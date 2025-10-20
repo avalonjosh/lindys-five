@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --color-sabres-blue: #003087;
+  --color-sabres-gold: #FFB81C;
+  --color-sabres-navy: #0A1128;
+  --color-sabres-red: #C8102E;
+  --color-sabres-light: #1E3A8A;
+  --color-sabres-gray: #E5E7EB;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
