@@ -46,8 +46,17 @@ export async function fetchSabresSchedule(season: string = '20252026'): Promise<
         }
       }
 
+      // Convert game date to EST/EDT (America/New_York timezone)
+      // The API returns dates in YYYY-MM-DD format, we need to ensure it displays in Eastern Time
+      const gameDateEST = new Date(game.gameDate + 'T00:00:00-05:00').toLocaleDateString('en-US', {
+        timeZone: 'America/New_York',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+
       return {
-        date: game.gameDate,
+        date: gameDateEST,
         opponent: opponentTeam.abbrev,
         opponentLogo: opponentTeam.logo,
         isHome,
