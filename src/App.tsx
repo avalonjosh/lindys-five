@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { GameChunk, SeasonStats, ChunkStats } from './types';
 import { fetchSabresSchedule } from './services/nhlApi';
-import { calculateChunks, calculateSeasonStats, calculateChunkStats } from './utils/chunkCalculator';
+import { calculateChunks, calculateSeasonStats } from './utils/chunkCalculator';
 import ChunkCard from './components/ChunkCard';
 import ProgressBar from './components/ProgressBar';
 
@@ -157,7 +157,7 @@ function App() {
           <div className="grid grid-cols-1 gap-4">
             {chunks
               .filter(chunk => !hideCompleted || !chunk.isComplete)
-              .map((chunk, index, filteredChunks) => {
+              .map((chunk) => {
                 // Find the previous chunk (by chunk number, not filtered index)
                 const previousChunk = chunks.find(c => c.chunkNumber === chunk.chunkNumber - 1);
                 const previousChunkStats = previousChunk
