@@ -7,6 +7,9 @@
   --color-sabres-red: #C8102E;
   --color-sabres-light: #1E3A8A;
   --color-sabres-gray: #E5E7EB;
+
+  --radius-xl: 0.5rem;
+  --radius-2xl: 0.625rem;
 }
 
 body {
