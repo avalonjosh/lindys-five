@@ -5,6 +5,7 @@ import { calculateChunks, calculateSeasonStats } from './utils/chunkCalculator';
 import ChunkCard from './components/ChunkCard';
 import ProgressBar from './components/ProgressBar';
 
+// Force rebuild - clean deploy
 function App() {
   const [chunks, setChunks] = useState<GameChunk[]>([]);
   const [stats, setStats] = useState<SeasonStats | null>(null);
