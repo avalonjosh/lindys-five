@@ -86,7 +86,7 @@ function App() {
           ? 'bg-black border-red-600'
           : 'bg-gradient-to-r from-sabres-blue to-sabres-navy border-sabres-gold'
       }`}>
-        <div className="max-w-7xl mx-auto px-4 py-4 md:py-6">
+        <div className="max-w-7xl mx-auto px-4 py-3 md:py-4">
           <div className="flex flex-col items-center text-center relative">
             {/* Theme Toggle Switch */}
             <div className="absolute right-0 top-0">
@@ -112,7 +112,7 @@ function App() {
             <img
               src={logoUrl}
               alt="Buffalo Sabres Logo"
-              className="w-16 h-16 md:w-24 md:h-24 mb-3 md:mb-4"
+              className="w-16 h-16 md:w-24 md:h-24 mb-2 md:mb-3"
             />
             <h1 className="text-3xl md:text-5xl font-bold text-white mb-2">
               Lindy's Five
@@ -129,13 +129,13 @@ function App() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 py-6">
         {/* Progress Bar */}
         {stats && <ProgressBar stats={stats} isGoatMode={isGoatMode} />}
 
         {/* Chunk Grid */}
-        <div className="mb-6">
-          <div className="flex justify-between items-center mb-4">
+        <div className="mb-4">
+          <div className="flex justify-between items-center mb-3">
             <h2 className={`text-2xl font-bold ${
               isGoatMode ? 'text-white' : 'text-sabres-navy'
             }`}>Game Chunks</h2>
@@ -154,7 +154,7 @@ function App() {
               {hideCompleted ? 'Show All Chunks' : 'Hide Completed Chunks'}
             </button>
           </div>
-          <div className="grid grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 gap-4">
             {chunks
               .filter(chunk => !hideCompleted || !chunk.isComplete)
               .map((chunk, index, filteredChunks) => {

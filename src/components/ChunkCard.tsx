@@ -47,15 +47,15 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
 
   return (
     <div
-      className={`${borderStyle} ${shadowStyle} ${opacity} rounded-2xl p-4 md:p-6 hover:shadow-2xl transition-all ${
+      className={`${borderStyle} ${shadowStyle} ${opacity} rounded-2xl p-3 md:p-4 hover:shadow-2xl transition-all ${
         isGoatMode ? 'bg-zinc-800' : 'bg-white'
       }`}
     >
       {/* Chunk Header */}
-      <div className={`mb-4 md:mb-5 pb-4 md:pb-5 border-b-2 ${
+      <div className={`mb-3 md:mb-4 pb-3 md:pb-4 border-b-2 ${
         isGoatMode ? 'border-zinc-800' : 'border-gray-100'
       }`}>
-        <div className="flex justify-between items-center mb-3 md:mb-4">
+        <div className="flex justify-between items-center mb-2 md:mb-3">
           <div>
             <h3 className={`font-bold text-xl md:text-2xl ${
               isGoatMode ? 'text-white' : 'text-sabres-navy'
@@ -79,8 +79,8 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
         </div>
 
         {/* Record Summary */}
-        <div className="grid grid-cols-3 gap-2 md:gap-3">
-          <div className={`rounded-xl p-2 md:p-3 text-center border ${
+        <div className="grid grid-cols-3 gap-2">
+          <div className={`rounded-xl p-2 text-center border ${
             isGoatMode
               ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
               : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
@@ -92,7 +92,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
               isGoatMode ? 'text-zinc-400' : 'text-gray-600'
             }`}>Wins</div>
           </div>
-          <div className={`rounded-xl p-2 md:p-3 text-center border ${
+          <div className={`rounded-xl p-2 text-center border ${
             isGoatMode
               ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
               : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
@@ -104,7 +104,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
               isGoatMode ? 'text-zinc-400' : 'text-gray-600'
             }`}>OT Losses</div>
           </div>
-          <div className={`rounded-xl p-2 md:p-3 text-center border ${
+          <div className={`rounded-xl p-2 text-center border ${
             isGoatMode
               ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
               : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
@@ -120,7 +120,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
 
         {/* Target Status */}
         {chunk.isComplete && (
-          <div className="mt-4 text-center">
+          <div className="mt-3 text-center">
             {chunk.points >= (chunk.totalGames * 2 * 0.6) ? (
               <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border ${
                 isGoatMode
@@ -177,7 +177,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
         <>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className={`w-full mt-4 md:mt-6 py-3 px-4 rounded-xl font-semibold text-sm transition-all ${
+            className={`w-full mt-3 md:mt-4 py-2 px-4 rounded-xl font-semibold text-sm transition-all ${
               isGoatMode
                 ? 'bg-zinc-900 hover:bg-zinc-950 text-red-500 border border-zinc-700'
                 : 'bg-blue-50 hover:bg-blue-100 text-sabres-blue border border-blue-200'
@@ -188,17 +188,17 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
 
           {/* Stats Section */}
           {isExpanded && (
-            <div className={`mt-4 pt-4 border-t-2 ${
+            <div className={`mt-3 pt-3 border-t-2 ${
               isGoatMode ? 'border-zinc-700' : 'border-gray-200'
             }`}>
               {loading ? (
-                <div className={`text-center py-8 ${
+                <div className={`text-center py-6 ${
                   isGoatMode ? 'text-zinc-400' : 'text-gray-500'
                 }`}>
                   Loading stats...
                 </div>
               ) : stats ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
                   <StatItem
                     label="Goals Per Game"
                     value={stats.goalsPerGame.toFixed(2)}
@@ -248,7 +248,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
                     higherIsBetter={true}
                     isGoatMode={isGoatMode}
                   />
-                  <div className={`rounded-xl p-4 text-center border ${
+                  <div className={`rounded-xl p-3 text-center border ${
                     isGoatMode
                       ? 'bg-zinc-900 border-zinc-700'
                       : 'bg-gray-50 border-gray-200'
@@ -266,7 +266,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
                   </div>
                 </div>
               ) : (
-                <div className={`text-center py-8 ${
+                <div className={`text-center py-6 ${
                   isGoatMode ? 'text-zinc-400' : 'text-gray-500'
                 }`}>
                   No stats available
@@ -308,7 +308,7 @@ function StatItem({ label, value, previousValue, higherIsBetter, isGoatMode }: S
   }
 
   return (
-    <div className={`rounded-xl p-4 text-center border ${
+    <div className={`rounded-xl p-3 text-center border ${
       isGoatMode
         ? 'bg-zinc-900 border-zinc-700'
         : 'bg-gray-50 border-gray-200'

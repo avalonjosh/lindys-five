@@ -20,17 +20,17 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
   const barColor = isGoatMode ? 'bg-red-600' : 'bg-sabres-blue';
 
   return (
-    <div className={`rounded-2xl p-4 md:p-6 shadow-xl mb-6 border ${
+    <div className={`rounded-2xl p-3 md:p-4 shadow-xl mb-4 border ${
       isGoatMode
         ? 'bg-zinc-900 border-zinc-800'
         : 'bg-white border-gray-200'
     }`}>
-      <h2 className={`text-xl md:text-2xl font-bold mb-3 md:mb-4 ${
+      <h2 className={`text-xl md:text-2xl font-bold mb-2 md:mb-3 ${
         isGoatMode ? 'text-white' : 'text-sabres-navy'
       }`}>Season Progress</h2>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
-        <div className={`rounded-xl p-3 md:p-4 border ${
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-3 md:mb-4">
+        <div className={`rounded-xl p-2 md:p-3 border ${
           isGoatMode
             ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
             : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
@@ -46,7 +46,7 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
           }`}>{gamesRemaining} remaining</div>
         </div>
 
-        <div className={`rounded-xl p-3 md:p-4 border ${
+        <div className={`rounded-xl p-2 md:p-3 border ${
           isGoatMode
             ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
             : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
@@ -62,7 +62,7 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
           }`}>of {gamesPlayed * 2} possible</div>
         </div>
 
-        <div className={`rounded-xl p-3 md:p-4 border ${
+        <div className={`rounded-xl p-2 md:p-3 border ${
           isGoatMode
             ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
             : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
@@ -78,7 +78,7 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
           }`}>pts/game (need {(playoffTarget / stats.totalGames).toFixed(2)})</div>
         </div>
 
-        <div className={`rounded-xl p-3 md:p-4 border ${
+        <div className={`rounded-xl p-2 md:p-3 border ${
           isGoatMode
             ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
             : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
@@ -141,13 +141,6 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
             </div>
           )}
 
-          {/* Playoff target marker - final goal */}
-          <div
-            className={`absolute top-0 h-8 w-1 ${
-              isGoatMode ? 'bg-red-500' : 'bg-sabres-gold'
-            }`}
-            style={{ left: '100%' }}
-          />
           </div>
         </div>
 
