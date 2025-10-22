@@ -1,9 +1,0 @@
-[build]
-  command = "npm run build"
-  publish = "dist"
-  functions = "netlify/functions"
-
-[[redirects]]
-  from = "/api/v1/*"
-  to = "/.netlify/functions/nhl-api/v1/:splat"
-  status = 200
