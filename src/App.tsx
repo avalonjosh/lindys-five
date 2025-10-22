@@ -10,7 +10,7 @@ function App() {
   const [chunks, setChunks] = useState<GameChunk[]>([]);
   const [stats, setStats] = useState<SeasonStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [hideCompleted, setHideCompleted] = useState(false);
+  const [hideCompleted, setHideCompleted] = useState(true);
   const [chunkStatsCache, setChunkStatsCache] = useState<Map<number, ChunkStats>>(new Map());
   const [isGoatMode, setIsGoatMode] = useState(() => {
     const saved = localStorage.getItem('sabres-theme');
