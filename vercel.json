@@ -4,8 +4,8 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/api/v1/:path*",
-      "destination": "/api/nhl-api"
+      "source": "/api/v1/(.*)",
+      "destination": "/api/nhl-api?path=$1"
     }
   ]
 }

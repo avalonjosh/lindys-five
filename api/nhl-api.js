@@ -1,13 +1,11 @@
 export default async function handler(req, res) {
-  // Vercel rewrites pass the original path in query params
-  // The path will be like: /api/v1/club-schedule-season/BUF/20252026
-  const originalUrl = req.headers['x-vercel-original-url'] || req.url;
-  const path = originalUrl.replace('/api/v1', '');
-  const url = `https://api-web.nhle.com/v1${path}`;
+  // Get the path from query parameter (passed by rewrite)
+  const path = req.query.path || '';
+  const url = `https://api-web.nhle.com/v1/${path}`;
 
   console.log('Vercel function called');
-  console.log('Original URL:', originalUrl);
-  console.log('Extracted path:', path);
+  console.log('Query params:', req.query);
+  console.log('Path:', path);
   console.log('Final NHL API URL:', url);
 
   try {
