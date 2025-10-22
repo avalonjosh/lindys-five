@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { GameChunk, SeasonStats, ChunkStats } from './types';
 import { fetchSabresSchedule } from './services/nhlApi';
-import { calculateChunks, calculateSeasonStats } from './utils/chunkCalculator';
+import { calculateChunks, calculateSeasonStats, calculateChunkStats } from './utils/chunkCalculator';
 import ChunkCard from './components/ChunkCard';
 import ProgressBar from './components/ProgressBar';
 
@@ -58,6 +58,31 @@ function App() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Pre-calculate stats for all completed chunks so comparisons work even when chunks are hidden
+  useEffect(() => {
+    const calculateAllCompletedStats = async () => {
+      for (const chunk of chunks) {
+        if (chunk.isComplete && !chunkStatsCache.has(chunk.chunkNumber)) {
+          const hasPlayed = chunk.games.some(g => g.outcome !== 'PENDING');
+          if (hasPlayed) {
+            try {
+              const stats = await calculateChunkStats(chunk);
+              if (stats) {
+                handleStatsCalculated(chunk.chunkNumber, stats);
+              }
+            } catch (error) {
+              console.error(`Error calculating stats for chunk ${chunk.chunkNumber}:`, error);
+            }
+          }
+        }
+      }
+    };
+
+    if (chunks.length > 0) {
+      calculateAllCompletedStats();
+    }
+  }, [chunks]);
 
   if (loading && chunks.length === 0) {
     return (
