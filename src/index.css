@@ -8,8 +8,8 @@
   --color-sabres-light: #1E3A8A;
   --color-sabres-gray: #E5E7EB;
 
-  --radius-xl: 0.5rem;
-  --radius-2xl: 0.625rem;
+  --radius-xl: 0.375rem;
+  --radius-2xl: 0.5rem;
 }
 
 body {
