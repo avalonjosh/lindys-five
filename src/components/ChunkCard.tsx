@@ -291,12 +291,17 @@ interface StatItemProps {
 function StatItem({ label, value, previousValue, higherIsBetter, isGoatMode }: StatItemProps) {
   let indicator: 'up' | 'down' | 'none' = 'none';
   let indicatorColor = '';
+  let percentChange = '';
 
   if (previousValue !== undefined) {
     const currentNumeric = parseFloat(value);
     const diff = currentNumeric - previousValue;
 
     if (Math.abs(diff) > 0.1) { // Only show indicator if difference is meaningful
+      // Calculate percentage change
+      const pctChange = previousValue !== 0 ? (diff / previousValue) * 100 : 0;
+      percentChange = `${Math.abs(pctChange).toFixed(1)}%`;
+
       if (diff > 0) {
         indicator = 'up';
         indicatorColor = higherIsBetter ? 'text-green-500' : 'text-red-500';
@@ -325,9 +330,14 @@ function StatItem({ label, value, previousValue, higherIsBetter, isGoatMode }: S
           {value}
         </div>
         {indicator !== 'none' && (
-          <span className={`text-xl ${indicatorColor}`}>
-            {indicator === 'up' ? '↑' : '↓'}
-          </span>
+          <div className={`flex flex-col items-center ${indicatorColor}`}>
+            <span className="text-xl leading-none">
+              {indicator === 'up' ? '↑' : '↓'}
+            </span>
+            <span className="text-xs font-semibold leading-none">
+              {percentChange}
+            </span>
+          </div>
         )}
       </div>
     </div>
