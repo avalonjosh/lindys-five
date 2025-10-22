@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { GameChunk, SeasonStats } from './types';
+import type { GameChunk, SeasonStats, ChunkStats } from './types';
 import { fetchSabresSchedule } from './services/nhlApi';
-import { calculateChunks, calculateSeasonStats } from './utils/chunkCalculator';
+import { calculateChunks, calculateSeasonStats, calculateChunkStats } from './utils/chunkCalculator';
 import ChunkCard from './components/ChunkCard';
 import ProgressBar from './components/ProgressBar';
 
@@ -10,6 +10,7 @@ function App() {
   const [stats, setStats] = useState<SeasonStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [hideCompleted, setHideCompleted] = useState(false);
+  const [chunkStatsCache, setChunkStatsCache] = useState<Map<number, ChunkStats>>(new Map());
   const [isGoatMode, setIsGoatMode] = useState(() => {
     const saved = localStorage.getItem('sabres-theme');
     return saved === 'goat';
@@ -20,6 +21,14 @@ function App() {
       const newMode = !prev;
       localStorage.setItem('sabres-theme', newMode ? 'goat' : 'classic');
       return newMode;
+    });
+  };
+
+  const handleStatsCalculated = (chunkNumber: number, stats: ChunkStats) => {
+    setChunkStatsCache(prev => {
+      const newCache = new Map(prev);
+      newCache.set(chunkNumber, stats);
+      return newCache;
     });
   };
 
@@ -148,9 +157,23 @@ function App() {
           <div className="grid grid-cols-1 gap-6">
             {chunks
               .filter(chunk => !hideCompleted || !chunk.isComplete)
-              .map((chunk) => (
-                <ChunkCard key={chunk.chunkNumber} chunk={chunk} isGoatMode={isGoatMode} />
-              ))}
+              .map((chunk, index, filteredChunks) => {
+                // Find the previous chunk (by chunk number, not filtered index)
+                const previousChunk = chunks.find(c => c.chunkNumber === chunk.chunkNumber - 1);
+                const previousChunkStats = previousChunk
+                  ? chunkStatsCache.get(previousChunk.chunkNumber)
+                  : undefined;
+
+                return (
+                  <ChunkCard
+                    key={chunk.chunkNumber}
+                    chunk={chunk}
+                    isGoatMode={isGoatMode}
+                    previousChunkStats={previousChunkStats}
+                    onStatsCalculated={handleStatsCalculated}
+                  />
+                );
+              })}
           </div>
         </div>
 

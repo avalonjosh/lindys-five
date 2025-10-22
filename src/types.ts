@@ -30,6 +30,20 @@ export interface GameResult {
   outcome: 'W' | 'OTL' | 'L' | 'PENDING';
   points: number;
   gameState: string;
+  gameId?: number;
+}
+
+export interface DetailedGameStats {
+  goalsFor: number;
+  goalsAgainst: number;
+  shotsFor: number;
+  shotsAgainst: number;
+  powerPlayGoals: number;
+  powerPlayOpportunities: number;
+  penaltyKillOpportunities: number;
+  powerPlayGoalsAgainst: number;
+  saves: number;
+  shotsAgainstGoalie: number;
 }
 
 export interface GameChunk {
@@ -42,6 +56,17 @@ export interface GameChunk {
   points: number;
   maxPoints: number;
   isComplete: boolean;
+}
+
+export interface ChunkStats {
+  goalsPerGame: number;
+  goalsAgainstPerGame: number;
+  shotsPerGame: number;
+  shotsAgainstPerGame: number;
+  powerPlayPct: number;
+  penaltyKillPct: number;
+  savePct: number;
+  gamesPlayed: number;
 }
 
 export interface SeasonStats {

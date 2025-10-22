@@ -1,14 +1,39 @@
-import type { GameChunk } from '../types';
+import { useState, useEffect } from 'react';
+import type { GameChunk, ChunkStats } from '../types';
 import GameBox from './GameBox';
+import { calculateChunkStats } from '../utils/chunkCalculator';
 
 interface ChunkCardProps {
   chunk: GameChunk;
   isGoatMode: boolean;
+  previousChunkStats?: ChunkStats | null;
+  onStatsCalculated?: (chunkNumber: number, stats: ChunkStats) => void;
 }
 
-export default function ChunkCard({ chunk, isGoatMode }: ChunkCardProps) {
+export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onStatsCalculated }: ChunkCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [stats, setStats] = useState<ChunkStats | null>(null);
+  const [loading, setLoading] = useState(false);
   const targetMet = chunk.points >= (chunk.totalGames * 2 * 0.6);
   const hasPlayed = chunk.games.some(g => g.outcome !== 'PENDING');
+
+  // Load stats when expanded
+  useEffect(() => {
+    if (isExpanded && !stats && hasPlayed) {
+      setLoading(true);
+      calculateChunkStats(chunk)
+        .then(calculatedStats => {
+          setStats(calculatedStats);
+          if (calculatedStats && onStatsCalculated) {
+            onStatsCalculated(chunk.chunkNumber, calculatedStats);
+          }
+          setLoading(false);
+        })
+        .catch(() => {
+          setLoading(false);
+        });
+    }
+  }, [isExpanded, stats, chunk, hasPlayed, onStatsCalculated]);
 
   // Subtle styling based on performance
   const borderStyle = hasPlayed && chunk.isComplete
@@ -145,6 +170,165 @@ export default function ChunkCard({ chunk, isGoatMode }: ChunkCardProps) {
               <div className="text-sm py-4">Not Scheduled Yet</div>
             </div>
           ))}
+      </div>
+
+      {/* Show Stats Button - Only show if chunk has completed games */}
+      {hasPlayed && (
+        <>
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className={`w-full mt-4 md:mt-6 py-3 px-4 rounded-xl font-semibold text-sm transition-all ${
+              isGoatMode
+                ? 'bg-zinc-900 hover:bg-zinc-950 text-red-500 border border-zinc-700'
+                : 'bg-blue-50 hover:bg-blue-100 text-sabres-blue border border-blue-200'
+            }`}
+          >
+            {isExpanded ? '▲ Hide Chunk Stats' : '▼ Show Chunk Stats'}
+          </button>
+
+          {/* Stats Section */}
+          {isExpanded && (
+            <div className={`mt-4 pt-4 border-t-2 ${
+              isGoatMode ? 'border-zinc-700' : 'border-gray-200'
+            }`}>
+              {loading ? (
+                <div className={`text-center py-8 ${
+                  isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+                }`}>
+                  Loading stats...
+                </div>
+              ) : stats ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                  <StatItem
+                    label="Goals Per Game"
+                    value={stats.goalsPerGame.toFixed(2)}
+                    previousValue={previousChunkStats?.goalsPerGame}
+                    higherIsBetter={true}
+                    isGoatMode={isGoatMode}
+                  />
+                  <StatItem
+                    label="Goals Against Per Game"
+                    value={stats.goalsAgainstPerGame.toFixed(2)}
+                    previousValue={previousChunkStats?.goalsAgainstPerGame}
+                    higherIsBetter={false}
+                    isGoatMode={isGoatMode}
+                  />
+                  <StatItem
+                    label="Shots Per Game"
+                    value={stats.shotsPerGame.toFixed(1)}
+                    previousValue={previousChunkStats?.shotsPerGame}
+                    higherIsBetter={true}
+                    isGoatMode={isGoatMode}
+                  />
+                  <StatItem
+                    label="Shots Against Per Game"
+                    value={stats.shotsAgainstPerGame.toFixed(1)}
+                    previousValue={previousChunkStats?.shotsAgainstPerGame}
+                    higherIsBetter={false}
+                    isGoatMode={isGoatMode}
+                  />
+                  <StatItem
+                    label="Power Play %"
+                    value={stats.powerPlayPct.toFixed(1) + '%'}
+                    previousValue={previousChunkStats?.powerPlayPct}
+                    higherIsBetter={true}
+                    isGoatMode={isGoatMode}
+                  />
+                  <StatItem
+                    label="Penalty Kill %"
+                    value={stats.penaltyKillPct.toFixed(1) + '%'}
+                    previousValue={previousChunkStats?.penaltyKillPct}
+                    higherIsBetter={true}
+                    isGoatMode={isGoatMode}
+                  />
+                  <StatItem
+                    label="Save %"
+                    value={stats.savePct.toFixed(1) + '%'}
+                    previousValue={previousChunkStats?.savePct}
+                    higherIsBetter={true}
+                    isGoatMode={isGoatMode}
+                  />
+                  <div className={`rounded-xl p-4 text-center border ${
+                    isGoatMode
+                      ? 'bg-zinc-900 border-zinc-700'
+                      : 'bg-gray-50 border-gray-200'
+                  }`}>
+                    <div className={`text-xs font-semibold mb-2 uppercase tracking-wide ${
+                      isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+                    }`}>
+                      Games Played
+                    </div>
+                    <div className={`text-2xl md:text-3xl font-bold ${
+                      isGoatMode ? 'text-white' : 'text-gray-800'
+                    }`}>
+                      {stats.gamesPlayed}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className={`text-center py-8 ${
+                  isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+                }`}>
+                  No stats available
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+interface StatItemProps {
+  label: string;
+  value: string;
+  previousValue?: number;
+  higherIsBetter: boolean;
+  isGoatMode: boolean;
+}
+
+function StatItem({ label, value, previousValue, higherIsBetter, isGoatMode }: StatItemProps) {
+  let indicator: 'up' | 'down' | 'none' = 'none';
+  let indicatorColor = '';
+
+  if (previousValue !== undefined) {
+    const currentNumeric = parseFloat(value);
+    const diff = currentNumeric - previousValue;
+
+    if (Math.abs(diff) > 0.1) { // Only show indicator if difference is meaningful
+      if (diff > 0) {
+        indicator = 'up';
+        indicatorColor = higherIsBetter ? 'text-green-500' : 'text-red-500';
+      } else {
+        indicator = 'down';
+        indicatorColor = higherIsBetter ? 'text-red-500' : 'text-green-500';
+      }
+    }
+  }
+
+  return (
+    <div className={`rounded-xl p-4 text-center border ${
+      isGoatMode
+        ? 'bg-zinc-900 border-zinc-700'
+        : 'bg-gray-50 border-gray-200'
+    }`}>
+      <div className={`text-xs font-semibold mb-2 uppercase tracking-wide ${
+        isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+      }`}>
+        {label}
+      </div>
+      <div className="flex items-center justify-center gap-2">
+        <div className={`text-2xl md:text-3xl font-bold ${
+          isGoatMode ? 'text-white' : 'text-gray-800'
+        }`}>
+          {value}
+        </div>
+        {indicator !== 'none' && (
+          <span className={`text-xl ${indicatorColor}`}>
+            {indicator === 'up' ? '↑' : '↓'}
+          </span>
+        )}
       </div>
     </div>
   );

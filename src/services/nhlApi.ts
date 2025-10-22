@@ -1,4 +1,4 @@
-import type { NHLGame, GameResult } from '../types';
+import type { NHLGame, GameResult, DetailedGameStats } from '../types';
 
 const SABRES_ID = 7;
 const SABRES_ABBREV = 'BUF';
@@ -65,6 +65,7 @@ export async function fetchSabresSchedule(season: string = '20252026'): Promise<
         outcome,
         points,
         gameState: game.gameState,
+        gameId: game.id,
       };
     });
 
@@ -73,5 +74,98 @@ export async function fetchSabresSchedule(season: string = '20252026'): Promise<
   } catch (error) {
     console.error('Error fetching Sabres schedule:', error);
     return [];
+  }
+}
+
+export async function fetchDetailedGameStats(gameId: number, isHome: boolean): Promise<DetailedGameStats | null> {
+  try {
+    const url = `${API_BASE}/gamecenter/${gameId}/boxscore`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    const sabresTeam = isHome ? data.homeTeam : data.awayTeam;
+    const opponentTeam = isHome ? data.awayTeam : data.homeTeam;
+
+    // Get shots from team data
+    const shotsFor = sabresTeam.sog || 0;
+    const shotsAgainst = opponentTeam.sog || 0;
+
+    // Calculate PP and PK stats from player data
+    let powerPlayGoals = 0;
+    let powerPlayGoalsAgainst = 0;
+
+    const sabresPlayerData = data.playerByGameStats[isHome ? 'homeTeam' : 'awayTeam'];
+    const opponentPlayerData = data.playerByGameStats[isHome ? 'awayTeam' : 'homeTeam'];
+
+    // Aggregate PP goals from Sabres players
+    ['forwards', 'defense'].forEach(position => {
+      if (sabresPlayerData[position]) {
+        sabresPlayerData[position].forEach((player: any) => {
+          powerPlayGoals += player.powerPlayGoals || 0;
+        });
+      }
+    });
+
+    // Aggregate PP goals against (opponent's PP goals)
+    ['forwards', 'defense'].forEach(position => {
+      if (opponentPlayerData[position]) {
+        opponentPlayerData[position].forEach((player: any) => {
+          powerPlayGoalsAgainst += player.powerPlayGoals || 0;
+        });
+      }
+    });
+
+    // Get penalty data from play-by-play to calculate opportunities
+    const playByPlayUrl = `${API_BASE}/gamecenter/${gameId}/play-by-play`;
+    const pbpResponse = await fetch(playByPlayUrl);
+    const pbpData = await pbpResponse.json();
+
+    let sabresPenalties = 0;
+    let opponentPenalties = 0;
+
+    if (pbpData.plays) {
+      pbpData.plays.forEach((play: any) => {
+        if (play.typeDescKey === 'penalty' && play.details) {
+          const penaltyTeam = play.details.eventOwnerTeamId;
+          if (penaltyTeam === SABRES_ID) {
+            sabresPenalties++;
+          } else {
+            opponentPenalties++;
+          }
+        }
+      });
+    }
+
+    // PP opportunities = opponent's penalties (when we get PP)
+    // PK opportunities = our penalties (when opponent gets PP)
+    const powerPlayOpportunities = opponentPenalties;
+    const penaltyKillOpportunities = sabresPenalties;
+
+    // Get goalie stats for save percentage
+    let saves = 0;
+    let shotsAgainstGoalie = 0;
+
+    if (sabresPlayerData.goalies && sabresPlayerData.goalies.length > 0) {
+      sabresPlayerData.goalies.forEach((goalie: any) => {
+        saves += goalie.saves || 0;
+        shotsAgainstGoalie += goalie.shotsAgainst || 0;
+      });
+    }
+
+    return {
+      goalsFor: sabresTeam.score || 0,
+      goalsAgainst: opponentTeam.score || 0,
+      shotsFor,
+      shotsAgainst,
+      powerPlayGoals,
+      powerPlayOpportunities,
+      penaltyKillOpportunities,
+      powerPlayGoalsAgainst,
+      saves,
+      shotsAgainstGoalie,
+    };
+  } catch (error) {
+    console.error(`Error fetching detailed stats for game ${gameId}:`, error);
+    return null;
   }
 }

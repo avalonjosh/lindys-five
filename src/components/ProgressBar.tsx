@@ -103,7 +103,7 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
           isGoatMode ? 'text-zinc-300' : 'text-gray-700'
         }`}>
           <span>Progress to Playoff Target ({playoffTarget} pts)</span>
-          <span>{totalPoints} pts • {currentProgress.toFixed(1)}%</span>
+          <span>{currentProgress.toFixed(1)}%</span>
         </div>
         {/* Add top padding to make room for the Expected label */}
         <div className="pt-10">
@@ -151,19 +151,14 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
           </div>
         </div>
 
-        {/* Projected finish indicator */}
+        {/* Points earned indicator */}
         {gamesPlayed > 0 && (
           <div className={`mt-2 text-sm ${
             isGoatMode ? 'text-zinc-300' : 'text-gray-600'
           }`}>
-            <span className="font-semibold">Projected finish:</span>{' '}
+            <span className="font-semibold">Points Earned:</span>{' '}
             <span className={paceColor}>
-              {projectedPoints} points
-            </span>
-            <span className={`ml-2 ${
-              isGoatMode ? 'text-zinc-300' : 'text-gray-600'
-            }`}>
-              (need {playoffTarget})
+              {totalPoints}
             </span>
           </div>
         )}

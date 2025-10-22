@@ -1,4 +1,5 @@
-import type { GameResult, GameChunk, SeasonStats } from '../types';
+import type { GameResult, GameChunk, SeasonStats, ChunkStats } from '../types';
+import { fetchDetailedGameStats } from '../services/nhlApi';
 
 const GAMES_PER_CHUNK = 5;
 const TOTAL_REGULAR_SEASON_GAMES = 82;
@@ -105,4 +106,84 @@ export function getChunkBorderColor(chunk: GameChunk): string {
     .replace('bg-red-400', 'border-red-500')
     .replace('bg-red-600', 'border-red-700')
     .replace('bg-gray-700', 'border-gray-600');
+}
+
+export async function calculateChunkStats(chunk: GameChunk): Promise<ChunkStats | null> {
+  // Only calculate stats for completed games
+  const completedGames = chunk.games.filter(g => g.outcome !== 'PENDING' && g.gameId);
+
+  if (completedGames.length === 0) {
+    return null;
+  }
+
+  // Fetch detailed stats for each completed game
+  const gameStatsPromises = completedGames.map(game =>
+    fetchDetailedGameStats(game.gameId!, game.isHome)
+  );
+
+  const gameStatsResults = await Promise.all(gameStatsPromises);
+
+  // Filter out any null results (failed fetches)
+  const validGameStats = gameStatsResults.filter(stats => stats !== null);
+
+  if (validGameStats.length === 0) {
+    return null;
+  }
+
+  // Aggregate totals across all games
+  let totalGoalsFor = 0;
+  let totalGoalsAgainst = 0;
+  let totalShotsFor = 0;
+  let totalShotsAgainst = 0;
+  let totalPowerPlayGoals = 0;
+  let totalPowerPlayOpportunities = 0;
+  let totalPenaltyKillOpportunities = 0;
+  let totalPowerPlayGoalsAgainst = 0;
+  let totalSaves = 0;
+  let totalShotsAgainstGoalie = 0;
+
+  validGameStats.forEach(stats => {
+    totalGoalsFor += stats.goalsFor;
+    totalGoalsAgainst += stats.goalsAgainst;
+    totalShotsFor += stats.shotsFor;
+    totalShotsAgainst += stats.shotsAgainst;
+    totalPowerPlayGoals += stats.powerPlayGoals;
+    totalPowerPlayOpportunities += stats.powerPlayOpportunities;
+    totalPenaltyKillOpportunities += stats.penaltyKillOpportunities;
+    totalPowerPlayGoalsAgainst += stats.powerPlayGoalsAgainst;
+    totalSaves += stats.saves;
+    totalShotsAgainstGoalie += stats.shotsAgainstGoalie;
+  });
+
+  const gamesPlayed = validGameStats.length;
+
+  // Calculate per-game averages
+  const goalsPerGame = totalGoalsFor / gamesPlayed;
+  const goalsAgainstPerGame = totalGoalsAgainst / gamesPlayed;
+  const shotsPerGame = totalShotsFor / gamesPlayed;
+  const shotsAgainstPerGame = totalShotsAgainst / gamesPlayed;
+
+  // Calculate percentages
+  const powerPlayPct = totalPowerPlayOpportunities > 0
+    ? (totalPowerPlayGoals / totalPowerPlayOpportunities) * 100
+    : 0;
+
+  const penaltyKillPct = totalPenaltyKillOpportunities > 0
+    ? ((totalPenaltyKillOpportunities - totalPowerPlayGoalsAgainst) / totalPenaltyKillOpportunities) * 100
+    : 0;
+
+  const savePct = totalShotsAgainstGoalie > 0
+    ? (totalSaves / totalShotsAgainstGoalie) * 100
+    : 0;
+
+  return {
+    goalsPerGame,
+    goalsAgainstPerGame,
+    shotsPerGame,
+    shotsAgainstPerGame,
+    powerPlayPct,
+    penaltyKillPct,
+    savePct,
+    gamesPlayed,
+  };
 }
