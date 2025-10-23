@@ -330,11 +330,11 @@ function StatItem({ label, value, previousValue, higherIsBetter, isGoatMode }: S
           {value}
         </div>
         {indicator !== 'none' && (
-          <div className={`flex flex-col items-center ${indicatorColor}`}>
+          <div className={`flex items-center gap-1 ${indicatorColor}`}>
             <span className="text-xl leading-none">
               {indicator === 'up' ? '↑' : '↓'}
             </span>
-            <span className="text-xs font-semibold leading-none">
+            <span className="text-xs font-semibold">
               {percentChange}
             </span>
           </div>
