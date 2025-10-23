@@ -142,7 +142,10 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
             >
               {/* Triangle pointing down at top of line - color coded by performance */}
               <div className={`w-0 h-0 border-l-[4px] border-r-[4px] border-t-[5px] border-l-transparent border-r-transparent -mb-px ${indicatorColor}`}></div>
-              <div className="w-0.5 h-8 bg-white shadow-sm"></div>
+              {/* Only show white line if behind or on pace (not ahead) */}
+              {currentProgress <= expectedProgress && (
+                <div className="w-0.5 h-8 bg-white shadow-sm"></div>
+              )}
             </div>
           )}
         </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { GameChunk, SeasonStats, ChunkStats } from './types';
+import type { GameChunk, SeasonStats, ChunkStats, GameResult } from './types';
 import { fetchSabresSchedule } from './services/nhlApi';
 import { calculateChunks, calculateSeasonStats, calculateChunkStats } from './utils/chunkCalculator';
 import ChunkCard from './components/ChunkCard';
@@ -16,6 +16,8 @@ function App() {
     const saved = localStorage.getItem('sabres-theme');
     return saved === 'goat';
   });
+  const [whatIfMode, setWhatIfMode] = useState(false);
+  const [hypotheticalResults, setHypotheticalResults] = useState<Map<number, GameResult>>(new Map());
 
   const toggleTheme = () => {
     setIsGoatMode(prev => {
@@ -30,6 +32,100 @@ function App() {
       const newCache = new Map(prev);
       newCache.set(chunkNumber, stats);
       return newCache;
+    });
+  };
+
+  // Find the current active set (first set with pending games)
+  const getCurrentSet = (): GameChunk | null => {
+    return chunks.find(chunk =>
+      chunk.games.some(g => g.outcome === 'PENDING') &&
+      chunk.games.some(g => g.outcome !== 'PENDING')
+    ) || chunks.find(chunk =>
+      chunk.games.every(g => g.outcome === 'PENDING')
+    ) || null;
+  };
+
+  // Get sets available for What If mode (current set + next 2 sets)
+  const getWhatIfSets = (): GameChunk[] => {
+    const currentSet = getCurrentSet();
+    if (!currentSet) return [];
+
+    const currentIndex = chunks.findIndex(c => c.chunkNumber === currentSet.chunkNumber);
+    if (currentIndex === -1) return [];
+
+    // Return current set + next 2 sets (up to 3 total)
+    return chunks.slice(currentIndex, currentIndex + 3);
+  };
+
+  // Apply hypothetical results to chunks
+  const getChunksWithHypotheticals = (): GameChunk[] => {
+    if (!whatIfMode || hypotheticalResults.size === 0) {
+      return chunks;
+    }
+
+    return chunks.map(chunk => ({
+      ...chunk,
+      games: chunk.games.map(game => {
+        const hypothetical = hypotheticalResults.get(game.gameId || 0);
+        return hypothetical || game;
+      }),
+      // Recalculate chunk totals
+      wins: chunk.games.filter(g => {
+        const hypo = hypotheticalResults.get(g.gameId || 0);
+        return (hypo || g).outcome === 'W';
+      }).length,
+      otLosses: chunk.games.filter(g => {
+        const hypo = hypotheticalResults.get(g.gameId || 0);
+        return (hypo || g).outcome === 'OTL';
+      }).length,
+      losses: chunk.games.filter(g => {
+        const hypo = hypotheticalResults.get(g.gameId || 0);
+        return (hypo || g).outcome === 'L';
+      }).length,
+      points: chunk.games.reduce((sum, g) => {
+        const hypo = hypotheticalResults.get(g.gameId || 0);
+        return sum + (hypo || g).points;
+      }, 0),
+    }));
+  };
+
+  const handleGameClick = (gameId: number, currentGame: GameResult, outcome: 'W' | 'OTL' | 'L') => {
+    if (!whatIfMode || currentGame.outcome !== 'PENDING') return;
+
+    const whatIfSets = getWhatIfSets();
+    if (whatIfSets.length === 0) return;
+
+    // Only allow editing games in the What If sets (current + next 2)
+    const isInWhatIfSets = whatIfSets.some(set =>
+      set.games.some(g => g.gameId === gameId)
+    );
+    if (!isInWhatIfSets) return;
+
+    const currentHypo = hypotheticalResults.get(gameId);
+
+    // If clicking the same outcome, remove the simulation
+    if (currentHypo?.outcome === outcome) {
+      setHypotheticalResults(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(gameId);
+        return newMap;
+      });
+      return;
+    }
+
+    // Set the new outcome
+    const hypotheticalGame: GameResult = {
+      ...currentGame,
+      outcome: outcome,
+      points: outcome === 'W' ? 2 : outcome === 'OTL' ? 1 : 0,
+      sabresScore: outcome === 'W' ? 3 : outcome === 'OTL' ? 2 : 1,
+      opponentScore: outcome === 'W' ? 2 : outcome === 'OTL' ? 3 : 3,
+    };
+
+    setHypotheticalResults(prev => {
+      const newMap = new Map(prev);
+      newMap.set(gameId, hypotheticalGame);
+      return newMap;
     });
   };
 
@@ -116,23 +212,30 @@ function App() {
           <div className="flex flex-col items-center text-center relative">
             {/* Theme Toggle Switch */}
             <div className="absolute right-0 top-0">
-              <button
-                onClick={toggleTheme}
-                className={`relative inline-flex h-6 w-11 md:h-7 md:w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                  isGoatMode
-                    ? 'bg-red-600 focus:ring-red-500'
-                    : 'bg-sabres-gold focus:ring-sabres-gold'
-                }`}
-                role="switch"
-                aria-checked={isGoatMode}
-                title={isGoatMode ? 'Switch to Classic Mode (Blue & Gold)' : 'Switch to GOAT Mode (Black & Red)'}
-              >
-                <span
-                  className={`inline-block h-4 w-4 md:h-5 md:w-5 transform rounded-full bg-white shadow-lg transition-transform ${
-                    isGoatMode ? 'translate-x-6 md:translate-x-8' : 'translate-x-1'
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-semibold ${
+                  isGoatMode ? 'text-zinc-400' : 'text-sabres-gold'
+                }`}>
+                  {isGoatMode ? 'GOAT' : 'Classic'}
+                </span>
+                <button
+                  onClick={toggleTheme}
+                  className={`relative inline-flex h-6 w-11 md:h-7 md:w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    isGoatMode
+                      ? 'bg-red-600 focus:ring-red-500'
+                      : 'bg-sabres-gold focus:ring-sabres-gold'
                   }`}
-                />
-              </button>
+                  role="switch"
+                  aria-checked={isGoatMode}
+                  title={isGoatMode ? 'Switch to Classic Mode (Blue & Gold)' : 'Switch to GOAT Mode (Black & Red)'}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 md:h-5 md:w-5 transform rounded-full bg-white shadow-lg transition-transform ${
+                      isGoatMode ? 'translate-x-6 md:translate-x-8' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
 
             <img
@@ -157,28 +260,96 @@ function App() {
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         {/* Progress Bar */}
-        {stats && <ProgressBar stats={stats} isGoatMode={isGoatMode} />}
+        {stats && <ProgressBar stats={whatIfMode && hypotheticalResults.size > 0 ? calculateSeasonStats(getChunksWithHypotheticals()) : stats} isGoatMode={isGoatMode} />}
+
+        {/* What If Mode Banner */}
+        {whatIfMode && (
+          <div className={`mb-4 p-3 rounded-lg border-2 ${
+            isGoatMode
+              ? 'bg-red-900/30 border-red-500 text-red-300'
+              : 'bg-blue-100 border-blue-400 text-blue-800'
+          }`}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2">
+                <span className="font-semibold">What If Mode Active</span>
+                <span className="text-sm opacity-80"><span className="hidden md:inline">- </span>Simulate pending games in the next 3 sets</span>
+              </div>
+              <button
+                onClick={() => {
+                  setHypotheticalResults(new Map());
+                }}
+                className={`px-3 py-1 rounded text-sm font-semibold transition-all ${
+                  isGoatMode
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                }`}
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Set Grid */}
         <div className="mb-4">
-          <div className="flex justify-between items-center mb-3">
+          <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
             <h2 className={`text-2xl font-bold ${
               isGoatMode ? 'text-white' : 'text-sabres-navy'
             }`}>Game Sets</h2>
-            <button
-              onClick={() => setHideCompleted(!hideCompleted)}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                hideCompleted
-                  ? isGoatMode
-                    ? 'bg-red-600 text-white shadow-md'
-                    : 'bg-sabres-blue text-white shadow-md'
-                  : isGoatMode
-                    ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              {hideCompleted ? 'Show All Sets' : 'Hide Completed Sets'}
-            </button>
+            <div className="flex items-center gap-3">
+              {/* What If Toggle */}
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-semibold ${
+                  whatIfMode
+                    ? isGoatMode ? 'text-red-400' : 'text-sabres-blue'
+                    : isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+                }`}>
+                  What If
+                </span>
+                <button
+                  onClick={() => {
+                    setWhatIfMode(!whatIfMode);
+                    if (whatIfMode) {
+                      setHypotheticalResults(new Map());
+                    }
+                  }}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    whatIfMode
+                      ? isGoatMode
+                        ? 'bg-red-600 focus:ring-red-500'
+                        : 'bg-sabres-blue focus:ring-sabres-blue'
+                      : isGoatMode
+                        ? 'bg-zinc-700 focus:ring-zinc-500'
+                        : 'bg-gray-400 focus:ring-gray-400'
+                  }`}
+                  role="switch"
+                  aria-checked={whatIfMode}
+                  title={whatIfMode ? 'Turn off What If Mode' : 'Turn on What If Mode'}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform ${
+                      whatIfMode ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Hide Completed Button */}
+              <button
+                onClick={() => setHideCompleted(!hideCompleted)}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  hideCompleted
+                    ? isGoatMode
+                      ? 'bg-red-600 text-white shadow-md'
+                      : 'bg-sabres-blue text-white shadow-md'
+                    : isGoatMode
+                      ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {hideCompleted ? 'Show All Sets' : 'Hide Completed Sets'}
+              </button>
+            </div>
           </div>
           <div className="grid grid-cols-1 gap-4">
             {chunks
@@ -190,6 +361,9 @@ function App() {
                   ? chunkStatsCache.get(previousChunk.chunkNumber)
                   : undefined;
 
+                const whatIfSets = getWhatIfSets();
+                const isWhatIfSet = whatIfSets.some(set => set.chunkNumber === chunk.chunkNumber);
+
                 return (
                   <ChunkCard
                     key={chunk.chunkNumber}
@@ -197,6 +371,9 @@ function App() {
                     isGoatMode={isGoatMode}
                     previousChunkStats={previousChunkStats}
                     onStatsCalculated={handleStatsCalculated}
+                    whatIfMode={whatIfMode && isWhatIfSet}
+                    onGameClick={handleGameClick}
+                    hypotheticalResults={hypotheticalResults}
                   />
                 );
               })}

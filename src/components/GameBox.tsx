@@ -4,14 +4,19 @@ interface GameBoxProps {
   game: GameResult;
   gameNumber: number;
   isGoatMode: boolean;
+  whatIfMode?: boolean;
+  onGameClick?: (gameId: number, currentGame: GameResult, outcome: 'W' | 'OTL' | 'L') => void;
+  hypotheticalOutcome?: 'W' | 'OTL' | 'L' | null;
 }
 
-export default function GameBox({ game, gameNumber, isGoatMode }: GameBoxProps) {
+export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGameClick, hypotheticalOutcome }: GameBoxProps) {
   const isPending = game.outcome === 'PENDING';
+  const isClickable = whatIfMode && isPending && onGameClick;
 
   // Subtle styling variations based on outcome
   const isWin = game.outcome === 'W';
   const isLoss = game.outcome === 'L';
+  const isOTL = game.outcome === 'OTL';
 
   const borderStyle = isPending
     ? isGoatMode ? 'border-zinc-700 border-2' : 'border-gray-200 border-2'
@@ -34,8 +39,42 @@ export default function GameBox({ game, gameNumber, isGoatMode }: GameBoxProps) 
     return 'UPCOMING';
   };
 
+  const handleWinClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onGameClick && game.gameId) {
+      onGameClick(game.gameId, game, 'W');
+    }
+  };
+
+  const handleOTLClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onGameClick && game.gameId) {
+      onGameClick(game.gameId, game, 'OTL');
+    }
+  };
+
+  const handleLossClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onGameClick && game.gameId) {
+      onGameClick(game.gameId, game, 'L');
+    }
+  };
+
   return (
-    <div className={`${styles.bg} ${borderStyle} ${shadowStyle} ${opacity} rounded-xl p-2.5 md:p-3 hover:shadow-lg transition-all`}>
+    <div
+      className={`${styles.bg} ${borderStyle} ${shadowStyle} ${opacity} rounded-xl p-2.5 md:p-3 transition-all ${
+        isClickable
+          ? isGoatMode
+            ? 'hover:shadow-xl border-dashed !border-red-500/60 shadow-red-500/20'
+            : 'hover:shadow-xl border-dashed !border-blue-400/60 shadow-blue-400/20'
+          : 'hover:shadow-lg'
+      }`}
+      style={isClickable ? {
+        boxShadow: isGoatMode
+          ? '0 0 15px rgba(239, 68, 68, 0.3)'
+          : '0 0 15px rgba(96, 165, 250, 0.3)'
+      } : undefined}
+    >
       {/* Game number and location */}
       <div className="flex justify-between items-center mb-2">
         <span className={`text-xs font-bold ${
@@ -144,9 +183,56 @@ export default function GameBox({ game, gameNumber, isGoatMode }: GameBoxProps) 
                 {game.startTime}
               </div>
             )}
-            <div className={`text-xs font-medium ${
-              isGoatMode ? 'text-zinc-400' : 'text-gray-500'
-            }`}>Upcoming Game</div>
+            {isClickable ? (
+              <div className="flex gap-1.5 justify-center mt-2">
+                <button
+                  onClick={handleWinClick}
+                  className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition-all ${
+                    hypotheticalOutcome === 'W'
+                      ? isGoatMode
+                        ? 'bg-white text-zinc-900 border-2 border-white shadow-lg scale-105'
+                        : 'bg-sabres-blue text-white border-2 border-sabres-blue shadow-lg scale-105'
+                      : isGoatMode
+                        ? 'bg-zinc-700/60 hover:bg-zinc-600 text-zinc-300 border-2 border-zinc-600/60 hover:border-zinc-500'
+                        : 'bg-sabres-blue/40 hover:bg-sabres-blue/60 text-blue-900 border-2 border-sabres-blue/40 hover:border-sabres-blue/60'
+                  }`}
+                >
+                  W
+                </button>
+                <button
+                  onClick={handleOTLClick}
+                  className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition-all ${
+                    hypotheticalOutcome === 'OTL'
+                      ? 'bg-sabres-gold text-gray-900 border-2 border-sabres-gold shadow-lg scale-105'
+                      : isGoatMode
+                        ? 'bg-yellow-600/40 hover:bg-yellow-500/60 text-yellow-200 border-2 border-yellow-600/40 hover:border-yellow-500/60'
+                        : 'bg-sabres-gold/40 hover:bg-sabres-gold/60 text-yellow-900 border-2 border-sabres-gold/40 hover:border-sabres-gold/60'
+                  }`}
+                >
+                  OTL
+                </button>
+                <button
+                  onClick={handleLossClick}
+                  className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition-all ${
+                    hypotheticalOutcome === 'L'
+                      ? isGoatMode
+                        ? 'bg-zinc-600 text-white border-2 border-zinc-500 shadow-lg scale-105'
+                        : 'bg-gray-500 text-white border-2 border-gray-500 shadow-lg scale-105'
+                      : isGoatMode
+                        ? 'bg-zinc-700/60 hover:bg-zinc-600 text-zinc-300 border-2 border-zinc-600/60 hover:border-zinc-500'
+                        : 'bg-gray-400/40 hover:bg-gray-400/60 text-gray-700 border-2 border-gray-400/40 hover:border-gray-400/60'
+                  }`}
+                >
+                  L
+                </button>
+              </div>
+            ) : (
+              <div className={`text-xs font-medium ${
+                isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+              }`}>
+                Upcoming Game
+              </div>
+            )}
           </div>
         </>
       )}

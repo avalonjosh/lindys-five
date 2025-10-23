@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { GameChunk, ChunkStats } from '../types';
+import type { GameChunk, ChunkStats, GameResult } from '../types';
 import GameBox from './GameBox';
 import { calculateChunkStats } from '../utils/chunkCalculator';
 
@@ -8,13 +8,28 @@ interface ChunkCardProps {
   isGoatMode: boolean;
   previousChunkStats?: ChunkStats | null;
   onStatsCalculated?: (chunkNumber: number, stats: ChunkStats) => void;
+  whatIfMode?: boolean;
+  onGameClick?: (gameId: number, currentGame: GameResult, outcome: 'W' | 'OTL' | 'L') => void;
+  hypotheticalResults?: Map<number, GameResult>;
 }
 
-export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onStatsCalculated }: ChunkCardProps) {
+export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onStatsCalculated, whatIfMode, onGameClick, hypotheticalResults }: ChunkCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [stats, setStats] = useState<ChunkStats | null>(null);
   const [loading, setLoading] = useState(false);
-  const targetMet = chunk.points >= (chunk.totalGames * 2 * 0.6);
+
+  // Calculate display values with hypotheticals applied
+  const getDisplayGame = (game: GameResult): GameResult => {
+    const hypo = hypotheticalResults?.get(game.gameId || 0);
+    return hypo || game;
+  };
+
+  const displayWins = chunk.games.filter(g => getDisplayGame(g).outcome === 'W').length;
+  const displayOTLosses = chunk.games.filter(g => getDisplayGame(g).outcome === 'OTL').length;
+  const displayLosses = chunk.games.filter(g => getDisplayGame(g).outcome === 'L').length;
+  const displayPoints = chunk.games.reduce((sum, g) => sum + getDisplayGame(g).points, 0);
+
+  const targetMet = displayPoints >= (chunk.totalGames * 2 * 0.6);
   const hasPlayed = chunk.games.some(g => g.outcome !== 'PENDING');
 
   // Load stats when expanded
@@ -89,7 +104,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
             <div className={`text-4xl md:text-5xl font-bold ${
               isGoatMode ? 'text-red-500' : 'text-sabres-blue'
             }`}>
-              {chunk.points}
+              {displayPoints}
             </div>
             <div className={`text-xs mt-1 font-semibold ${
               isGoatMode ? 'text-zinc-400' : 'text-gray-500'
@@ -106,7 +121,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
           }`}>
             <div className={`text-2xl md:text-3xl font-bold ${
               isGoatMode ? 'text-red-500' : 'text-sabres-blue'
-            }`}>{chunk.wins}</div>
+            }`}>{displayWins}</div>
             <div className={`text-xs font-semibold mt-1 uppercase tracking-wide ${
               isGoatMode ? 'text-zinc-400' : 'text-gray-600'
             }`}>Wins</div>
@@ -118,7 +133,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
           }`}>
             <div className={`text-2xl md:text-3xl font-bold ${
               isGoatMode ? 'text-red-500' : 'text-sabres-blue'
-            }`}>{chunk.otLosses}</div>
+            }`}>{displayOTLosses}</div>
             <div className={`text-xs font-semibold mt-1 uppercase tracking-wide ${
               isGoatMode ? 'text-zinc-400' : 'text-gray-600'
             }`}>OT Losses</div>
@@ -130,7 +145,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
           }`}>
             <div className={`text-2xl md:text-3xl font-bold ${
               isGoatMode ? 'text-red-500' : 'text-sabres-blue'
-            }`}>{chunk.losses}</div>
+            }`}>{displayLosses}</div>
             <div className={`text-xs font-semibold mt-1 uppercase tracking-wide ${
               isGoatMode ? 'text-zinc-400' : 'text-gray-600'
             }`}>Losses</div>
@@ -163,14 +178,24 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
 
       {/* Individual Game Boxes */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-        {chunk.games.map((game, idx) => (
-          <GameBox
-            key={idx}
-            game={game}
-            gameNumber={(chunk.chunkNumber - 1) * 5 + idx + 1}
-            isGoatMode={isGoatMode}
-          />
-        ))}
+        {chunk.games.map((game, idx) => {
+          const hypothetical = hypotheticalResults?.get(game.gameId || 0);
+          const hypotheticalOutcome = hypothetical?.outcome === 'W' || hypothetical?.outcome === 'OTL' || hypothetical?.outcome === 'L'
+            ? hypothetical.outcome
+            : null;
+
+          return (
+            <GameBox
+              key={idx}
+              game={game}
+              gameNumber={(chunk.chunkNumber - 1) * 5 + idx + 1}
+              isGoatMode={isGoatMode}
+              whatIfMode={whatIfMode}
+              onGameClick={onGameClick}
+              hypotheticalOutcome={hypotheticalOutcome}
+            />
+          );
+        })}
 
         {/* Empty placeholders for games not yet scheduled */}
         {chunk.games.length < chunk.totalGames &&
