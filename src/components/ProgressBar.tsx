@@ -11,10 +11,6 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
   // Calculate percentages for visual display
   const currentProgress = (totalPoints / playoffTarget) * 100;
 
-  // Calculate where they SHOULD be at this point in the season (pro-rated)
-  const expectedPointsAtThisStage = (playoffTarget / stats.totalGames) * gamesPlayed;
-  const expectedProgress = (expectedPointsAtThisStage / playoffTarget) * 100;
-
   const isOnPace = projectedPoints >= playoffTarget;
   const paceColor = isGoatMode ? 'text-red-500' : 'text-sabres-blue';
   const barColor = isGoatMode ? 'bg-red-600' : 'bg-sabres-blue';
@@ -99,17 +95,14 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
 
       {/* Progress bar */}
       <div className="mb-4">
-        <div className={`flex justify-between text-sm font-semibold mb-2 ${
+        <div className={`flex justify-end text-sm font-semibold mb-2 ${
           isGoatMode ? 'text-zinc-300' : 'text-gray-700'
         }`}>
-          <span>Progress to Playoff Target ({playoffTarget} pts)</span>
           <span>{currentProgress.toFixed(1)}%</span>
         </div>
-        {/* Add top padding to make room for the Expected label */}
-        <div className="pt-10">
-          <div className={`w-full rounded-full h-8 relative shadow-inner ${
-            isGoatMode ? 'bg-zinc-800' : 'bg-gray-200'
-          }`}>
+        <div className={`w-full rounded-full h-8 relative shadow-inner ${
+          isGoatMode ? 'bg-zinc-800' : 'bg-gray-200'
+        }`}>
           {/* Current points bar */}
           <div
             className={`${barColor} h-8 rounded-full transition-all duration-500 relative shadow-md`}
@@ -123,38 +116,7 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
               </span>
             )}
           </div>
-
-          {/* Expected pace marker - where they SHOULD be */}
-          {gamesPlayed > 0 && (
-            <div
-              className="absolute top-0 h-8 flex flex-col items-center"
-              style={{ left: `${Math.min(expectedProgress, 100)}%` }}
-            >
-              <div className="w-0.5 h-8 bg-white shadow-sm"></div>
-              <div className={`absolute -top-8 text-xs font-bold px-2 py-1 rounded shadow-md whitespace-nowrap border ${
-                isGoatMode
-                  ? 'bg-zinc-900 text-white border-zinc-700'
-                  : 'bg-white text-sabres-navy border-gray-300'
-              }`}>
-                Expected: {expectedPointsAtThisStage.toFixed(1)}
-              </div>
-            </div>
-          )}
-
-          </div>
         </div>
-
-        {/* Points earned indicator */}
-        {gamesPlayed > 0 && (
-          <div className={`mt-2 text-sm ${
-            isGoatMode ? 'text-zinc-300' : 'text-gray-600'
-          }`}>
-            <span className="font-semibold">Points Earned:</span>{' '}
-            <span className={paceColor}>
-              {totalPoints}
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Additional context - hidden on mobile for cleaner experience */}
