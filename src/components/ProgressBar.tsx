@@ -104,10 +104,20 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
         }`}>
           <span>{currentProgress.toFixed(1)}%</span>
         </div>
-        <div className={`w-full rounded-full h-8 relative shadow-inner ${
+        <div className={`w-full rounded-full h-8 relative shadow-inner overflow-hidden ${
           isGoatMode ? 'bg-zinc-800' : 'bg-gray-200'
         }`}>
-          {/* Current points bar */}
+          {/* Expected progress bar (lighter color showing where they should be) */}
+          {gamesPlayed > 0 && (
+            <div
+              className={`absolute h-8 rounded-full transition-all duration-500 ${
+                isGoatMode ? 'bg-zinc-700' : 'bg-gray-300'
+              }`}
+              style={{ width: `${Math.min(expectedProgress, 100)}%` }}
+            />
+          )}
+
+          {/* Current points bar (full color showing actual progress) */}
           <div
             className={`${barColor} h-8 rounded-full transition-all duration-500 relative shadow-md`}
             style={{ width: `${Math.min(currentProgress, 100)}%` }}
@@ -120,18 +130,6 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
               </span>
             )}
           </div>
-
-          {/* Expected pace marker - subtle triangle indicator */}
-          {gamesPlayed > 0 && Math.abs(expectedProgress - currentProgress) > 2 && (
-            <div
-              className="absolute -top-2 -translate-x-1/2"
-              style={{ left: `${Math.min(expectedProgress, 100)}%` }}
-            >
-              <div className={`w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent ${
-                isGoatMode ? 'border-t-zinc-400' : 'border-t-gray-500'
-              }`}></div>
-            </div>
-          )}
         </div>
       </div>
 
