@@ -207,9 +207,6 @@ function App() {
         <footer className={`text-center text-sm mt-8 pb-8 ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}>
-          <p className="mb-2">
-            <strong className={isGoatMode ? 'text-red-500' : 'text-sabres-navy'}>Coach's Strategy:</strong> The team focuses on 5-game chunks, aiming for at least 6 out of 10 points per chunk.
-          </p>
           <p className="text-xs mb-2">
             Data provided by NHL API | Updates automatically every 5 minutes
           </p>
