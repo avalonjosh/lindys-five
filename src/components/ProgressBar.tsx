@@ -114,9 +114,8 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
           >
             {/* Show points label when there's enough room */}
             {currentProgress > 0 && (
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white text-sm font-bold">
-                <span className="hidden md:inline">{totalPoints}</span>
-                <span className="md:hidden">{currentProgress > 8 ? totalPoints : ''}</span>
+              <span className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 text-white text-xs md:text-sm font-bold">
+                {totalPoints}
               </span>
             )}
           </div>
