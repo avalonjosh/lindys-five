@@ -131,20 +131,12 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
           )}
         </div>
 
-        {/* Text indicators below bar */}
+        {/* Text indicator below bar */}
         {gamesPlayed > 0 && (
-          <div className={`mt-2 flex justify-between text-xs ${
+          <div className={`mt-2 text-xs ${
             isGoatMode ? 'text-zinc-400' : 'text-gray-600'
           }`}>
-            <span>
-              <span className="font-semibold">Expected:</span> {expectedPointsAtThisStage.toFixed(1)} pts
-            </span>
-            <span>
-              <span className="font-semibold">Earned:</span>{' '}
-              <span className={paceColor}>
-                {totalPoints} pts
-              </span>
-            </span>
+            <span className="font-semibold">Expected:</span> {expectedPointsAtThisStage.toFixed(1)} pts
           </div>
         )}
       </div>
