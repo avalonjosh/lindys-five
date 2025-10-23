@@ -292,14 +292,14 @@ function App() {
 
         {/* Set Grid */}
         <div className="mb-4">
-          <div className="flex justify-between items-center mb-3 flex-wrap gap-2">
-            <h2 className={`text-2xl font-bold ${
+          <div className="flex justify-between items-center mb-3 gap-2">
+            <h2 className={`text-lg md:text-2xl font-bold ${
               isGoatMode ? 'text-white' : 'text-sabres-navy'
             }`}>Game Sets</h2>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 md:gap-3">
               {/* What If Toggle */}
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-semibold ${
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <span className={`text-xs md:text-sm font-semibold ${
                   whatIfMode
                     ? isGoatMode ? 'text-red-400' : 'text-sabres-blue'
                     : isGoatMode ? 'text-zinc-400' : 'text-gray-500'
@@ -337,7 +337,7 @@ function App() {
               {/* Hide Completed Button */}
               <button
                 onClick={() => setHideCompleted(!hideCompleted)}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                className={`px-2 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold transition-all whitespace-nowrap ${
                   hideCompleted
                     ? isGoatMode
                       ? 'bg-red-600 text-white shadow-md'
@@ -347,7 +347,8 @@ function App() {
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
-                {hideCompleted ? 'Show All Sets' : 'Hide Completed Sets'}
+                <span className="hidden sm:inline">{hideCompleted ? 'Show All Sets' : 'Hide Completed Sets'}</span>
+                <span className="sm:hidden">{hideCompleted ? 'Show All' : 'Hide Done'}</span>
               </button>
             </div>
           </div>
