@@ -51,7 +51,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
         isGoatMode ? 'bg-zinc-800' : 'bg-white'
       }`}
     >
-      {/* Chunk Header */}
+      {/* Set Header */}
       <div className={`mb-3 md:mb-4 pb-3 md:pb-4 border-b-2 ${
         isGoatMode ? 'border-zinc-800' : 'border-gray-100'
       }`}>
@@ -59,11 +59,30 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
           <div>
             <h3 className={`font-bold text-xl md:text-2xl ${
               isGoatMode ? 'text-white' : 'text-sabres-navy'
-            }`}>Chunk {chunk.chunkNumber}</h3>
+            }`}>Set {chunk.chunkNumber}</h3>
             <p className={`text-xs md:text-sm mt-1 ${
               isGoatMode ? 'text-zinc-400' : 'text-gray-500'
             }`}>
-              {chunk.totalGames} game{chunk.totalGames !== 1 ? 's' : ''}
+              {chunk.games.length > 0 ? (() => {
+                const firstDate = new Date(chunk.games[0].date);
+                const lastDate = new Date(chunk.games[chunk.games.length - 1].date);
+                const firstMonth = firstDate.toLocaleDateString('en-US', { month: 'short' });
+                const lastMonth = lastDate.toLocaleDateString('en-US', { month: 'short' });
+                const firstDay = firstDate.getDate();
+                const lastDay = lastDate.getDate();
+
+                if (chunk.games.length === 1) {
+                  return `${firstMonth} ${firstDay}`;
+                } else if (firstMonth === lastMonth) {
+                  // Same month: "Oct 9-15"
+                  return `${firstMonth} ${firstDay}-${lastDay}`;
+                } else {
+                  // Different months: "Oct 28 - Nov 5"
+                  return `${firstMonth} ${firstDay} - ${lastMonth} ${lastDay}`;
+                }
+              })() : (
+                `${chunk.totalGames} game${chunk.totalGames !== 1 ? 's' : ''}`
+              )}
             </p>
           </div>
           <div className="text-right">
@@ -172,7 +191,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
           ))}
       </div>
 
-      {/* Show Stats Button - Only show if chunk has completed games */}
+      {/* Show Stats Button - Only show if set has completed games */}
       {hasPlayed && (
         <>
           <button
@@ -183,7 +202,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
                 : 'bg-blue-50 hover:bg-blue-100 text-sabres-blue border border-blue-200'
             }`}
           >
-            {isExpanded ? '▲ Hide Chunk Stats' : '▼ Show Chunk Stats'}
+            {isExpanded ? '▲ Hide Set Stats' : '▼ Show Set Stats'}
           </button>
 
           {/* Stats Section */}

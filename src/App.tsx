@@ -149,7 +149,7 @@ function App() {
               Buffalo Sabres Road to the Playoffs 2025-2026
             </h2>
             <p className="text-white text-xs md:text-base opacity-90 px-2 leading-tight">
-              5-Game Chunk Analysis<br className="md:hidden" /> Target: 6+ points per chunk
+              5-Game Set Analysis<br className="md:hidden" /> Target: 6+ points per set
             </p>
           </div>
         </div>
@@ -159,12 +159,12 @@ function App() {
         {/* Progress Bar */}
         {stats && <ProgressBar stats={stats} isGoatMode={isGoatMode} />}
 
-        {/* Chunk Grid */}
+        {/* Set Grid */}
         <div className="mb-4">
           <div className="flex justify-between items-center mb-3">
             <h2 className={`text-2xl font-bold ${
               isGoatMode ? 'text-white' : 'text-sabres-navy'
-            }`}>Game Chunks</h2>
+            }`}>Game Sets</h2>
             <button
               onClick={() => setHideCompleted(!hideCompleted)}
               className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
@@ -177,7 +177,7 @@ function App() {
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
-              {hideCompleted ? 'Show All Chunks' : 'Hide Completed Chunks'}
+              {hideCompleted ? 'Show All Sets' : 'Hide Completed Sets'}
             </button>
           </div>
           <div className="grid grid-cols-1 gap-4">
