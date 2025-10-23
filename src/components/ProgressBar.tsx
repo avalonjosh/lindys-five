@@ -19,6 +19,20 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
   const paceColor = isGoatMode ? 'text-red-500' : 'text-sabres-blue';
   const barColor = isGoatMode ? 'bg-red-600' : 'bg-sabres-blue';
 
+  // Determine Expected indicator color based on performance
+  const pointsDifference = totalPoints - expectedPointsAtThisStage;
+  let indicatorColor = '';
+  if (Math.abs(pointsDifference) < 1) {
+    // Close to pace - neutral gray
+    indicatorColor = isGoatMode ? 'border-t-zinc-400' : 'border-t-gray-600';
+  } else if (pointsDifference > 0) {
+    // Ahead of pace - green
+    indicatorColor = 'border-t-green-500';
+  } else {
+    // Behind pace - red
+    indicatorColor = 'border-t-red-500';
+  }
+
   return (
     <div className={`rounded-2xl p-3 md:p-4 shadow-xl mb-4 border ${
       isGoatMode
@@ -126,10 +140,8 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
               className="absolute top-0 h-8 flex flex-col items-center"
               style={{ left: `${Math.min(expectedProgress, 100)}%` }}
             >
-              {/* Triangle pointing down at top of line */}
-              <div className={`w-0 h-0 border-l-[4px] border-r-[4px] border-t-[5px] border-l-transparent border-r-transparent -mb-px ${
-                isGoatMode ? 'border-t-zinc-400' : 'border-t-gray-600'
-              }`}></div>
+              {/* Triangle pointing down at top of line - color coded by performance */}
+              <div className={`w-0 h-0 border-l-[4px] border-r-[4px] border-t-[5px] border-l-transparent border-r-transparent -mb-px ${indicatorColor}`}></div>
               <div className="w-0.5 h-8 bg-white shadow-sm"></div>
             </div>
           )}
@@ -140,10 +152,8 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
           <div className={`mt-2 text-xs flex items-center gap-1 ${
             isGoatMode ? 'text-zinc-400' : 'text-gray-600'
           }`}>
-            {/* Triangle icon matching the one on the bar */}
-            <div className={`w-0 h-0 border-l-[4px] border-r-[4px] border-t-[5px] border-l-transparent border-r-transparent ${
-              isGoatMode ? 'border-t-zinc-400' : 'border-t-gray-600'
-            }`}></div>
+            {/* Triangle icon matching the one on the bar - color coded by performance */}
+            <div className={`w-0 h-0 border-l-[4px] border-r-[4px] border-t-[5px] border-l-transparent border-r-transparent ${indicatorColor}`}></div>
             <span>
               <span className="font-semibold">Expected:</span> {expectedPointsAtThisStage.toFixed(1)} pts
             </span>
