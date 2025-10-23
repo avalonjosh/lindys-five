@@ -210,8 +210,11 @@ function App() {
           <p className="mb-2">
             <strong className={isGoatMode ? 'text-red-500' : 'text-sabres-navy'}>Coach's Strategy:</strong> The team focuses on 5-game chunks, aiming for at least 6 out of 10 points per chunk.
           </p>
-          <p className="text-xs">
+          <p className="text-xs mb-2">
             Data provided by NHL API | Updates automatically every 5 minutes
+          </p>
+          <p className="text-xs">
+            © {new Date().getFullYear()} JRR Apps. All rights reserved.
           </p>
         </footer>
       </main>
