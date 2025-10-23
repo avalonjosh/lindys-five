@@ -104,11 +104,9 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
         }`}>
           <span>{currentProgress.toFixed(1)}%</span>
         </div>
-        {/* Add top padding to make room for the Expected label */}
-        <div className="pt-10">
-          <div className={`w-full rounded-full h-8 relative shadow-inner ${
-            isGoatMode ? 'bg-zinc-800' : 'bg-gray-200'
-          }`}>
+        <div className={`w-full rounded-full h-8 relative shadow-inner ${
+          isGoatMode ? 'bg-zinc-800' : 'bg-gray-200'
+        }`}>
           {/* Current points bar */}
           <div
             className={`${barColor} h-8 rounded-full transition-all duration-500 relative shadow-md`}
@@ -123,34 +121,30 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
             )}
           </div>
 
-          {/* Expected pace marker - where they SHOULD be */}
+          {/* Expected pace marker - white line indicator */}
           {gamesPlayed > 0 && (
             <div
-              className="absolute top-0 h-8 flex flex-col items-center"
+              className="absolute top-0 h-8"
               style={{ left: `${Math.min(expectedProgress, 100)}%` }}
             >
               <div className="w-0.5 h-8 bg-white shadow-sm"></div>
-              <div className={`absolute -top-8 text-xs font-bold px-2 py-1 rounded shadow-md whitespace-nowrap border ${
-                isGoatMode
-                  ? 'bg-zinc-900 text-white border-zinc-700'
-                  : 'bg-white text-sabres-navy border-gray-300'
-              }`}>
-                Expected: {expectedPointsAtThisStage.toFixed(1)}
-              </div>
             </div>
           )}
-
-          </div>
         </div>
 
-        {/* Points earned indicator */}
+        {/* Text indicators below bar */}
         {gamesPlayed > 0 && (
-          <div className={`mt-2 text-sm ${
-            isGoatMode ? 'text-zinc-300' : 'text-gray-600'
+          <div className={`mt-2 flex justify-between text-xs ${
+            isGoatMode ? 'text-zinc-400' : 'text-gray-600'
           }`}>
-            <span className="font-semibold">Points Earned:</span>{' '}
-            <span className={paceColor}>
-              {totalPoints}
+            <span>
+              <span className="font-semibold">Expected:</span> {expectedPointsAtThisStage.toFixed(1)} pts
+            </span>
+            <span>
+              <span className="font-semibold">Earned:</span>{' '}
+              <span className={paceColor}>
+                {totalPoints} pts
+              </span>
             </span>
           </div>
         )}
