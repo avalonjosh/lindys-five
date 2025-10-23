@@ -120,23 +120,33 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
             )}
           </div>
 
-          {/* Expected pace marker - white line indicator */}
+          {/* Expected pace marker - white line indicator with triangle */}
           {gamesPlayed > 0 && (
             <div
-              className="absolute top-0 h-8"
+              className="absolute top-0 h-8 flex flex-col items-center"
               style={{ left: `${Math.min(expectedProgress, 100)}%` }}
             >
+              {/* Triangle pointing down at top of line */}
+              <div className={`w-0 h-0 border-l-[4px] border-r-[4px] border-t-[5px] border-l-transparent border-r-transparent -mb-px ${
+                isGoatMode ? 'border-t-zinc-400' : 'border-t-gray-600'
+              }`}></div>
               <div className="w-0.5 h-8 bg-white shadow-sm"></div>
             </div>
           )}
         </div>
 
-        {/* Text indicator below bar */}
+        {/* Text indicator below bar with matching triangle */}
         {gamesPlayed > 0 && (
-          <div className={`mt-2 text-xs ${
+          <div className={`mt-2 text-xs flex items-center gap-1 ${
             isGoatMode ? 'text-zinc-400' : 'text-gray-600'
           }`}>
-            <span className="font-semibold">Expected:</span> {expectedPointsAtThisStage.toFixed(1)} pts
+            {/* Triangle icon matching the one on the bar */}
+            <div className={`w-0 h-0 border-l-[4px] border-r-[4px] border-t-[5px] border-l-transparent border-r-transparent ${
+              isGoatMode ? 'border-t-zinc-400' : 'border-t-gray-600'
+            }`}></div>
+            <span>
+              <span className="font-semibold">Expected:</span> {expectedPointsAtThisStage.toFixed(1)} pts
+            </span>
           </div>
         )}
       </div>
