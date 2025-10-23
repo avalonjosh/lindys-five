@@ -1,6 +1,7 @@
 export interface NHLGame {
   id: number;
   gameDate: string;
+  startTimeUTC?: string;
   gameState: string; // "FINAL", "LIVE", "FUT", "OFF"
   gameType: number; // 1 = preseason, 2 = regular, 3 = playoffs
   awayTeam: {
@@ -22,6 +23,7 @@ export interface NHLGame {
 
 export interface GameResult {
   date: string;
+  startTime?: string;
   opponent: string;
   opponentLogo: string;
   isHome: boolean;

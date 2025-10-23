@@ -137,6 +137,13 @@ export default function GameBox({ game, gameNumber, isGoatMode }: GameBoxProps) 
                 year: 'numeric'
               })}
             </div>
+            {game.startTime && (
+              <div className={`text-xs font-semibold mb-2 ${
+                isGoatMode ? 'text-red-400' : 'text-sabres-blue'
+              }`}>
+                {game.startTime}
+              </div>
+            )}
             <div className={`text-xs font-medium ${
               isGoatMode ? 'text-zinc-400' : 'text-gray-500'
             }`}>Upcoming Game</div>

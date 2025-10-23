@@ -55,8 +55,21 @@ export async function fetchSabresSchedule(season: string = '20252026'): Promise<
         day: '2-digit'
       });
 
+      // Extract and format start time in Eastern Time
+      let startTime: string | undefined;
+      if (game.startTimeUTC) {
+        const startDate = new Date(game.startTimeUTC);
+        startTime = startDate.toLocaleTimeString('en-US', {
+          timeZone: 'America/New_York',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+      }
+
       return {
         date: gameDateEST,
+        startTime,
         opponent: opponentTeam.abbrev,
         opponentLogo: opponentTeam.logo,
         isHome,
