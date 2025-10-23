@@ -16,7 +16,6 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
   // Subtle styling variations based on outcome
   const isWin = game.outcome === 'W';
   const isLoss = game.outcome === 'L';
-  const isOTL = game.outcome === 'OTL';
 
   const borderStyle = isPending
     ? isGoatMode ? 'border-zinc-700 border-2' : 'border-gray-200 border-2'
