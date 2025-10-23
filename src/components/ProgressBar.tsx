@@ -99,10 +99,9 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
 
       {/* Progress bar */}
       <div className="mb-4">
-        <div className={`flex justify-between text-sm font-semibold mb-2 ${
+        <div className={`flex justify-end text-sm font-semibold mb-2 ${
           isGoatMode ? 'text-zinc-300' : 'text-gray-700'
         }`}>
-          <span>Progress to Playoff Target ({playoffTarget} pts)</span>
           <span>{currentProgress.toFixed(1)}%</span>
         </div>
         {/* Add top padding to make room for the Expected label */}
