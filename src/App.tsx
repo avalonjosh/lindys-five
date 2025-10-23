@@ -140,7 +140,7 @@ function App() {
               alt="Buffalo Sabres Logo"
               className="w-16 h-16 md:w-24 md:h-24 mb-2 md:mb-3"
             />
-            <h1 className="text-3xl md:text-5xl font-bold text-white mb-2">
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-2 tracking-wider" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
               Lindy's Five
             </h1>
             <h2 className={`text-sm md:text-2xl font-semibold mb-1 px-2 leading-tight ${

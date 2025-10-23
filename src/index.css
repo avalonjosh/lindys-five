@@ -12,6 +12,8 @@
   --radius-2xl: 0.5rem;
   --radius-lg: 0.375rem;
   --radius-md: 0.25rem;
+
+  --font-display: 'Bebas Neue', sans-serif;
 }
 
 :root {
