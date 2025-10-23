@@ -11,10 +11,6 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
   // Calculate percentages for visual display
   const currentProgress = (totalPoints / playoffTarget) * 100;
 
-  // Calculate where they SHOULD be at this point in the season (pro-rated)
-  const expectedPointsAtThisStage = (playoffTarget / stats.totalGames) * gamesPlayed;
-  const expectedProgress = (expectedPointsAtThisStage / playoffTarget) * 100;
-
   const isOnPace = projectedPoints >= playoffTarget;
   const paceColor = isGoatMode ? 'text-red-500' : 'text-sabres-blue';
   const barColor = isGoatMode ? 'bg-red-600' : 'bg-sabres-blue';
@@ -104,20 +100,10 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
         }`}>
           <span>{currentProgress.toFixed(1)}%</span>
         </div>
-        <div className={`w-full rounded-full h-8 relative shadow-inner overflow-hidden ${
+        <div className={`w-full rounded-full h-8 relative shadow-inner ${
           isGoatMode ? 'bg-zinc-800' : 'bg-gray-200'
         }`}>
-          {/* Expected progress bar (lighter color showing where they should be) */}
-          {gamesPlayed > 0 && (
-            <div
-              className={`absolute h-8 rounded-full transition-all duration-500 ${
-                isGoatMode ? 'bg-zinc-700' : 'bg-gray-300'
-              }`}
-              style={{ width: `${Math.min(expectedProgress, 100)}%` }}
-            />
-          )}
-
-          {/* Current points bar (full color showing actual progress) */}
+          {/* Current points bar */}
           <div
             className={`${barColor} h-8 rounded-full transition-all duration-500 relative shadow-md`}
             style={{ width: `${Math.min(currentProgress, 100)}%` }}
