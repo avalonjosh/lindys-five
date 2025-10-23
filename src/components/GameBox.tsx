@@ -106,12 +106,28 @@ export default function GameBox({ game, gameNumber, isGoatMode }: GameBoxProps) 
             }`}>
               {game.points} {game.points === 1 ? 'PT' : 'PTS'}
             </div>
+            <div className={`text-xs mt-1 ${
+              isGoatMode ? 'text-zinc-500' : 'text-gray-500'
+            }`}>
+              {new Date(game.date).toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric'
+              })}
+            </div>
           </div>
         </>
       ) : (
         <>
           {/* Upcoming game - show date */}
           <div className="text-center py-3">
+            <div className={`text-xs font-semibold mb-1 ${
+              isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+            }`}>
+              {new Date(game.date).toLocaleDateString('en-US', {
+                weekday: 'short'
+              })}
+            </div>
             <div className={`text-sm font-semibold mb-2 ${
               isGoatMode ? 'text-zinc-300' : 'text-gray-600'
             }`}>
