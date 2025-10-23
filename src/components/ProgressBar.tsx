@@ -11,6 +11,10 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
   // Calculate percentages for visual display
   const currentProgress = (totalPoints / playoffTarget) * 100;
 
+  // Calculate where they SHOULD be at this point in the season (pro-rated)
+  const expectedPointsAtThisStage = (playoffTarget / stats.totalGames) * gamesPlayed;
+  const expectedProgress = (expectedPointsAtThisStage / playoffTarget) * 100;
+
   const isOnPace = projectedPoints >= playoffTarget;
   const paceColor = isGoatMode ? 'text-red-500' : 'text-sabres-blue';
   const barColor = isGoatMode ? 'bg-red-600' : 'bg-sabres-blue';
@@ -116,6 +120,18 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
               </span>
             )}
           </div>
+
+          {/* Expected pace marker - subtle triangle indicator */}
+          {gamesPlayed > 0 && Math.abs(expectedProgress - currentProgress) > 2 && (
+            <div
+              className="absolute -top-2 -translate-x-1/2"
+              style={{ left: `${Math.min(expectedProgress, 100)}%` }}
+            >
+              <div className={`w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent ${
+                isGoatMode ? 'border-t-zinc-400' : 'border-t-gray-500'
+              }`}></div>
+            </div>
+          )}
         </div>
       </div>
 
