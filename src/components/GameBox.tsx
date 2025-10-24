@@ -183,47 +183,57 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
               </div>
             )}
             {isClickable ? (
-              <div className="flex gap-1.5 justify-center mt-2">
-                <button
-                  onClick={handleWinClick}
-                  className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition-all ${
-                    hypotheticalOutcome === 'W'
-                      ? isGoatMode
-                        ? 'bg-white text-zinc-900 border-2 border-white shadow-lg scale-105'
-                        : 'bg-sabres-blue text-white border-2 border-sabres-blue shadow-lg scale-105'
-                      : isGoatMode
-                        ? 'bg-zinc-700/60 hover:bg-zinc-600 text-zinc-300 border-2 border-zinc-600/60 hover:border-zinc-500'
-                        : 'bg-sabres-blue/40 hover:bg-sabres-blue/60 text-blue-900 border-2 border-sabres-blue/40 hover:border-sabres-blue/60'
-                  }`}
-                >
-                  W
-                </button>
-                <button
-                  onClick={handleOTLClick}
-                  className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition-all ${
-                    hypotheticalOutcome === 'OTL'
-                      ? 'bg-sabres-gold text-gray-900 border-2 border-sabres-gold shadow-lg scale-105'
-                      : isGoatMode
-                        ? 'bg-yellow-600/40 hover:bg-yellow-500/60 text-yellow-200 border-2 border-yellow-600/40 hover:border-yellow-500/60'
-                        : 'bg-sabres-gold/40 hover:bg-sabres-gold/60 text-yellow-900 border-2 border-sabres-gold/40 hover:border-sabres-gold/60'
-                  }`}
-                >
-                  OTL
-                </button>
-                <button
-                  onClick={handleLossClick}
-                  className={`px-2.5 py-1.5 rounded-md text-xs font-bold transition-all ${
-                    hypotheticalOutcome === 'L'
-                      ? isGoatMode
-                        ? 'bg-zinc-600 text-white border-2 border-zinc-500 shadow-lg scale-105'
-                        : 'bg-gray-500 text-white border-2 border-gray-500 shadow-lg scale-105'
-                      : isGoatMode
-                        ? 'bg-zinc-700/60 hover:bg-zinc-600 text-zinc-300 border-2 border-zinc-600/60 hover:border-zinc-500'
-                        : 'bg-gray-400/40 hover:bg-gray-400/60 text-gray-700 border-2 border-gray-400/40 hover:border-gray-400/60'
-                  }`}
-                >
-                  L
-                </button>
+              <div className="flex justify-center mt-2">
+                <div className={`inline-flex rounded-lg overflow-hidden border-2 shadow-md ${
+                  isGoatMode
+                    ? 'border-zinc-600'
+                    : 'border-blue-300'
+                }`}>
+                  <button
+                    onClick={handleWinClick}
+                    className={`px-3 py-1.5 text-xs font-bold transition-all ${
+                      isGoatMode
+                        ? 'border-r border-zinc-600'
+                        : 'border-r border-blue-300'
+                    } ${
+                      hypotheticalOutcome === 'W'
+                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
+                        : isGoatMode
+                          ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                          : 'bg-blue-50 text-gray-600 hover:bg-blue-100'
+                    }`}
+                  >
+                    W
+                  </button>
+                  <button
+                    onClick={handleOTLClick}
+                    className={`px-3 py-1.5 text-xs font-bold transition-all ${
+                      isGoatMode
+                        ? 'border-r border-zinc-600'
+                        : 'border-r border-blue-300'
+                    } ${
+                      hypotheticalOutcome === 'OTL'
+                        ? 'bg-gradient-to-r from-amber-400 to-amber-600 text-white'
+                        : isGoatMode
+                          ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                          : 'bg-blue-50 text-gray-600 hover:bg-blue-100'
+                    }`}
+                  >
+                    OTL
+                  </button>
+                  <button
+                    onClick={handleLossClick}
+                    className={`px-3 py-1.5 text-xs font-bold transition-all ${
+                      hypotheticalOutcome === 'L'
+                        ? 'bg-gradient-to-r from-red-500 to-red-700 text-white'
+                        : isGoatMode
+                          ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                          : 'bg-blue-50 text-gray-600 hover:bg-blue-100'
+                    }`}
+                  >
+                    L
+                  </button>
+                </div>
               </div>
             ) : (
               <div className={`text-xs font-medium ${

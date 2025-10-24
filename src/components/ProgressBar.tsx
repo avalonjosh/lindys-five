@@ -22,11 +22,8 @@ export default function ProgressBar({ stats, isGoatMode }: ProgressBarProps) {
   // Determine Expected indicator color based on performance
   const pointsDifference = totalPoints - expectedPointsAtThisStage;
   let indicatorColor = '';
-  if (Math.abs(pointsDifference) < 1) {
-    // Close to pace - neutral gray
-    indicatorColor = isGoatMode ? 'border-t-zinc-400' : 'border-t-gray-600';
-  } else if (pointsDifference > 0) {
-    // Ahead of pace - green
+  if (pointsDifference >= 0) {
+    // At or ahead of pace - green
     indicatorColor = 'border-t-green-500';
   } else {
     // Behind pace - red

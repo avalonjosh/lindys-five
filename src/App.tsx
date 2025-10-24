@@ -216,7 +216,7 @@ function App() {
                 <span className={`text-xs font-semibold ${
                   isGoatMode ? 'text-zinc-400' : 'text-sabres-gold'
                 }`}>
-                  {isGoatMode ? 'GOAT' : 'Classic'}
+                  {isGoatMode ? 'Goat' : 'Classic'}
                 </span>
                 <button
                   onClick={toggleTheme}
@@ -252,7 +252,7 @@ function App() {
               Buffalo Sabres Road to the Playoffs 2025-2026
             </h2>
             <p className="text-white text-xs md:text-base opacity-90 px-2 leading-tight">
-              5-Game Set Analysis<br className="md:hidden" /> Target: 6+ points per set
+              5-Game Set Analysis • Target: 6+ points per set
             </p>
           </div>
         </div>
@@ -269,16 +269,16 @@ function App() {
               ? 'bg-red-900/30 border-red-500 text-red-300'
               : 'bg-blue-100 border-blue-400 text-blue-800'
           }`}>
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2">
-                <span className="font-semibold">What If Mode Active</span>
-                <span className="text-sm opacity-80"><span className="hidden md:inline">- </span>Simulate pending games in the next 3 sets</span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 flex-1 min-w-0">
+                <span className="font-semibold text-sm md:text-base">What If Mode Active</span>
+                <span className="text-xs md:text-sm opacity-80"><span className="hidden md:inline">- </span>Simulate pending games in the next 3 sets</span>
               </div>
               <button
                 onClick={() => {
                   setHypotheticalResults(new Map());
                 }}
-                className={`px-3 py-1 rounded text-sm font-semibold transition-all ${
+                className={`px-3 py-1 rounded text-sm font-semibold transition-all whitespace-nowrap ${
                   isGoatMode
                     ? 'bg-red-600 hover:bg-red-700 text-white'
                     : 'bg-blue-500 hover:bg-blue-600 text-white'
