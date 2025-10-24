@@ -245,6 +245,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
                   <StatItem
                     label="Goals Per Game"
+                    mobileLabel="GPG"
                     value={stats.goalsPerGame.toFixed(2)}
                     previousValue={previousChunkStats?.goalsPerGame}
                     higherIsBetter={true}
@@ -252,6 +253,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
                   />
                   <StatItem
                     label="Goals Against Per Game"
+                    mobileLabel="GAA"
                     value={stats.goalsAgainstPerGame.toFixed(2)}
                     previousValue={previousChunkStats?.goalsAgainstPerGame}
                     higherIsBetter={false}
@@ -259,6 +261,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
                   />
                   <StatItem
                     label="Shots Per Game"
+                    mobileLabel="SPG"
                     value={stats.shotsPerGame.toFixed(1)}
                     previousValue={previousChunkStats?.shotsPerGame}
                     higherIsBetter={true}
@@ -266,6 +269,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
                   />
                   <StatItem
                     label="Shots Against Per Game"
+                    mobileLabel="SAPG"
                     value={stats.shotsAgainstPerGame.toFixed(1)}
                     previousValue={previousChunkStats?.shotsAgainstPerGame}
                     higherIsBetter={false}
@@ -273,6 +277,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
                   />
                   <StatItem
                     label="Power Play %"
+                    mobileLabel="PP%"
                     value={stats.powerPlayPct.toFixed(1) + '%'}
                     previousValue={previousChunkStats?.powerPlayPct}
                     higherIsBetter={true}
@@ -280,6 +285,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
                   />
                   <StatItem
                     label="Penalty Kill %"
+                    mobileLabel="PK%"
                     value={stats.penaltyKillPct.toFixed(1) + '%'}
                     previousValue={previousChunkStats?.penaltyKillPct}
                     higherIsBetter={true}
@@ -287,6 +293,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
                   />
                   <StatItem
                     label="Save %"
+                    mobileLabel="SV%"
                     value={stats.savePct.toFixed(1) + '%'}
                     previousValue={previousChunkStats?.savePct}
                     higherIsBetter={true}
@@ -326,13 +333,14 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
 
 interface StatItemProps {
   label: string;
+  mobileLabel?: string;
   value: string;
   previousValue?: number;
   higherIsBetter: boolean;
   isGoatMode: boolean;
 }
 
-function StatItem({ label, value, previousValue, higherIsBetter, isGoatMode }: StatItemProps) {
+function StatItem({ label, mobileLabel, value, previousValue, higherIsBetter, isGoatMode }: StatItemProps) {
   let indicator: 'up' | 'down' | 'none' = 'none';
   let indicatorColor = '';
   let percentChange = '';
@@ -348,10 +356,10 @@ function StatItem({ label, value, previousValue, higherIsBetter, isGoatMode }: S
 
       if (diff > 0) {
         indicator = 'up';
-        indicatorColor = higherIsBetter ? 'text-green-500' : 'text-red-500';
+        indicatorColor = higherIsBetter ? 'text-emerald-600' : 'text-red-600';
       } else {
         indicator = 'down';
-        indicatorColor = higherIsBetter ? 'text-red-500' : 'text-green-500';
+        indicatorColor = higherIsBetter ? 'text-red-600' : 'text-emerald-600';
       }
     }
   }
@@ -365,7 +373,14 @@ function StatItem({ label, value, previousValue, higherIsBetter, isGoatMode }: S
       <div className={`text-xs font-semibold mb-2 uppercase tracking-wide ${
         isGoatMode ? 'text-zinc-400' : 'text-gray-500'
       }`}>
-        {label}
+        {mobileLabel ? (
+          <>
+            <span className="md:hidden">{mobileLabel}</span>
+            <span className="hidden md:inline">{label}</span>
+          </>
+        ) : (
+          label
+        )}
       </div>
       <div className="flex items-center justify-center gap-2">
         <div className={`text-2xl md:text-3xl font-bold ${
@@ -374,11 +389,11 @@ function StatItem({ label, value, previousValue, higherIsBetter, isGoatMode }: S
           {value}
         </div>
         {indicator !== 'none' && (
-          <div className={`flex flex-col items-center ${indicatorColor}`}>
-            <span className="text-xl leading-none">
+          <div className={`flex flex-col items-center justify-center ${indicatorColor}`}>
+            <span className="text-sm md:text-base leading-none">
               {indicator === 'up' ? '↑' : '↓'}
             </span>
-            <span className="text-xs font-semibold leading-none">
+            <span className="text-[10px] md:text-xs font-semibold leading-none">
               {percentChange}
             </span>
           </div>
