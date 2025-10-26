@@ -90,6 +90,30 @@ export async function fetchSabresSchedule(season: string = '20252026'): Promise<
   }
 }
 
+export async function fetchLastSeasonComparison(currentGamesPlayed: number): Promise<{ pointsLastYear: number; recordLastYear: string } | null> {
+  try {
+    // Fetch 2024-2025 season data
+    const lastSeasonGames = await fetchSabresSchedule('20242025');
+
+    // Get the first N games from last season (matching current games played)
+    const gamesAtSamePoint = lastSeasonGames.slice(0, currentGamesPlayed);
+
+    // Calculate total points at that point last season
+    const pointsLastYear = gamesAtSamePoint.reduce((sum, game) => sum + game.points, 0);
+
+    // Calculate record (W-OTL-L)
+    const wins = gamesAtSamePoint.filter(g => g.outcome === 'W').length;
+    const otLosses = gamesAtSamePoint.filter(g => g.outcome === 'OTL').length;
+    const losses = gamesAtSamePoint.filter(g => g.outcome === 'L').length;
+    const recordLastYear = `${wins}-${otLosses}-${losses}`;
+
+    return { pointsLastYear, recordLastYear };
+  } catch (error) {
+    console.error('Error fetching last season comparison:', error);
+    return null;
+  }
+}
+
 export async function fetchDetailedGameStats(gameId: number, isHome: boolean): Promise<DetailedGameStats | null> {
   try {
     const url = `${API_BASE}/gamecenter/${gameId}/boxscore`;

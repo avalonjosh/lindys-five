@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { GameChunk, SeasonStats, ChunkStats, GameResult } from './types';
-import { fetchSabresSchedule } from './services/nhlApi';
+import { fetchSabresSchedule, fetchLastSeasonComparison } from './services/nhlApi';
 import { calculateChunks, calculateSeasonStats, calculateChunkStats } from './utils/chunkCalculator';
 import ChunkCard from './components/ChunkCard';
 import ProgressBar from './components/ProgressBar';
@@ -18,6 +18,8 @@ function App() {
   });
   const [whatIfMode, setWhatIfMode] = useState(false);
   const [hypotheticalResults, setHypotheticalResults] = useState<Map<number, GameResult>>(new Map());
+  const [yearOverYearMode, setYearOverYearMode] = useState(false);
+  const [lastSeasonData, setLastSeasonData] = useState<{ pointsLastYear: number; recordLastYear: string } | null>(null);
 
   const toggleTheme = () => {
     setIsGoatMode(prev => {
@@ -55,6 +57,27 @@ function App() {
 
     // Return current set + next 2 sets (up to 3 total)
     return chunks.slice(currentIndex, currentIndex + 3);
+  };
+
+  // Check if a completed set should be hidden
+  // A set should only be hidden if it's complete AND the next set has started
+  const shouldHideCompletedSet = (chunk: GameChunk): boolean => {
+    if (!chunk.isComplete) return false;
+
+    // Find the next chunk
+    const nextChunk = chunks.find(c => c.chunkNumber === chunk.chunkNumber + 1);
+    if (!nextChunk) return true; // If no next chunk, hide completed ones
+
+    // Check if the next chunk has started (has at least one game that's not pending or has a past date)
+    const now = new Date();
+    const nextChunkFirstGame = nextChunk.games[0];
+
+    if (!nextChunkFirstGame?.date) return true; // If no date info, use old behavior
+
+    const firstGameDate = new Date(nextChunkFirstGame.date);
+
+    // Only hide if the next set's first game date has passed (or is today)
+    return now >= firstGameDate;
   };
 
   // Apply hypothetical results to chunks
@@ -155,6 +178,17 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Fetch last season comparison data when Year-over-Year mode is enabled
+  useEffect(() => {
+    const fetchLastSeasonData = async () => {
+      if (yearOverYearMode && stats && stats.gamesPlayed > 0) {
+        const comparison = await fetchLastSeasonComparison(stats.gamesPlayed);
+        setLastSeasonData(comparison);
+      }
+    };
+    fetchLastSeasonData();
+  }, [yearOverYearMode, stats?.gamesPlayed]);
+
   // Pre-calculate stats for all completed chunks so comparisons work even when chunks are hidden
   useEffect(() => {
     const calculateAllCompletedStats = async () => {
@@ -212,30 +246,23 @@ function App() {
           <div className="flex flex-col items-center text-center relative">
             {/* Theme Toggle Switch */}
             <div className="absolute right-0 top-0">
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-semibold ${
-                  isGoatMode ? 'text-zinc-400' : 'text-sabres-gold'
-                }`}>
-                  {isGoatMode ? 'Goat' : 'Classic'}
-                </span>
-                <button
-                  onClick={toggleTheme}
-                  className={`relative inline-flex h-6 w-11 md:h-7 md:w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                    isGoatMode
-                      ? 'bg-red-600 focus:ring-red-500'
-                      : 'bg-sabres-gold focus:ring-sabres-gold'
+              <button
+                onClick={toggleTheme}
+                className={`relative inline-flex h-6 w-11 md:h-7 md:w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  isGoatMode
+                    ? 'bg-red-600 focus:ring-red-500'
+                    : 'bg-sabres-gold focus:ring-sabres-gold'
+                }`}
+                role="switch"
+                aria-checked={isGoatMode}
+                title={isGoatMode ? 'Switch to Classic Mode (Blue & Gold)' : 'Switch to GOAT Mode (Black & Red)'}
+              >
+                <span
+                  className={`inline-block h-4 w-4 md:h-5 md:w-5 transform rounded-full bg-white shadow-lg transition-transform ${
+                    isGoatMode ? 'translate-x-6 md:translate-x-8' : 'translate-x-1'
                   }`}
-                  role="switch"
-                  aria-checked={isGoatMode}
-                  title={isGoatMode ? 'Switch to Classic Mode (Blue & Gold)' : 'Switch to GOAT Mode (Black & Red)'}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 md:h-5 md:w-5 transform rounded-full bg-white shadow-lg transition-transform ${
-                      isGoatMode ? 'translate-x-6 md:translate-x-8' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
+                />
+              </button>
             </div>
 
             <img
@@ -260,11 +287,28 @@ function App() {
 
       <main className="max-w-7xl mx-auto px-4 py-6">
         {/* Progress Bar */}
-        {stats && <ProgressBar stats={whatIfMode && hypotheticalResults.size > 0 ? calculateSeasonStats(getChunksWithHypotheticals()) : stats} isGoatMode={isGoatMode} />}
+        {stats && (
+          <ProgressBar
+            stats={whatIfMode && hypotheticalResults.size > 0 ? calculateSeasonStats(getChunksWithHypotheticals()) : stats}
+            isGoatMode={isGoatMode}
+            yearOverYearMode={yearOverYearMode}
+            onYearOverYearToggle={() => setYearOverYearMode(!yearOverYearMode)}
+            lastSeasonStats={yearOverYearMode && lastSeasonData ? {
+              totalPoints: lastSeasonData.pointsLastYear,
+              totalGames: stats.totalGames,
+              gamesPlayed: stats.gamesPlayed,
+              gamesRemaining: stats.gamesRemaining,
+              currentPace: lastSeasonData.pointsLastYear / stats.gamesPlayed,
+              projectedPoints: Math.round((lastSeasonData.pointsLastYear / stats.gamesPlayed) * stats.totalGames),
+              playoffTarget: stats.playoffTarget,
+              pointsAboveBelow: Math.round((lastSeasonData.pointsLastYear / stats.gamesPlayed) * stats.totalGames) - stats.playoffTarget
+            } : undefined}
+          />
+        )}
 
         {/* What If Mode Banner */}
         {whatIfMode && (
-          <div className={`mb-4 p-3 rounded-lg border-2 ${
+          <div className={`mt-4 mb-4 p-3 rounded-lg border-2 ${
             isGoatMode
               ? 'bg-red-900/30 border-red-500 text-red-300'
               : 'bg-blue-100 border-blue-400 text-blue-800'
@@ -291,7 +335,7 @@ function App() {
         )}
 
         {/* Set Grid */}
-        <div className="mb-4">
+        <div className={`mb-4 ${whatIfMode ? '' : 'mt-4'}`}>
           <div className="flex justify-between items-center mb-3 gap-2">
             <h2 className={`text-lg md:text-2xl font-bold ${
               isGoatMode ? 'text-white' : 'text-sabres-navy'
@@ -354,7 +398,7 @@ function App() {
           </div>
           <div className="grid grid-cols-1 gap-4">
             {chunks
-              .filter(chunk => !hideCompleted || !chunk.isComplete)
+              .filter(chunk => !hideCompleted || !shouldHideCompletedSet(chunk))
               .map((chunk) => {
                 // Find the previous chunk (by chunk number, not filtered index)
                 const previousChunk = chunks.find(c => c.chunkNumber === chunk.chunkNumber - 1);
