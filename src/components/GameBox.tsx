@@ -1,5 +1,19 @@
 import type { GameResult } from '../types';
 
+interface TeamColors {
+  primary: string;
+  secondary: string;
+  accent: string;
+}
+
+interface DarkModeColors {
+  background: string;
+  backgroundGradient?: string;
+  accent: string;
+  border: string;
+  text: string;
+}
+
 interface GameBoxProps {
   game: GameResult;
   gameNumber: number;
@@ -7,9 +21,11 @@ interface GameBoxProps {
   whatIfMode?: boolean;
   onGameClick?: (gameId: number, currentGame: GameResult, outcome: 'W' | 'OTL' | 'L') => void;
   hypotheticalOutcome?: 'W' | 'OTL' | 'L' | null;
+  teamColors: TeamColors;
+  darkModeColors: DarkModeColors;
 }
 
-export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGameClick, hypotheticalOutcome }: GameBoxProps) {
+export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGameClick, hypotheticalOutcome, teamColors, darkModeColors }: GameBoxProps) {
   const isPending = game.outcome === 'PENDING';
   const isClickable = whatIfMode && isPending && onGameClick;
 
@@ -17,18 +33,25 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
   const isWin = game.outcome === 'W';
   const isLoss = game.outcome === 'L';
 
-  const borderStyle = isPending
-    ? isGoatMode ? 'border-zinc-700 border-2' : 'border-gray-200 border-2'
+  const teamPrimaryColor = isGoatMode ? darkModeColors.accent : teamColors.primary;
+  const borderClass = isPending
+    ? 'border-2'
     : isWin
-    ? isGoatMode ? 'border-red-600 border-2' : 'border-sabres-blue border-2'
-    : isGoatMode ? 'border-zinc-700 border-2 border-dashed' : 'border-gray-300 border-2 border-dashed';
+    ? 'border-2'
+    : 'border-2 border-dashed';
+
+  const borderColorStyle = isPending
+    ? (isGoatMode ? { borderColor: darkModeColors.border } : { borderColor: '#e5e7eb' })
+    : isWin
+    ? (isGoatMode ? { borderColor: darkModeColors.border } : { borderColor: teamColors.primary })
+    : (isGoatMode ? { borderColor: darkModeColors.border, borderStyle: 'dashed' } : { borderColor: '#d1d5db', borderStyle: 'dashed' });
 
   const shadowStyle = isWin ? 'shadow-lg' : 'shadow-md';
   const opacity = isLoss ? 'opacity-75' : 'opacity-100';
 
   const styles = {
     bg: isGoatMode ? 'bg-gradient-to-br from-zinc-800 to-zinc-900' : 'bg-gradient-to-br from-blue-50 to-slate-50',
-    text: isGoatMode ? 'text-red-500' : 'text-sabres-blue'
+    textColor: teamPrimaryColor
   };
 
   const getOutcomeText = () => {
@@ -61,25 +84,27 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
 
   return (
     <div
-      className={`${styles.bg} ${borderStyle} ${shadowStyle} ${opacity} rounded-xl p-2.5 md:p-3 transition-all ${
+      className={`${styles.bg} ${borderClass} ${shadowStyle} ${opacity} rounded-xl p-2.5 md:p-3 transition-all ${
         isClickable
           ? isGoatMode
             ? 'hover:shadow-xl border-dashed !border-red-500/60 shadow-red-500/20'
             : 'hover:shadow-xl border-dashed !border-blue-400/60 shadow-blue-400/20'
           : 'hover:shadow-lg'
       }`}
-      style={isClickable ? {
-        boxShadow: isGoatMode
-          ? '0 0 15px rgba(239, 68, 68, 0.3)'
-          : '0 0 15px rgba(96, 165, 250, 0.3)'
-      } : undefined}
+      style={
+        isClickable ? {
+          boxShadow: isGoatMode
+            ? '0 0 15px rgba(239, 68, 68, 0.3)'
+            : '0 0 15px rgba(96, 165, 250, 0.3)'
+        } : borderColorStyle
+      }
     >
       {/* Game number and location */}
       <div className="flex justify-between items-center mb-2">
         <span className={`text-xs font-bold ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}>#{gameNumber}</span>
-        <span className={`text-xs font-bold ${styles.text}`}>
+        <span className="text-xs font-bold" style={{ color: styles.textColor }}>
           {game.isHome ? 'HOME' : 'AWAY'}
         </span>
       </div>
@@ -138,7 +163,7 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
           <div className={`text-center pt-2 border-t-2 ${
             isGoatMode ? 'border-zinc-800' : 'border-gray-200'
           }`}>
-            <div className={`text-sm font-bold ${styles.text}`}>{getOutcomeText()}</div>
+            <div className="text-sm font-bold" style={{ color: styles.textColor }}>{getOutcomeText()}</div>
             <div className={`text-xs font-semibold mt-1 ${
               isGoatMode ? 'text-zinc-400' : 'text-gray-600'
             }`}>

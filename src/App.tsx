@@ -1,19 +1,29 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { GameChunk, SeasonStats, ChunkStats, GameResult } from './types';
 import { fetchSabresSchedule, fetchLastSeasonComparison } from './services/nhlApi';
 import { calculateChunks, calculateSeasonStats, calculateChunkStats } from './utils/chunkCalculator';
 import ChunkCard from './components/ChunkCard';
 import ProgressBar from './components/ProgressBar';
+import TeamNav from './components/TeamNav';
+import type { TeamConfig } from './teamConfig';
+import { getDarkModeColors } from './teamConfig';
 
 // Force rebuild - clean deploy
-function App() {
+interface AppProps {
+  team: TeamConfig;
+}
+
+function App({ team }: AppProps) {
+  const navigate = useNavigate();
+  const darkModeColors = getDarkModeColors(team);
   const [chunks, setChunks] = useState<GameChunk[]>([]);
   const [stats, setStats] = useState<SeasonStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [hideCompleted, setHideCompleted] = useState(true);
   const [chunkStatsCache, setChunkStatsCache] = useState<Map<number, ChunkStats>>(new Map());
   const [isGoatMode, setIsGoatMode] = useState(() => {
-    const saved = localStorage.getItem('sabres-theme');
+    const saved = localStorage.getItem(`${team.id}-theme`);
     return saved === 'goat';
   });
   const [whatIfMode, setWhatIfMode] = useState(false);
@@ -24,7 +34,7 @@ function App() {
   const toggleTheme = () => {
     setIsGoatMode(prev => {
       const newMode = !prev;
-      localStorage.setItem('sabres-theme', newMode ? 'goat' : 'classic');
+      localStorage.setItem(`${team.id}-theme`, newMode ? 'goat' : 'classic');
       return newMode;
     });
   };
@@ -155,7 +165,7 @@ function App() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const schedule = await fetchSabresSchedule('20252026');
+      const schedule = await fetchSabresSchedule('20252026', team.abbreviation, team.nhlId);
 
       const calculatedChunks = calculateChunks(schedule);
       setChunks(calculatedChunks);
@@ -176,18 +186,18 @@ function App() {
     const interval = setInterval(loadData, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [team]);
 
   // Fetch last season comparison data when Year-over-Year mode is enabled
   useEffect(() => {
     const fetchLastSeasonData = async () => {
       if (yearOverYearMode && stats && stats.gamesPlayed > 0) {
-        const comparison = await fetchLastSeasonComparison(stats.gamesPlayed);
+        const comparison = await fetchLastSeasonComparison(stats.gamesPlayed, team.abbreviation, team.nhlId);
         setLastSeasonData(comparison);
       }
     };
     fetchLastSeasonData();
-  }, [yearOverYearMode, stats?.gamesPlayed]);
+  }, [yearOverYearMode, stats?.gamesPlayed, team]);
 
   // Pre-calculate stats for all completed chunks so comparisons work even when chunks are hidden
   useEffect(() => {
@@ -197,7 +207,7 @@ function App() {
           const hasPlayed = chunk.games.some(g => g.outcome !== 'PENDING');
           if (hasPlayed) {
             try {
-              const stats = await calculateChunkStats(chunk);
+              const stats = await calculateChunkStats(chunk, team.nhlId);
               if (stats) {
                 handleStatsCalculated(chunk.chunkNumber, stats);
               }
@@ -218,65 +228,99 @@ function App() {
     return (
       <div className={`min-h-screen flex items-center justify-center ${
         isGoatMode
-          ? 'bg-gradient-to-b from-black to-zinc-900'
+          ? `bg-gradient-to-b ${darkModeColors.backgroundGradient}`
           : 'bg-gradient-to-b from-sabres-navy to-sabres-blue'
       }`}>
-        <div className="text-white text-2xl">Loading Sabres data...</div>
+        <div className="text-white text-2xl">Loading {team.name} data...</div>
       </div>
     );
   }
 
-  const logoUrl = isGoatMode
-    ? '/goat-logo.png'
-    : 'https://assets.nhle.com/logos/nhl/svg/BUF_light.svg';
+  const logoUrl = isGoatMode && team.altLogo
+    ? team.altLogo
+    : team.logo;
 
   return (
     <div className={`min-h-screen ${
       isGoatMode
-        ? 'bg-gradient-to-br from-black to-zinc-900'
+        ? `bg-gradient-to-br ${darkModeColors.backgroundGradient}`
         : 'bg-gradient-to-br from-slate-50 to-blue-50'
     }`}>
       {/* Header */}
-      <header className={`shadow-xl border-b-4 ${
-        isGoatMode
-          ? 'bg-black border-red-600'
-          : 'bg-gradient-to-r from-sabres-blue to-sabres-navy border-sabres-gold'
-      }`}>
+      <header
+        className={`shadow-xl border-b-4 ${
+          isGoatMode
+            ? ''
+            : ''
+        }`}
+        style={isGoatMode ? {
+          backgroundColor: darkModeColors.background,
+          borderBottomColor: darkModeColors.border
+        } : {
+          background: team.id === 'sabres'
+            ? `linear-gradient(to right, ${team.colors.primary}, ${team.colors.secondary})`
+            : team.colors.primary,
+          borderBottomColor: team.id === 'sabres' ? team.colors.accent : team.colors.secondary
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 py-3 md:py-4">
           <div className="flex flex-col items-center text-center relative">
+            {/* Team Navigation */}
+            <div className="absolute left-0 top-0">
+              <TeamNav currentTeamId={team.id} isGoatMode={isGoatMode} darkModeColors={darkModeColors} />
+            </div>
+
             {/* Theme Toggle Switch */}
             <div className="absolute right-0 top-0">
               <button
                 onClick={toggleTheme}
                 className={`relative inline-flex h-6 w-11 md:h-7 md:w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                   isGoatMode
-                    ? 'bg-red-600 focus:ring-red-500'
-                    : 'bg-sabres-gold focus:ring-sabres-gold'
+                    ? ''
+                    : 'focus:ring-offset-2'
                 }`}
+                style={isGoatMode ? {
+                  backgroundColor: darkModeColors.accent,
+                  boxShadow: `0 0 0 2px ${darkModeColors.accent}`
+                } : {
+                  backgroundColor: team.colors.accent,
+                  boxShadow: `0 0 0 2px ${team.colors.accent === '#FFFFFF' ? team.colors.secondary : team.colors.accent}`
+                }}
                 role="switch"
                 aria-checked={isGoatMode}
-                title={isGoatMode ? 'Switch to Classic Mode (Blue & Gold)' : 'Switch to GOAT Mode (Black & Red)'}
+                title={isGoatMode ? 'Switch to Classic Mode' : 'Switch to Dark Mode'}
               >
                 <span
-                  className={`inline-block h-4 w-4 md:h-5 md:w-5 transform rounded-full bg-white shadow-lg transition-transform ${
+                  className={`inline-block h-4 w-4 md:h-5 md:w-5 transform rounded-full shadow-lg transition-transform ${
                     isGoatMode ? 'translate-x-6 md:translate-x-8' : 'translate-x-1'
                   }`}
+                  style={!isGoatMode ? {
+                    backgroundColor: team.colors.accent === '#FFFFFF' ? team.colors.secondary : '#FFFFFF',
+                    border: team.colors.accent === '#FFFFFF' ? `2px solid ${team.colors.secondary}` : 'none'
+                  } : { backgroundColor: '#FFFFFF' }}
                 />
               </button>
             </div>
 
-            <img
-              src={logoUrl}
-              alt="Buffalo Sabres Logo"
-              className="w-16 h-16 md:w-24 md:h-24 mb-2 md:mb-3"
-            />
+            <button
+              onClick={() => navigate('/')}
+              className="hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 rounded-lg"
+              title="Back to Home"
+            >
+              <img
+                src={logoUrl}
+                alt={`${team.city} ${team.name} Logo`}
+                className="w-16 h-16 md:w-24 md:h-24 mb-2 md:mb-3"
+              />
+            </button>
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-2 tracking-wider" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
               Lindy's Five
             </h1>
-            <h2 className={`text-sm md:text-2xl font-semibold mb-1 px-2 leading-tight ${
-              isGoatMode ? 'text-red-500' : 'text-sabres-gold'
-            }`}>
-              Buffalo Sabres Road to the Playoffs 2025-2026
+            <h2
+              className={`text-xs md:text-2xl font-semibold mb-1 px-2 leading-tight whitespace-nowrap`}
+              style={isGoatMode ? { color: darkModeColors.accent } : { color: team.id === 'sabres' ? team.colors.accent : team.colors.secondary }}
+            >
+              {team.city} {team.name} Road to the Playoffs 2025-2026
             </h2>
             <p className="text-white text-xs md:text-base opacity-90 px-2 leading-tight">
               5-Game Set Analysis • Target: 6+ points per set
@@ -303,16 +347,25 @@ function App() {
               playoffTarget: stats.playoffTarget,
               pointsAboveBelow: Math.round((lastSeasonData.pointsLastYear / stats.gamesPlayed) * stats.totalGames) - stats.playoffTarget
             } : undefined}
+            teamColors={team.colors}
+            darkModeColors={darkModeColors}
           />
         )}
 
         {/* What If Mode Banner */}
         {whatIfMode && (
-          <div className={`mt-4 mb-4 p-3 rounded-lg border-2 ${
-            isGoatMode
-              ? 'bg-red-900/30 border-red-500 text-red-300'
-              : 'bg-blue-100 border-blue-400 text-blue-800'
-          }`}>
+          <div
+            className={`mt-4 mb-4 p-3 rounded-lg border-2`}
+            style={isGoatMode ? {
+              backgroundColor: `${darkModeColors.accent}20`,
+              borderColor: darkModeColors.accent,
+              color: darkModeColors.accent
+            } : {
+              backgroundColor: `${team.colors.primary}15`,
+              borderColor: team.colors.primary,
+              color: team.colors.primary
+            }}
+          >
             <div className="flex items-center justify-between gap-2">
               <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 flex-1 min-w-0">
                 <span className="font-semibold text-sm md:text-base">What If Mode Active</span>
@@ -322,11 +375,18 @@ function App() {
                 onClick={() => {
                   setHypotheticalResults(new Map());
                 }}
-                className={`px-3 py-1 rounded text-sm font-semibold transition-all whitespace-nowrap ${
-                  isGoatMode
-                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                    : 'bg-blue-500 hover:bg-blue-600 text-white'
-                }`}
+                className={`px-3 py-1 rounded text-sm font-semibold transition-all whitespace-nowrap text-white`}
+                style={isGoatMode ? {
+                  backgroundColor: darkModeColors.accent,
+                } : {
+                  backgroundColor: team.colors.primary,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
               >
                 Reset
               </button>
@@ -337,17 +397,23 @@ function App() {
         {/* Set Grid */}
         <div className={`mb-4 ${whatIfMode ? '' : 'mt-4'}`}>
           <div className="flex justify-between items-center mb-3 gap-2">
-            <h2 className={`text-lg md:text-2xl font-bold ${
-              isGoatMode ? 'text-white' : 'text-sabres-navy'
-            }`}>Game Sets</h2>
+            <h2
+              className={`text-lg md:text-2xl font-bold ${isGoatMode ? 'text-white' : ''}`}
+              style={!isGoatMode ? { color: team.colors.secondary } : undefined}
+            >
+              Game Sets
+            </h2>
             <div className="flex items-center gap-1.5 md:gap-3">
               {/* What If Toggle */}
               <div className="flex items-center gap-1.5 md:gap-2">
-                <span className={`text-xs md:text-sm font-semibold ${
-                  whatIfMode
-                    ? isGoatMode ? 'text-red-400' : 'text-sabres-blue'
-                    : isGoatMode ? 'text-zinc-400' : 'text-gray-500'
-                }`}>
+                <span
+                  className={`text-xs md:text-sm font-semibold ${
+                    whatIfMode
+                      ? ''
+                      : isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+                  }`}
+                  style={whatIfMode ? (isGoatMode ? { color: darkModeColors.accent } : { color: team.colors.primary }) : undefined}
+                >
                   What If
                 </span>
                 <button
@@ -359,13 +425,18 @@ function App() {
                   }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                     whatIfMode
-                      ? isGoatMode
-                        ? 'bg-red-600 focus:ring-red-500'
-                        : 'bg-sabres-blue focus:ring-sabres-blue'
+                      ? ''
                       : isGoatMode
-                        ? 'bg-zinc-700 focus:ring-zinc-500'
-                        : 'bg-gray-400 focus:ring-gray-400'
+                        ? 'bg-zinc-700'
+                        : 'bg-gray-400'
                   }`}
+                  style={whatIfMode ? (isGoatMode ? {
+                    backgroundColor: darkModeColors.accent,
+                    boxShadow: `0 0 0 2px ${darkModeColors.accent}`
+                  } : {
+                    backgroundColor: team.colors.primary,
+                    boxShadow: `0 0 0 2px ${team.colors.primary}`
+                  }) : undefined}
                   role="switch"
                   aria-checked={whatIfMode}
                   title={whatIfMode ? 'Turn off What If Mode' : 'Turn on What If Mode'}
@@ -383,13 +454,12 @@ function App() {
                 onClick={() => setHideCompleted(!hideCompleted)}
                 className={`px-2 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold transition-all whitespace-nowrap ${
                   hideCompleted
-                    ? isGoatMode
-                      ? 'bg-red-600 text-white shadow-md'
-                      : 'bg-sabres-blue text-white shadow-md'
+                    ? 'text-white shadow-md'
                     : isGoatMode
                       ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
+                style={hideCompleted ? (isGoatMode ? { backgroundColor: darkModeColors.accent } : { backgroundColor: team.colors.primary }) : undefined}
               >
                 <span className="hidden sm:inline">{hideCompleted ? 'Show All Sets' : 'Hide Completed Sets'}</span>
                 <span className="sm:hidden">{hideCompleted ? 'Show All' : 'Hide Done'}</span>
@@ -419,6 +489,9 @@ function App() {
                     whatIfMode={whatIfMode && isWhatIfSet}
                     onGameClick={handleGameClick}
                     hypotheticalResults={hypotheticalResults}
+                    teamId={team.nhlId}
+                    teamColors={team.colors}
+                    darkModeColors={darkModeColors}
                   />
                 );
               })}

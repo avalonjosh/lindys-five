@@ -108,7 +108,7 @@ export function getChunkBorderColor(chunk: GameChunk): string {
     .replace('bg-gray-700', 'border-gray-600');
 }
 
-export async function calculateChunkStats(chunk: GameChunk): Promise<ChunkStats | null> {
+export async function calculateChunkStats(chunk: GameChunk, teamId: number = 7): Promise<ChunkStats | null> {
   // Only calculate stats for completed games
   const completedGames = chunk.games.filter(g => g.outcome !== 'PENDING' && g.gameId);
 
@@ -118,7 +118,7 @@ export async function calculateChunkStats(chunk: GameChunk): Promise<ChunkStats 
 
   // Fetch detailed stats for each completed game
   const gameStatsPromises = completedGames.map(game =>
-    fetchDetailedGameStats(game.gameId!, game.isHome)
+    fetchDetailedGameStats(game.gameId!, game.isHome, teamId)
   );
 
   const gameStatsResults = await Promise.all(gameStatsPromises);

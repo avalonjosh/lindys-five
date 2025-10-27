@@ -1,13 +1,11 @@
 import type { NHLGame, GameResult, DetailedGameStats } from '../types';
 
-const SABRES_ID = 7;
-const SABRES_ABBREV = 'BUF';
 const API_BASE = '/api/v1';
 
-export async function fetchSabresSchedule(season: string = '20252026'): Promise<GameResult[]> {
-  console.log('🏒 fetchSabresSchedule called with season:', season);
+export async function fetchSabresSchedule(season: string = '20252026', teamAbbrev: string = 'BUF', teamId: number = 7): Promise<GameResult[]> {
+  console.log(`🏒 fetchSchedule called for ${teamAbbrev} with season:`, season);
   try {
-    const url = `${API_BASE}/club-schedule-season/${SABRES_ABBREV}/${season}`;
+    const url = `${API_BASE}/club-schedule-season/${teamAbbrev}/${season}`;
     console.log('🏒 Fetching from URL:', url);
     const response = await fetch(url);
     console.log('🏒 Response status:', response.status);
@@ -22,19 +20,19 @@ export async function fetchSabresSchedule(season: string = '20252026'): Promise<
     console.log('Regular season games:', regularSeasonGames.length);
 
     const results = regularSeasonGames.map((game): GameResult => {
-      const isHome = game.homeTeam.id === SABRES_ID;
-      const sabresTeam = isHome ? game.homeTeam : game.awayTeam;
+      const isHome = game.homeTeam.id === teamId;
+      const myTeam = isHome ? game.homeTeam : game.awayTeam;
       const opponentTeam = isHome ? game.awayTeam : game.homeTeam;
 
       let outcome: 'W' | 'OTL' | 'L' | 'PENDING' = 'PENDING';
       let points = 0;
 
       if (game.gameState === 'FINAL' || game.gameState === 'OFF') {
-        const sabresWon = sabresTeam.score > opponentTeam.score;
+        const teamWon = myTeam.score > opponentTeam.score;
         const wentToOvertime = game.gameOutcome?.lastPeriodType === 'OT' ||
                                game.gameOutcome?.lastPeriodType === 'SO';
 
-        if (sabresWon) {
+        if (teamWon) {
           outcome = 'W';
           points = 2;
         } else if (wentToOvertime) {
@@ -73,7 +71,7 @@ export async function fetchSabresSchedule(season: string = '20252026'): Promise<
         opponent: opponentTeam.abbrev,
         opponentLogo: opponentTeam.logo,
         isHome,
-        sabresScore: sabresTeam.score || 0,
+        sabresScore: myTeam.score || 0,
         opponentScore: opponentTeam.score || 0,
         outcome,
         points,
@@ -90,10 +88,10 @@ export async function fetchSabresSchedule(season: string = '20252026'): Promise<
   }
 }
 
-export async function fetchLastSeasonComparison(currentGamesPlayed: number): Promise<{ pointsLastYear: number; recordLastYear: string } | null> {
+export async function fetchLastSeasonComparison(currentGamesPlayed: number, teamAbbrev: string = 'BUF', teamId: number = 7): Promise<{ pointsLastYear: number; recordLastYear: string } | null> {
   try {
     // Fetch 2024-2025 season data
-    const lastSeasonGames = await fetchSabresSchedule('20242025');
+    const lastSeasonGames = await fetchSabresSchedule('20242025', teamAbbrev, teamId);
 
     // Get the first N games from last season (matching current games played)
     const gamesAtSamePoint = lastSeasonGames.slice(0, currentGamesPlayed);
@@ -114,30 +112,30 @@ export async function fetchLastSeasonComparison(currentGamesPlayed: number): Pro
   }
 }
 
-export async function fetchDetailedGameStats(gameId: number, isHome: boolean): Promise<DetailedGameStats | null> {
+export async function fetchDetailedGameStats(gameId: number, isHome: boolean, teamId: number = 7): Promise<DetailedGameStats | null> {
   try {
     const url = `${API_BASE}/gamecenter/${gameId}/boxscore`;
     const response = await fetch(url);
     const data = await response.json();
 
-    const sabresTeam = isHome ? data.homeTeam : data.awayTeam;
+    const myTeam = isHome ? data.homeTeam : data.awayTeam;
     const opponentTeam = isHome ? data.awayTeam : data.homeTeam;
 
     // Get shots from team data
-    const shotsFor = sabresTeam.sog || 0;
+    const shotsFor = myTeam.sog || 0;
     const shotsAgainst = opponentTeam.sog || 0;
 
     // Calculate PP and PK stats from player data
     let powerPlayGoals = 0;
     let powerPlayGoalsAgainst = 0;
 
-    const sabresPlayerData = data.playerByGameStats[isHome ? 'homeTeam' : 'awayTeam'];
+    const myTeamPlayerData = data.playerByGameStats[isHome ? 'homeTeam' : 'awayTeam'];
     const opponentPlayerData = data.playerByGameStats[isHome ? 'awayTeam' : 'homeTeam'];
 
-    // Aggregate PP goals from Sabres players
+    // Aggregate PP goals from my team's players
     ['forwards', 'defense'].forEach(position => {
-      if (sabresPlayerData[position]) {
-        sabresPlayerData[position].forEach((player: any) => {
+      if (myTeamPlayerData[position]) {
+        myTeamPlayerData[position].forEach((player: any) => {
           powerPlayGoals += player.powerPlayGoals || 0;
         });
       }
@@ -157,15 +155,15 @@ export async function fetchDetailedGameStats(gameId: number, isHome: boolean): P
     const pbpResponse = await fetch(playByPlayUrl);
     const pbpData = await pbpResponse.json();
 
-    let sabresPenalties = 0;
+    let myTeamPenalties = 0;
     let opponentPenalties = 0;
 
     if (pbpData.plays) {
       pbpData.plays.forEach((play: any) => {
         if (play.typeDescKey === 'penalty' && play.details) {
           const penaltyTeam = play.details.eventOwnerTeamId;
-          if (penaltyTeam === SABRES_ID) {
-            sabresPenalties++;
+          if (penaltyTeam === teamId) {
+            myTeamPenalties++;
           } else {
             opponentPenalties++;
           }
@@ -176,21 +174,21 @@ export async function fetchDetailedGameStats(gameId: number, isHome: boolean): P
     // PP opportunities = opponent's penalties (when we get PP)
     // PK opportunities = our penalties (when opponent gets PP)
     const powerPlayOpportunities = opponentPenalties;
-    const penaltyKillOpportunities = sabresPenalties;
+    const penaltyKillOpportunities = myTeamPenalties;
 
     // Get goalie stats for save percentage
     let saves = 0;
     let shotsAgainstGoalie = 0;
 
-    if (sabresPlayerData.goalies && sabresPlayerData.goalies.length > 0) {
-      sabresPlayerData.goalies.forEach((goalie: any) => {
+    if (myTeamPlayerData.goalies && myTeamPlayerData.goalies.length > 0) {
+      myTeamPlayerData.goalies.forEach((goalie: any) => {
         saves += goalie.saves || 0;
         shotsAgainstGoalie += goalie.shotsAgainst || 0;
       });
     }
 
     return {
-      goalsFor: sabresTeam.score || 0,
+      goalsFor: myTeam.score || 0,
       goalsAgainst: opponentTeam.score || 0,
       shotsFor,
       shotsAgainst,

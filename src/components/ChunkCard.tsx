@@ -3,6 +3,20 @@ import type { GameChunk, ChunkStats, GameResult } from '../types';
 import GameBox from './GameBox';
 import { calculateChunkStats } from '../utils/chunkCalculator';
 
+interface TeamColors {
+  primary: string;
+  secondary: string;
+  accent: string;
+}
+
+interface DarkModeColors {
+  background: string;
+  backgroundGradient?: string;
+  accent: string;
+  border: string;
+  text: string;
+}
+
 interface ChunkCardProps {
   chunk: GameChunk;
   isGoatMode: boolean;
@@ -11,9 +25,12 @@ interface ChunkCardProps {
   whatIfMode?: boolean;
   onGameClick?: (gameId: number, currentGame: GameResult, outcome: 'W' | 'OTL' | 'L') => void;
   hypotheticalResults?: Map<number, GameResult>;
+  teamId?: number;
+  teamColors: TeamColors;
+  darkModeColors: DarkModeColors;
 }
 
-export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onStatsCalculated, whatIfMode, onGameClick, hypotheticalResults }: ChunkCardProps) {
+export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onStatsCalculated, whatIfMode, onGameClick, hypotheticalResults, teamId = 7, teamColors, darkModeColors }: ChunkCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [stats, setStats] = useState<ChunkStats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -36,7 +53,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
   useEffect(() => {
     if (isExpanded && !stats && hasPlayed) {
       setLoading(true);
-      calculateChunkStats(chunk)
+      calculateChunkStats(chunk, teamId)
         .then(calculatedStats => {
           setStats(calculatedStats);
           if (calculatedStats && onStatsCalculated) {
@@ -51,20 +68,34 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
   }, [isExpanded, stats, chunk, hasPlayed, onStatsCalculated]);
 
   // Subtle styling based on performance
-  const borderStyle = hasPlayed && chunk.isComplete
+  const borderClass = hasPlayed && chunk.isComplete
     ? (targetMet
-      ? isGoatMode ? 'border-red-600 border-2' : 'border-sabres-blue border-2'
-      : isGoatMode ? 'border-zinc-700 border-2 border-dashed' : 'border-gray-300 border-2 border-dashed')
-    : isGoatMode ? 'border-zinc-800 border-2' : 'border-gray-200 border-2';
+      ? 'border-2'
+      : isGoatMode ? 'border-2 border-dashed' : 'border-gray-300 border-2 border-dashed')
+    : isGoatMode ? 'border-2' : 'border-gray-200 border-2';
+
+  const borderColorStyle = hasPlayed && chunk.isComplete
+    ? (targetMet
+      ? (isGoatMode ? { borderColor: darkModeColors.border } : { borderColor: teamColors.primary })
+      : (isGoatMode ? { borderColor: darkModeColors.border, borderStyle: 'dashed' } : undefined))
+    : (isGoatMode ? { borderColor: darkModeColors.border } : undefined);
 
   const shadowStyle = targetMet && chunk.isComplete ? 'shadow-xl' : 'shadow-lg';
   const opacity = hasPlayed && !targetMet && chunk.isComplete ? 'opacity-80' : 'opacity-100';
 
+  // Helper styles for team colors
+  const teamPrimaryColor = isGoatMode ? darkModeColors.accent : teamColors.primary;
+  const teamSecondaryColor = isGoatMode ? '#ffffff' : teamColors.secondary;
+
   return (
     <div
-      className={`${borderStyle} ${shadowStyle} ${opacity} rounded-2xl p-3 md:p-4 hover:shadow-2xl transition-all ${
-        isGoatMode ? 'bg-zinc-800' : 'bg-white'
+      className={`${borderClass} ${shadowStyle} ${opacity} rounded-2xl p-3 md:p-4 hover:shadow-2xl transition-all ${
+        isGoatMode ? '' : 'bg-white'
       }`}
+      style={isGoatMode ? {
+        backgroundColor: darkModeColors.background,
+        ...borderColorStyle
+      } : borderColorStyle}
     >
       {/* Set Header */}
       <div className={`mb-3 md:mb-4 pb-3 md:pb-4 border-b-2 ${
@@ -101,9 +132,10 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
             </p>
           </div>
           <div className="text-right">
-            <div className={`text-4xl md:text-5xl font-bold ${
-              isGoatMode ? 'text-red-500' : 'text-sabres-blue'
-            }`}>
+            <div
+              className={`text-4xl md:text-5xl font-bold ${isGoatMode ? 'text-red-500' : ''}`}
+              style={!isGoatMode ? { color: teamColors.primary } : undefined}
+            >
               {displayPoints}
             </div>
             <div className={`text-xs mt-1 font-semibold ${
@@ -119,9 +151,12 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
               ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
               : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
           }`}>
-            <div className={`text-2xl md:text-3xl font-bold ${
-              isGoatMode ? 'text-red-500' : 'text-sabres-blue'
-            }`}>{displayWins}</div>
+            <div
+              className={`text-2xl md:text-3xl font-bold ${isGoatMode ? 'text-red-500' : ''}`}
+              style={!isGoatMode ? { color: teamColors.primary } : undefined}
+            >
+              {displayWins}
+            </div>
             <div className={`text-xs font-semibold mt-1 uppercase tracking-wide ${
               isGoatMode ? 'text-zinc-400' : 'text-gray-600'
             }`}>Wins</div>
@@ -131,9 +166,12 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
               ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
               : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
           }`}>
-            <div className={`text-2xl md:text-3xl font-bold ${
-              isGoatMode ? 'text-red-500' : 'text-sabres-blue'
-            }`}>{displayOTLosses}</div>
+            <div
+              className={`text-2xl md:text-3xl font-bold ${isGoatMode ? 'text-red-500' : ''}`}
+              style={!isGoatMode ? { color: teamColors.primary } : undefined}
+            >
+              {displayOTLosses}
+            </div>
             <div className={`text-xs font-semibold mt-1 uppercase tracking-wide ${
               isGoatMode ? 'text-zinc-400' : 'text-gray-600'
             }`}>OT Losses</div>
@@ -143,9 +181,12 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
               ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
               : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
           }`}>
-            <div className={`text-2xl md:text-3xl font-bold ${
-              isGoatMode ? 'text-red-500' : 'text-sabres-blue'
-            }`}>{displayLosses}</div>
+            <div
+              className={`text-2xl md:text-3xl font-bold ${isGoatMode ? 'text-red-500' : ''}`}
+              style={!isGoatMode ? { color: teamColors.primary } : undefined}
+            >
+              {displayLosses}
+            </div>
             <div className={`text-xs font-semibold mt-1 uppercase tracking-wide ${
               isGoatMode ? 'text-zinc-400' : 'text-gray-600'
             }`}>Losses</div>
@@ -156,11 +197,18 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
         {chunk.isComplete && (
           <div className="mt-3 text-center">
             {chunk.points >= (chunk.totalGames * 2 * 0.6) ? (
-              <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border ${
-                isGoatMode
-                  ? 'bg-red-900/50 text-red-400 border-red-700'
-                  : 'bg-blue-100 text-sabres-blue border-blue-300'
-              }`}>
+              <span
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border`}
+                style={isGoatMode ? {
+                  backgroundColor: `${darkModeColors.accent}30`,
+                  color: darkModeColors.accent,
+                  borderColor: darkModeColors.accent
+                } : {
+                  backgroundColor: `${teamColors.primary}20`,
+                  color: teamColors.primary,
+                  borderColor: `${teamColors.primary}50`
+                }}
+              >
                 <span className="text-lg">✓</span> Target Met! (6+ points)
               </span>
             ) : (
@@ -193,6 +241,8 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
               whatIfMode={whatIfMode}
               onGameClick={onGameClick}
               hypotheticalOutcome={hypotheticalOutcome}
+              teamColors={teamColors}
+              darkModeColors={darkModeColors}
             />
           );
         })}
@@ -221,11 +271,30 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
         <>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className={`w-full mt-3 md:mt-4 py-2 px-4 rounded-xl font-semibold text-sm transition-all ${
-              isGoatMode
-                ? 'bg-zinc-900 hover:bg-zinc-950 text-red-500 border border-zinc-700'
-                : 'bg-blue-50 hover:bg-blue-100 text-sabres-blue border border-blue-200'
-            }`}
+            className={`w-full mt-3 md:mt-4 py-2 px-4 rounded-xl font-semibold text-sm transition-all border`}
+            style={isGoatMode ? {
+              backgroundColor: darkModeColors.background,
+              color: darkModeColors.accent,
+              borderColor: darkModeColors.border
+            } : {
+              backgroundColor: `${teamColors.primary}10`,
+              color: teamColors.primary,
+              borderColor: `${teamColors.primary}40`
+            }}
+            onMouseEnter={(e) => {
+              if (isGoatMode) {
+                e.currentTarget.style.backgroundColor = '#000000';
+              } else {
+                e.currentTarget.style.backgroundColor = `${teamColors.primary}20`;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (isGoatMode) {
+                e.currentTarget.style.backgroundColor = darkModeColors.background;
+              } else {
+                e.currentTarget.style.backgroundColor = `${teamColors.primary}10`;
+              }
+            }}
           >
             {isExpanded ? '▲ Hide Set Stats' : '▼ Show Set Stats'}
           </button>

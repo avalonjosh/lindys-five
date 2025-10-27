@@ -1,11 +1,27 @@
 import type { SeasonStats } from '../types';
 
+interface TeamColors {
+  primary: string;
+  secondary: string;
+  accent: string;
+}
+
+interface DarkModeColors {
+  background: string;
+  backgroundGradient?: string;
+  accent: string;
+  border: string;
+  text: string;
+}
+
 interface ProgressBarProps {
   stats: SeasonStats;
   isGoatMode: boolean;
   yearOverYearMode?: boolean;
   onYearOverYearToggle?: () => void;
   lastSeasonStats?: SeasonStats;
+  teamColors: TeamColors;
+  darkModeColors: DarkModeColors;
 }
 
 // Helper function to render a season section
@@ -14,15 +30,32 @@ function SeasonSection({
   isGoatMode,
   isLastYear = false,
   currentYearStats,
-  lastSeasonLabel
+  lastSeasonLabel,
+  teamColors,
+  darkModeColors
 }: {
   stats: SeasonStats;
   isGoatMode: boolean;
   isLastYear?: boolean;
   currentYearStats?: SeasonStats;
   lastSeasonLabel?: string;
+  teamColors: TeamColors;
+  darkModeColors: DarkModeColors;
 }) {
   const { totalPoints, gamesPlayed, gamesRemaining, currentPace, projectedPoints, playoffTarget, pointsAboveBelow } = stats;
+
+  // Team color classes - dynamically computed based on team colors
+  const labelColor = isLastYear
+    ? (isGoatMode ? 'text-zinc-500' : 'text-slate-600')
+    : (isGoatMode ? '' : '');
+  const labelStyle = isLastYear
+    ? undefined
+    : (isGoatMode ? { color: darkModeColors.accent } : { color: teamColors.primary });
+
+  const valueColor = isLastYear
+    ? (isGoatMode ? 'text-zinc-400' : 'text-slate-700')
+    : (isGoatMode ? 'text-white' : 'text-gray-900');
+  const valueStyle = !isGoatMode && !isLastYear ? undefined : undefined;
 
   // Calculate differences for last year section
   const pointsDiff = isLastYear && currentYearStats ? totalPoints - currentYearStats.totalPoints : 0;
@@ -37,12 +70,12 @@ function SeasonSection({
   const expectedProgress = (expectedPointsAtThisStage / playoffTarget) * 100;
 
   const isOnPace = projectedPoints >= playoffTarget;
-  const paceColor = isGoatMode ? 'text-red-500' : 'text-sabres-blue';
+  const paceColor = isGoatMode ? darkModeColors.accent : teamColors.primary;
   const barColor = isLastYear
     ? isGoatMode
-      ? 'bg-zinc-600'
-      : 'bg-slate-500'
-    : isGoatMode ? 'bg-red-600' : 'bg-sabres-blue';
+      ? '#52525b'
+      : '#64748b'
+    : isGoatMode ? darkModeColors.accent : teamColors.primary;
 
   // Determine Expected indicator color based on performance
   const pointsDifference = totalPoints - expectedPointsAtThisStage;
@@ -50,11 +83,10 @@ function SeasonSection({
 
   return (
     <>
-      <h3 className={`text-xl md:text-2xl font-bold mb-2 md:mb-3 ${
-        isLastYear
-          ? isGoatMode ? 'text-zinc-400' : 'text-slate-600'
-          : isGoatMode ? 'text-white' : 'text-sabres-navy'
-      }`}>
+      <h3
+        className={`text-xl md:text-2xl font-bold mb-2 md:mb-3 ${valueColor}`}
+        style={valueStyle}
+      >
         {isLastYear ? `Last Year (${lastSeasonLabel})` : 'Season Progress'}
       </h3>
 
@@ -69,16 +101,8 @@ function SeasonSection({
               ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
               : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
         }`}>
-          <div className={`text-xs font-semibold uppercase tracking-wide mb-1 ${
-            isLastYear
-              ? isGoatMode ? 'text-zinc-500' : 'text-slate-600'
-              : isGoatMode ? 'text-red-400' : 'text-sabres-blue'
-          }`}>Games Played</div>
-          <div className={`text-2xl md:text-3xl font-bold ${
-            isLastYear
-              ? isGoatMode ? 'text-zinc-400' : 'text-slate-700'
-              : isGoatMode ? 'text-white' : 'text-sabres-navy'
-          }`}>{gamesPlayed}</div>
+          <div className={`text-xs font-semibold uppercase tracking-wide mb-1 ${labelColor}`} style={labelStyle}>Games Played</div>
+          <div className={`text-2xl md:text-3xl font-bold ${valueColor}`} style={valueStyle}>{gamesPlayed}</div>
           <div className={`text-xs mt-1 ${
             isLastYear
               ? isGoatMode ? 'text-zinc-600' : 'text-slate-500'
@@ -96,16 +120,8 @@ function SeasonSection({
               ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
               : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
         }`}>
-          <div className={`text-xs font-semibold uppercase tracking-wide mb-1 ${
-            isLastYear
-              ? isGoatMode ? 'text-zinc-500' : 'text-slate-600'
-              : isGoatMode ? 'text-red-400' : 'text-sabres-blue'
-          }`}>Current Points</div>
-          <div className={`text-2xl md:text-3xl font-bold flex items-center gap-2 ${
-            isLastYear
-              ? isGoatMode ? 'text-zinc-400' : 'text-slate-700'
-              : isGoatMode ? 'text-white' : 'text-sabres-navy'
-          }`}>
+          <div className={`text-xs font-semibold uppercase tracking-wide mb-1 ${labelColor}`} style={labelStyle}>Current Points</div>
+          <div className={`text-2xl md:text-3xl font-bold flex items-center gap-2 ${valueColor}`} style={valueStyle}>
             {totalPoints}
             {isLastYear && pointsDiff !== 0 && (
               <span className={`text-sm font-semibold ${
@@ -132,16 +148,8 @@ function SeasonSection({
               ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
               : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
         }`}>
-          <div className={`text-xs font-semibold uppercase tracking-wide mb-1 ${
-            isLastYear
-              ? isGoatMode ? 'text-zinc-500' : 'text-slate-600'
-              : isGoatMode ? 'text-red-400' : 'text-sabres-blue'
-          }`}>Current Pace</div>
-          <div className={`text-2xl md:text-3xl font-bold flex items-center gap-2 ${
-            isLastYear
-              ? isGoatMode ? 'text-zinc-400' : 'text-slate-700'
-              : isGoatMode ? 'text-white' : 'text-sabres-navy'
-          }`}>
+          <div className={`text-xs font-semibold uppercase tracking-wide mb-1 ${labelColor}`} style={labelStyle}>Current Pace</div>
+          <div className={`text-2xl md:text-3xl font-bold flex items-center gap-2 ${valueColor}`} style={valueStyle}>
             {currentPace.toFixed(2)}
             {isLastYear && paceDiff !== 0 && (
               <span className={`text-sm font-semibold ${
@@ -168,16 +176,8 @@ function SeasonSection({
               ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
               : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
         }`}>
-          <div className={`text-xs font-semibold uppercase tracking-wide mb-1 ${
-            isLastYear
-              ? isGoatMode ? 'text-zinc-500' : 'text-slate-600'
-              : isGoatMode ? 'text-red-400' : 'text-sabres-blue'
-          }`}>Projected</div>
-          <div className={`text-2xl md:text-3xl font-bold flex items-center gap-2 ${
-            isLastYear
-              ? isGoatMode ? 'text-zinc-400' : 'text-slate-700'
-              : isGoatMode ? 'text-white' : 'text-sabres-navy'
-          }`}>
+          <div className={`text-xs font-semibold uppercase tracking-wide mb-1 ${labelColor}`} style={labelStyle}>Projected</div>
+          <div className={`text-2xl md:text-3xl font-bold flex items-center gap-2 ${valueColor}`} style={valueStyle}>
             {projectedPoints}
             {isLastYear && projectedDiff !== 0 && (
               <span className={`text-sm font-semibold ${
@@ -213,8 +213,8 @@ function SeasonSection({
         }`}>
           {/* Current points bar */}
           <div
-            className={`${barColor} h-8 rounded-full transition-all duration-500 relative shadow-md`}
-            style={{ width: `${Math.min(currentProgress, 100)}%` }}
+            className="h-8 rounded-full transition-all duration-500 relative shadow-md"
+            style={{ width: `${Math.min(currentProgress, 100)}%`, backgroundColor: barColor }}
           >
             {/* Show points label when there's enough room */}
             {currentProgress > 0 && (
@@ -262,14 +262,14 @@ function SeasonSection({
             <p>
               {isOnPace ? (
                 <>
-                  At the current pace, the Sabres are projected to finish with <span className={`font-semibold ${paceColor}`}>{projectedPoints} points</span>.
+                  At the current pace, the team is projected to finish with <span className="font-semibold" style={{ color: paceColor }}>{projectedPoints} points</span>.
                   They can afford to earn {' '}
                   <span className="font-semibold">{(pointsAboveBelow / gamesRemaining).toFixed(1)} fewer points per game</span> over the remaining {gamesRemaining} games.
                 </>
               ) : (
                 <>
-                  To reach the playoff target, the Sabres need approximately{' '}
-                  <span className={`font-semibold ${paceColor}`}>{((playoffTarget - totalPoints) / gamesRemaining).toFixed(2)} points per game</span> over the remaining {gamesRemaining} games.
+                  To reach the playoff target, the team needs approximately{' '}
+                  <span className="font-semibold" style={{ color: paceColor }}>{((playoffTarget - totalPoints) / gamesRemaining).toFixed(2)} points per game</span> over the remaining {gamesRemaining} games.
                 </>
               )}
             </p>
@@ -280,7 +280,7 @@ function SeasonSection({
   );
 }
 
-export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, onYearOverYearToggle, lastSeasonStats }: ProgressBarProps) {
+export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors }: ProgressBarProps) {
   // Calculate the last season label dynamically
   // Current season is 2025-2026, so we get the start year (2025) and format as "24-25"
   const currentDate = new Date();
@@ -299,24 +299,29 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, onYea
   const lastSeasonLabel = `${String(lastSeasonStartYear).slice(-2)}-${String(lastSeasonEndYear).slice(-2)}`;
 
   return (
-    <div className={`rounded-2xl p-3 md:p-4 shadow-xl mb-4 border-2 relative ${
-      isGoatMode
-        ? 'bg-zinc-900 border-zinc-800'
-        : 'bg-white border-gray-200'
-    }`}>
+    <div
+      className={`rounded-2xl p-3 md:p-4 shadow-xl mb-4 border-2 relative ${
+        isGoatMode
+          ? 'bg-zinc-900'
+          : 'bg-white border-gray-200'
+      }`}
+      style={isGoatMode ? {
+        backgroundColor: darkModeColors.background,
+        borderColor: darkModeColors.border
+      } : undefined}
+    >
       {/* Year-over-Year Toggle Text Button */}
       {onYearOverYearToggle && (
         <button
           onClick={onYearOverYearToggle}
           className={`absolute top-3 md:top-4 right-3 md:right-4 flex items-center gap-1 text-xs md:text-sm font-semibold transition-all focus:outline-none group ${
             yearOverYearMode
-              ? isGoatMode
-                ? 'text-red-400'
-                : 'text-sabres-blue'
+              ? ''
               : isGoatMode
                 ? 'text-zinc-500 hover:text-zinc-400'
                 : 'text-gray-500 hover:text-gray-700'
           }`}
+          style={yearOverYearMode ? (isGoatMode ? { color: darkModeColors.accent } : { color: teamColors.primary }) : undefined}
           title={yearOverYearMode ? `Hide ${lastSeasonLabel} comparison` : `Compare to ${lastSeasonLabel}`}
         >
           <span className={yearOverYearMode ? 'underline decoration-2 underline-offset-2' : ''}>
@@ -334,7 +339,7 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, onYea
       )}
 
       {/* Current Year Section */}
-      <SeasonSection stats={stats} isGoatMode={isGoatMode} />
+      <SeasonSection stats={stats} isGoatMode={isGoatMode} teamColors={teamColors} darkModeColors={darkModeColors} />
 
       {/* Divider and Last Year Section */}
       {lastSeasonStats && (
@@ -351,6 +356,8 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, onYea
             isLastYear={true}
             currentYearStats={stats}
             lastSeasonLabel={lastSeasonLabel}
+            teamColors={teamColors}
+            darkModeColors={darkModeColors}
           />
         </>
       )}
