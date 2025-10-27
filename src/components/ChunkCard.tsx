@@ -83,10 +83,6 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
   const shadowStyle = targetMet && chunk.isComplete ? 'shadow-xl' : 'shadow-lg';
   const opacity = hasPlayed && !targetMet && chunk.isComplete ? 'opacity-80' : 'opacity-100';
 
-  // Helper styles for team colors
-  const teamPrimaryColor = isGoatMode ? darkModeColors.accent : teamColors.primary;
-  const teamSecondaryColor = isGoatMode ? '#ffffff' : teamColors.secondary;
-
   return (
     <div
       className={`${borderClass} ${shadowStyle} ${opacity} rounded-2xl p-3 md:p-4 hover:shadow-2xl transition-all ${
