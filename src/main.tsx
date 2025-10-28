@@ -28,6 +28,13 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/bluejackets" element={<App team={TEAMS.bluejackets} />} />
         <Route path="/rangers" element={<App team={TEAMS.rangers} />} />
         <Route path="/utah" element={<App team={TEAMS.utah} />} />
+        <Route path="/avalanche" element={<App team={TEAMS.avalanche} />} />
+        <Route path="/jets" element={<App team={TEAMS.jets} />} />
+        <Route path="/stars" element={<App team={TEAMS.stars} />} />
+        <Route path="/blackhawks" element={<App team={TEAMS.blackhawks} />} />
+        <Route path="/predators" element={<App team={TEAMS.predators} />} />
+        <Route path="/wild" element={<App team={TEAMS.wild} />} />
+        <Route path="/blues" element={<App team={TEAMS.blues} />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,

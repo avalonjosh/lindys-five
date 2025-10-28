@@ -85,7 +85,14 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors }: T
       TEAMS.capitals,     // Washington
     ],
     'Central Division': [
+      TEAMS.blackhawks,   // Chicago
+      TEAMS.avalanche,    // Colorado
+      TEAMS.stars,        // Dallas
+      TEAMS.wild,         // Minnesota
+      TEAMS.predators,    // Nashville
+      TEAMS.blues,        // St. Louis
       TEAMS.utah,         // Utah
+      TEAMS.jets,         // Winnipeg
     ],
     // 'Pacific Division': [],
   };

@@ -329,6 +329,157 @@ export default function Landing() {
           </Link>
             </div>
           </div>
+
+          {/* Central Division */}
+          <div className="mb-12">
+            <div className="border-t-2 border-gray-600 mb-8"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+          {/* Chicago Blackhawks */}
+          <Link
+            to="/blackhawks"
+            className="group relative bg-gradient-to-br from-[#CF0A2C] to-[#a00822] rounded-2xl p-8 shadow-2xl border-2 border-[#000000] hover:border-[#1a1a1a] transition-all duration-300 hover:scale-105 hover:shadow-[#CF0A2C]/50"
+          >
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={TEAMS.blackhawks.logo}
+                alt="Chicago Blackhawks"
+                className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300"
+              />
+              <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                {TEAMS.blackhawks.city} {TEAMS.blackhawks.name}
+              </h2>
+              <p className="text-white font-semibold">View →</p>
+            </div>
+          </Link>
+
+          {/* Colorado Avalanche */}
+          <Link
+            to="/avalanche"
+            className="group relative bg-gradient-to-br from-[#6F263D] to-[#561d30] rounded-2xl p-8 shadow-2xl border-2 border-[#236192] hover:border-[#3477ad] transition-all duration-300 hover:scale-105 hover:shadow-[#236192]/50"
+          >
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={TEAMS.avalanche.logo}
+                alt="Colorado Avalanche"
+                className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300"
+              />
+              <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                {TEAMS.avalanche.city} {TEAMS.avalanche.name}
+              </h2>
+              <p className="text-[#236192] font-semibold">View →</p>
+            </div>
+          </Link>
+
+          {/* Dallas Stars */}
+          <Link
+            to="/stars"
+            className="group relative bg-gradient-to-br from-[#006847] to-[#004d35] rounded-2xl p-8 shadow-2xl border-2 border-[#8F8F8C] hover:border-[#a5a5a2] transition-all duration-300 hover:scale-105 hover:shadow-[#8F8F8C]/50"
+          >
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={TEAMS.stars.logo}
+                alt="Dallas Stars"
+                className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300"
+              />
+              <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                {TEAMS.stars.city} {TEAMS.stars.name}
+              </h2>
+              <p className="text-[#8F8F8C] font-semibold">View →</p>
+            </div>
+          </Link>
+
+          {/* Minnesota Wild */}
+          <Link
+            to="/wild"
+            className="group relative bg-gradient-to-br from-[#154734] to-[#0f3526] rounded-2xl p-8 shadow-2xl border-2 border-[#A6192E] hover:border-[#bf1f37] transition-all duration-300 hover:scale-105 hover:shadow-[#A6192E]/50"
+          >
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={TEAMS.wild.logo}
+                alt="Minnesota Wild"
+                className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300"
+              />
+              <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                {TEAMS.wild.city} {TEAMS.wild.name}
+              </h2>
+              <p className="text-[#A6192E] font-semibold">View →</p>
+            </div>
+          </Link>
+
+          {/* Nashville Predators */}
+          <Link
+            to="/predators"
+            className="group relative bg-gradient-to-br from-[#FFB81C] to-[#d99915] rounded-2xl p-8 shadow-2xl border-2 border-[#041E42] hover:border-[#072d5c] transition-all duration-300 hover:scale-105 hover:shadow-[#FFB81C]/50"
+          >
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={TEAMS.predators.logo}
+                alt="Nashville Predators"
+                className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300"
+              />
+              <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                {TEAMS.predators.city} {TEAMS.predators.name}
+              </h2>
+              <p className="text-[#041E42] font-semibold">View →</p>
+            </div>
+          </Link>
+
+          {/* St. Louis Blues */}
+          <Link
+            to="/blues"
+            className="group relative bg-gradient-to-br from-[#002F87] to-[#00226b] rounded-2xl p-8 shadow-2xl border-2 border-[#FCB514] hover:border-[#fdc845] transition-all duration-300 hover:scale-105 hover:shadow-[#FCB514]/50"
+          >
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={TEAMS.blues.logo}
+                alt="St. Louis Blues"
+                className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300"
+              />
+              <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                {TEAMS.blues.city} {TEAMS.blues.name}
+              </h2>
+              <p className="text-[#FCB514] font-semibold">View →</p>
+            </div>
+          </Link>
+
+          {/* Utah Mammoth */}
+          <Link
+            to="/utah"
+            className="group relative bg-gradient-to-br from-[#69B3E7] to-[#4a9cd4] rounded-2xl p-8 shadow-2xl border-2 border-[#000000] hover:border-[#1a1a1a] transition-all duration-300 hover:scale-105 hover:shadow-[#69B3E7]/50"
+          >
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={TEAMS.utah.logo}
+                alt="Utah Mammoth"
+                className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300"
+              />
+              <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                {TEAMS.utah.city} {TEAMS.utah.name}
+              </h2>
+              <p className="text-white font-semibold">View →</p>
+            </div>
+          </Link>
+
+          {/* Winnipeg Jets */}
+          <Link
+            to="/jets"
+            className="group relative bg-gradient-to-br from-[#041E42] to-[#02152e] rounded-2xl p-8 shadow-2xl border-2 border-[#AC162C] hover:border-[#c51b36] transition-all duration-300 hover:scale-105 hover:shadow-[#AC162C]/50"
+          >
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={TEAMS.jets.logo}
+                alt="Winnipeg Jets"
+                className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300"
+              />
+              <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                {TEAMS.jets.city} {TEAMS.jets.name}
+              </h2>
+              <p className="text-[#AC162C] font-semibold">View →</p>
+            </div>
+          </Link>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}

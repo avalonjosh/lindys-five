@@ -390,5 +390,152 @@ export const TEAMS: Record<string, TeamConfig> = {
       text: '#ffffff' // White text
     },
     logo: 'https://assets.nhle.com/logos/nhl/svg/UTA_light.svg'
+  },
+  avalanche: {
+    id: 'avalanche',
+    nhlId: 21,
+    name: 'Avalanche',
+    city: 'Colorado',
+    abbreviation: 'COL',
+    slug: 'avalanche',
+    colors: {
+      primary: '#6F263D', // Burgundy
+      secondary: '#236192', // Steel blue
+      accent: '#236192' // Steel blue
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#236192', // Avalanche steel blue
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/COL_light.svg'
+  },
+  jets: {
+    id: 'jets',
+    nhlId: 52,
+    name: 'Jets',
+    city: 'Winnipeg',
+    abbreviation: 'WPG',
+    slug: 'jets',
+    colors: {
+      primary: '#041E42', // Navy blue
+      secondary: '#AC162C', // Red
+      accent: '#AC162C' // Red
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#AC162C', // Jets red
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/WPG_light.svg'
+  },
+  stars: {
+    id: 'stars',
+    nhlId: 25,
+    name: 'Stars',
+    city: 'Dallas',
+    abbreviation: 'DAL',
+    slug: 'stars',
+    colors: {
+      primary: '#006847', // Victory green
+      secondary: '#8F8F8C', // Silver
+      accent: '#8F8F8C' // Silver
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#8F8F8C', // Stars silver
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/DAL_light.svg'
+  },
+  blackhawks: {
+    id: 'blackhawks',
+    nhlId: 16,
+    name: 'Blackhawks',
+    city: 'Chicago',
+    abbreviation: 'CHI',
+    slug: 'blackhawks',
+    colors: {
+      primary: '#CF0A2C', // Red
+      secondary: '#000000', // Black
+      accent: '#CF0A2C' // Red
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#CF0A2C', // Blackhawks red
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/CHI_light.svg'
+  },
+  predators: {
+    id: 'predators',
+    nhlId: 18,
+    name: 'Predators',
+    city: 'Nashville',
+    abbreviation: 'NSH',
+    slug: 'predators',
+    colors: {
+      primary: '#FFB81C', // Gold
+      secondary: '#041E42', // Navy blue
+      accent: '#FFB81C' // Gold
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#FFB81C', // Predators gold
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/NSH_light.svg'
+  },
+  wild: {
+    id: 'wild',
+    nhlId: 30,
+    name: 'Wild',
+    city: 'Minnesota',
+    abbreviation: 'MIN',
+    slug: 'wild',
+    colors: {
+      primary: '#154734', // Forest green
+      secondary: '#A6192E', // Red
+      accent: '#A6192E' // Red
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#A6192E', // Wild red
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/MIN_light.svg'
+  },
+  blues: {
+    id: 'blues',
+    nhlId: 19,
+    name: 'Blues',
+    city: 'St. Louis',
+    abbreviation: 'STL',
+    slug: 'blues',
+    colors: {
+      primary: '#002F87', // Blue
+      secondary: '#FCB514', // Gold
+      accent: '#FCB514' // Gold
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#FCB514', // Blues gold
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/STL_light.svg'
   }
 };
