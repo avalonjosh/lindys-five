@@ -211,6 +211,15 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors }: T
                 </div>
               </div>
             ))}
+
+            {/* More teams coming soon message */}
+            <div className="px-4 mt-4">
+              <p className={`text-sm text-center italic ${
+                isGoatMode ? 'text-zinc-500' : 'text-gray-500'
+              }`}>
+                More teams coming soon.
+              </p>
+            </div>
           </div>
 
           {/* Footer */}
