@@ -201,5 +201,194 @@ export const TEAMS: Record<string, TeamConfig> = {
       text: '#ffffff' // White text
     },
     logo: 'https://assets.nhle.com/logos/nhl/svg/BOS_light.svg'
+  },
+  devils: {
+    id: 'devils',
+    nhlId: 1,
+    name: 'Devils',
+    city: 'New Jersey',
+    abbreviation: 'NJD',
+    slug: 'devils',
+    colors: {
+      primary: '#CE1126', // Devils red
+      secondary: '#000000', // Black
+      accent: '#CE1126' // Red
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#CE1126', // Devils red
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/NJD_light.svg'
+  },
+  penguins: {
+    id: 'penguins',
+    nhlId: 5,
+    name: 'Penguins',
+    city: 'Pittsburgh',
+    abbreviation: 'PIT',
+    slug: 'penguins',
+    colors: {
+      primary: '#000000', // Black
+      secondary: '#FCB514', // Vegas gold
+      accent: '#FCB514' // Gold
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#FCB514', // Penguins gold
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/PIT_light.svg'
+  },
+  hurricanes: {
+    id: 'hurricanes',
+    nhlId: 12,
+    name: 'Hurricanes',
+    city: 'Carolina',
+    abbreviation: 'CAR',
+    slug: 'hurricanes',
+    colors: {
+      primary: '#CE1126', // Red
+      secondary: '#000000', // Black
+      accent: '#CE1126' // Red
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#CE1126', // Hurricanes red
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/CAR_light.svg'
+  },
+  capitals: {
+    id: 'capitals',
+    nhlId: 15,
+    name: 'Capitals',
+    city: 'Washington',
+    abbreviation: 'WSH',
+    slug: 'capitals',
+    colors: {
+      primary: '#041E42', // Navy blue
+      secondary: '#C8102E', // Red
+      accent: '#C8102E' // Red
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#C8102E', // Capitals red
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/WSH_light.svg'
+  },
+  islanders: {
+    id: 'islanders',
+    nhlId: 2,
+    name: 'Islanders',
+    city: 'New York',
+    abbreviation: 'NYI',
+    slug: 'islanders',
+    colors: {
+      primary: '#00539B', // Royal blue
+      secondary: '#F47D30', // Orange
+      accent: '#F47D30' // Orange
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#F47D30', // Islanders orange
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/NYI_light.svg'
+  },
+  flyers: {
+    id: 'flyers',
+    nhlId: 4,
+    name: 'Flyers',
+    city: 'Philadelphia',
+    abbreviation: 'PHI',
+    slug: 'flyers',
+    colors: {
+      primary: '#F74902', // Orange
+      secondary: '#000000', // Black
+      accent: '#F74902' // Orange
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#F74902', // Flyers orange
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/PHI_light.svg'
+  },
+  bluejackets: {
+    id: 'bluejackets',
+    nhlId: 29,
+    name: 'Blue Jackets',
+    city: 'Columbus',
+    abbreviation: 'CBJ',
+    slug: 'bluejackets',
+    colors: {
+      primary: '#002654', // Navy blue
+      secondary: '#CE1126', // Red
+      accent: '#CE1126' // Red
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#CE1126', // Blue Jackets red
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/CBJ_light.svg'
+  },
+  rangers: {
+    id: 'rangers',
+    nhlId: 3,
+    name: 'Rangers',
+    city: 'New York',
+    abbreviation: 'NYR',
+    slug: 'rangers',
+    colors: {
+      primary: '#0038A8', // Royal blue
+      secondary: '#CE1126', // Red
+      accent: '#CE1126' // Red
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#CE1126', // Rangers red
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/NYR_light.svg'
+  },
+  utah: {
+    id: 'utah',
+    nhlId: 59,
+    name: 'Mammoth',
+    city: 'Utah',
+    abbreviation: 'UTA',
+    slug: 'utah',
+    colors: {
+      primary: '#69B3E7', // Utah blue
+      secondary: '#000000', // Black
+      accent: '#69B3E7' // Blue
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#69B3E7', // Utah blue
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/UTA_light.svg'
   }
 };

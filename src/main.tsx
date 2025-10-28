@@ -19,6 +19,15 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/mapleleafs" element={<App team={TEAMS.mapleleafs} />} />
         <Route path="/lightning" element={<App team={TEAMS.lightning} />} />
         <Route path="/bruins" element={<App team={TEAMS.bruins} />} />
+        <Route path="/devils" element={<App team={TEAMS.devils} />} />
+        <Route path="/penguins" element={<App team={TEAMS.penguins} />} />
+        <Route path="/hurricanes" element={<App team={TEAMS.hurricanes} />} />
+        <Route path="/capitals" element={<App team={TEAMS.capitals} />} />
+        <Route path="/islanders" element={<App team={TEAMS.islanders} />} />
+        <Route path="/flyers" element={<App team={TEAMS.flyers} />} />
+        <Route path="/bluejackets" element={<App team={TEAMS.bluejackets} />} />
+        <Route path="/rangers" element={<App team={TEAMS.rangers} />} />
+        <Route path="/utah" element={<App team={TEAMS.utah} />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
