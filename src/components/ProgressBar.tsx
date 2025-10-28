@@ -22,6 +22,7 @@ interface ProgressBarProps {
   lastSeasonStats?: SeasonStats;
   teamColors: TeamColors;
   darkModeColors: DarkModeColors;
+  teamId: string;
 }
 
 // Helper function to render a season section
@@ -32,7 +33,8 @@ function SeasonSection({
   currentYearStats,
   lastSeasonLabel,
   teamColors,
-  darkModeColors
+  darkModeColors,
+  teamId
 }: {
   stats: SeasonStats;
   isGoatMode: boolean;
@@ -41,8 +43,9 @@ function SeasonSection({
   lastSeasonLabel?: string;
   teamColors: TeamColors;
   darkModeColors: DarkModeColors;
+  teamId: string;
 }) {
-  const { totalPoints, gamesPlayed, gamesRemaining, currentPace, projectedPoints, playoffTarget, pointsAboveBelow } = stats;
+  const { totalPoints, gamesPlayed, gamesRemaining, currentPace, projectedPoints, playoffTarget } = stats;
 
   // Team color classes - dynamically computed based on team colors
   const labelColor = isLastYear
@@ -69,13 +72,14 @@ function SeasonSection({
   const expectedPointsAtThisStage = (playoffTarget / stats.totalGames) * gamesPlayed;
   const expectedProgress = (expectedPointsAtThisStage / playoffTarget) * 100;
 
-  const isOnPace = projectedPoints >= playoffTarget;
-  const paceColor = isGoatMode ? darkModeColors.accent : teamColors.primary;
   const barColor = isLastYear
     ? isGoatMode
       ? '#52525b'
       : '#64748b'
     : isGoatMode ? darkModeColors.accent : teamColors.primary;
+
+  // Calculate text color for points label inside progress bar
+  const barTextColor = !isLastYear && isGoatMode && darkModeColors.accent === '#FFFFFF' ? '#002868' : '#FFFFFF';
 
   // Determine Expected indicator color based on performance
   const pointsDifference = totalPoints - expectedPointsAtThisStage;
@@ -125,9 +129,11 @@ function SeasonSection({
             {totalPoints}
             {isLastYear && pointsDiff !== 0 && (
               <span className={`text-sm font-semibold ${
-                pointsDiff < 0 ? 'text-amber-500' : 'text-red-600'
+                teamId === 'sabres'
+                  ? (pointsDiff < 0 ? 'text-amber-500' : 'text-red-600')
+                  : (pointsDiff < 0 ? 'text-green-600' : 'text-red-600')
               }`}>
-                {pointsDiff < 0 ? '+' : ''}{Math.abs(pointsDiff)}
+                {pointsDiff < 0 ? '+' : '-'}{Math.abs(pointsDiff)}
               </span>
             )}
           </div>
@@ -153,9 +159,11 @@ function SeasonSection({
             {currentPace.toFixed(2)}
             {isLastYear && paceDiff !== 0 && (
               <span className={`text-sm font-semibold ${
-                paceDiff < 0 ? 'text-amber-500' : 'text-red-600'
+                teamId === 'sabres'
+                  ? (paceDiff < 0 ? 'text-amber-500' : 'text-red-600')
+                  : (paceDiff < 0 ? 'text-green-600' : 'text-red-600')
               }`}>
-                {paceDiff < 0 ? '+' : ''}{Math.abs(paceDiff).toFixed(2)}
+                {paceDiff < 0 ? '+' : '-'}{Math.abs(paceDiff).toFixed(2)}
               </span>
             )}
           </div>
@@ -181,9 +189,11 @@ function SeasonSection({
             {projectedPoints}
             {isLastYear && projectedDiff !== 0 && (
               <span className={`text-sm font-semibold ${
-                projectedDiff < 0 ? 'text-amber-500' : 'text-red-600'
+                teamId === 'sabres'
+                  ? (projectedDiff < 0 ? 'text-amber-500' : 'text-red-600')
+                  : (projectedDiff < 0 ? 'text-green-600' : 'text-red-600')
               }`}>
-                {projectedDiff < 0 ? '+' : ''}{Math.abs(projectedDiff)}
+                {projectedDiff < 0 ? '+' : '-'}{Math.abs(projectedDiff)}
               </span>
             )}
           </div>
@@ -218,7 +228,10 @@ function SeasonSection({
           >
             {/* Show points label when there's enough room */}
             {currentProgress > 0 && (
-              <span className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 text-white text-xs md:text-sm font-bold">
+              <span
+                className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 text-xs md:text-sm font-bold"
+                style={{ color: barTextColor }}
+              >
                 {totalPoints}
               </span>
             )}
@@ -251,36 +264,11 @@ function SeasonSection({
         )}
       </div>
 
-      {/* Additional context - only show for current year, hidden on mobile */}
-      {!isLastYear && gamesPlayed > 10 && (
-        <div className={`mt-4 pt-4 border-t hidden md:block ${
-          isGoatMode ? 'border-zinc-800' : 'border-gray-200'
-        }`}>
-          <div className={`text-sm ${
-            isGoatMode ? 'text-zinc-300' : 'text-gray-600'
-          }`}>
-            <p>
-              {isOnPace ? (
-                <>
-                  At the current pace, the team is projected to finish with <span className="font-semibold" style={{ color: paceColor }}>{projectedPoints} points</span>.
-                  They can afford to earn {' '}
-                  <span className="font-semibold">{(pointsAboveBelow / gamesRemaining).toFixed(1)} fewer points per game</span> over the remaining {gamesRemaining} games.
-                </>
-              ) : (
-                <>
-                  To reach the playoff target, the team needs approximately{' '}
-                  <span className="font-semibold" style={{ color: paceColor }}>{((playoffTarget - totalPoints) / gamesRemaining).toFixed(2)} points per game</span> over the remaining {gamesRemaining} games.
-                </>
-              )}
-            </p>
-          </div>
-        </div>
-      )}
     </>
   );
 }
 
-export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors }: ProgressBarProps) {
+export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors, teamId }: ProgressBarProps) {
   // Calculate the last season label dynamically
   // Current season is 2025-2026, so we get the start year (2025) and format as "24-25"
   const currentDate = new Date();
@@ -339,7 +327,7 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, onYea
       )}
 
       {/* Current Year Section */}
-      <SeasonSection stats={stats} isGoatMode={isGoatMode} teamColors={teamColors} darkModeColors={darkModeColors} />
+      <SeasonSection stats={stats} isGoatMode={isGoatMode} teamColors={teamColors} darkModeColors={darkModeColors} teamId={teamId} />
 
       {/* Divider and Last Year Section */}
       {lastSeasonStats && (
@@ -358,6 +346,7 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, onYea
             lastSeasonLabel={lastSeasonLabel}
             teamColors={teamColors}
             darkModeColors={darkModeColors}
+            teamId={teamId}
           />
         </>
       )}

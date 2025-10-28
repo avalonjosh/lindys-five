@@ -25,12 +25,17 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors }: T
     setIsOpen(false);
   };
 
-  // Organize teams by division (for now, we'll just list Sabres and Canadiens)
-  // When you add more teams, organize them by division here
+  // Organize teams by division
   const divisions = {
     'Atlantic Division': [
       TEAMS.sabres,
       TEAMS.canadiens,
+      TEAMS.redwings,
+      TEAMS.senators,
+      TEAMS.panthers,
+      TEAMS.mapleleafs,
+      TEAMS.lightning,
+      TEAMS.bruins,
       // Add more Atlantic teams here
     ],
     // 'Metropolitan Division': [],
@@ -57,7 +62,7 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors }: T
         <svg
           className="w-4 h-4 md:w-5 md:h-5"
           fill="none"
-          stroke="white"
+          stroke={isGoatMode && darkModeColors.accent === '#FFFFFF' ? '#002868' : 'white'}
           viewBox="0 0 24 24"
         >
           <path

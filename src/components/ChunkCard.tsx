@@ -129,7 +129,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
           </div>
           <div className="text-right">
             <div
-              className={`text-4xl md:text-5xl font-bold ${isGoatMode ? 'text-red-500' : ''}`}
+              className={`text-4xl md:text-5xl font-bold ${isGoatMode ? 'text-white' : ''}`}
               style={!isGoatMode ? { color: teamColors.primary } : undefined}
             >
               {displayPoints}
@@ -148,7 +148,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
               : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
           }`}>
             <div
-              className={`text-2xl md:text-3xl font-bold ${isGoatMode ? 'text-red-500' : ''}`}
+              className={`text-2xl md:text-3xl font-bold ${isGoatMode ? 'text-white' : ''}`}
               style={!isGoatMode ? { color: teamColors.primary } : undefined}
             >
               {displayWins}
@@ -163,7 +163,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
               : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
           }`}>
             <div
-              className={`text-2xl md:text-3xl font-bold ${isGoatMode ? 'text-red-500' : ''}`}
+              className={`text-2xl md:text-3xl font-bold ${isGoatMode ? 'text-white' : ''}`}
               style={!isGoatMode ? { color: teamColors.primary } : undefined}
             >
               {displayOTLosses}
@@ -178,7 +178,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
               : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
           }`}>
             <div
-              className={`text-2xl md:text-3xl font-bold ${isGoatMode ? 'text-red-500' : ''}`}
+              className={`text-2xl md:text-3xl font-bold ${isGoatMode ? 'text-white' : ''}`}
               style={!isGoatMode ? { color: teamColors.primary } : undefined}
             >
               {displayLosses}

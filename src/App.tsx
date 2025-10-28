@@ -274,17 +274,13 @@ function App({ team }: AppProps) {
             <div className="absolute right-0 top-0">
               <button
                 onClick={toggleTheme}
-                className={`relative inline-flex h-6 w-11 md:h-7 md:w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                  isGoatMode
-                    ? ''
-                    : 'focus:ring-offset-2'
-                }`}
+                className={`relative inline-flex h-6 w-11 md:h-7 md:w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2`}
                 style={isGoatMode ? {
                   backgroundColor: darkModeColors.accent,
                   boxShadow: `0 0 0 2px ${darkModeColors.accent}`
                 } : {
                   backgroundColor: team.colors.accent,
-                  boxShadow: `0 0 0 2px ${team.colors.accent === '#FFFFFF' ? team.colors.secondary : team.colors.accent}`
+                  boxShadow: `0 0 0 2px ${team.colors.accent === '#FFFFFF' ? team.colors.secondary : 'rgba(255, 255, 255, 0.5)'}`
                 }}
                 role="switch"
                 aria-checked={isGoatMode}
@@ -297,7 +293,9 @@ function App({ team }: AppProps) {
                   style={!isGoatMode ? {
                     backgroundColor: team.colors.accent === '#FFFFFF' ? team.colors.secondary : '#FFFFFF',
                     border: team.colors.accent === '#FFFFFF' ? `2px solid ${team.colors.secondary}` : 'none'
-                  } : { backgroundColor: '#FFFFFF' }}
+                  } : {
+                    backgroundColor: darkModeColors.accent === '#FFFFFF' ? '#002868' : '#FFFFFF'
+                  }}
                 />
               </button>
             </div>
@@ -307,11 +305,21 @@ function App({ team }: AppProps) {
               className="hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 rounded-lg"
               title="Back to Home"
             >
-              <img
-                src={logoUrl}
-                alt={`${team.city} ${team.name} Logo`}
-                className="w-16 h-16 md:w-24 md:h-24 mb-2 md:mb-3"
-              />
+              {team.id === 'lightning' ? (
+                <div className="p-2 md:p-3 rounded-full bg-white mb-2 md:mb-3">
+                  <img
+                    src={logoUrl}
+                    alt={`${team.city} ${team.name} Logo`}
+                    className="w-12 h-12 md:w-18 md:h-18"
+                  />
+                </div>
+              ) : (
+                <img
+                  src={logoUrl}
+                  alt={`${team.city} ${team.name} Logo`}
+                  className="w-16 h-16 md:w-24 md:h-24 mb-2 md:mb-3"
+                />
+              )}
             </button>
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-2 tracking-wider" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
               Lindy's Five
@@ -349,6 +357,7 @@ function App({ team }: AppProps) {
             } : undefined}
             teamColors={team.colors}
             darkModeColors={darkModeColors}
+            teamId={team.id}
           />
         )}
 
@@ -454,12 +463,18 @@ function App({ team }: AppProps) {
                 onClick={() => setHideCompleted(!hideCompleted)}
                 className={`px-2 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold transition-all whitespace-nowrap ${
                   hideCompleted
-                    ? 'text-white shadow-md'
+                    ? ''
                     : isGoatMode
                       ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
                       : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
-                style={hideCompleted ? (isGoatMode ? { backgroundColor: darkModeColors.accent } : { backgroundColor: team.colors.primary }) : undefined}
+                style={hideCompleted ? (isGoatMode ? {
+                  backgroundColor: darkModeColors.accent,
+                  color: darkModeColors.accent === '#FFFFFF' ? '#002868' : '#FFFFFF'
+                } : {
+                  backgroundColor: team.colors.primary,
+                  color: '#FFFFFF'
+                }) : undefined}
               >
                 <span className="hidden sm:inline">{hideCompleted ? 'Show All Sets' : 'Hide Completed Sets'}</span>
                 <span className="sm:hidden">{hideCompleted ? 'Show All' : 'Hide Done'}</span>
