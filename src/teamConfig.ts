@@ -14,6 +14,7 @@ export interface TeamConfig {
     background: string;
     backgroundGradient?: string;
     cardBackground?: string; // Optional: separate background for cards (if different from page background)
+    headerBackground?: string; // Optional: separate background for header
     accent: string;
     border: string;
     text: string;
