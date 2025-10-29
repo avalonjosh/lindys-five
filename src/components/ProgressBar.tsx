@@ -343,7 +343,7 @@ ${teamUrl}
 
   const handleTwitterShare = () => {
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
-    window.open(twitterUrl, '_blank', 'width=550,height=420');
+    window.open(twitterUrl, '_blank', 'noopener,noreferrer');
     setShareMenuOpen(false);
   };
 
