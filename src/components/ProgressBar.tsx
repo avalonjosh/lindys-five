@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { MoreHorizontal, X as XIcon, Link as LinkIcon, Check } from 'lucide-react';
 import type { SeasonStats } from '../types';
 
 interface TeamColors {
@@ -24,6 +26,8 @@ interface ProgressBarProps {
   teamColors: TeamColors;
   darkModeColors: DarkModeColors;
   teamId: string;
+  showShareButton?: boolean;
+  teamName?: string;
 }
 
 // Helper function to render a season section
@@ -306,7 +310,10 @@ function SeasonSection({
   );
 }
 
-export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors, teamId }: ProgressBarProps) {
+export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors, teamId, showShareButton, teamName }: ProgressBarProps) {
+  const [shareMenuOpen, setShareMenuOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
   // Calculate the last season label dynamically
   // Current season is 2025-2026, so we get the start year (2025) and format as "24-25"
   const currentDate = new Date();
@@ -323,6 +330,35 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, onYea
 
   // Format as "YY-YY" (e.g., "24-25")
   const lastSeasonLabel = `${String(lastSeasonStartYear).slice(-2)}-${String(lastSeasonEndYear).slice(-2)}`;
+
+  // Share functionality
+  const hostname = window.location.hostname;
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+  const baseUrl = isLocalhost ? `http://${hostname}:${window.location.port}` : 'https://lindysfive.com';
+  const teamUrl = `${baseUrl}/team/${teamId}`;
+
+  const tweetText = `Track the ${teamName}'s road to the playoffs! 🏒
+${teamUrl}
+@lindysfive #LindysFive`;
+
+  const handleTwitterShare = () => {
+    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+    window.open(twitterUrl, '_blank', 'width=550,height=420');
+    setShareMenuOpen(false);
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(teamUrl);
+      setCopied(true);
+      setTimeout(() => {
+        setCopied(false);
+        setShareMenuOpen(false);
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   return (
     <div
@@ -387,6 +423,99 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, onYea
             teamId={teamId}
           />
         </>
+      )}
+
+      {/* Share Button - Small grey icon in bottom-right corner */}
+      {showShareButton && (
+        <div className="relative">
+          {/* Share Menu */}
+          {shareMenuOpen && (
+            <>
+              {/* Backdrop */}
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setShareMenuOpen(false)}
+              />
+
+              {/* Menu with theme-aware styling */}
+              <div
+                className={`absolute bottom-12 right-0 rounded-lg shadow-2xl p-2 border-2 z-50 min-w-[240px] animate-in fade-in slide-in-from-bottom-2 duration-200 ${
+                  isGoatMode
+                    ? 'bg-zinc-900'
+                    : 'bg-white'
+                }`}
+                style={{
+                  borderColor: isGoatMode ? darkModeColors.accent : teamColors.primary
+                }}
+              >
+                {/* Small arrow pointing to button */}
+                <div
+                  className="absolute -bottom-2 right-4 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent"
+                  style={{
+                    borderTopColor: isGoatMode ? darkModeColors.accent : teamColors.primary
+                  }}
+                />
+
+                <button
+                  onClick={handleTwitterShare}
+                  className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg transition-colors text-left ${
+                    isGoatMode
+                      ? 'hover:bg-zinc-800'
+                      : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center bg-black"
+                  >
+                    <XIcon size={16} color="#FFFFFF" />
+                  </div>
+                  <span
+                    className={`font-semibold text-sm ${
+                      isGoatMode ? 'text-white' : 'text-gray-800'
+                    }`}
+                  >
+                    Share on X
+                  </span>
+                </button>
+
+                <button
+                  onClick={handleCopyLink}
+                  className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg transition-colors text-left ${
+                    isGoatMode
+                      ? 'hover:bg-zinc-800'
+                      : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{
+                      backgroundColor: isGoatMode ? darkModeColors.accent : teamColors.primary
+                    }}
+                  >
+                    {copied ? <Check size={16} color="#FFFFFF" /> : <LinkIcon size={16} color="#FFFFFF" />}
+                  </div>
+                  <span
+                    className={`font-semibold text-sm ${
+                      isGoatMode ? 'text-white' : 'text-gray-800'
+                    }`}
+                  >
+                    {copied ? 'Link Copied!' : 'Copy Link'}
+                  </span>
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Share Icon Button */}
+          <button
+            onClick={() => setShareMenuOpen(!shareMenuOpen)}
+            className="absolute -bottom-1 md:-bottom-2 right-2 md:right-3 p-2 rounded-full hover:bg-gray-200 transition-colors group"
+            aria-label="Share team page"
+            title="Share this page"
+          >
+            <MoreHorizontal size={18} className="text-gray-500 group-hover:text-gray-700" />
+          </button>
+        </div>
       )}
     </div>
   );

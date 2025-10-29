@@ -441,6 +441,8 @@ function App({ team }: AppProps) {
             teamColors={effectiveTeamColors}
             darkModeColors={darkModeColors}
             teamId={team.id}
+            showShareButton={true}
+            teamName={`${team.city} ${team.name}`}
           />
         )}
 
