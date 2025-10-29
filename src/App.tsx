@@ -240,12 +240,30 @@ function App({ team }: AppProps) {
     ? team.altLogo
     : team.logo;
 
+  // Special cases: treat certain teams' dark mode as classic mode with custom colors
+  const isNordiquesMode = team.id === 'avalanche' && isGoatMode;
+  const isVintagePanthersMode = team.id === 'panthers' && isGoatMode;
+  const useClassicStyling = !isGoatMode || isNordiquesMode || isVintagePanthersMode;
+
+  // For special modes, create custom team colors using their palette
+  const effectiveTeamColors = isNordiquesMode ? {
+    primary: darkModeColors.accent, // Nordiques red
+    secondary: darkModeColors.border, // Nordiques navy blue
+    accent: darkModeColors.accent // Nordiques red
+  } : isVintagePanthersMode ? {
+    primary: team.colors.primary, // Panthers red
+    secondary: team.colors.secondary, // Panthers navy blue
+    accent: team.colors.accent // Panthers gold
+  } : team.colors;
+
   return (
-    <div className={`min-h-screen ${
-      isGoatMode
-        ? `bg-gradient-to-br ${darkModeColors.backgroundGradient}`
-        : 'bg-gradient-to-br from-slate-50 to-blue-50'
-    }`}>
+    <div
+      className={`min-h-screen ${
+        useClassicStyling
+          ? 'bg-gradient-to-br from-slate-50 to-blue-50'
+          : `bg-gradient-to-br ${darkModeColors.backgroundGradient}`
+      }`}
+    >
       {/* Header */}
       <header
         className={`shadow-xl border-b-4 ${
@@ -253,21 +271,23 @@ function App({ team }: AppProps) {
             ? ''
             : ''
         }`}
-        style={isGoatMode ? {
-          backgroundColor: darkModeColors.background,
-          borderBottomColor: darkModeColors.border
-        } : {
+        style={useClassicStyling ? {
           background: team.id === 'sabres'
             ? `linear-gradient(to right, ${team.colors.primary}, ${team.colors.secondary})`
-            : team.colors.primary,
+            : isVintagePanthersMode
+              ? effectiveTeamColors.accent // Gold for vintage Panthers
+              : team.colors.primary,
           borderBottomColor: team.id === 'sabres' ? team.colors.accent : team.colors.secondary
+        } : {
+          backgroundColor: team.id === 'lightning' || team.id === 'penguins' ? '#FFFFFF' : darkModeColors.background,
+          borderBottomColor: team.id === 'lightning' ? team.colors.primary : team.id === 'penguins' ? team.colors.secondary : darkModeColors.border
         }}
       >
         <div className="max-w-7xl mx-auto px-4 py-3 md:py-4">
           <div className="flex flex-col items-center text-center relative">
             {/* Team Navigation */}
             <div className="absolute left-0 top-0">
-              <TeamNav currentTeamId={team.id} isGoatMode={isGoatMode} darkModeColors={darkModeColors} />
+              <TeamNav currentTeamId={team.id} isGoatMode={!useClassicStyling} darkModeColors={darkModeColors} teamColors={team.colors} />
             </div>
 
             {/* Theme Toggle Switch */}
@@ -276,8 +296,8 @@ function App({ team }: AppProps) {
                 onClick={toggleTheme}
                 className={`relative inline-flex h-6 w-11 md:h-7 md:w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2`}
                 style={isGoatMode ? {
-                  backgroundColor: darkModeColors.accent,
-                  boxShadow: `0 0 0 2px ${darkModeColors.accent}`
+                  backgroundColor: team.id === 'lightning' ? team.colors.primary : team.id === 'penguins' ? team.colors.primary : darkModeColors.accent,
+                  boxShadow: `0 0 0 2px ${team.id === 'lightning' ? team.colors.primary : team.id === 'penguins' ? team.colors.primary : darkModeColors.accent}`
                 } : {
                   backgroundColor: team.colors.accent,
                   boxShadow: `0 0 0 2px ${team.colors.accent === '#FFFFFF' ? team.colors.secondary : 'rgba(255, 255, 255, 0.5)'}`
@@ -294,7 +314,8 @@ function App({ team }: AppProps) {
                     backgroundColor: team.colors.accent === '#FFFFFF' ? team.colors.secondary : '#FFFFFF',
                     border: team.colors.accent === '#FFFFFF' ? `2px solid ${team.colors.secondary}` : 'none'
                   } : {
-                    backgroundColor: darkModeColors.accent === '#FFFFFF' ? '#002868' : '#FFFFFF'
+                    backgroundColor: '#FFFFFF',
+                    border: team.id === 'lightning' || team.id === 'penguins' ? `2px solid ${team.colors.primary}` : 'none'
                   }}
                 />
               </button>
@@ -305,7 +326,7 @@ function App({ team }: AppProps) {
               className="hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 rounded-lg"
               title="Back to Home"
             >
-              {team.id === 'lightning' ? (
+              {team.id === 'lightning' && !isGoatMode ? (
                 <div className="p-2 md:p-3 rounded-full bg-white mb-2 md:mb-3">
                   <img
                     src={logoUrl}
@@ -313,6 +334,36 @@ function App({ team }: AppProps) {
                     className="w-12 h-12 md:w-18 md:h-18"
                   />
                 </div>
+              ) : team.id === 'lightning' && isGoatMode ? (
+                <img
+                  src={logoUrl}
+                  alt={`${team.city} ${team.name} Logo`}
+                  className="h-16 md:h-24 mb-2 md:mb-3 w-auto"
+                />
+              ) : (team.id === 'canucks' && isGoatMode) ? (
+                <img
+                  src={logoUrl}
+                  alt={`${team.city} ${team.name} Logo`}
+                  className="h-16 md:h-24 mb-2 md:mb-3 w-auto"
+                />
+              ) : (team.id === 'senators' && isGoatMode) ? (
+                <img
+                  src={logoUrl}
+                  alt={`${team.city} ${team.name} Logo`}
+                  className="h-16 md:h-24 mb-2 md:mb-3 w-auto"
+                />
+              ) : (team.id === 'blackhawks' && isGoatMode) ? (
+                <img
+                  src={logoUrl}
+                  alt={`${team.city} ${team.name} Logo`}
+                  className="h-16 md:h-24 mb-2 md:mb-3 w-auto"
+                />
+              ) : (team.id === 'penguins' && isGoatMode) ? (
+                <img
+                  src={logoUrl}
+                  alt={`${team.city} ${team.name} Logo`}
+                  className="h-16 md:h-24 mb-2 md:mb-3 w-auto"
+                />
               ) : (
                 <img
                   src={logoUrl}
@@ -321,7 +372,15 @@ function App({ team }: AppProps) {
                 />
               )}
             </button>
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-2 tracking-wider" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+            <h1
+              className={`text-4xl md:text-6xl font-bold mb-2 tracking-wider ${
+                (team.id === 'lightning' || team.id === 'penguins') && isGoatMode ? '' : 'text-white'
+              }`}
+              style={(team.id === 'lightning' || team.id === 'penguins') && isGoatMode ? {
+                fontFamily: 'Bebas Neue, sans-serif',
+                color: team.colors.primary
+              } : { fontFamily: 'Bebas Neue, sans-serif' }}
+            >
               {team.id === 'goldenknights' && isGoatMode ? (
                 <span className="relative inline-block">
                   <span
@@ -338,17 +397,37 @@ function App({ team }: AppProps) {
                   </span>
                   {' Five'}
                 </span>
+              ) : team.id === 'canadiens' && isGoatMode ? (
+                <span className="relative inline-block">
+                  <span
+                    className="absolute -top-5 md:-top-8 left-1/2 transform -translate-x-1/2 text-xl md:text-3xl -rotate-1 whitespace-nowrap"
+                    style={{
+                      fontFamily: 'Permanent Marker, cursive',
+                      color: darkModeColors.accent
+                    }}
+                  >
+                    Les cinq de Lindy
+                  </span>
+                  <span style={{ textDecoration: 'line-through', textDecorationThickness: '3px' }}>
+                    Lindy's Five
+                  </span>
+                </span>
               ) : (
                 "Lindy's Five"
               )}
             </h1>
             <h2
               className={`text-xs md:text-2xl font-semibold mb-1 px-2 leading-tight whitespace-nowrap`}
-              style={isGoatMode ? { color: darkModeColors.accent } : { color: team.id === 'sabres' ? team.colors.accent : team.colors.secondary }}
+              style={isGoatMode ? { color: (team.id === 'lightning' || team.id === 'penguins') ? team.colors.primary : darkModeColors.accent } : { color: team.id === 'sabres' ? team.colors.accent : team.colors.secondary }}
             >
               {team.city} {team.name} Road to the Playoffs 2025-2026
             </h2>
-            <p className="text-white text-xs md:text-base opacity-90 px-2 leading-tight">
+            <p
+              className={`text-xs md:text-base opacity-90 px-2 leading-tight ${
+                (team.id === 'lightning' || team.id === 'penguins') && isGoatMode ? '' : 'text-white'
+              }`}
+              style={(team.id === 'lightning' || team.id === 'penguins') && isGoatMode ? { color: team.colors.primary } : undefined}
+            >
               5-Game Set Analysis • Target: 6+ points per set
             </p>
           </div>
@@ -360,7 +439,7 @@ function App({ team }: AppProps) {
         {stats && (
           <ProgressBar
             stats={whatIfMode && hypotheticalResults.size > 0 ? calculateSeasonStats(getChunksWithHypotheticals()) : stats}
-            isGoatMode={isGoatMode}
+            isGoatMode={!useClassicStyling}
             yearOverYearMode={yearOverYearMode}
             onYearOverYearToggle={() => setYearOverYearMode(!yearOverYearMode)}
             lastSeasonStats={yearOverYearMode && lastSeasonData ? {
@@ -373,7 +452,7 @@ function App({ team }: AppProps) {
               playoffTarget: stats.playoffTarget,
               pointsAboveBelow: Math.round((lastSeasonData.pointsLastYear / stats.gamesPlayed) * stats.totalGames) - stats.playoffTarget
             } : undefined}
-            teamColors={team.colors}
+            teamColors={effectiveTeamColors}
             darkModeColors={darkModeColors}
             teamId={team.id}
           />
@@ -425,8 +504,8 @@ function App({ team }: AppProps) {
         <div className={`mb-4 ${whatIfMode ? '' : 'mt-4'}`}>
           <div className="flex justify-between items-center mb-3 gap-2">
             <h2
-              className={`text-lg md:text-2xl font-bold ${isGoatMode ? 'text-white' : ''}`}
-              style={!isGoatMode ? { color: team.colors.secondary } : undefined}
+              className={`text-lg md:text-2xl font-bold ${isGoatMode && !isNordiquesMode ? 'text-white' : ''}`}
+              style={useClassicStyling ? { color: effectiveTeamColors.secondary } : undefined}
             >
               Game Sets
             </h2>
@@ -516,14 +595,14 @@ function App({ team }: AppProps) {
                   <ChunkCard
                     key={chunk.chunkNumber}
                     chunk={chunk}
-                    isGoatMode={isGoatMode}
+                    isGoatMode={!useClassicStyling}
                     previousChunkStats={previousChunkStats}
                     onStatsCalculated={handleStatsCalculated}
                     whatIfMode={whatIfMode && isWhatIfSet}
                     onGameClick={handleGameClick}
                     hypotheticalResults={hypotheticalResults}
                     teamId={team.nhlId}
-                    teamColors={team.colors}
+                    teamColors={effectiveTeamColors}
                     darkModeColors={darkModeColors}
                   />
                 );

@@ -9,6 +9,7 @@ interface TeamColors {
 interface DarkModeColors {
   background: string;
   backgroundGradient?: string;
+  cardBackground?: string;
   accent: string;
   border: string;
   text: string;
@@ -50,15 +51,19 @@ function SeasonSection({
   // Team color classes - dynamically computed based on team colors
   const labelColor = isLastYear
     ? (isGoatMode ? 'text-zinc-500' : 'text-slate-600')
-    : (isGoatMode ? '' : '');
+    : (isGoatMode ? (darkModeColors.cardBackground ? '' : '') : '');
   const labelStyle = isLastYear
     ? undefined
-    : (isGoatMode ? { color: darkModeColors.accent } : { color: teamColors.primary });
+    : (isGoatMode
+        ? (darkModeColors.cardBackground ? { color: darkModeColors.accent } : { color: darkModeColors.accent })
+        : { color: teamColors.primary });
 
   const valueColor = isLastYear
     ? (isGoatMode ? 'text-zinc-400' : 'text-slate-700')
-    : (isGoatMode ? 'text-white' : 'text-gray-900');
-  const valueStyle = !isGoatMode && !isLastYear ? undefined : undefined;
+    : (isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-white') : 'text-gray-900');
+  const valueStyle = isLastYear
+    ? undefined
+    : (isGoatMode && darkModeColors.cardBackground ? { color: darkModeColors.text } : undefined);
 
   // Calculate differences for last year section
   const pointsDiff = isLastYear && currentYearStats ? totalPoints - currentYearStats.totalPoints : 0;
@@ -96,34 +101,49 @@ function SeasonSection({
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-3 md:mb-4">
         {/* Games Played Card */}
-        <div className={`rounded-xl p-2 md:p-3 border ${
-          isLastYear
-            ? isGoatMode
-              ? 'bg-gradient-to-br from-zinc-800/60 to-zinc-900/60 border-zinc-600'
-              : 'bg-gradient-to-br from-slate-100 to-slate-200 border-slate-300'
-            : isGoatMode
-              ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
-              : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
-        }`}>
+        <div
+          className={`rounded-xl p-2 md:p-3 border ${
+            isLastYear
+              ? isGoatMode
+                ? 'bg-gradient-to-br from-zinc-800/60 to-zinc-900/60 border-zinc-600'
+                : 'bg-gradient-to-br from-slate-100 to-slate-200 border-slate-300'
+              : isGoatMode
+                ? (darkModeColors.cardBackground ? '' : 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700')
+                : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
+          }`}
+          style={!isLastYear && isGoatMode && darkModeColors.cardBackground ? {
+            background: `linear-gradient(to bottom right, ${darkModeColors.cardBackground}f0, ${darkModeColors.cardBackground}e0)`,
+            borderColor: darkModeColors.border
+          } : undefined}
+        >
           <div className={`text-xs font-semibold uppercase tracking-wide mb-1 ${labelColor}`} style={labelStyle}>Games Played</div>
           <div className={`text-2xl md:text-3xl font-bold ${valueColor}`} style={valueStyle}>{gamesPlayed}</div>
-          <div className={`text-xs mt-1 ${
-            isLastYear
-              ? isGoatMode ? 'text-zinc-600' : 'text-slate-500'
-              : isGoatMode ? 'text-zinc-400' : 'text-gray-600'
-          }`}>{gamesRemaining} remaining</div>
+          <div
+            className={`text-xs mt-1 ${
+              isLastYear
+                ? isGoatMode ? 'text-zinc-600' : 'text-slate-500'
+                : isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-zinc-400') : 'text-gray-600'
+            }`}
+            style={!isLastYear && isGoatMode && darkModeColors.cardBackground ? { color: `${darkModeColors.text}80` } : undefined}
+          >{gamesRemaining} remaining</div>
         </div>
 
         {/* Current Points Card */}
-        <div className={`rounded-xl p-2 md:p-3 border ${
-          isLastYear
-            ? isGoatMode
-              ? 'bg-gradient-to-br from-zinc-800/60 to-zinc-900/60 border-zinc-600'
-              : 'bg-gradient-to-br from-slate-100 to-slate-200 border-slate-300'
-            : isGoatMode
-              ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
-              : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
-        }`}>
+        <div
+          className={`rounded-xl p-2 md:p-3 border ${
+            isLastYear
+              ? isGoatMode
+                ? 'bg-gradient-to-br from-zinc-800/60 to-zinc-900/60 border-zinc-600'
+                : 'bg-gradient-to-br from-slate-100 to-slate-200 border-slate-300'
+              : isGoatMode
+                ? (darkModeColors.cardBackground ? '' : 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700')
+                : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
+          }`}
+          style={!isLastYear && isGoatMode && darkModeColors.cardBackground ? {
+            background: `linear-gradient(to bottom right, ${darkModeColors.cardBackground}f0, ${darkModeColors.cardBackground}e0)`,
+            borderColor: darkModeColors.border
+          } : undefined}
+        >
           <div className={`text-xs font-semibold uppercase tracking-wide mb-1 ${labelColor}`} style={labelStyle}>Current Points</div>
           <div className={`text-2xl md:text-3xl font-bold flex items-center gap-2 ${valueColor}`} style={valueStyle}>
             {totalPoints}
@@ -137,23 +157,32 @@ function SeasonSection({
               </span>
             )}
           </div>
-          <div className={`text-xs mt-1 ${
-            isLastYear
-              ? isGoatMode ? 'text-zinc-600' : 'text-slate-500'
-              : isGoatMode ? 'text-zinc-400' : 'text-gray-600'
-          }`}>of {gamesPlayed * 2} possible</div>
+          <div
+            className={`text-xs mt-1 ${
+              isLastYear
+                ? isGoatMode ? 'text-zinc-600' : 'text-slate-500'
+                : isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-zinc-400') : 'text-gray-600'
+            }`}
+            style={!isLastYear && isGoatMode && darkModeColors.cardBackground ? { color: `${darkModeColors.text}80` } : undefined}
+          >of {gamesPlayed * 2} possible</div>
         </div>
 
         {/* Current Pace Card */}
-        <div className={`rounded-xl p-2 md:p-3 border ${
-          isLastYear
-            ? isGoatMode
-              ? 'bg-gradient-to-br from-zinc-800/60 to-zinc-900/60 border-zinc-600'
-              : 'bg-gradient-to-br from-slate-100 to-slate-200 border-slate-300'
-            : isGoatMode
-              ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
-              : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
-        }`}>
+        <div
+          className={`rounded-xl p-2 md:p-3 border ${
+            isLastYear
+              ? isGoatMode
+                ? 'bg-gradient-to-br from-zinc-800/60 to-zinc-900/60 border-zinc-600'
+                : 'bg-gradient-to-br from-slate-100 to-slate-200 border-slate-300'
+              : isGoatMode
+                ? (darkModeColors.cardBackground ? '' : 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700')
+                : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
+          }`}
+          style={!isLastYear && isGoatMode && darkModeColors.cardBackground ? {
+            background: `linear-gradient(to bottom right, ${darkModeColors.cardBackground}f0, ${darkModeColors.cardBackground}e0)`,
+            borderColor: darkModeColors.border
+          } : undefined}
+        >
           <div className={`text-xs font-semibold uppercase tracking-wide mb-1 ${labelColor}`} style={labelStyle}>Current Pace</div>
           <div className={`text-2xl md:text-3xl font-bold flex items-center gap-2 ${valueColor}`} style={valueStyle}>
             {currentPace.toFixed(2)}
@@ -167,23 +196,32 @@ function SeasonSection({
               </span>
             )}
           </div>
-          <div className={`text-xs mt-1 ${
-            isLastYear
-              ? isGoatMode ? 'text-zinc-600' : 'text-slate-500'
-              : isGoatMode ? 'text-zinc-400' : 'text-gray-600'
-          }`}>pts/game (need {(playoffTarget / stats.totalGames).toFixed(2)})</div>
+          <div
+            className={`text-xs mt-1 ${
+              isLastYear
+                ? isGoatMode ? 'text-zinc-600' : 'text-slate-500'
+                : isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-zinc-400') : 'text-gray-600'
+            }`}
+            style={!isLastYear && isGoatMode && darkModeColors.cardBackground ? { color: `${darkModeColors.text}80` } : undefined}
+          >pts/game (need {(playoffTarget / stats.totalGames).toFixed(2)})</div>
         </div>
 
         {/* Projected Card */}
-        <div className={`rounded-xl p-2 md:p-3 border ${
-          isLastYear
-            ? isGoatMode
-              ? 'bg-gradient-to-br from-zinc-800/60 to-zinc-900/60 border-zinc-600'
-              : 'bg-gradient-to-br from-slate-100 to-slate-200 border-slate-300'
-            : isGoatMode
-              ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
+        <div
+          className={`rounded-xl p-2 md:p-3 border ${
+            isLastYear
+              ? isGoatMode
+                ? 'bg-gradient-to-br from-zinc-800/60 to-zinc-900/60 border-zinc-600'
+                : 'bg-gradient-to-br from-slate-100 to-slate-200 border-slate-300'
+              : isGoatMode
+                ? (darkModeColors.cardBackground ? '' : 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700')
               : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
-        }`}>
+          }`}
+          style={!isLastYear && isGoatMode && darkModeColors.cardBackground ? {
+            background: `linear-gradient(to bottom right, ${darkModeColors.cardBackground}f0, ${darkModeColors.cardBackground}e0)`,
+            borderColor: darkModeColors.border
+          } : undefined}
+        >
           <div className={`text-xs font-semibold uppercase tracking-wide mb-1 ${labelColor}`} style={labelStyle}>Projected</div>
           <div className={`text-2xl md:text-3xl font-bold flex items-center gap-2 ${valueColor}`} style={valueStyle}>
             {projectedPoints}
@@ -290,11 +328,11 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, onYea
     <div
       className={`rounded-2xl p-3 md:p-4 shadow-xl mb-4 border-2 relative ${
         isGoatMode
-          ? 'bg-zinc-900'
+          ? (darkModeColors.cardBackground ? '' : 'bg-zinc-900')
           : 'bg-white border-gray-200'
       }`}
       style={isGoatMode ? {
-        backgroundColor: darkModeColors.background,
+        backgroundColor: darkModeColors.cardBackground || darkModeColors.background,
         borderColor: darkModeColors.border
       } : undefined}
     >

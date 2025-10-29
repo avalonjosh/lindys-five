@@ -13,6 +13,7 @@ export interface TeamConfig {
   darkMode?: {
     background: string;
     backgroundGradient?: string;
+    cardBackground?: string; // Optional: separate background for cards (if different from page background)
     accent: string;
     border: string;
     text: string;
@@ -117,7 +118,8 @@ export const TEAMS: Record<string, TeamConfig> = {
       border: '#27272a', // Medium dark gray (zinc-800)
       text: '#ffffff' // White text
     },
-    logo: 'https://assets.nhle.com/logos/nhl/svg/OTT_light.svg'
+    logo: 'https://assets.nhle.com/logos/nhl/svg/OTT_light.svg',
+    altLogo: '/senators-vintage.svg'
   },
   panthers: {
     id: 'panthers',
@@ -138,7 +140,8 @@ export const TEAMS: Record<string, TeamConfig> = {
       border: '#27272a', // Medium dark gray (zinc-800)
       text: '#ffffff' // White text
     },
-    logo: 'https://assets.nhle.com/logos/nhl/svg/FLA_light.svg'
+    logo: 'https://assets.nhle.com/logos/nhl/svg/FLA_light.svg',
+    altLogo: '/panthers-vintage.png'
   },
   mapleleafs: {
     id: 'mapleleafs',
@@ -180,7 +183,8 @@ export const TEAMS: Record<string, TeamConfig> = {
       border: '#27272a', // Medium dark gray (zinc-800)
       text: '#ffffff' // White text
     },
-    logo: 'https://assets.nhle.com/logos/nhl/svg/TBL_light.svg'
+    logo: 'https://assets.nhle.com/logos/nhl/svg/TBL_light.svg',
+    altLogo: '/lightning-vintage.png'
   },
   bruins: {
     id: 'bruins',
@@ -244,7 +248,8 @@ export const TEAMS: Record<string, TeamConfig> = {
       border: '#27272a', // Medium dark gray (zinc-800)
       text: '#ffffff' // White text
     },
-    logo: 'https://assets.nhle.com/logos/nhl/svg/PIT_light.svg'
+    logo: 'https://assets.nhle.com/logos/nhl/svg/PIT_light.svg',
+    altLogo: '/penguins-vintage.png'
   },
   hurricanes: {
     id: 'hurricanes',
@@ -406,13 +411,15 @@ export const TEAMS: Record<string, TeamConfig> = {
       accent: '#236192' // Steel blue
     },
     darkMode: {
-      background: '#1a1a1a', // Neutral dark gray
-      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
-      accent: '#236192', // Avalanche steel blue
-      border: '#27272a', // Medium dark gray (zinc-800)
-      text: '#ffffff' // White text
+      background: '#5AB7E6', // Nordiques powder blue page background (ice rink feel)
+      backgroundGradient: 'from-[#5AB7E6] to-[#4AA5D4]',
+      cardBackground: '#FFFFFF', // White cards for clean look against powder blue
+      accent: '#E4002B', // Nordiques red
+      border: '#002654', // Nordiques navy blue
+      text: '#002654' // Navy blue text for contrast
     },
-    logo: 'https://assets.nhle.com/logos/nhl/svg/COL_light.svg'
+    logo: 'https://assets.nhle.com/logos/nhl/svg/COL_light.svg',
+    altLogo: '/nordiques-logo.png'
   },
   jets: {
     id: 'jets',
@@ -475,7 +482,8 @@ export const TEAMS: Record<string, TeamConfig> = {
       border: '#27272a', // Medium dark gray (zinc-800)
       text: '#ffffff' // White text
     },
-    logo: 'https://assets.nhle.com/logos/nhl/svg/CHI_light.svg'
+    logo: 'https://assets.nhle.com/logos/nhl/svg/CHI_light.svg',
+    altLogo: '/blackhawks-vintage.png'
   },
   predators: {
     id: 'predators',
@@ -595,13 +603,14 @@ export const TEAMS: Record<string, TeamConfig> = {
       accent: '#00843D' // Green
     },
     darkMode: {
-      background: '#1a1a1a', // Neutral dark gray
-      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
-      accent: '#00843D', // Canucks green
-      border: '#27272a', // Medium dark gray (zinc-800)
+      background: '#000000', // Black background (flying skate era)
+      backgroundGradient: 'from-black to-zinc-900',
+      accent: '#F4A900', // Yellow/gold (flying skate era)
+      border: '#C8102E', // Red border (flying skate era)
       text: '#ffffff' // White text
     },
-    logo: 'https://assets.nhle.com/logos/nhl/svg/VAN_light.svg'
+    logo: 'https://assets.nhle.com/logos/nhl/svg/VAN_light.svg',
+    altLogo: '/canucks-flying-skate.png'
   },
   flames: {
     id: 'flames',

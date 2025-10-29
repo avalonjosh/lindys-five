@@ -12,6 +12,7 @@ interface TeamColors {
 interface DarkModeColors {
   background: string;
   backgroundGradient?: string;
+  cardBackground?: string;
   accent: string;
   border: string;
   text: string;
@@ -89,22 +90,31 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
         isGoatMode ? '' : 'bg-white'
       }`}
       style={isGoatMode ? {
-        backgroundColor: darkModeColors.background,
+        backgroundColor: darkModeColors.cardBackground || darkModeColors.background,
         ...borderColorStyle
       } : borderColorStyle}
     >
       {/* Set Header */}
-      <div className={`mb-3 md:mb-4 pb-3 md:pb-4 border-b-2 ${
-        isGoatMode ? 'border-zinc-800' : 'border-gray-100'
-      }`}>
+      <div
+        className={`mb-3 md:mb-4 pb-3 md:pb-4 border-b-2 ${
+          isGoatMode ? (darkModeColors.cardBackground ? '' : 'border-zinc-800') : 'border-gray-100'
+        }`}
+        style={isGoatMode && darkModeColors.cardBackground ? { borderColor: `${darkModeColors.border}40` } : undefined}
+      >
         <div className="flex justify-between items-center mb-2 md:mb-3">
           <div>
-            <h3 className={`font-bold text-xl md:text-2xl ${
-              isGoatMode ? 'text-white' : 'text-sabres-navy'
-            }`}>Set {chunk.chunkNumber}</h3>
-            <p className={`text-xs md:text-sm mt-1 ${
-              isGoatMode ? 'text-zinc-400' : 'text-gray-500'
-            }`}>
+            <h3
+              className={`font-bold text-xl md:text-2xl ${
+                isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-white') : 'text-sabres-navy'
+              }`}
+              style={isGoatMode && darkModeColors.cardBackground ? { color: darkModeColors.text } : undefined}
+            >Set {chunk.chunkNumber}</h3>
+            <p
+              className={`text-xs md:text-sm mt-1 ${
+                isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-zinc-400') : 'text-gray-500'
+              }`}
+              style={isGoatMode && darkModeColors.cardBackground ? { color: `${darkModeColors.text}99` } : undefined}
+            >
               {chunk.games.length > 0 ? (() => {
                 const firstDate = new Date(chunk.games[0].date);
                 const lastDate = new Date(chunk.games[chunk.games.length - 1].date);
@@ -129,63 +139,101 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
           </div>
           <div className="text-right">
             <div
-              className={`text-4xl md:text-5xl font-bold ${isGoatMode ? 'text-white' : ''}`}
-              style={!isGoatMode ? { color: teamColors.primary } : undefined}
+              className={`text-4xl md:text-5xl font-bold ${isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-white') : ''}`}
+              style={isGoatMode && darkModeColors.cardBackground
+                ? { color: darkModeColors.accent }
+                : !isGoatMode ? { color: teamColors.primary } : undefined}
             >
               {displayPoints}
             </div>
-            <div className={`text-xs mt-1 font-semibold ${
-              isGoatMode ? 'text-zinc-400' : 'text-gray-500'
-            }`}>of {chunk.maxPoints} points</div>
+            <div
+              className={`text-xs mt-1 font-semibold ${
+                isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-zinc-400') : 'text-gray-500'
+              }`}
+              style={isGoatMode && darkModeColors.cardBackground ? { color: `${darkModeColors.text}99` } : undefined}
+            >of {chunk.maxPoints} points</div>
           </div>
         </div>
 
         {/* Record Summary */}
         <div className="grid grid-cols-3 gap-2">
-          <div className={`rounded-xl p-2 text-center border ${
-            isGoatMode
-              ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
-              : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
-          }`}>
+          <div
+            className={`rounded-xl p-2 text-center border ${
+              isGoatMode
+                ? (darkModeColors.cardBackground ? '' : 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700')
+                : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
+            }`}
+            style={isGoatMode && darkModeColors.cardBackground ? {
+              background: `linear-gradient(to bottom right, ${darkModeColors.cardBackground}f0, ${darkModeColors.cardBackground}e0)`,
+              borderColor: darkModeColors.border
+            } : undefined}
+          >
             <div
-              className={`text-2xl md:text-3xl font-bold ${isGoatMode ? 'text-white' : ''}`}
-              style={!isGoatMode ? { color: teamColors.primary } : undefined}
+              className={`text-2xl md:text-3xl font-bold ${isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-white') : ''}`}
+              style={isGoatMode && darkModeColors.cardBackground
+                ? { color: darkModeColors.text }
+                : !isGoatMode ? { color: teamColors.primary } : undefined}
             >
               {displayWins}
             </div>
-            <div className={`text-xs font-semibold mt-1 uppercase tracking-wide ${
-              isGoatMode ? 'text-zinc-400' : 'text-gray-600'
-            }`}>Wins</div>
-          </div>
-          <div className={`rounded-xl p-2 text-center border ${
-            isGoatMode
-              ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
-              : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
-          }`}>
             <div
-              className={`text-2xl md:text-3xl font-bold ${isGoatMode ? 'text-white' : ''}`}
-              style={!isGoatMode ? { color: teamColors.primary } : undefined}
+              className={`text-xs font-semibold mt-1 uppercase tracking-wide ${
+                isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-zinc-400') : 'text-gray-600'
+              }`}
+              style={isGoatMode && darkModeColors.cardBackground ? { color: `${darkModeColors.text}99` } : undefined}
+            >Wins</div>
+          </div>
+          <div
+            className={`rounded-xl p-2 text-center border ${
+              isGoatMode
+                ? (darkModeColors.cardBackground ? '' : 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700')
+                : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
+            }`}
+            style={isGoatMode && darkModeColors.cardBackground ? {
+              background: `linear-gradient(to bottom right, ${darkModeColors.cardBackground}f0, ${darkModeColors.cardBackground}e0)`,
+              borderColor: darkModeColors.border
+            } : undefined}
+          >
+            <div
+              className={`text-2xl md:text-3xl font-bold ${isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-white') : ''}`}
+              style={isGoatMode && darkModeColors.cardBackground
+                ? { color: darkModeColors.text }
+                : !isGoatMode ? { color: teamColors.primary } : undefined}
             >
               {displayOTLosses}
             </div>
-            <div className={`text-xs font-semibold mt-1 uppercase tracking-wide ${
-              isGoatMode ? 'text-zinc-400' : 'text-gray-600'
-            }`}>OT Losses</div>
-          </div>
-          <div className={`rounded-xl p-2 text-center border ${
-            isGoatMode
-              ? 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700'
-              : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
-          }`}>
             <div
-              className={`text-2xl md:text-3xl font-bold ${isGoatMode ? 'text-white' : ''}`}
-              style={!isGoatMode ? { color: teamColors.primary } : undefined}
+              className={`text-xs font-semibold mt-1 uppercase tracking-wide ${
+                isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-zinc-400') : 'text-gray-600'
+              }`}
+              style={isGoatMode && darkModeColors.cardBackground ? { color: `${darkModeColors.text}99` } : undefined}
+            >OT Losses</div>
+          </div>
+          <div
+            className={`rounded-xl p-2 text-center border ${
+              isGoatMode
+                ? (darkModeColors.cardBackground ? '' : 'bg-gradient-to-br from-zinc-800 to-zinc-900 border-zinc-700')
+                : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
+            }`}
+            style={isGoatMode && darkModeColors.cardBackground ? {
+              background: `linear-gradient(to bottom right, ${darkModeColors.cardBackground}f0, ${darkModeColors.cardBackground}e0)`,
+              borderColor: darkModeColors.border
+            } : undefined}
+          >
+            <div
+              className={`text-2xl md:text-3xl font-bold ${isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-white') : ''}`}
+              style={isGoatMode && darkModeColors.cardBackground
+                ? { color: darkModeColors.text }
+                : !isGoatMode ? { color: teamColors.primary } : undefined}
             >
               {displayLosses}
             </div>
-            <div className={`text-xs font-semibold mt-1 uppercase tracking-wide ${
-              isGoatMode ? 'text-zinc-400' : 'text-gray-600'
-            }`}>Losses</div>
+            <div
+              className={`text-xs font-semibold mt-1 uppercase tracking-wide ${
+                isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-zinc-400') : 'text-gray-600'
+              }`}
+              style={isGoatMode && darkModeColors.cardBackground ? { color: `${darkModeColors.text}99` } : undefined}
+            >Losses</div>
           </div>
         </div>
 

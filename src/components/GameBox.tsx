@@ -9,6 +9,7 @@ interface TeamColors {
 interface DarkModeColors {
   background: string;
   backgroundGradient?: string;
+  cardBackground?: string;
   accent: string;
   border: string;
   text: string;
@@ -50,7 +51,11 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
   const opacity = isLoss ? 'opacity-75' : 'opacity-100';
 
   const styles = {
-    bg: isGoatMode ? 'bg-gradient-to-br from-zinc-800 to-zinc-900' : 'bg-gradient-to-br from-blue-50 to-slate-50',
+    bg: isGoatMode
+      ? (darkModeColors.cardBackground
+          ? ''
+          : 'bg-gradient-to-br from-zinc-800 to-zinc-900')
+      : 'bg-gradient-to-br from-blue-50 to-slate-50',
     textColor: teamPrimaryColor
   };
 
@@ -95,8 +100,18 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
         isClickable ? {
           boxShadow: isGoatMode
             ? '0 0 15px rgba(239, 68, 68, 0.3)'
-            : '0 0 15px rgba(96, 165, 250, 0.3)'
-        } : borderColorStyle
+            : '0 0 15px rgba(96, 165, 250, 0.3)',
+          ...(isGoatMode && darkModeColors.cardBackground ? {
+            background: `linear-gradient(to bottom right, ${darkModeColors.cardBackground}f8, ${darkModeColors.cardBackground}f0)`,
+            borderColor: darkModeColors.border
+          } : {})
+        } : {
+          ...borderColorStyle,
+          ...(isGoatMode && darkModeColors.cardBackground ? {
+            background: `linear-gradient(to bottom right, ${darkModeColors.cardBackground}f8, ${darkModeColors.cardBackground}f0)`,
+            borderColor: darkModeColors.border
+          } : {})
+        }
       }
     >
       {/* Game number and location */}
@@ -117,20 +132,27 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
           {game.isHome ? 'vs' : '@'}
         </div>
         <div className="flex flex-col items-center gap-1.5">
-          <div className={`rounded-lg p-1.5 md:p-2 shadow-sm border ${
-            isGoatMode
-              ? 'bg-zinc-950 border-zinc-800'
-              : 'bg-white border-gray-200'
-          }`}>
+          <div
+            className={`rounded-lg p-1.5 md:p-2 shadow-sm border ${
+              isGoatMode ? '' : 'bg-white border-gray-200'
+            }`}
+            style={isGoatMode ? {
+              backgroundColor: darkModeColors.cardBackground || darkModeColors.background,
+              borderColor: darkModeColors.border
+            } : undefined}
+          >
             <img
               src={game.opponentLogo}
               alt={game.opponent}
               className="w-14 h-14 md:w-12 md:h-12 object-contain"
             />
           </div>
-          <div className={`text-sm md:text-sm font-bold ${
-            isGoatMode ? 'text-white' : 'text-gray-800'
-          }`}>{game.opponent}</div>
+          <div
+            className={`text-sm md:text-sm font-bold ${
+              isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-white') : 'text-gray-800'
+            }`}
+            style={isGoatMode && darkModeColors.cardBackground ? { color: darkModeColors.text } : undefined}
+          >{game.opponent}</div>
         </div>
       </div>
 
@@ -139,23 +161,38 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
         <>
           <div className="flex justify-center items-center gap-2 md:gap-3 mb-2">
             <div className="text-center">
-              <div className={`text-xs font-semibold mb-1 ${
-                isGoatMode ? 'text-zinc-400' : 'text-gray-500'
-              }`}>BUF</div>
-              <div className={`text-3xl md:text-3xl font-bold ${
-                isGoatMode ? 'text-white' : 'text-gray-800'
-              }`}>{game.sabresScore}</div>
+              <div
+                className={`text-xs font-semibold mb-1 ${
+                  isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-zinc-400') : 'text-gray-500'
+                }`}
+                style={isGoatMode && darkModeColors.cardBackground ? { color: `${darkModeColors.text}80` } : undefined}
+              >BUF</div>
+              <div
+                className={`text-3xl md:text-3xl font-bold ${
+                  isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-white') : 'text-gray-800'
+                }`}
+                style={isGoatMode && darkModeColors.cardBackground ? { color: darkModeColors.text } : undefined}
+              >{game.sabresScore}</div>
             </div>
-            <div className={`text-xl md:text-2xl font-light ${
-              isGoatMode ? 'text-zinc-600' : 'text-gray-400'
-            }`}>-</div>
+            <div
+              className={`text-xl md:text-2xl font-light ${
+                isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-zinc-600') : 'text-gray-400'
+              }`}
+              style={isGoatMode && darkModeColors.cardBackground ? { color: `${darkModeColors.text}60` } : undefined}
+            >-</div>
             <div className="text-center">
-              <div className={`text-xs font-semibold mb-1 ${
-                isGoatMode ? 'text-zinc-400' : 'text-gray-500'
-              }`}>{game.opponent}</div>
-              <div className={`text-3xl md:text-3xl font-bold ${
-                isGoatMode ? 'text-white' : 'text-gray-800'
-              }`}>{game.opponentScore}</div>
+              <div
+                className={`text-xs font-semibold mb-1 ${
+                  isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-zinc-400') : 'text-gray-500'
+                }`}
+                style={isGoatMode && darkModeColors.cardBackground ? { color: `${darkModeColors.text}80` } : undefined}
+              >{game.opponent}</div>
+              <div
+                className={`text-3xl md:text-3xl font-bold ${
+                  isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-white') : 'text-gray-800'
+                }`}
+                style={isGoatMode && darkModeColors.cardBackground ? { color: darkModeColors.text } : undefined}
+              >{game.opponentScore}</div>
             </div>
           </div>
 

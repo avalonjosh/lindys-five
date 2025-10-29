@@ -11,13 +11,20 @@ interface DarkModeColors {
   text: string;
 }
 
+interface TeamColors {
+  primary: string;
+  secondary: string;
+  accent: string;
+}
+
 interface TeamNavProps {
   currentTeamId: string;
   isGoatMode: boolean;
   darkModeColors: DarkModeColors;
+  teamColors: TeamColors;
 }
 
-export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors }: TeamNavProps) {
+export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, teamColors }: TeamNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -121,8 +128,8 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors }: T
         onClick={() => setIsOpen(!isOpen)}
         className={`relative inline-flex h-6 w-11 md:h-7 md:w-14 items-center justify-center rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2`}
         style={isGoatMode ? {
-          backgroundColor: darkModeColors.accent,
-          boxShadow: `0 0 0 2px ${darkModeColors.accent}`
+          backgroundColor: (currentTeamId === 'lightning' || currentTeamId === 'penguins') ? teamColors.primary : darkModeColors.accent,
+          boxShadow: `0 0 0 2px ${(currentTeamId === 'lightning' || currentTeamId === 'penguins') ? teamColors.primary : darkModeColors.accent}`
         } : {
           backgroundColor: 'rgba(255, 255, 255, 0.2)',
           boxShadow: `0 0 0 2px rgba(255, 255, 255, 0.3)`
@@ -133,7 +140,7 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors }: T
         <svg
           className="w-4 h-4 md:w-5 md:h-5"
           fill="none"
-          stroke={isGoatMode && darkModeColors.accent === '#FFFFFF' ? '#002868' : 'white'}
+          stroke={(currentTeamId === 'lightning' || currentTeamId === 'penguins') && isGoatMode ? 'white' : (isGoatMode && darkModeColors.accent === '#FFFFFF' ? '#002868' : 'white')}
           viewBox="0 0 24 24"
         >
           <path
@@ -282,14 +289,14 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors }: T
                             </div>
                           </div>
                         </button>
-                        {/* Star icon - visible on hover or when favorited */}
+                        {/* Star icon - always visible on mobile, visible on hover on desktop */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleFavorite(team.id);
                           }}
                           className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-all ${
-                            isFavorite ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                            isFavorite ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
                           } ${
                             isGoatMode
                               ? 'hover:bg-zinc-700'
@@ -397,14 +404,14 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors }: T
                             </div>
                           </div>
                         </button>
-                        {/* Star icon - visible on hover or when favorited */}
+                        {/* Star icon - always visible on mobile, visible on hover on desktop */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleFavorite(team.id);
                           }}
                           className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-all ${
-                            isFavorite ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                            isFavorite ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
                           } ${
                             isGoatMode
                               ? 'hover:bg-zinc-700'
