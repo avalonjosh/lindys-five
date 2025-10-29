@@ -379,7 +379,7 @@ export const TEAMS: Record<string, TeamConfig> = {
   },
   utah: {
     id: 'utah',
-    nhlId: 59,
+    nhlId: 68,
     name: 'Mammoth',
     city: 'Utah',
     abbreviation: 'UTA',
@@ -390,13 +390,16 @@ export const TEAMS: Record<string, TeamConfig> = {
       accent: '#69B3E7' // Blue
     },
     darkMode: {
-      background: '#1a1a1a', // Neutral dark gray
-      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
-      accent: '#69B3E7', // Utah blue
-      border: '#27272a', // Medium dark gray (zinc-800)
-      text: '#ffffff' // White text
+      background: '#E8D6C0', // Desert sand/tan
+      backgroundGradient: 'from-[#E8D6C0] to-[#D4BCA0]',
+      accent: '#8C2633', // Coyotes brick red
+      border: '#8C2633', // Brick red border
+      text: '#000000', // Black text
+      cardBackground: '#F5EDE0', // Lighter sand for cards
+      headerBackground: '#006B4B' // Coyotes desert green/teal
     },
-    logo: 'https://assets.nhle.com/logos/nhl/svg/UTA_light.svg'
+    logo: 'https://assets.nhle.com/logos/nhl/svg/UTA_light.svg',
+    altLogo: '/Phoenix-Coyotes-Logo-1996 trans.png'
   },
   avalanche: {
     id: 'avalanche',
@@ -434,13 +437,16 @@ export const TEAMS: Record<string, TeamConfig> = {
       accent: '#AC162C' // Red
     },
     darkMode: {
-      background: '#1a1a1a', // Neutral dark gray
-      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
-      accent: '#AC162C', // Jets red
-      border: '#27272a', // Medium dark gray (zinc-800)
-      text: '#ffffff' // White text
+      background: '#FFFFFF', // White background
+      backgroundGradient: 'from-[#FFFFFF] to-[#F0F0F0]',
+      accent: '#C8102E', // Vintage Jets red
+      border: '#C8102E', // Red border
+      text: '#041E42', // Navy blue text
+      cardBackground: '#F8F8F8', // Light gray cards
+      headerBackground: '#FFFFFF' // White header
     },
-    logo: 'https://assets.nhle.com/logos/nhl/svg/WPG_light.svg'
+    logo: 'https://assets.nhle.com/logos/nhl/svg/WPG_light.svg',
+    altLogo: '/vintage jets trans.png'
   },
   stars: {
     id: 'stars',

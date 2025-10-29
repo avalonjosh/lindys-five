@@ -43,6 +43,9 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
   const [loadingStandings, setLoadingStandings] = useState(false);
   const navigate = useNavigate();
 
+  // For vintage Jets (dark mode), use classic sidebar styling
+  const useClassicStyling = currentTeamId === 'jets' && isGoatMode ? false : isGoatMode;
+
   // Save favorites to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('favorite-teams', JSON.stringify(favorites));
@@ -210,11 +213,11 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
         className={`fixed top-0 left-0 h-full w-80 max-w-[85vw] z-50 transform transition-transform duration-300 ease-in-out border-r-2 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } ${
-          isGoatMode
+          useClassicStyling
             ? ''
             : 'bg-white border-blue-300'
         }`}
-        style={isGoatMode ? {
+        style={useClassicStyling ? {
           backgroundColor: darkModeColors.background,
           borderRightColor: darkModeColors.border
         } : undefined}
@@ -222,18 +225,18 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className={`p-4 border-b-2 ${
-            isGoatMode ? 'border-zinc-800' : 'border-gray-200'
+            useClassicStyling ? 'border-zinc-800' : 'border-gray-200'
           }`}>
             <div className="flex items-center justify-between">
               <h2 className={`text-xl font-bold ${
-                isGoatMode ? 'text-white' : 'text-gray-900'
+                useClassicStyling ? 'text-white' : 'text-gray-900'
               }`}>
                 Teams
               </h2>
               <button
                 onClick={() => setIsOpen(false)}
                 className={`p-2 rounded-lg transition-colors ${
-                  isGoatMode
+                  useClassicStyling
                     ? 'hover:bg-zinc-800 text-zinc-400'
                     : 'hover:bg-gray-100 text-gray-600'
                 }`}
@@ -262,7 +265,7 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
             <button
               onClick={() => handleNavigation('/')}
               className={`w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold transition-all ${
-                isGoatMode
+                useClassicStyling
                   ? 'hover:bg-zinc-800 text-white'
                   : 'hover:bg-blue-50 text-gray-900'
               }`}
@@ -274,7 +277,7 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
             <button
               onClick={() => setIsAboutOpen(true)}
               className={`w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold transition-all ${
-                isGoatMode
+                useClassicStyling
                   ? 'hover:bg-zinc-800 text-white'
                   : 'hover:bg-blue-50 text-gray-900'
               }`}
@@ -284,14 +287,14 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
 
             {/* Divider */}
             <div className={`my-4 border-t ${
-              isGoatMode ? 'border-zinc-800' : 'border-gray-200'
+              useClassicStyling ? 'border-zinc-800' : 'border-gray-200'
             }`} />
 
             {/* Favorite Teams Section */}
             {favoriteTeams.length > 0 && (
               <div className="mb-6">
                 <h3 className={`text-xs font-bold uppercase tracking-wide mb-2 px-4 ${
-                  isGoatMode ? 'text-zinc-500' : 'text-gray-500'
+                  useClassicStyling ? 'text-zinc-500' : 'text-gray-500'
                 }`}>
                   Favorite Teams
                 </h3>
@@ -305,10 +308,10 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                           onClick={() => handleNavigation(`/${team.slug}`)}
                           className={`w-full text-left px-4 py-3 rounded-lg font-semibold transition-all flex items-center gap-3 ${
                             isActive
-                              ? isGoatMode
+                              ? useClassicStyling
                                 ? 'bg-red-900/50 text-red-400 border-2 border-red-600'
                                 : 'bg-blue-100 border-2'
-                              : isGoatMode
+                              : useClassicStyling
                                 ? 'hover:bg-zinc-800 text-zinc-300'
                                 : 'hover:bg-gray-100 text-gray-700'
                           }`}
@@ -327,8 +330,8 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                             <div className="font-bold truncate">{team.city} {team.name}</div>
                             <div className={`text-xs flex items-center gap-1.5 ${
                               isActive
-                                ? isGoatMode ? 'text-red-300' : 'opacity-70'
-                                : isGoatMode ? 'text-zinc-500' : 'text-gray-500'
+                                ? useClassicStyling ? 'text-red-300' : 'opacity-70'
+                                : useClassicStyling ? 'text-zinc-500' : 'text-gray-500'
                             }`}>
                               <span>{team.abbreviation}</span>
                               {teamStandings.get(team.id) && (
@@ -351,7 +354,7 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                           className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-all ${
                             isFavorite ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
                           } ${
-                            isGoatMode
+                            useClassicStyling
                               ? 'hover:bg-zinc-700'
                               : 'hover:bg-gray-200'
                           }`}
@@ -360,8 +363,8 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                           <svg
                             className={`w-5 h-5 ${
                               isFavorite
-                                ? isGoatMode ? 'text-yellow-400' : 'text-yellow-500'
-                                : isGoatMode ? 'text-zinc-600' : 'text-gray-400'
+                                ? useClassicStyling ? 'text-yellow-400' : 'text-yellow-500'
+                                : useClassicStyling ? 'text-zinc-600' : 'text-gray-400'
                             }`}
                             fill={isFavorite ? 'currentColor' : 'none'}
                             stroke="currentColor"
@@ -395,7 +398,7 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                   <button
                     onClick={() => toggleDivision(division)}
                     className={`w-full flex items-center justify-between px-4 py-2 mb-2 rounded-lg transition-colors ${
-                      isGoatMode
+                      useClassicStyling
                         ? 'hover:bg-zinc-800 text-zinc-500'
                         : 'hover:bg-gray-100 text-gray-500'
                     }`}
@@ -428,10 +431,10 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                           onClick={() => handleNavigation(`/${team.slug}`)}
                           className={`w-full text-left px-4 py-3 rounded-lg font-semibold transition-all flex items-center gap-3 ${
                             isActive
-                              ? isGoatMode
+                              ? useClassicStyling
                                 ? 'bg-red-900/50 text-red-400 border-2 border-red-600'
                                 : 'bg-blue-100 border-2'
-                              : isGoatMode
+                              : useClassicStyling
                                 ? 'hover:bg-zinc-800 text-zinc-300'
                                 : 'hover:bg-gray-100 text-gray-700'
                           }`}
@@ -450,8 +453,8 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                             <div className="font-bold truncate">{team.city} {team.name}</div>
                             <div className={`text-xs flex items-center gap-1.5 ${
                               isActive
-                                ? isGoatMode ? 'text-red-300' : 'opacity-70'
-                                : isGoatMode ? 'text-zinc-500' : 'text-gray-500'
+                                ? useClassicStyling ? 'text-red-300' : 'opacity-70'
+                                : useClassicStyling ? 'text-zinc-500' : 'text-gray-500'
                             }`}>
                               <span>{team.abbreviation}</span>
                               {teamStandings.get(team.id) && (
@@ -474,7 +477,7 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                           className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded transition-all ${
                             isFavorite ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
                           } ${
-                            isGoatMode
+                            useClassicStyling
                               ? 'hover:bg-zinc-700'
                               : 'hover:bg-gray-200'
                           }`}
@@ -483,8 +486,8 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                           <svg
                             className={`w-5 h-5 ${
                               isFavorite
-                                ? isGoatMode ? 'text-yellow-400' : 'text-yellow-500'
-                                : isGoatMode ? 'text-zinc-600' : 'text-gray-400'
+                                ? useClassicStyling ? 'text-yellow-400' : 'text-yellow-500'
+                                : useClassicStyling ? 'text-zinc-600' : 'text-gray-400'
                             }`}
                             fill={isFavorite ? 'currentColor' : 'none'}
                             stroke="currentColor"
@@ -510,10 +513,10 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
 
           {/* Footer */}
           <div className={`p-4 border-t ${
-            isGoatMode ? 'border-zinc-800' : 'border-gray-200'
+            useClassicStyling ? 'border-zinc-800' : 'border-gray-200'
           }`}>
             <p className={`text-xs text-center ${
-              isGoatMode ? 'text-zinc-500' : 'text-gray-500'
+              useClassicStyling ? 'text-zinc-500' : 'text-gray-500'
             }`}>
               Lindy's Five • {new Date().getFullYear()}
             </p>

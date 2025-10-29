@@ -265,7 +265,7 @@ function SeasonSection({
         }`}>
           {/* Current points bar */}
           <div
-            className="h-8 rounded-full transition-all duration-500 relative shadow-md"
+            className="h-8 rounded-l-full transition-all duration-500 relative shadow-md"
             style={{ width: `${Math.min(currentProgress, 100)}%`, backgroundColor: barColor }}
           >
             {/* Show points label when there's enough room */}

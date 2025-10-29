@@ -243,7 +243,9 @@ function App({ team }: AppProps) {
   // Special cases: treat certain teams' dark mode as classic mode with custom colors
   const isNordiquesMode = team.id === 'avalanche' && isGoatMode;
   const isVintagePanthersMode = team.id === 'panthers' && isGoatMode;
-  const useClassicStyling = !isGoatMode || isNordiquesMode || isVintagePanthersMode;
+  const isCoyotesMode = team.id === 'utah' && isGoatMode;
+  const isVintageJetsMode = team.id === 'jets' && isGoatMode;
+  const useClassicStyling = !isGoatMode || isNordiquesMode || isVintagePanthersMode || isCoyotesMode || isVintageJetsMode;
 
   // For special modes, create custom team colors using their palette
   const effectiveTeamColors = isNordiquesMode ? {
@@ -254,6 +256,14 @@ function App({ team }: AppProps) {
     primary: team.colors.primary, // Panthers red
     secondary: team.colors.secondary, // Panthers navy blue
     accent: team.colors.accent // Panthers gold
+  } : isCoyotesMode ? {
+    primary: darkModeColors.accent, // Coyotes brick red
+    secondary: darkModeColors.text, // Black text
+    accent: darkModeColors.accent // Coyotes brick red
+  } : isVintageJetsMode ? {
+    primary: darkModeColors.border, // Thrashers navy blue
+    secondary: darkModeColors.text, // Navy blue text
+    accent: darkModeColors.accent // Thrashers red
   } : team.colors;
 
   return (
@@ -278,8 +288,12 @@ function App({ team }: AppProps) {
               ? effectiveTeamColors.accent // Gold for vintage Panthers
               : isNordiquesMode
                 ? darkModeColors.background // Nordiques powder blue (#5AB7E6)
-                : team.colors.primary,
-          borderBottomColor: team.id === 'sabres' ? team.colors.accent : isNordiquesMode ? darkModeColors.accent : team.colors.secondary
+                : isCoyotesMode
+                  ? darkModeColors.headerBackground || darkModeColors.background // Coyotes desert green
+                  : isVintageJetsMode
+                    ? darkModeColors.headerBackground || darkModeColors.border // Thrashers navy blue
+                    : team.colors.primary,
+          borderBottomColor: team.id === 'sabres' ? team.colors.accent : isNordiquesMode ? darkModeColors.accent : isCoyotesMode ? darkModeColors.accent : isVintageJetsMode ? darkModeColors.accent : team.colors.secondary
         } : {
           backgroundColor: team.id === 'lightning' || team.id === 'penguins' ? '#FFFFFF' : darkModeColors.background,
           borderBottomColor: team.id === 'lightning' ? team.colors.primary : team.id === 'penguins' ? team.colors.secondary : darkModeColors.border
@@ -289,7 +303,7 @@ function App({ team }: AppProps) {
           <div className="flex flex-col items-center text-center relative">
             {/* Team Navigation */}
             <div className="absolute left-0 top-0">
-              <TeamNav currentTeamId={team.id} isGoatMode={!useClassicStyling} darkModeColors={darkModeColors} teamColors={team.colors} />
+              <TeamNav currentTeamId={team.id} isGoatMode={isGoatMode} darkModeColors={darkModeColors} teamColors={team.colors} />
             </div>
 
             {/* Theme Toggle Switch */}
@@ -298,8 +312,8 @@ function App({ team }: AppProps) {
                 onClick={toggleTheme}
                 className={`relative inline-flex h-6 w-11 md:h-7 md:w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2`}
                 style={isGoatMode ? {
-                  backgroundColor: team.id === 'lightning' ? team.colors.primary : team.id === 'penguins' ? team.colors.primary : darkModeColors.accent,
-                  boxShadow: `0 0 0 2px ${team.id === 'lightning' ? team.colors.primary : team.id === 'penguins' ? team.colors.primary : darkModeColors.accent}`
+                  backgroundColor: team.id === 'lightning' ? team.colors.primary : team.id === 'penguins' ? team.colors.primary : isVintageJetsMode ? '#C8102E' : darkModeColors.accent,
+                  boxShadow: `0 0 0 2px ${team.id === 'lightning' ? team.colors.primary : team.id === 'penguins' ? team.colors.primary : isVintageJetsMode ? '#C8102E' : darkModeColors.accent}`
                 } : {
                   backgroundColor: team.colors.accent,
                   boxShadow: `0 0 0 2px ${team.colors.accent === '#FFFFFF' ? team.colors.secondary : 'rgba(255, 255, 255, 0.5)'}`
@@ -376,11 +390,14 @@ function App({ team }: AppProps) {
             </button>
             <h1
               className={`text-4xl md:text-6xl font-bold mb-2 tracking-wider ${
-                (team.id === 'lightning' || team.id === 'penguins') && isGoatMode ? '' : 'text-white'
+                (team.id === 'lightning' || team.id === 'penguins' || team.id === 'jets') && isGoatMode ? '' : 'text-white'
               }`}
               style={(team.id === 'lightning' || team.id === 'penguins') && isGoatMode ? {
                 fontFamily: 'Bebas Neue, sans-serif',
                 color: team.colors.primary
+              } : isVintageJetsMode ? {
+                fontFamily: 'Bebas Neue, sans-serif',
+                color: '#041E42' // Navy blue
               } : { fontFamily: 'Bebas Neue, sans-serif' }}
             >
               {team.id === 'canadiens' && isGoatMode ? (
@@ -404,15 +421,15 @@ function App({ team }: AppProps) {
             </h1>
             <h2
               className={`text-xs md:text-2xl font-semibold mb-1 px-2 leading-tight whitespace-nowrap`}
-              style={isGoatMode ? { color: (team.id === 'lightning' || team.id === 'penguins') ? team.colors.primary : darkModeColors.accent } : { color: team.id === 'sabres' ? team.colors.accent : team.colors.secondary }}
+              style={isGoatMode ? { color: (team.id === 'lightning' || team.id === 'penguins') ? team.colors.primary : isVintageJetsMode ? '#041E42' : darkModeColors.accent } : { color: team.id === 'sabres' ? team.colors.accent : team.colors.secondary }}
             >
               {team.city} {team.name} Road to the Playoffs 2025-2026
             </h2>
             <p
               className={`text-xs md:text-base opacity-90 px-2 leading-tight ${
-                (team.id === 'lightning' || team.id === 'penguins') && isGoatMode ? '' : 'text-white'
+                (team.id === 'lightning' || team.id === 'penguins' || team.id === 'jets') && isGoatMode ? '' : 'text-white'
               }`}
-              style={(team.id === 'lightning' || team.id === 'penguins') && isGoatMode ? { color: team.colors.primary } : undefined}
+              style={(team.id === 'lightning' || team.id === 'penguins') && isGoatMode ? { color: team.colors.primary } : isVintageJetsMode ? { color: '#041E42' } : undefined}
             >
               5-Game Set Analysis • Target: 6+ points per set
             </p>
@@ -492,8 +509,16 @@ function App({ team }: AppProps) {
         <div className={`mb-4 ${whatIfMode ? '' : 'mt-4'}`}>
           <div className="flex justify-between items-center mb-3 gap-2">
             <h2
-              className={`text-lg md:text-2xl font-bold ${isGoatMode && !isNordiquesMode ? 'text-white' : ''}`}
-              style={useClassicStyling ? { color: effectiveTeamColors.secondary } : undefined}
+              className={`text-lg md:text-2xl font-bold ${
+                isGoatMode && !isNordiquesMode ? 'text-white' : ''
+              }`}
+              style={
+                useClassicStyling && effectiveTeamColors.secondary.toUpperCase() !== '#FFFFFF'
+                  ? { color: effectiveTeamColors.secondary }
+                  : useClassicStyling
+                    ? { color: '#111827' } // gray-900
+                    : undefined
+              }
             >
               Game Sets
             </h2>
