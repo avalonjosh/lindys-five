@@ -276,8 +276,10 @@ function App({ team }: AppProps) {
             ? `linear-gradient(to right, ${team.colors.primary}, ${team.colors.secondary})`
             : isVintagePanthersMode
               ? effectiveTeamColors.accent // Gold for vintage Panthers
-              : team.colors.primary,
-          borderBottomColor: team.id === 'sabres' ? team.colors.accent : team.colors.secondary
+              : isNordiquesMode
+                ? darkModeColors.background // Nordiques powder blue (#5AB7E6)
+                : team.colors.primary,
+          borderBottomColor: team.id === 'sabres' ? team.colors.accent : isNordiquesMode ? darkModeColors.accent : team.colors.secondary
         } : {
           backgroundColor: team.id === 'lightning' || team.id === 'penguins' ? '#FFFFFF' : darkModeColors.background,
           borderBottomColor: team.id === 'lightning' ? team.colors.primary : team.id === 'penguins' ? team.colors.secondary : darkModeColors.border
@@ -381,23 +383,7 @@ function App({ team }: AppProps) {
                 color: team.colors.primary
               } : { fontFamily: 'Bebas Neue, sans-serif' }}
             >
-              {team.id === 'goldenknights' && isGoatMode ? (
-                <span className="relative inline-block">
-                  <span
-                    className="absolute -top-5 md:-top-8 left-0 text-2xl md:text-4xl transform -rotate-3"
-                    style={{
-                      fontFamily: 'Permanent Marker, cursive',
-                      color: darkModeColors.accent
-                    }}
-                  >
-                    Jack's
-                  </span>
-                  <span style={{ textDecoration: 'line-through', textDecorationThickness: '3px' }}>
-                    Lindy's
-                  </span>
-                  {' Five'}
-                </span>
-              ) : team.id === 'canadiens' && isGoatMode ? (
+              {team.id === 'canadiens' && isGoatMode ? (
                 <span className="relative inline-block">
                   <span
                     className="absolute -top-5 md:-top-8 left-1/2 transform -translate-x-1/2 text-xl md:text-3xl -rotate-1 whitespace-nowrap"
