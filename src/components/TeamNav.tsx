@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TEAMS } from '../teamConfig';
+import { fetchTeamStandings, type TeamStandings } from '../services/nhlApi';
 import AboutModal from './AboutModal';
 
 interface DarkModeColors {
@@ -38,6 +39,8 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
       'Metropolitan Division': true,
     };
   });
+  const [teamStandings, setTeamStandings] = useState<Map<string, TeamStandings>>(new Map());
+  const [loadingStandings, setLoadingStandings] = useState(false);
   const navigate = useNavigate();
 
   // Save favorites to localStorage whenever they change
@@ -49,6 +52,31 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
   useEffect(() => {
     localStorage.setItem('expanded-divisions', JSON.stringify(expandedDivisions));
   }, [expandedDivisions]);
+
+  // Fetch team standings when menu opens
+  useEffect(() => {
+    const fetchAllStandings = async () => {
+      if (isOpen && teamStandings.size === 0 && !loadingStandings) {
+        setLoadingStandings(true);
+        const standingsMap = new Map<string, TeamStandings>();
+
+        // Fetch standings for all teams
+        const allTeams = Object.values(TEAMS);
+        const promises = allTeams.map(async (team) => {
+          const standings = await fetchTeamStandings(team.abbreviation, team.nhlId);
+          if (standings) {
+            standingsMap.set(team.id, standings);
+          }
+        });
+
+        await Promise.all(promises);
+        setTeamStandings(standingsMap);
+        setLoadingStandings(false);
+      }
+    };
+
+    fetchAllStandings();
+  }, [isOpen, teamStandings.size, loadingStandings]);
 
   const handleNavigation = (path: string) => {
     navigate(path);
@@ -70,7 +98,24 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
     }));
   };
 
-  // Organize teams by division
+  // Sort function for teams by points
+  const sortTeamsByPoints = (teams: typeof TEAMS[keyof typeof TEAMS][]) => {
+    return [...teams].sort((a, b) => {
+      const aStandings = teamStandings.get(a.id);
+      const bStandings = teamStandings.get(b.id);
+
+      // If standings not loaded yet, maintain original order
+      if (!aStandings || !bStandings) return 0;
+
+      // Sort by points (descending), then alphabetically by city
+      if (bStandings.points !== aStandings.points) {
+        return bStandings.points - aStandings.points;
+      }
+      return a.city.localeCompare(b.city);
+    });
+  };
+
+  // Organize teams by division (will be sorted by points when displayed)
   const divisions = {
     'Atlantic Division': [
       TEAMS.bruins,      // Boston
@@ -251,7 +296,7 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                   Favorite Teams
                 </h3>
                 <div className="space-y-1">
-                  {favoriteTeams.map((team) => {
+                  {sortTeamsByPoints(favoriteTeams).map((team) => {
                     const isActive = team.id === currentTeamId;
                     const isFavorite = favorites.includes(team.id);
                     return (
@@ -276,16 +321,24 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                           <img
                             src={team.logo}
                             alt={`${team.city} ${team.name}`}
-                            className="w-8 h-8 object-contain"
+                            className="w-8 h-8 object-contain flex-shrink-0"
                           />
-                          <div className="flex-1">
-                            <div className="font-bold">{team.city} {team.name}</div>
-                            <div className={`text-xs ${
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold truncate">{team.city} {team.name}</div>
+                            <div className={`text-xs flex items-center gap-1.5 ${
                               isActive
                                 ? isGoatMode ? 'text-red-300' : 'opacity-70'
                                 : isGoatMode ? 'text-zinc-500' : 'text-gray-500'
                             }`}>
-                              {team.abbreviation}
+                              <span>{team.abbreviation}</span>
+                              {teamStandings.get(team.id) && (
+                                <>
+                                  <span>•</span>
+                                  <span className="font-semibold">
+                                    {teamStandings.get(team.id)!.points} pts
+                                  </span>
+                                </>
+                              )}
                             </div>
                           </div>
                         </button>
@@ -366,7 +419,7 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                   </button>
                   {isExpanded && (
                     <div className="space-y-1">
-                  {teams.map((team) => {
+                  {sortTeamsByPoints(teams).map((team) => {
                     const isActive = team.id === currentTeamId;
                     const isFavorite = favorites.includes(team.id);
                     return (
@@ -391,16 +444,24 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                           <img
                             src={team.logo}
                             alt={`${team.city} ${team.name}`}
-                            className="w-8 h-8 object-contain"
+                            className="w-8 h-8 object-contain flex-shrink-0"
                           />
-                          <div className="flex-1">
-                            <div className="font-bold">{team.city} {team.name}</div>
-                            <div className={`text-xs ${
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold truncate">{team.city} {team.name}</div>
+                            <div className={`text-xs flex items-center gap-1.5 ${
                               isActive
                                 ? isGoatMode ? 'text-red-300' : 'opacity-70'
                                 : isGoatMode ? 'text-zinc-500' : 'text-gray-500'
                             }`}>
-                              {team.abbreviation}
+                              <span>{team.abbreviation}</span>
+                              {teamStandings.get(team.id) && (
+                                <>
+                                  <span>•</span>
+                                  <span className="font-semibold">
+                                    {teamStandings.get(team.id)!.points} pts
+                                  </span>
+                                </>
+                              )}
                             </div>
                           </div>
                         </button>

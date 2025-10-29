@@ -2,6 +2,16 @@ import type { NHLGame, GameResult, DetailedGameStats } from '../types';
 
 const API_BASE = '/api/v1';
 
+export interface TeamStandings {
+  teamId: number;
+  teamAbbrev: string;
+  points: number;
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  otLosses: number;
+}
+
 export async function fetchSabresSchedule(season: string = '20252026', teamAbbrev: string = 'BUF', teamId: number = 7): Promise<GameResult[]> {
   console.log(`🏒 fetchSchedule called for ${teamAbbrev} with season:`, season);
   try {
@@ -201,6 +211,32 @@ export async function fetchDetailedGameStats(gameId: number, isHome: boolean, te
     };
   } catch (error) {
     console.error(`Error fetching detailed stats for game ${gameId}:`, error);
+    return null;
+  }
+}
+
+export async function fetchTeamStandings(teamAbbrev: string, teamId: number): Promise<TeamStandings | null> {
+  try {
+    const schedule = await fetchSabresSchedule('20252026', teamAbbrev, teamId);
+
+    // Calculate current points and record from played games
+    const playedGames = schedule.filter(game => game.outcome !== 'PENDING');
+    const points = playedGames.reduce((sum, game) => sum + game.points, 0);
+    const wins = playedGames.filter(g => g.outcome === 'W').length;
+    const otLosses = playedGames.filter(g => g.outcome === 'OTL').length;
+    const losses = playedGames.filter(g => g.outcome === 'L').length;
+
+    return {
+      teamId,
+      teamAbbrev,
+      points,
+      gamesPlayed: playedGames.length,
+      wins,
+      losses,
+      otLosses
+    };
+  } catch (error) {
+    console.error(`Error fetching standings for ${teamAbbrev}:`, error);
     return null;
   }
 }
