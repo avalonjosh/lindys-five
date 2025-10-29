@@ -480,11 +480,161 @@ export default function Landing() {
           </Link>
             </div>
           </div>
+
+          {/* Pacific Division */}
+          <div className="mb-12">
+            <div className="border-t-2 border-gray-600 mb-8"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+          {/* Anaheim Ducks */}
+          <Link
+            to="/ducks"
+            className="group relative bg-gradient-to-br from-[#F47A38] to-[#d66530] rounded-2xl p-8 shadow-2xl border-2 border-[#B9975B] hover:border-[#c7a66a] transition-all duration-300 hover:scale-105 hover:shadow-[#F47A38]/50"
+          >
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={TEAMS.ducks.logo}
+                alt="Anaheim Ducks"
+                className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300"
+              />
+              <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                {TEAMS.ducks.city} {TEAMS.ducks.name}
+              </h2>
+              <p className="text-[#B9975B] font-semibold">View →</p>
+            </div>
+          </Link>
+
+          {/* Calgary Flames */}
+          <Link
+            to="/flames"
+            className="group relative bg-gradient-to-br from-[#C8102E] to-[#9c0d24] rounded-2xl p-8 shadow-2xl border-2 border-[#F1BE48] hover:border-[#f4ca66] transition-all duration-300 hover:scale-105 hover:shadow-[#C8102E]/50"
+          >
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={TEAMS.flames.logo}
+                alt="Calgary Flames"
+                className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300"
+              />
+              <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                {TEAMS.flames.city} {TEAMS.flames.name}
+              </h2>
+              <p className="text-[#F1BE48] font-semibold">View →</p>
+            </div>
+          </Link>
+
+          {/* Edmonton Oilers */}
+          <Link
+            to="/oilers"
+            className="group relative bg-gradient-to-br from-[#041E42] to-[#02152e] rounded-2xl p-8 shadow-2xl border-2 border-[#FF4C00] hover:border-[#ff6a2e] transition-all duration-300 hover:scale-105 hover:shadow-[#FF4C00]/50"
+          >
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={TEAMS.oilers.logo}
+                alt="Edmonton Oilers"
+                className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300"
+              />
+              <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                {TEAMS.oilers.city} {TEAMS.oilers.name}
+              </h2>
+              <p className="text-[#FF4C00] font-semibold">View →</p>
+            </div>
+          </Link>
+
+          {/* Los Angeles Kings */}
+          <Link
+            to="/kings"
+            className="group relative bg-gradient-to-br from-[#111111] to-[#000000] rounded-2xl p-8 shadow-2xl border-2 border-[#A2AAAD] hover:border-[#b5bcc0] transition-all duration-300 hover:scale-105 hover:shadow-[#A2AAAD]/50"
+          >
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={TEAMS.kings.logo}
+                alt="Los Angeles Kings"
+                className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300"
+              />
+              <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                {TEAMS.kings.city} {TEAMS.kings.name}
+              </h2>
+              <p className="text-[#A2AAAD] font-semibold">View →</p>
+            </div>
+          </Link>
+
+          {/* San Jose Sharks */}
+          <Link
+            to="/sharks"
+            className="group relative bg-gradient-to-br from-[#006D75] to-[#005159] rounded-2xl p-8 shadow-2xl border-2 border-[#EA7200] hover:border-[#ff8619] transition-all duration-300 hover:scale-105 hover:shadow-[#006D75]/50"
+          >
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={TEAMS.sharks.logo}
+                alt="San Jose Sharks"
+                className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300"
+              />
+              <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                {TEAMS.sharks.city} {TEAMS.sharks.name}
+              </h2>
+              <p className="text-[#EA7200] font-semibold">View →</p>
+            </div>
+          </Link>
+
+          {/* Seattle Kraken */}
+          <Link
+            to="/kraken"
+            className="group relative bg-gradient-to-br from-[#001628] to-[#000a14] rounded-2xl p-8 shadow-2xl border-2 border-[#96D8D8] hover:border-[#adeaea] transition-all duration-300 hover:scale-105 hover:shadow-[#96D8D8]/50"
+          >
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={TEAMS.kraken.logo}
+                alt="Seattle Kraken"
+                className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300"
+              />
+              <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                {TEAMS.kraken.city} {TEAMS.kraken.name}
+              </h2>
+              <p className="text-[#96D8D8] font-semibold">View →</p>
+            </div>
+          </Link>
+
+          {/* Vancouver Canucks */}
+          <Link
+            to="/canucks"
+            className="group relative bg-gradient-to-br from-[#00205B] to-[#001543] rounded-2xl p-8 shadow-2xl border-2 border-[#00843D] hover:border-[#00a04c] transition-all duration-300 hover:scale-105 hover:shadow-[#00843D]/50"
+          >
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={TEAMS.canucks.logo}
+                alt="Vancouver Canucks"
+                className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300"
+              />
+              <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                {TEAMS.canucks.city} {TEAMS.canucks.name}
+              </h2>
+              <p className="text-[#00843D] font-semibold">View →</p>
+            </div>
+          </Link>
+
+          {/* Vegas Golden Knights */}
+          <Link
+            to="/goldenknights"
+            className="group relative bg-gradient-to-br from-[#333F42] to-[#1f2628] rounded-2xl p-8 shadow-2xl border-2 border-[#B4975A] hover:border-[#c5a96f] transition-all duration-300 hover:scale-105 hover:shadow-[#B4975A]/50"
+          >
+            <div className="flex flex-col items-center text-center">
+              <img
+                src={TEAMS.goldenknights.logo}
+                alt="Vegas Golden Knights"
+                className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300"
+              />
+              <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                {TEAMS.goldenknights.city} {TEAMS.goldenknights.name}
+              </h2>
+              <p className="text-[#B4975A] font-semibold">View →</p>
+            </div>
+          </Link>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
         <div className="text-center mt-12 text-gray-400 text-sm">
-          <p className="mb-2">More teams coming soon.</p>
           <p>© {new Date().getFullYear()} JRR Apps. All rights reserved.</p>
         </div>
       </div>

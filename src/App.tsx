@@ -322,7 +322,25 @@ function App({ team }: AppProps) {
               )}
             </button>
             <h1 className="text-4xl md:text-6xl font-bold text-white mb-2 tracking-wider" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-              Lindy's Five
+              {team.id === 'goldenknights' && isGoatMode ? (
+                <span className="relative inline-block">
+                  <span
+                    className="absolute -top-5 md:-top-8 left-0 text-2xl md:text-4xl transform -rotate-3"
+                    style={{
+                      fontFamily: 'Permanent Marker, cursive',
+                      color: darkModeColors.accent
+                    }}
+                  >
+                    Jack's
+                  </span>
+                  <span style={{ textDecoration: 'line-through', textDecorationThickness: '3px' }}>
+                    Lindy's
+                  </span>
+                  {' Five'}
+                </span>
+              ) : (
+                "Lindy's Five"
+              )}
             </h1>
             <h2
               className={`text-xs md:text-2xl font-semibold mb-1 px-2 leading-tight whitespace-nowrap`}

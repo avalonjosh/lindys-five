@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TEAMS } from '../teamConfig';
+import AboutModal from './AboutModal';
 
 interface DarkModeColors {
   background: string;
@@ -18,6 +19,7 @@ interface TeamNavProps {
 
 export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors }: TeamNavProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [favorites, setFavorites] = useState<string[]>(() => {
     const saved = localStorage.getItem('favorite-teams');
     return saved ? JSON.parse(saved) : [];
@@ -94,7 +96,16 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors }: T
       TEAMS.utah,         // Utah
       TEAMS.jets,         // Winnipeg
     ],
-    // 'Pacific Division': [],
+    'Pacific Division': [
+      TEAMS.ducks,         // Anaheim
+      TEAMS.flames,        // Calgary
+      TEAMS.oilers,        // Edmonton
+      TEAMS.kings,         // Los Angeles
+      TEAMS.sharks,        // San Jose
+      TEAMS.kraken,        // Seattle
+      TEAMS.canucks,       // Vancouver
+      TEAMS.goldenknights, // Vegas
+    ],
   };
 
   // Get all teams as a flat array
@@ -205,6 +216,18 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors }: T
               }`}
             >
               Home
+            </button>
+
+            {/* About Link */}
+            <button
+              onClick={() => setIsAboutOpen(true)}
+              className={`w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold transition-all ${
+                isGoatMode
+                  ? 'hover:bg-zinc-800 text-white'
+                  : 'hover:bg-blue-50 text-gray-900'
+              }`}
+            >
+              About
             </button>
 
             {/* Divider */}
@@ -415,15 +438,6 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors }: T
                 </div>
               );
             })}
-
-            {/* More teams coming soon message */}
-            <div className="px-4 mt-4">
-              <p className={`text-sm text-center italic ${
-                isGoatMode ? 'text-zinc-500' : 'text-gray-500'
-              }`}>
-                More teams coming soon.
-              </p>
-            </div>
           </div>
 
           {/* Footer */}
@@ -438,6 +452,9 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors }: T
           </div>
         </div>
       </div>
+
+      {/* About Modal */}
+      <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
     </>
   );
 }

@@ -95,7 +95,8 @@ export const TEAMS: Record<string, TeamConfig> = {
       border: '#27272a', // Medium dark gray (zinc-800)
       text: '#ffffff' // White text
     },
-    logo: 'https://assets.nhle.com/logos/nhl/svg/DET_light.svg'
+    logo: 'https://assets.nhle.com/logos/nhl/svg/DET_light.svg',
+    altLogo: '/redwings-vintage.png'
   },
   senators: {
     id: 'senators',
@@ -200,7 +201,8 @@ export const TEAMS: Record<string, TeamConfig> = {
       border: '#27272a', // Medium dark gray (zinc-800)
       text: '#ffffff' // White text
     },
-    logo: 'https://assets.nhle.com/logos/nhl/svg/BOS_light.svg'
+    logo: 'https://assets.nhle.com/logos/nhl/svg/BOS_light.svg',
+    altLogo: '/bruins-pooh-bear.png'
   },
   devils: {
     id: 'devils',
@@ -537,5 +539,173 @@ export const TEAMS: Record<string, TeamConfig> = {
       text: '#ffffff' // White text
     },
     logo: 'https://assets.nhle.com/logos/nhl/svg/STL_light.svg'
+  },
+  goldenknights: {
+    id: 'goldenknights',
+    nhlId: 54,
+    name: 'Golden Knights',
+    city: 'Vegas',
+    abbreviation: 'VGK',
+    slug: 'goldenknights',
+    colors: {
+      primary: '#B4975A', // Gold
+      secondary: '#333F42', // Steel gray
+      accent: '#B4975A' // Gold
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#B4975A', // Golden Knights gold
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/VGK_light.svg'
+  },
+  oilers: {
+    id: 'oilers',
+    nhlId: 22,
+    name: 'Oilers',
+    city: 'Edmonton',
+    abbreviation: 'EDM',
+    slug: 'oilers',
+    colors: {
+      primary: '#041E42', // Navy blue
+      secondary: '#FF4C00', // Orange
+      accent: '#FF4C00' // Orange
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#FF4C00', // Oilers orange
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/EDM_light.svg'
+  },
+  canucks: {
+    id: 'canucks',
+    nhlId: 23,
+    name: 'Canucks',
+    city: 'Vancouver',
+    abbreviation: 'VAN',
+    slug: 'canucks',
+    colors: {
+      primary: '#00205B', // Navy blue
+      secondary: '#00843D', // Green
+      accent: '#00843D' // Green
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#00843D', // Canucks green
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/VAN_light.svg'
+  },
+  flames: {
+    id: 'flames',
+    nhlId: 20,
+    name: 'Flames',
+    city: 'Calgary',
+    abbreviation: 'CGY',
+    slug: 'flames',
+    colors: {
+      primary: '#C8102E', // Red
+      secondary: '#F1BE48', // Gold
+      accent: '#F1BE48' // Gold
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#C8102E', // Flames red
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/CGY_light.svg'
+  },
+  kings: {
+    id: 'kings',
+    nhlId: 26,
+    name: 'Kings',
+    city: 'Los Angeles',
+    abbreviation: 'LAK',
+    slug: 'kings',
+    colors: {
+      primary: '#111111', // Black
+      secondary: '#A2AAAD', // Silver
+      accent: '#A2AAAD' // Silver
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#A2AAAD', // Kings silver
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/LAK_light.svg'
+  },
+  ducks: {
+    id: 'ducks',
+    nhlId: 24,
+    name: 'Ducks',
+    city: 'Anaheim',
+    abbreviation: 'ANA',
+    slug: 'ducks',
+    colors: {
+      primary: '#F47A38', // Orange
+      secondary: '#B9975B', // Gold
+      accent: '#F47A38' // Orange
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#F47A38', // Ducks orange
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/ANA_light.svg'
+  },
+  sharks: {
+    id: 'sharks',
+    nhlId: 28,
+    name: 'Sharks',
+    city: 'San Jose',
+    abbreviation: 'SJS',
+    slug: 'sharks',
+    colors: {
+      primary: '#006D75', // Teal
+      secondary: '#EA7200', // Orange
+      accent: '#006D75' // Teal
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#006D75', // Sharks teal
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/SJS_light.svg'
+  },
+  kraken: {
+    id: 'kraken',
+    nhlId: 55,
+    name: 'Kraken',
+    city: 'Seattle',
+    abbreviation: 'SEA',
+    slug: 'kraken',
+    colors: {
+      primary: '#001628', // Deep sea blue
+      secondary: '#96D8D8', // Ice blue
+      accent: '#96D8D8' // Ice blue
+    },
+    darkMode: {
+      background: '#1a1a1a', // Neutral dark gray
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
+      accent: '#96D8D8', // Kraken ice blue
+      border: '#27272a', // Medium dark gray (zinc-800)
+      text: '#ffffff' // White text
+    },
+    logo: 'https://assets.nhle.com/logos/nhl/svg/SEA_light.svg'
   }
 };
