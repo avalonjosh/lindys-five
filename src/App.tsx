@@ -569,7 +569,7 @@ function App({ team }: AppProps) {
               {/* Hide Completed Button */}
               <button
                 onClick={() => setHideCompleted(!hideCompleted)}
-                className={`px-2 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold transition-all whitespace-nowrap ${
+                className={`px-2 md:px-4 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-semibold transition-all whitespace-nowrap ${
                   hideCompleted
                     ? ''
                     : isGoatMode
