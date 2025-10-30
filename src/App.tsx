@@ -282,18 +282,16 @@ function App({ team }: AppProps) {
             : ''
         }`}
         style={useClassicStyling ? {
-          background: team.id === 'sabres'
-            ? `linear-gradient(to right, ${team.colors.primary}, ${team.colors.secondary})`
-            : isVintagePanthersMode
-              ? effectiveTeamColors.accent // Gold for vintage Panthers
-              : isNordiquesMode
-                ? darkModeColors.background // Nordiques powder blue (#5AB7E6)
-                : isCoyotesMode
-                  ? darkModeColors.headerBackground || darkModeColors.background // Coyotes desert green
-                  : isVintageJetsMode
-                    ? darkModeColors.headerBackground || darkModeColors.border // Thrashers navy blue
-                    : team.colors.primary,
-          borderBottomColor: team.id === 'sabres' ? team.colors.accent : isNordiquesMode ? darkModeColors.accent : isCoyotesMode ? darkModeColors.accent : isVintageJetsMode ? darkModeColors.accent : team.colors.secondary
+          background: isVintagePanthersMode
+            ? effectiveTeamColors.accent // Gold for vintage Panthers
+            : isNordiquesMode
+              ? darkModeColors.background // Nordiques powder blue (#5AB7E6)
+              : isCoyotesMode
+                ? darkModeColors.headerBackground || darkModeColors.background // Coyotes desert green
+                : isVintageJetsMode
+                  ? darkModeColors.headerBackground || darkModeColors.border // Thrashers navy blue
+                  : team.colors.primary, // Standard template: use primary color (same for all teams including Sabres)
+          borderBottomColor: isNordiquesMode ? darkModeColors.accent : isCoyotesMode ? darkModeColors.accent : isVintageJetsMode ? darkModeColors.accent : team.colors.secondary
         } : {
           backgroundColor: team.id === 'lightning' || team.id === 'penguins' ? '#FFFFFF' : darkModeColors.background,
           borderBottomColor: team.id === 'lightning' ? team.colors.primary : team.id === 'penguins' ? team.colors.secondary : darkModeColors.border

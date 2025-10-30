@@ -48,10 +48,10 @@ export const TEAMS: Record<string, TeamConfig> = {
       accent: '#FFB81C' // Original sabres-gold (for labels, highlights)
     },
     darkMode: {
-      background: '#000000', // Black background (GOAT mode)
-      backgroundGradient: 'from-black to-zinc-900',
+      background: '#1a1a1a', // Neutral dark gray (standard template)
+      backgroundGradient: 'from-[#1a1a1a] to-[#0f0f0f]',
       accent: '#ef4444', // Red accent (GOAT mode)
-      border: '#dc2626', // Red border
+      border: '#27272a', // Medium dark gray (zinc-800)
       text: '#ffffff' // White text
     },
     logo: 'https://assets.nhle.com/logos/nhl/svg/BUF_light.svg',
