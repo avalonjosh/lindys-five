@@ -92,7 +92,9 @@ function SeasonSection({
 
   // Determine Expected indicator color based on performance
   const pointsDifference = totalPoints - expectedPointsAtThisStage;
-  const indicatorColor = pointsDifference >= 0 ? 'border-t-green-500' : 'border-t-red-500';
+  // Use a small threshold (0.05) to account for floating-point precision
+  // Green if at or above expected (within 0.05 points tolerance)
+  const indicatorColor = pointsDifference >= -0.05 ? 'border-t-green-500' : 'border-t-red-500';
 
   return (
     <>
@@ -283,7 +285,9 @@ function SeasonSection({
           {!isLastYear && gamesPlayed > 0 && (
             <div
               className="absolute top-0 h-8 flex flex-col items-center"
-              style={{ left: `${Math.min(expectedProgress, 100)}%` }}
+              style={{
+                left: `calc(${Math.min(expectedProgress, 100)}% - 4px)` // Shift left so white line is flush with bar edge and triangle overlaps
+              }}
             >
               <div className={`w-0 h-0 border-l-[4px] border-r-[4px] border-t-[5px] border-l-transparent border-r-transparent -mb-px ${indicatorColor}`}></div>
               {currentProgress <= expectedProgress && (
