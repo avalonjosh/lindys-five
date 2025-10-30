@@ -615,6 +615,7 @@ function App({ team }: AppProps) {
                     onGameClick={handleGameClick}
                     hypotheticalResults={hypotheticalResults}
                     teamId={team.nhlId}
+                    teamAbbreviation={team.abbreviation}
                     teamColors={effectiveTeamColors}
                     darkModeColors={darkModeColors}
                   />

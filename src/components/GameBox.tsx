@@ -22,11 +22,12 @@ interface GameBoxProps {
   whatIfMode?: boolean;
   onGameClick?: (gameId: number, currentGame: GameResult, outcome: 'W' | 'OTL' | 'L') => void;
   hypotheticalOutcome?: 'W' | 'OTL' | 'L' | null;
+  teamAbbreviation?: string;
   teamColors: TeamColors;
   darkModeColors: DarkModeColors;
 }
 
-export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGameClick, hypotheticalOutcome, teamColors, darkModeColors }: GameBoxProps) {
+export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGameClick, hypotheticalOutcome, teamAbbreviation = 'BUF', teamColors, darkModeColors }: GameBoxProps) {
   const isPending = game.outcome === 'PENDING';
   const isClickable = whatIfMode && isPending && onGameClick;
 
@@ -166,7 +167,7 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
                   isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-zinc-400') : 'text-gray-500'
                 }`}
                 style={isGoatMode && darkModeColors.cardBackground ? { color: `${darkModeColors.text}80` } : undefined}
-              >BUF</div>
+              >{teamAbbreviation}</div>
               <div
                 className={`text-3xl md:text-3xl font-bold ${
                   isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-white') : 'text-gray-800'

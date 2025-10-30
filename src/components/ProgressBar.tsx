@@ -376,7 +376,7 @@ ${teamUrl}
       {onYearOverYearToggle && (
         <button
           onClick={onYearOverYearToggle}
-          className={`absolute top-3 md:top-4 right-3 md:right-4 flex items-center gap-1 text-xs md:text-sm font-semibold transition-all focus:outline-none group ${
+          className={`absolute top-3 md:top-4 right-3 md:right-4 flex items-center gap-1 text-xs md:text-sm font-semibold transition-all focus:outline-none group z-10 ${
             yearOverYearMode
               ? ''
               : isGoatMode
@@ -400,8 +400,103 @@ ${teamUrl}
         </button>
       )}
 
-      {/* Current Year Section */}
-      <SeasonSection stats={stats} isGoatMode={isGoatMode} teamColors={teamColors} darkModeColors={darkModeColors} teamId={teamId} />
+      {/* Current Year Section - wrapped in relative container for share button positioning */}
+      <div className="relative">
+        <SeasonSection stats={stats} isGoatMode={isGoatMode} teamColors={teamColors} darkModeColors={darkModeColors} teamId={teamId} />
+
+        {/* Share Button - positioned relative to current season section */}
+        {showShareButton && (
+          <div className="relative">
+            {/* Share Menu */}
+            {shareMenuOpen && (
+              <>
+                {/* Backdrop */}
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShareMenuOpen(false)}
+                />
+
+                {/* Menu with theme-aware styling */}
+                <div
+                  className={`absolute bottom-12 right-0 rounded-lg shadow-2xl p-2 border-2 z-50 min-w-[240px] animate-in fade-in slide-in-from-bottom-2 duration-200 ${
+                    isGoatMode
+                      ? 'bg-zinc-900'
+                      : 'bg-white'
+                  }`}
+                  style={{
+                    borderColor: isGoatMode ? darkModeColors.accent : teamColors.primary
+                  }}
+                >
+                  {/* Small arrow pointing to button */}
+                  <div
+                    className="absolute -bottom-2 right-4 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent"
+                    style={{
+                      borderTopColor: isGoatMode ? darkModeColors.accent : teamColors.primary
+                    }}
+                  />
+
+                  <button
+                    onClick={handleTwitterShare}
+                    className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg transition-colors text-left ${
+                      isGoatMode
+                        ? 'hover:bg-zinc-800'
+                        : 'hover:bg-gray-100'
+                    }`}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center bg-black"
+                    >
+                      <XIcon size={16} color="#FFFFFF" />
+                    </div>
+                    <span
+                      className={`font-semibold text-sm ${
+                        isGoatMode ? 'text-white' : 'text-gray-800'
+                      }`}
+                    >
+                      Share on X
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={handleCopyLink}
+                    className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg transition-colors text-left ${
+                      isGoatMode
+                        ? 'hover:bg-zinc-800'
+                        : 'hover:bg-gray-100'
+                    }`}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center"
+                      style={{
+                        backgroundColor: isGoatMode ? darkModeColors.accent : teamColors.primary
+                      }}
+                    >
+                      {copied ? <Check size={16} color="#FFFFFF" /> : <LinkIcon size={16} color="#FFFFFF" />}
+                    </div>
+                    <span
+                      className={`font-semibold text-sm ${
+                        isGoatMode ? 'text-white' : 'text-gray-800'
+                      }`}
+                    >
+                      {copied ? 'Link Copied!' : 'Copy Link'}
+                    </span>
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Share Icon Button */}
+            <button
+              onClick={() => setShareMenuOpen(!shareMenuOpen)}
+              className="absolute -bottom-1 md:-bottom-2 right-2 md:right-3 p-2 rounded-full hover:bg-gray-200 transition-colors group"
+              aria-label="Share team page"
+              title="Share this page"
+            >
+              <MoreHorizontal size={18} className="text-gray-500 group-hover:text-gray-700" />
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Divider and Last Year Section */}
       {lastSeasonStats && (
@@ -423,99 +518,6 @@ ${teamUrl}
             teamId={teamId}
           />
         </>
-      )}
-
-      {/* Share Button - Small grey icon in bottom-right corner */}
-      {showShareButton && (
-        <div className="relative">
-          {/* Share Menu */}
-          {shareMenuOpen && (
-            <>
-              {/* Backdrop */}
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setShareMenuOpen(false)}
-              />
-
-              {/* Menu with theme-aware styling */}
-              <div
-                className={`absolute bottom-12 right-0 rounded-lg shadow-2xl p-2 border-2 z-50 min-w-[240px] animate-in fade-in slide-in-from-bottom-2 duration-200 ${
-                  isGoatMode
-                    ? 'bg-zinc-900'
-                    : 'bg-white'
-                }`}
-                style={{
-                  borderColor: isGoatMode ? darkModeColors.accent : teamColors.primary
-                }}
-              >
-                {/* Small arrow pointing to button */}
-                <div
-                  className="absolute -bottom-2 right-4 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent"
-                  style={{
-                    borderTopColor: isGoatMode ? darkModeColors.accent : teamColors.primary
-                  }}
-                />
-
-                <button
-                  onClick={handleTwitterShare}
-                  className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg transition-colors text-left ${
-                    isGoatMode
-                      ? 'hover:bg-zinc-800'
-                      : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center bg-black"
-                  >
-                    <XIcon size={16} color="#FFFFFF" />
-                  </div>
-                  <span
-                    className={`font-semibold text-sm ${
-                      isGoatMode ? 'text-white' : 'text-gray-800'
-                    }`}
-                  >
-                    Share on X
-                  </span>
-                </button>
-
-                <button
-                  onClick={handleCopyLink}
-                  className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg transition-colors text-left ${
-                    isGoatMode
-                      ? 'hover:bg-zinc-800'
-                      : 'hover:bg-gray-100'
-                  }`}
-                >
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center"
-                    style={{
-                      backgroundColor: isGoatMode ? darkModeColors.accent : teamColors.primary
-                    }}
-                  >
-                    {copied ? <Check size={16} color="#FFFFFF" /> : <LinkIcon size={16} color="#FFFFFF" />}
-                  </div>
-                  <span
-                    className={`font-semibold text-sm ${
-                      isGoatMode ? 'text-white' : 'text-gray-800'
-                    }`}
-                  >
-                    {copied ? 'Link Copied!' : 'Copy Link'}
-                  </span>
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* Share Icon Button */}
-          <button
-            onClick={() => setShareMenuOpen(!shareMenuOpen)}
-            className="absolute -bottom-1 md:-bottom-2 right-2 md:right-3 p-2 rounded-full hover:bg-gray-200 transition-colors group"
-            aria-label="Share team page"
-            title="Share this page"
-          >
-            <MoreHorizontal size={18} className="text-gray-500 group-hover:text-gray-700" />
-          </button>
-        </div>
       )}
     </div>
   );
