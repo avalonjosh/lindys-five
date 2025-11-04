@@ -10,6 +10,7 @@ export interface TeamStandings {
   wins: number;
   losses: number;
   otLosses: number;
+  divisionSequence?: number;
 }
 
 export async function fetchSabresSchedule(season: string = '20252026', teamAbbrev: string = 'BUF', teamId: number = 7): Promise<GameResult[]> {

@@ -63,16 +63,58 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
         setLoadingStandings(true);
         const standingsMap = new Map<string, TeamStandings>();
 
-        // Fetch standings for all teams
-        const allTeams = Object.values(TEAMS);
-        const promises = allTeams.map(async (team) => {
-          const standings = await fetchTeamStandings(team.abbreviation, team.nhlId);
-          if (standings) {
-            standingsMap.set(team.id, standings);
-          }
-        });
+        try {
+          // Get today's date in YYYY-MM-DD format
+          const today = new Date().toISOString().split('T')[0];
 
-        await Promise.all(promises);
+          // Fetch all standings at once from the NHL API with today's date
+          const response = await fetch(`/api/v1/standings/${today}`);
+          const data = await response.json();
+
+          console.log('📊 Standings API response:', data);
+
+          if (data.standings) {
+            // Map each team's standings data
+            const allTeams = Object.values(TEAMS);
+            allTeams.forEach((team) => {
+              const standing = data.standings.find((s: any) =>
+                s.teamAbbrev?.default === team.abbreviation
+              );
+
+              if (standing) {
+                console.log(`📊 Found standing for ${team.abbreviation}:`, {
+                  points: standing.points,
+                  divisionSequence: standing.divisionSequence
+                });
+                standingsMap.set(team.id, {
+                  teamId: team.nhlId,
+                  teamAbbrev: team.abbreviation,
+                  points: standing.points || 0,
+                  gamesPlayed: standing.gamesPlayed || 0,
+                  wins: standing.wins || 0,
+                  losses: standing.losses || 0,
+                  otLosses: standing.otLosses || 0,
+                  divisionSequence: standing.divisionSequence
+                });
+              }
+            });
+          }
+
+          console.log('📊 Final standingsMap size:', standingsMap.size);
+        } catch (error) {
+          console.error('Error fetching standings:', error);
+
+          // Fallback: Fetch standings individually for each team
+          const allTeams = Object.values(TEAMS);
+          const promises = allTeams.map(async (team) => {
+            const standings = await fetchTeamStandings(team.abbreviation, team.nhlId);
+            if (standings) {
+              standingsMap.set(team.id, standings);
+            }
+          });
+          await Promise.all(promises);
+        }
+
         setTeamStandings(standingsMap);
         setLoadingStandings(false);
       }
@@ -110,7 +152,12 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
       // If standings not loaded yet, maintain original order
       if (!aStandings || !bStandings) return 0;
 
-      // Sort by points (descending), then alphabetically by city
+      // If divisionSequence is available, use it (lower is better - 1st place = 1)
+      if (aStandings.divisionSequence !== undefined && bStandings.divisionSequence !== undefined) {
+        return aStandings.divisionSequence - bStandings.divisionSequence;
+      }
+
+      // Fallback: Sort by points (descending), then alphabetically by city
       if (bStandings.points !== aStandings.points) {
         return bStandings.points - aStandings.points;
       }
@@ -337,8 +384,12 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                               {teamStandings.get(team.id) && (
                                 <>
                                   <span>•</span>
-                                  <span className="font-semibold">
+                                  <span className="font-extrabold">
                                     {teamStandings.get(team.id)!.points} pts
+                                  </span>
+                                  <span>•</span>
+                                  <span>
+                                    {teamStandings.get(team.id)!.gamesPlayed} gp
                                   </span>
                                 </>
                               )}
@@ -460,8 +511,12 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                               {teamStandings.get(team.id) && (
                                 <>
                                   <span>•</span>
-                                  <span className="font-semibold">
+                                  <span className="font-extrabold">
                                     {teamStandings.get(team.id)!.points} pts
+                                  </span>
+                                  <span>•</span>
+                                  <span>
+                                    {teamStandings.get(team.id)!.gamesPlayed} gp
                                   </span>
                                 </>
                               )}
