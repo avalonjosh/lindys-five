@@ -182,8 +182,8 @@ function App({ team }: AppProps) {
   useEffect(() => {
     loadData();
 
-    // Auto-refresh every 5 minutes
-    const interval = setInterval(loadData, 5 * 60 * 1000);
+    // Auto-refresh every 1 minute
+    const interval = setInterval(loadData, 1 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, [team]);
@@ -627,7 +627,7 @@ function App({ team }: AppProps) {
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}>
           <p className="text-xs mb-2">
-            Data provided by NHL API | Updates automatically every 5 minutes
+            Data provided by NHL API | Updates automatically every minute
           </p>
           <p className="text-xs">
             © {new Date().getFullYear()} JRR Apps. All rights reserved.

@@ -9,7 +9,15 @@ export default defineConfig({
       '/api': {
         target: 'https://api-web.nhle.com',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
+        rewrite: (path) => path.replace(/^\/api/, ''),
+        configure: (proxy, _options) => {
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            // Disable caching for API responses
+            proxyRes.headers['cache-control'] = 'no-cache, no-store, must-revalidate';
+            proxyRes.headers['pragma'] = 'no-cache';
+            proxyRes.headers['expires'] = '0';
+          });
+        }
       }
     }
   }

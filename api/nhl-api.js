@@ -19,6 +19,11 @@ export default async function handler(req, res) {
     const data = await response.json();
     console.log('Data received successfully');
 
+    // Set cache-control headers to prevent stale data
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     res.status(200).json(data);
   } catch (error) {
     console.error('Error in Vercel function:', error);
