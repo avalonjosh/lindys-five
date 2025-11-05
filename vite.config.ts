@@ -11,7 +11,7 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
         configure: (proxy, _options) => {
-          proxy.on('proxyRes', (proxyRes, req, res) => {
+          proxy.on('proxyRes', (proxyRes, _req, _res) => {
             // Disable caching for API responses
             proxyRes.headers['cache-control'] = 'no-cache, no-store, must-revalidate';
             proxyRes.headers['pragma'] = 'no-cache';
