@@ -30,6 +30,7 @@ function App({ team }: AppProps) {
   const [hypotheticalResults, setHypotheticalResults] = useState<Map<number, GameResult>>(new Map());
   const [yearOverYearMode, setYearOverYearMode] = useState(false);
   const [lastSeasonData, setLastSeasonData] = useState<{ pointsLastYear: number; recordLastYear: string } | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(Date.now());
 
   const toggleTheme = () => {
     setIsGoatMode(prev => {
@@ -172,6 +173,9 @@ function App({ team }: AppProps) {
 
       const seasonStats = calculateSeasonStats(calculatedChunks);
       setStats(seasonStats);
+
+      // Update refresh trigger to sync with TeamNav
+      setRefreshTrigger(Date.now());
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -301,7 +305,7 @@ function App({ team }: AppProps) {
           <div className="flex flex-col items-center text-center relative">
             {/* Team Navigation */}
             <div className="absolute left-0 top-0">
-              <TeamNav currentTeamId={team.id} isGoatMode={isGoatMode} darkModeColors={darkModeColors} teamColors={team.colors} />
+              <TeamNav currentTeamId={team.id} isGoatMode={isGoatMode} darkModeColors={darkModeColors} teamColors={team.colors} refreshTrigger={refreshTrigger} />
             </div>
 
             {/* Theme Toggle Switch */}

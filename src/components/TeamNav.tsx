@@ -23,9 +23,10 @@ interface TeamNavProps {
   isGoatMode: boolean;
   darkModeColors: DarkModeColors;
   teamColors: TeamColors;
+  refreshTrigger?: number; // Timestamp to trigger refresh
 }
 
-export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, teamColors }: TeamNavProps) {
+export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, teamColors, refreshTrigger }: TeamNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -56,10 +57,12 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
     localStorage.setItem('expanded-divisions', JSON.stringify(expandedDivisions));
   }, [expandedDivisions]);
 
-  // Fetch team standings when menu opens
+  // Fetch team standings when menu opens or when refresh is triggered
   useEffect(() => {
     const fetchAllStandings = async () => {
-      if (isOpen && teamStandings.size === 0 && !loadingStandings) {
+      // Fetch if menu is open and not currently loading
+      // Also fetch on initial open (teamStandings.size === 0) or when refreshTrigger changes
+      if (isOpen && !loadingStandings) {
         setLoadingStandings(true);
         const standingsMap = new Map<string, TeamStandings>();
 
@@ -121,7 +124,7 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
     };
 
     fetchAllStandings();
-  }, [isOpen, teamStandings.size, loadingStandings]);
+  }, [isOpen, refreshTrigger, loadingStandings]);
 
   const handleNavigation = (path: string) => {
     navigate(path);
