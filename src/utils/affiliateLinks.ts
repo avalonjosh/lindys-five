@@ -99,7 +99,7 @@ export function generateStubHubLink({ stubhubId, trackingRef, teamSlug, teamCity
 export function generateGameTrackingRef(
   homeTeam: string,
   awayTeam: string,
-  date?: string
+  _date?: string
 ): string {
   // Keep it simple - just team matchup, no date (dates have slashes which could cause issues)
   return `${homeTeam.toLowerCase()}-vs-${awayTeam.toLowerCase()}`;
