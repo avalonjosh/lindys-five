@@ -81,6 +81,7 @@ export async function fetchSabresSchedule(season: string = '20252026', teamAbbre
         startTime,
         opponent: opponentTeam.abbrev,
         opponentLogo: opponentTeam.logo,
+        opponentAbbreviation: opponentTeam.abbrev,
         isHome,
         sabresScore: myTeam.score || 0,
         opponentScore: opponentTeam.score || 0,

@@ -1,4 +1,6 @@
 import type { GameResult } from '../types';
+import { generateGameTicketLink } from '../utils/affiliateLinks';
+import { TEAMS } from '../teamConfig';
 
 interface TeamColors {
   primary: string;
@@ -25,11 +27,27 @@ interface GameBoxProps {
   teamAbbreviation?: string;
   teamColors: TeamColors;
   darkModeColors: DarkModeColors;
+  venueTeamAbbreviation?: string; // Team whose venue is hosting the game
 }
 
-export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGameClick, hypotheticalOutcome, teamAbbreviation = 'BUF', teamColors, darkModeColors }: GameBoxProps) {
+export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGameClick, hypotheticalOutcome, teamAbbreviation = 'BUF', teamColors, darkModeColors, venueTeamAbbreviation }: GameBoxProps) {
   const isPending = game.outcome === 'PENDING';
   const isClickable = whatIfMode && isPending && onGameClick;
+
+  // Get the venue team (home team) for ticket link
+  const homeTeamAbbrev = game.isHome ? teamAbbreviation : game.opponentAbbreviation;
+  const awayTeamAbbrev = game.isHome ? game.opponentAbbreviation : teamAbbreviation;
+
+  // Find the venue team's StubHub ID
+  const venueTeam = Object.values(TEAMS).find(t => t.abbreviation === (venueTeamAbbreviation || homeTeamAbbrev));
+  const ticketLink = venueTeam
+    ? generateGameTicketLink(
+        venueTeam.stubhubId,
+        homeTeamAbbrev || '',
+        awayTeamAbbrev || '',
+        game.date
+      )
+    : null;
 
   // Subtle styling variations based on outcome
   const isWin = game.outcome === 'W';
@@ -299,11 +317,27 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
                 </div>
               </div>
             ) : (
-              <div className={`text-xs font-medium ${
-                isGoatMode ? 'text-zinc-400' : 'text-gray-500'
-              }`}>
-                Upcoming Game
-              </div>
+              <>
+                <div className={`text-xs font-medium mb-2 ${
+                  isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+                }`}>
+                  Upcoming Game
+                </div>
+                {ticketLink && (
+                  <a
+                    href={ticketLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`inline-block px-3 py-1.5 text-xs font-bold rounded-md transition-all shadow-sm hover:shadow-md ${
+                      isGoatMode
+                        ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white'
+                        : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white'
+                    }`}
+                  >
+                    Get Tickets
+                  </a>
+                )}
+              </>
             )}
           </div>
         </>

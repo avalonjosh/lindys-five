@@ -26,6 +26,7 @@ export interface GameResult {
   startTime?: string;
   opponent: string;
   opponentLogo: string;
+  opponentAbbreviation?: string; // Opponent team abbreviation for affiliate links
   isHome: boolean;
   sabresScore: number;
   opponentScore: number;

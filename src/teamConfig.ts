@@ -5,6 +5,7 @@ export interface TeamConfig {
   city: string;
   abbreviation: string;
   slug: string;
+  stubhubId: number; // StubHub performer ID for affiliate links
   colors: {
     primary: string;
     secondary: string;
@@ -42,6 +43,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Buffalo',
     abbreviation: 'BUF',
     slug: 'sabres',
+    stubhubId: 2356,
     colors: {
       primary: '#003087', // Original sabres-blue (for accents, borders, progress bars)
       secondary: '#0A1128', // Original sabres-navy (for headings, dark text)
@@ -64,6 +66,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Montreal',
     abbreviation: 'MTL',
     slug: 'canadiens',
+    stubhubId: 7554,
     colors: {
       primary: '#AF1E2D', // Red
       secondary: '#192168', // Blue
@@ -85,6 +88,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Detroit',
     abbreviation: 'DET',
     slug: 'redwings',
+    stubhubId: 2767,
     colors: {
       primary: '#CE1126', // Red Wings red
       secondary: '#FFFFFF', // White
@@ -107,6 +111,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Ottawa',
     abbreviation: 'OTT',
     slug: 'senators',
+    stubhubId: 7551,
     colors: {
       primary: '#C52032', // Senators red
       secondary: '#000000', // Black
@@ -129,6 +134,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Florida',
     abbreviation: 'FLA',
     slug: 'panthers',
+    stubhubId: 150352299,
     colors: {
       primary: '#C8102E', // Panthers red
       secondary: '#041E42', // Navy blue
@@ -151,6 +157,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Toronto',
     abbreviation: 'TOR',
     slug: 'mapleleafs',
+    stubhubId: 7550,
     colors: {
       primary: '#003E7E', // Maple Leafs blue
       secondary: '#FFFFFF', // White
@@ -172,6 +179,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Tampa Bay',
     abbreviation: 'TBL',
     slug: 'lightning',
+    stubhubId: 6355,
     colors: {
       primary: '#002868', // Lightning blue
       secondary: '#FFFFFF', // White
@@ -194,6 +202,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Boston',
     abbreviation: 'BOS',
     slug: 'bruins',
+    stubhubId: 2762,
     colors: {
       primary: '#000000', // Black
       secondary: '#FFB81C', // Gold
@@ -216,6 +225,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'New Jersey',
     abbreviation: 'NJD',
     slug: 'devils',
+    stubhubId: 3023,
     colors: {
       primary: '#CE1126', // Devils red
       secondary: '#000000', // Black
@@ -237,6 +247,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Pittsburgh',
     abbreviation: 'PIT',
     slug: 'penguins',
+    stubhubId: 4822,
     colors: {
       primary: '#000000', // Black
       secondary: '#FCB514', // Vegas gold
@@ -259,6 +270,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Carolina',
     abbreviation: 'CAR',
     slug: 'hurricanes',
+    stubhubId: 3085,
     colors: {
       primary: '#CE1126', // Red
       secondary: '#000000', // Black
@@ -280,6 +292,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Washington',
     abbreviation: 'WSH',
     slug: 'capitals',
+    stubhubId: 762,
     colors: {
       primary: '#041E42', // Navy blue
       secondary: '#C8102E', // Red
@@ -301,6 +314,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'New York',
     abbreviation: 'NYI',
     slug: 'islanders',
+    stubhubId: 6349,
     colors: {
       primary: '#00539B', // Royal blue
       secondary: '#F47D30', // Orange
@@ -322,6 +336,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Philadelphia',
     abbreviation: 'PHI',
     slug: 'flyers',
+    stubhubId: 2763,
     colors: {
       primary: '#F74902', // Orange
       secondary: '#000000', // Black
@@ -343,6 +358,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Columbus',
     abbreviation: 'CBJ',
     slug: 'bluejackets',
+    stubhubId: 6350,
     colors: {
       primary: '#002654', // Navy blue
       secondary: '#CE1126', // Red
@@ -364,6 +380,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'New York',
     abbreviation: 'NYR',
     slug: 'rangers',
+    stubhubId: 2764,
     colors: {
       primary: '#0038A8', // Royal blue
       secondary: '#CE1126', // Red
@@ -385,6 +402,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Utah',
     abbreviation: 'UTA',
     slug: 'utah',
+    stubhubId: 158737474,
     colors: {
       primary: '#69B3E7', // Utah blue
       secondary: '#000000', // Black
@@ -409,6 +427,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Colorado',
     abbreviation: 'COL',
     slug: 'avalanche',
+    stubhubId: 2768,
     colors: {
       primary: '#6F263D', // Burgundy
       secondary: '#236192', // Steel blue
@@ -432,6 +451,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Winnipeg',
     abbreviation: 'WPG',
     slug: 'jets',
+    stubhubId: 508938,
     colors: {
       primary: '#041E42', // Navy blue
       secondary: '#AC162C', // Red
@@ -456,6 +476,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Dallas',
     abbreviation: 'DAL',
     slug: 'stars',
+    stubhubId: 2766,
     colors: {
       primary: '#006847', // Victory green
       secondary: '#8F8F8C', // Silver
@@ -477,6 +498,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Chicago',
     abbreviation: 'CHI',
     slug: 'blackhawks',
+    stubhubId: 2769,
     colors: {
       primary: '#CF0A2C', // Red
       secondary: '#000000', // Black
@@ -499,6 +521,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Nashville',
     abbreviation: 'NSH',
     slug: 'predators',
+    stubhubId: 6351,
     colors: {
       primary: '#FFB81C', // Gold
       secondary: '#041E42', // Navy blue
@@ -520,6 +543,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Minnesota',
     abbreviation: 'MIN',
     slug: 'wild',
+    stubhubId: 2985,
     colors: {
       primary: '#154734', // Forest green
       secondary: '#A6192E', // Red
@@ -541,6 +565,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'St. Louis',
     abbreviation: 'STL',
     slug: 'blues',
+    stubhubId: 3086,
     colors: {
       primary: '#002F87', // Blue
       secondary: '#FCB514', // Gold
@@ -562,6 +587,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Vegas',
     abbreviation: 'VGK',
     slug: 'goldenknights',
+    stubhubId: 100270936,
     colors: {
       primary: '#B4975A', // Gold
       secondary: '#333F42', // Steel gray
@@ -583,6 +609,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Edmonton',
     abbreviation: 'EDM',
     slug: 'oilers',
+    stubhubId: 7555,
     colors: {
       primary: '#041E42', // Navy blue
       secondary: '#FF4C00', // Orange
@@ -604,6 +631,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Vancouver',
     abbreviation: 'VAN',
     slug: 'canucks',
+    stubhubId: 7552,
     colors: {
       primary: '#00205B', // Navy blue
       secondary: '#00843D', // Green
@@ -626,6 +654,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Calgary',
     abbreviation: 'CGY',
     slug: 'flames',
+    stubhubId: 7553,
     colors: {
       primary: '#C8102E', // Red
       secondary: '#F1BE48', // Gold
@@ -647,6 +676,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Los Angeles',
     abbreviation: 'LAK',
     slug: 'kings',
+    stubhubId: 1382,
     colors: {
       primary: '#111111', // Black
       secondary: '#A2AAAD', // Silver
@@ -668,6 +698,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Anaheim',
     abbreviation: 'ANA',
     slug: 'ducks',
+    stubhubId: 2802,
     colors: {
       primary: '#F47A38', // Orange
       secondary: '#B9975B', // Gold
@@ -689,6 +720,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'San Jose',
     abbreviation: 'SJS',
     slug: 'sharks',
+    stubhubId: 150405699,
     colors: {
       primary: '#006D75', // Teal
       secondary: '#EA7200', // Orange
@@ -710,6 +742,7 @@ export const TEAMS: Record<string, TeamConfig> = {
     city: 'Seattle',
     abbreviation: 'SEA',
     slug: 'kraken',
+    stubhubId: 50668503,
     colors: {
       primary: '#001628', // Deep sea blue
       secondary: '#96D8D8', // Ice blue

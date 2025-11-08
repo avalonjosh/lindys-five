@@ -633,6 +633,9 @@ function App({ team }: AppProps) {
           <p className="text-xs mb-2">
             Data provided by NHL API | Updates automatically every minute
           </p>
+          <p className="text-xs mb-2">
+            We may earn a commission from ticket purchases made through our affiliate links.
+          </p>
           <p className="text-xs">
             © {new Date().getFullYear()} JRR Apps. All rights reserved.
           </p>
