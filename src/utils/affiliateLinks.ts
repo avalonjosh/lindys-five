@@ -3,10 +3,10 @@
  */
 
 const STUBHUB_BASE_URL = 'https://stubhub.prf.hn/click';
-// Publisher ID from Partnerize dashboard
-const PUBLISHER_ID = import.meta.env.VITE_STUBHUB_PUBLISHER_ID || '1100l413235';
+// Campaign Reference (camref) from Partnerize - specific to StubHub NORAM campaign
+const CAMPAIGN_REF = import.meta.env.VITE_STUBHUB_CAMREF || '1110lpjky';
 // Set to true to use direct StubHub links (non-affiliate) for testing
-const USE_DIRECT_LINKS = true;
+const USE_DIRECT_LINKS = false;
 
 interface AffiliateLinParams {
   stubhubId: number;
@@ -70,7 +70,7 @@ export function generateStubHubLink({ stubhubId, trackingRef, teamSlug, teamCity
   const encodedDestination = encodeURIComponent(destinationUrl);
 
   // Build the tracking link with proper Partnerize format
-  let trackingLink = `${STUBHUB_BASE_URL}/camref:${PUBLISHER_ID}`;
+  let trackingLink = `${STUBHUB_BASE_URL}/camref:${CAMPAIGN_REF}`;
 
   // Add custom tracking reference if provided
   if (trackingRef) {
