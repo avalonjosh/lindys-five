@@ -38,10 +38,12 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
   const homeTeamAbbrev = game.isHome ? teamAbbreviation : game.opponentAbbreviation;
   const awayTeamAbbrev = game.isHome ? game.opponentAbbreviation : teamAbbreviation;
 
-  // Find the venue team's StubHub ID
+  // Find the venue team's info for ticket link
   const venueTeam = Object.values(TEAMS).find(t => t.abbreviation === (venueTeamAbbreviation || homeTeamAbbrev));
   const ticketLink = venueTeam
     ? generateGameTicketLink(
+        venueTeam.slug,
+        venueTeam.city,
         venueTeam.stubhubId,
         homeTeamAbbrev || '',
         awayTeamAbbrev || '',
