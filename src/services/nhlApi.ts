@@ -2,6 +2,42 @@ import type { NHLGame, GameResult, DetailedGameStats } from '../types';
 
 const API_BASE = '/api/v1';
 
+// Helper function to retry failed requests with exponential backoff
+async function fetchWithRetry(url: string, maxRetries: number = 3): Promise<Response> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        return response;
+      }
+
+      // If it's a 5xx server error, retry
+      if (response.status >= 500) {
+        lastError = new Error(`Server error: ${response.status}`);
+        // Wait before retrying (exponential backoff: 1s, 2s, 4s)
+        if (attempt < maxRetries - 1) {
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+          continue;
+        }
+      } else {
+        // For other errors (4xx), don't retry
+        throw new Error(`API returned status ${response.status}`);
+      }
+    } catch (error) {
+      lastError = error as Error;
+      // Network error or fetch failed, retry
+      if (attempt < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+        continue;
+      }
+    }
+  }
+
+  throw lastError || new Error('Failed to fetch after retries');
+}
+
 export interface TeamStandings {
   teamId: number;
   teamAbbrev: string;
@@ -18,12 +54,17 @@ export async function fetchSabresSchedule(season: string = '20252026', teamAbbre
   try {
     const url = `${API_BASE}/club-schedule-season/${teamAbbrev}/${season}`;
     console.log('🏒 Fetching from URL:', url);
-    const response = await fetch(url);
+    const response = await fetchWithRetry(url);
     console.log('🏒 Response status:', response.status);
+
     const data = await response.json();
 
     console.log('🏒 API Response:', data);
     console.log('🏒 Total games:', data.games?.length);
+
+    if (!data.games || !Array.isArray(data.games)) {
+      throw new Error('Invalid API response: missing games array');
+    }
 
     // Filter for regular season games only (gameType === 2)
     const regularSeasonGames: NHLGame[] = data.games.filter((game: NHLGame) => game.gameType === 2);

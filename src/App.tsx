@@ -168,16 +168,22 @@ function App({ team }: AppProps) {
     try {
       const schedule = await fetchSabresSchedule('20252026', team.abbreviation, team.nhlId);
 
-      const calculatedChunks = calculateChunks(schedule);
-      setChunks(calculatedChunks);
+      // Only update if we got valid data (not empty array from error)
+      if (schedule && schedule.length > 0) {
+        const calculatedChunks = calculateChunks(schedule);
+        setChunks(calculatedChunks);
 
-      const seasonStats = calculateSeasonStats(calculatedChunks);
-      setStats(seasonStats);
+        const seasonStats = calculateSeasonStats(calculatedChunks);
+        setStats(seasonStats);
 
-      // Update refresh trigger to sync with TeamNav
-      setRefreshTrigger(Date.now());
+        // Update refresh trigger to sync with TeamNav
+        setRefreshTrigger(Date.now());
+      } else {
+        console.warn('Received empty schedule data, keeping existing data');
+      }
     } catch (error) {
       console.error('Error loading data:', error);
+      // Don't clear existing data on error
     } finally {
       setLoading(false);
     }
