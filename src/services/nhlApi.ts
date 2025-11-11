@@ -63,6 +63,7 @@ export async function fetchSabresSchedule(season: string = '20252026', teamAbbre
     console.log('🏒 Total games:', data.games?.length);
 
     if (!data.games || !Array.isArray(data.games)) {
+      console.error('⚠️ Invalid API response: missing games array');
       throw new Error('Invalid API response: missing games array');
     }
 
@@ -70,6 +71,11 @@ export async function fetchSabresSchedule(season: string = '20252026', teamAbbre
     const regularSeasonGames: NHLGame[] = data.games.filter((game: NHLGame) => game.gameType === 2);
 
     console.log('Regular season games:', regularSeasonGames.length);
+
+    if (regularSeasonGames.length === 0) {
+      console.error('⚠️ No regular season games found in API response');
+      throw new Error('No regular season games found');
+    }
 
     const results = regularSeasonGames.map((game): GameResult => {
       const isHome = game.homeTeam.id === teamId;
@@ -133,11 +139,14 @@ export async function fetchSabresSchedule(season: string = '20252026', teamAbbre
       };
     });
 
+    console.log('✅ Successfully processed', results.length, 'games');
     console.log('First 3 games processed:', results.slice(0, 3));
     return results;
   } catch (error) {
-    console.error('Error fetching Sabres schedule:', error);
-    return [];
+    console.error('❌ Error fetching schedule:', error);
+    // Re-throw the error so the caller knows the fetch failed
+    // This allows App.tsx to keep existing data instead of clearing it
+    throw error;
   }
 }
 

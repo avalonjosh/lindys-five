@@ -72,6 +72,11 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
 
           // Fetch all standings at once from the NHL API with today's date
           const response = await fetch(`/api/v1/standings/${today}`);
+
+          if (!response.ok) {
+            throw new Error(`API returned status ${response.status}`);
+          }
+
           const data = await response.json();
 
           console.log('📊 Standings API response:', data);
@@ -101,24 +106,47 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                 });
               }
             });
-          }
 
-          console.log('📊 Final standingsMap size:', standingsMap.size);
-        } catch (error) {
-          console.error('Error fetching standings:', error);
+            console.log('📊 Final standingsMap size:', standingsMap.size);
 
-          // Fallback: Fetch standings individually for each team
-          const allTeams = Object.values(TEAMS);
-          const promises = allTeams.map(async (team) => {
-            const standings = await fetchTeamStandings(team.abbreviation, team.nhlId);
-            if (standings) {
-              standingsMap.set(team.id, standings);
+            // Only update standings if we successfully fetched data
+            if (standingsMap.size > 0) {
+              setTeamStandings(standingsMap);
+            } else {
+              console.warn('⚠️ No standings data found, keeping existing data');
             }
-          });
-          await Promise.all(promises);
+          } else {
+            throw new Error('Invalid standings API response');
+          }
+        } catch (error) {
+          console.error('❌ Error fetching standings:', error);
+
+          // Fallback: Try individual team fetches, but only if we don't have existing data
+          if (teamStandings.size === 0) {
+            console.log('📊 Attempting fallback: fetching standings individually');
+            try {
+              const allTeams = Object.values(TEAMS);
+              const promises = allTeams.map(async (team) => {
+                const standings = await fetchTeamStandings(team.abbreviation, team.nhlId);
+                if (standings) {
+                  standingsMap.set(team.id, standings);
+                }
+              });
+              await Promise.all(promises);
+
+              if (standingsMap.size > 0) {
+                setTeamStandings(standingsMap);
+                console.log('✅ Fallback successful, fetched', standingsMap.size, 'team standings');
+              }
+            } catch (fallbackError) {
+              console.error('❌ Fallback fetch also failed:', fallbackError);
+              // Keep existing standings data - don't clear it
+            }
+          } else {
+            console.log('⚠️ Keeping existing standings data due to API error');
+          }
         }
 
-        setTeamStandings(standingsMap);
         setLoadingStandings(false);
       }
     };
