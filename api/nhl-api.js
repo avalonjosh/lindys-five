@@ -1,11 +1,22 @@
 export default async function handler(req, res) {
   // Get the path from query parameter (passed by rewrite)
-  const path = req.query.path || '';
+  // Also handle case where path might come from URL directly
+  let path = req.query.path || '';
+
+  // If path is empty, try to extract from the URL
+  if (!path && req.url) {
+    const urlPath = req.url.replace('/api/nhl-api', '').replace(/^\?path=/, '');
+    if (urlPath && urlPath !== '/' && urlPath !== '') {
+      path = urlPath.startsWith('/') ? urlPath.slice(1) : urlPath;
+    }
+  }
+
   const url = `https://api-web.nhle.com/v1/${path}`;
 
   console.log('Vercel function called');
-  console.log('Query params:', req.query);
-  console.log('Path:', path);
+  console.log('Full request URL:', req.url);
+  console.log('Query params:', JSON.stringify(req.query));
+  console.log('Extracted path:', path);
   console.log('Final NHL API URL:', url);
 
   try {

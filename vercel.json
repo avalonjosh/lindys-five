@@ -4,11 +4,11 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/api/v1/(.*)",
-      "destination": "/api/nhl-api?path=$1"
+      "source": "/api/v1/:path*",
+      "destination": "/api/nhl-api?path=:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api).*)",
       "destination": "/index.html"
     }
   ]
