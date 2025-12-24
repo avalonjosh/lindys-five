@@ -21,6 +21,7 @@ interface ProgressBarProps {
   stats: SeasonStats;
   isGoatMode: boolean;
   yearOverYearMode?: boolean;
+  yearOverYearLoading?: boolean;
   onYearOverYearToggle?: () => void;
   lastSeasonStats?: SeasonStats;
   teamColors: TeamColors;
@@ -314,7 +315,7 @@ function SeasonSection({
   );
 }
 
-export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors, teamId, showShareButton, teamName }: ProgressBarProps) {
+export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearOverYearLoading, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors, teamId, showShareButton, teamName }: ProgressBarProps) {
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -380,27 +381,39 @@ ${teamUrl}
       {onYearOverYearToggle && (
         <button
           onClick={onYearOverYearToggle}
+          disabled={yearOverYearLoading}
           className={`absolute top-3 md:top-4 right-3 md:right-4 flex items-center gap-1 text-xs md:text-sm font-semibold transition-all focus:outline-none group z-10 ${
             yearOverYearMode
               ? ''
               : isGoatMode
                 ? 'text-zinc-500 hover:text-zinc-400'
                 : 'text-gray-500 hover:text-gray-700'
-          }`}
+          } ${yearOverYearLoading ? 'opacity-70 cursor-wait' : ''}`}
           style={yearOverYearMode ? (isGoatMode ? { color: darkModeColors.accent } : { color: teamColors.primary }) : undefined}
-          title={yearOverYearMode ? `Hide ${lastSeasonLabel} comparison` : `Compare to ${lastSeasonLabel}`}
+          title={yearOverYearLoading ? 'Loading...' : yearOverYearMode ? `Hide ${lastSeasonLabel} comparison` : `Compare to ${lastSeasonLabel}`}
         >
           <span className={yearOverYearMode ? 'underline decoration-2 underline-offset-2' : ''}>
             vs Last Year
           </span>
-          <svg
-            className={`w-3 h-3 transition-transform ${yearOverYearMode ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
-          </svg>
+          {yearOverYearLoading ? (
+            <svg
+              className="w-3 h-3 animate-spin"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          ) : (
+            <svg
+              className={`w-3 h-3 transition-transform ${yearOverYearMode ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+            </svg>
+          )}
         </button>
       )}
 

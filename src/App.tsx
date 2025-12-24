@@ -31,6 +31,8 @@ function App({ team }: AppProps) {
   const [yearOverYearMode, setYearOverYearMode] = useState(false);
   const [lastSeasonData, setLastSeasonData] = useState<{ pointsLastYear: number; recordLastYear: string } | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(Date.now());
+  const [error, setError] = useState(false);
+  const [yearOverYearLoading, setYearOverYearLoading] = useState(false);
 
   const toggleTheme = () => {
     setIsGoatMode(prev => {
@@ -178,18 +180,40 @@ function App({ team }: AppProps) {
 
         // Update refresh trigger to sync with TeamNav
         setRefreshTrigger(Date.now());
+        setError(false);
       } else {
         console.warn('Received empty schedule data, keeping existing data');
+        // Only show error if we have no existing data (initial load failure)
+        if (chunks.length === 0) {
+          setError(true);
+        }
       }
-    } catch (error) {
-      console.error('Error loading data:', error);
-      // Don't clear existing data on error
+    } catch (err) {
+      console.error('Error loading data:', err);
+      // Only show error if we have no existing data (initial load failure)
+      // Don't clear existing data on error during auto-refresh
+      if (chunks.length === 0) {
+        setError(true);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    // Reset all team-specific state when team changes
+    setChunks([]);
+    setStats(null);
+    setChunkStatsCache(new Map());
+    setWhatIfMode(false);
+    setHypotheticalResults(new Map());
+    setYearOverYearMode(false);
+    setLastSeasonData(null);
+    setError(false);
+    setYearOverYearLoading(false);
+    // Re-sync theme from localStorage for new team
+    setIsGoatMode(localStorage.getItem(`${team.id}-theme`) === 'goat');
+
     loadData();
 
     // Auto-refresh every 1 minute
@@ -202,8 +226,16 @@ function App({ team }: AppProps) {
   useEffect(() => {
     const fetchLastSeasonData = async () => {
       if (yearOverYearMode && stats && stats.gamesPlayed > 0) {
-        const comparison = await fetchLastSeasonComparison(stats.gamesPlayed, team.abbreviation, team.nhlId);
-        setLastSeasonData(comparison);
+        setYearOverYearLoading(true);
+        try {
+          const comparison = await fetchLastSeasonComparison(stats.gamesPlayed, team.abbreviation, team.nhlId);
+          setLastSeasonData(comparison);
+        } catch (err) {
+          console.error('Error fetching year-over-year data:', err);
+          setLastSeasonData(null);
+        } finally {
+          setYearOverYearLoading(false);
+        }
       }
     };
     fetchLastSeasonData();
@@ -242,6 +274,29 @@ function App({ team }: AppProps) {
           : 'bg-gradient-to-b from-sabres-navy to-sabres-blue'
       }`}>
         <div className="text-white text-2xl">Loading {team.name} data...</div>
+      </div>
+    );
+  }
+
+  if (error && chunks.length === 0) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${
+        isGoatMode
+          ? `bg-gradient-to-b ${darkModeColors.backgroundGradient}`
+          : 'bg-gradient-to-b from-sabres-navy to-sabres-blue'
+      }`}>
+        <div className="text-center p-6">
+          <div className="text-white text-2xl mb-4">Failed to load {team.name} data</div>
+          <button
+            onClick={() => {
+              setError(false);
+              loadData();
+            }}
+            className="px-6 py-3 bg-white text-gray-900 font-semibold rounded-lg shadow-lg hover:bg-gray-100 transition-colors"
+          >
+            Tap to Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -452,6 +507,7 @@ function App({ team }: AppProps) {
             stats={whatIfMode && hypotheticalResults.size > 0 ? calculateSeasonStats(getChunksWithHypotheticals()) : stats}
             isGoatMode={!useClassicStyling}
             yearOverYearMode={yearOverYearMode}
+            yearOverYearLoading={yearOverYearLoading}
             onYearOverYearToggle={() => setYearOverYearMode(!yearOverYearMode)}
             lastSeasonStats={yearOverYearMode && lastSeasonData ? {
               totalPoints: lastSeasonData.pointsLastYear,

@@ -152,7 +152,7 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
     };
 
     fetchAllStandings();
-  }, [isOpen, refreshTrigger, loadingStandings]);
+  }, [isOpen, refreshTrigger]);
 
   const handleNavigation = (path: string) => {
     navigate(path);
