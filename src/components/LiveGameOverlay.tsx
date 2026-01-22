@@ -1,5 +1,4 @@
 import type { GameResult } from '../types';
-import { TEAMS } from '../teamConfig';
 
 interface TeamColors {
   primary: string;
