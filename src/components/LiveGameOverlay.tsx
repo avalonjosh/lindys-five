@@ -9,7 +9,7 @@ interface TeamColors {
 
 interface DarkModeColors {
   background: string;
-  backgroundGradient: string;
+  backgroundGradient?: string;
   cardBackground?: string;
   accent: string;
   border: string;
@@ -44,18 +44,9 @@ export function LiveGameOverlay({ game, gameNumber, teamAbbreviation, teamColors
   const periodText = getOrdinalPeriod(period, periodType);
 
   // Determine which team is which (home vs away)
-  const isHomeTeam = game.isHome;
   const myTeamScore = game.sabresScore;
   const opponentScore = game.opponentScore;
   const myTeamAbbrev = teamAbbreviation;
-  const opponentAbbrev = game.opponent;
-
-  // Get team logo
-  const myTeamLogo = Object.values(TEAMS).find(t => t.abbreviation === teamAbbreviation)?.logo;
-
-  // Determine winning team for visual emphasis
-  const myTeamWinning = myTeamScore > opponentScore;
-  const opponentWinning = opponentScore > myTeamScore;
 
   // Conditional styling based on mode - matching GameBox pattern
   const containerClass = isGoatMode
