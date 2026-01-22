@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { GameChunk, SeasonStats, ChunkStats, GameResult } from './types';
 import { fetchSabresSchedule, fetchLastSeasonComparison } from './services/nhlApi';
@@ -8,6 +8,10 @@ import ProgressBar from './components/ProgressBar';
 import TeamNav from './components/TeamNav';
 import type { TeamConfig } from './teamConfig';
 import { getDarkModeColors } from './teamConfig';
+import {
+  saveChunkStatsToCache,
+  loadChunkStatsFromCache
+} from './utils/statsCache';
 
 // Force rebuild - clean deploy
 interface AppProps {
@@ -21,7 +25,21 @@ function App({ team }: AppProps) {
   const [stats, setStats] = useState<SeasonStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [hideCompleted, setHideCompleted] = useState(true);
-  const [chunkStatsCache, setChunkStatsCache] = useState<Map<number, ChunkStats>>(new Map());
+  const [chunkStatsCache, setChunkStatsCache] = useState<Map<number, ChunkStats>>(() => {
+    // On mount, try to load cached stats from localStorage
+    const initialCache = new Map<number, ChunkStats>();
+
+    // We don't know which chunks exist yet, but we can pre-populate
+    // the cache for chunks 1-17 (max possible in a season: 82 games ÷ 5 = 16.4)
+    for (let i = 1; i <= 17; i++) {
+      const cachedStats = loadChunkStatsFromCache(team.id, i);
+      if (cachedStats) {
+        initialCache.set(i, cachedStats);
+      }
+    }
+
+    return initialCache;
+  });
   const [isGoatMode, setIsGoatMode] = useState(() => {
     const saved = localStorage.getItem(`${team.id}-theme`);
     return saved === 'goat';
@@ -34,6 +52,7 @@ function App({ team }: AppProps) {
   const [error, setError] = useState(false);
   const [yearOverYearLoading, setYearOverYearLoading] = useState(false);
   const [pollingInterval, setPollingInterval] = useState(60000); // Start with 60 seconds
+  const pollingIntervalRef = useRef(60000); // Ref to avoid re-renders
 
   const toggleTheme = () => {
     setIsGoatMode(prev => {
@@ -49,6 +68,9 @@ function App({ team }: AppProps) {
       newCache.set(chunkNumber, stats);
       return newCache;
     });
+
+    // Persist to localStorage
+    saveChunkStatsToCache(team.id, chunkNumber, stats);
   };
 
   // Find the current active set (first set with pending games)
@@ -185,7 +207,12 @@ function App({ team }: AppProps) {
 
         // Adjust polling interval based on live games (LIVE or CRIT state)
         const hasLiveGame = schedule.some(game => game.gameState === 'LIVE' || game.gameState === 'CRIT');
-        setPollingInterval(hasLiveGame ? 15000 : 60000);
+        const newInterval = hasLiveGame ? 15000 : 60000;
+
+        // Only update if interval needs to change
+        if (newInterval !== pollingIntervalRef.current) {
+          setPollingInterval(newInterval);
+        }
       } else {
         console.warn('Received empty schedule data, keeping existing data');
         // Only show error if we have no existing data (initial load failure)
@@ -221,11 +248,16 @@ function App({ team }: AppProps) {
 
     loadData();
 
-    // Auto-refresh with dynamic interval
-    const interval = setInterval(loadData, pollingInterval);
+    // Auto-refresh with dynamic interval using ref
+    const interval = setInterval(loadData, pollingIntervalRef.current);
 
     return () => clearInterval(interval);
-  }, [team, pollingInterval]);
+  }, [team]); // REMOVED pollingInterval from dependencies
+
+  // Separate effect to handle polling interval changes
+  useEffect(() => {
+    pollingIntervalRef.current = pollingInterval;
+  }, [pollingInterval]);
 
   // Fetch last season comparison data when Year-over-Year mode is enabled
   useEffect(() => {
@@ -247,29 +279,47 @@ function App({ team }: AppProps) {
   }, [yearOverYearMode, stats?.gamesPlayed, team]);
 
   // Pre-calculate stats for all completed chunks so comparisons work even when chunks are hidden
+  // WITH THROTTLING to avoid rate limiting
   useEffect(() => {
+    const THROTTLE_DELAY_MS = 2000; // 2 seconds between each chunk fetch
+
     const calculateAllCompletedStats = async () => {
-      for (const chunk of chunks) {
-        if (chunk.isComplete && !chunkStatsCache.has(chunk.chunkNumber)) {
-          const hasPlayed = chunk.games.some(g => g.outcome !== 'PENDING');
-          if (hasPlayed) {
-            try {
-              const stats = await calculateChunkStats(chunk, team.nhlId);
-              if (stats) {
-                handleStatsCalculated(chunk.chunkNumber, stats);
-              }
-            } catch (error) {
-              console.error(`Error calculating stats for chunk ${chunk.chunkNumber}:`, error);
-            }
+      const eligibleChunks = chunks.filter(chunk => {
+        const hasPlayed = chunk.games.some(g => g.outcome !== 'PENDING');
+        return chunk.isComplete && !chunkStatsCache.has(chunk.chunkNumber) && hasPlayed;
+      });
+
+      if (eligibleChunks.length === 0) return;
+
+      console.log(`📊 Throttled stats fetch: ${eligibleChunks.length} chunks to process`);
+
+      // Process chunks ONE AT A TIME with delays
+      for (let i = 0; i < eligibleChunks.length; i++) {
+        const chunk = eligibleChunks[i];
+
+        try {
+          console.log(`⏳ Fetching stats for chunk ${chunk.chunkNumber}/${eligibleChunks.length}...`);
+          const stats = await calculateChunkStats(chunk, team.nhlId);
+          if (stats) {
+            handleStatsCalculated(chunk.chunkNumber, stats);
           }
+        } catch (error) {
+          console.error(`Error calculating stats for chunk ${chunk.chunkNumber}:`, error);
+        }
+
+        // Wait before processing next chunk (except for last one)
+        if (i < eligibleChunks.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, THROTTLE_DELAY_MS));
         }
       }
+
+      console.log(`✅ Completed throttled stats fetch`);
     };
 
     if (chunks.length > 0) {
       calculateAllCompletedStats();
     }
-  }, [chunks]);
+  }, [chunks, chunkStatsCache, team.nhlId]);
 
   if (loading && chunks.length === 0) {
     return (
