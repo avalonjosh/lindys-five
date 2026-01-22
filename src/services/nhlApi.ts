@@ -224,7 +224,18 @@ export async function fetchDetailedGameStats(gameId: number, isHome: boolean, te
   try {
     const url = `${API_BASE}/gamecenter/${gameId}/boxscore`;
     const response = await fetch(url);
+
+    // Check for HTTP errors
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
+    }
+
     const data = await response.json();
+
+    // Validate response structure
+    if (!data.homeTeam || !data.awayTeam) {
+      throw new Error('Invalid API response: missing team data');
+    }
 
     const myTeam = isHome ? data.homeTeam : data.awayTeam;
     const opponentTeam = isHome ? data.awayTeam : data.homeTeam;
@@ -261,6 +272,12 @@ export async function fetchDetailedGameStats(gameId: number, isHome: boolean, te
     // Get penalty data from play-by-play to calculate opportunities
     const playByPlayUrl = `${API_BASE}/gamecenter/${gameId}/play-by-play`;
     const pbpResponse = await fetch(playByPlayUrl);
+
+    // Check for HTTP errors
+    if (!pbpResponse.ok) {
+      throw new Error(`HTTP error ${pbpResponse.status}: ${pbpResponse.statusText}`);
+    }
+
     const pbpData = await pbpResponse.json();
 
     let myTeamPenalties = 0;

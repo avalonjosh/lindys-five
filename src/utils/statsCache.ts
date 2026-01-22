@@ -18,12 +18,13 @@ function getStorageKey(teamId: string, chunkNumber: number): string {
 export function saveChunkStatsToCache(
   teamId: string,
   chunkNumber: number,
-  stats: ChunkStats
+  stats: ChunkStats,
+  nhlId: number
 ): void {
   const cached: CachedChunkStats = {
     stats,
     timestamp: Date.now(),
-    teamId: parseInt(teamId) // Store numeric team ID for verification
+    teamId: nhlId // Store numeric NHL team ID for verification
   };
 
   try {
@@ -39,7 +40,8 @@ export function saveChunkStatsToCache(
 // Load stats from localStorage
 export function loadChunkStatsFromCache(
   teamId: string,
-  chunkNumber: number
+  chunkNumber: number,
+  nhlId: number
 ): ChunkStats | null {
   try {
     const key = getStorageKey(teamId, chunkNumber);
@@ -57,8 +59,8 @@ export function loadChunkStatsFromCache(
       return null;
     }
 
-    // Validate team ID matches
-    if (cached.teamId.toString() !== teamId) {
+    // Validate team ID matches (handle old cache format with null/undefined teamId)
+    if (!cached.teamId || cached.teamId !== nhlId) {
       localStorage.removeItem(key);
       return null;
     }

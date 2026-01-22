@@ -32,7 +32,7 @@ function App({ team }: AppProps) {
     // We don't know which chunks exist yet, but we can pre-populate
     // the cache for chunks 1-17 (max possible in a season: 82 games ÷ 5 = 16.4)
     for (let i = 1; i <= 17; i++) {
-      const cachedStats = loadChunkStatsFromCache(team.id, i);
+      const cachedStats = loadChunkStatsFromCache(team.id, i, team.nhlId);
       if (cachedStats) {
         initialCache.set(i, cachedStats);
       }
@@ -70,7 +70,7 @@ function App({ team }: AppProps) {
     });
 
     // Persist to localStorage
-    saveChunkStatsToCache(team.id, chunkNumber, stats);
+    saveChunkStatsToCache(team.id, chunkNumber, stats, team.nhlId);
   };
 
   // Find the current active set (first set with pending games)
@@ -298,7 +298,7 @@ function App({ team }: AppProps) {
         const chunk = eligibleChunks[i];
 
         try {
-          console.log(`⏳ Fetching stats for chunk ${chunk.chunkNumber}/${eligibleChunks.length}...`);
+          console.log(`⏳ Fetching stats for chunk ${i + 1} of ${eligibleChunks.length} (chunk #${chunk.chunkNumber})...`);
           const stats = await calculateChunkStats(chunk, team.nhlId);
           if (stats) {
             handleStatsCalculated(chunk.chunkNumber, stats);
@@ -319,7 +319,9 @@ function App({ team }: AppProps) {
     if (chunks.length > 0) {
       calculateAllCompletedStats();
     }
-  }, [chunks, chunkStatsCache, team.nhlId]);
+    // Note: chunkStatsCache intentionally NOT in dependencies to avoid feedback loop
+    // The filter inside checks the current cache state via closure
+  }, [chunks, team.nhlId]);
 
   if (loading && chunks.length === 0) {
     return (
