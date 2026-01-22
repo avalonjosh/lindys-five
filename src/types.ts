@@ -19,6 +19,17 @@ export interface NHLGame {
   gameOutcome?: {
     lastPeriodType: string; // "REG", "OT", "SO"
   };
+  // Live game data (only present when gameState === "LIVE")
+  period?: number;
+  periodDescriptor?: {
+    number: number;
+    periodType: string; // "REG", "OT", "SO"
+  };
+  clock?: {
+    timeRemaining: string; // "MM:SS" format
+    inIntermission: boolean;
+    running: boolean;
+  };
 }
 
 export interface GameResult {
@@ -34,6 +45,17 @@ export interface GameResult {
   points: number;
   gameState: string;
   gameId?: number;
+  // Live game data
+  period?: number;
+  periodDescriptor?: {
+    number: number;
+    periodType: string; // "REG", "OT", "SO"
+  };
+  clock?: {
+    timeRemaining: string; // "MM:SS" format
+    inIntermission: boolean;
+    running: boolean;
+  };
 }
 
 export interface DetailedGameStats {

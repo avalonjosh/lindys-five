@@ -33,6 +33,7 @@ function App({ team }: AppProps) {
   const [refreshTrigger, setRefreshTrigger] = useState(Date.now());
   const [error, setError] = useState(false);
   const [yearOverYearLoading, setYearOverYearLoading] = useState(false);
+  const [pollingInterval, setPollingInterval] = useState(60000); // Start with 60 seconds
 
   const toggleTheme = () => {
     setIsGoatMode(prev => {
@@ -181,6 +182,10 @@ function App({ team }: AppProps) {
         // Update refresh trigger to sync with TeamNav
         setRefreshTrigger(Date.now());
         setError(false);
+
+        // Adjust polling interval based on live games (LIVE or CRIT state)
+        const hasLiveGame = schedule.some(game => game.gameState === 'LIVE' || game.gameState === 'CRIT');
+        setPollingInterval(hasLiveGame ? 15000 : 60000);
       } else {
         console.warn('Received empty schedule data, keeping existing data');
         // Only show error if we have no existing data (initial load failure)
@@ -216,11 +221,11 @@ function App({ team }: AppProps) {
 
     loadData();
 
-    // Auto-refresh every 1 minute
-    const interval = setInterval(loadData, 1 * 60 * 1000);
+    // Auto-refresh with dynamic interval
+    const interval = setInterval(loadData, pollingInterval);
 
     return () => clearInterval(interval);
-  }, [team]);
+  }, [team, pollingInterval]);
 
   // Fetch last season comparison data when Year-over-Year mode is enabled
   useEffect(() => {

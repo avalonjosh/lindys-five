@@ -136,8 +136,54 @@ export async function fetchSabresSchedule(season: string = '20252026', teamAbbre
         points,
         gameState: game.gameState,
         gameId: game.id,
+        // Pass through live game data if available
+        period: game.period,
+        periodDescriptor: game.periodDescriptor,
+        clock: game.clock,
       };
     });
+
+    // Enrich LIVE and CRIT games with real-time period and clock data
+    const liveGames = results.filter(game => (game.gameState === 'LIVE' || game.gameState === 'CRIT') && game.gameId);
+
+    if (liveGames.length > 0) {
+      console.log(`🔴 Fetching live data for ${liveGames.length} LIVE game(s)...`);
+
+      // Fetch live data for all live games in parallel
+      const liveDataPromises = liveGames.map(async (game) => {
+        try {
+          const url = `${API_BASE}/gamecenter/${game.gameId}/landing`;
+          const response = await fetchWithRetry(url);
+          const liveData = await response.json();
+
+          return {
+            gameId: game.gameId,
+            period: liveData.periodDescriptor?.number || null,
+            periodDescriptor: liveData.periodDescriptor || null,
+            clock: liveData.clock || null
+          };
+        } catch (error) {
+          console.error(`Failed to fetch live data for game ${game.gameId}:`, error);
+          return null; // Return null on error, will be filtered out
+        }
+      });
+
+      const liveDataResults = await Promise.all(liveDataPromises);
+
+      // Merge live data back into results
+      liveDataResults.forEach((liveData) => {
+        if (!liveData) return; // Skip failed fetches
+
+        const gameIndex = results.findIndex(g => g.gameId === liveData.gameId);
+        if (gameIndex !== -1) {
+          results[gameIndex].period = liveData.period;
+          results[gameIndex].periodDescriptor = liveData.periodDescriptor;
+          results[gameIndex].clock = liveData.clock;
+        }
+      });
+
+      console.log('✅ Live game data enriched');
+    }
 
     console.log('✅ Successfully processed', results.length, 'games');
     console.log('First 3 games processed:', results.slice(0, 3));

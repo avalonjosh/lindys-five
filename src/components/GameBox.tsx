@@ -1,6 +1,7 @@
 import type { GameResult } from '../types';
 import { generateGameTicketLink } from '../utils/affiliateLinks';
 import { TEAMS } from '../teamConfig';
+import { LiveGameOverlay } from './LiveGameOverlay';
 
 interface TeamColors {
   primary: string;
@@ -33,6 +34,23 @@ interface GameBoxProps {
 export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGameClick, hypotheticalOutcome, teamAbbreviation = 'BUF', teamColors, darkModeColors, venueTeamAbbreviation }: GameBoxProps) {
   const isPending = game.outcome === 'PENDING';
   const isClickable = whatIfMode && isPending && onGameClick;
+
+  // Check if this is a live game (LIVE or CRIT state)
+  const isLiveGame = game.gameState === 'LIVE' || game.gameState === 'CRIT';
+
+  // If this is a live game, render the LiveGameOverlay instead
+  if (isLiveGame) {
+    return (
+      <LiveGameOverlay
+        game={game}
+        gameNumber={gameNumber}
+        teamAbbreviation={teamAbbreviation}
+        teamColors={teamColors}
+        darkModeColors={darkModeColors}
+        isGoatMode={isGoatMode}
+      />
+    );
+  }
 
   // Get the venue team (home team) for ticket link
   const homeTeamAbbrev = game.isHome ? teamAbbreviation : game.opponentAbbreviation;
