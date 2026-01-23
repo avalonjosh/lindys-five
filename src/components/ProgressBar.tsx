@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { MoreHorizontal, X as XIcon, Link as LinkIcon, Check } from 'lucide-react';
+import { MoreHorizontal, X as XIcon, Link as LinkIcon, Check, ChevronDown } from 'lucide-react';
 import type { SeasonStats } from '../types';
+import { calculatePlayoffProbability, getProbabilityColor } from '../utils/playoffProbability';
 
 interface TeamColors {
   primary: string;
@@ -40,7 +41,11 @@ function SeasonSection({
   lastSeasonLabel,
   teamColors,
   darkModeColors,
-  teamId
+  teamId,
+  probability,
+  probabilityColor,
+  playoffExpanded,
+  onPlayoffToggle
 }: {
   stats: SeasonStats;
   isGoatMode: boolean;
@@ -50,6 +55,10 @@ function SeasonSection({
   teamColors: TeamColors;
   darkModeColors: DarkModeColors;
   teamId: string;
+  probability?: number;
+  probabilityColor?: string;
+  playoffExpanded?: boolean;
+  onPlayoffToggle?: () => void;
 }) {
   const { totalPoints, gamesPlayed, gamesRemaining, currentPace, projectedPoints, playoffTarget } = stats;
 
@@ -99,12 +108,35 @@ function SeasonSection({
 
   return (
     <>
-      <h3
-        className={`text-xl md:text-2xl font-bold mb-2 md:mb-3 ${valueColor}`}
-        style={valueStyle}
-      >
-        {isLastYear ? `Last Year (${lastSeasonLabel})` : 'Season Progress'}
-      </h3>
+      {/* Header row with title and centered pill (desktop) */}
+      <div className="relative mb-2 md:mb-3">
+        <h3
+          className={`text-xl md:text-2xl font-bold ${valueColor}`}
+          style={valueStyle}
+        >
+          {isLastYear ? `Last Year (${lastSeasonLabel})` : 'Season Progress'}
+        </h3>
+
+        {/* Desktop: Absolutely centered Playoff Probability text link */}
+        {!isLastYear && probability !== undefined && onPlayoffToggle && (
+          <div className="hidden md:flex absolute inset-0 justify-center items-center pointer-events-none">
+            <button
+              onClick={onPlayoffToggle}
+              className="flex items-center gap-1 text-sm font-semibold transition-all focus:outline-none pointer-events-auto"
+              style={{ color: probabilityColor }}
+              title={playoffExpanded ? 'Hide playoff details' : 'Show playoff details'}
+            >
+              <span className={playoffExpanded ? 'underline decoration-2 underline-offset-2' : ''}>
+                Playoff Probability: {probability}%
+              </span>
+              <ChevronDown
+                size={14}
+                className={`transition-transform duration-200 ${playoffExpanded ? 'rotate-180' : ''}`}
+              />
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-3 md:mb-4">
         {/* Games Played Card */}
@@ -311,6 +343,92 @@ function SeasonSection({
         )}
       </div>
 
+      {/* Mobile: Centered Playoff Probability text link at bottom */}
+      {!isLastYear && probability !== undefined && onPlayoffToggle && (
+        <div className="flex md:hidden justify-center mt-3">
+          <button
+            onClick={onPlayoffToggle}
+            className="flex items-center gap-1 text-xs font-semibold transition-all focus:outline-none"
+            style={{ color: probabilityColor }}
+            title={playoffExpanded ? 'Hide playoff details' : 'Show playoff details'}
+          >
+            <span className={playoffExpanded ? 'underline decoration-2 underline-offset-2' : ''}>
+              Playoff Probability: {probability}%
+            </span>
+            <ChevronDown
+              size={12}
+              className={`transition-transform duration-200 ${playoffExpanded ? 'rotate-180' : ''}`}
+            />
+          </button>
+        </div>
+      )}
+
+      {/* Expandable Playoff Probability Section */}
+      {!isLastYear && probability !== undefined && (
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-out ${
+            playoffExpanded ? 'max-h-48 opacity-100 mt-4' : 'max-h-0 opacity-0'
+          }`}
+        >
+          {/* Dashed divider */}
+          <div className={`border-t-2 border-dashed mb-4 ${
+            isGoatMode ? 'border-zinc-700' : 'border-gray-300'
+          }`}></div>
+
+          {/* Probability details */}
+          <div className="flex items-center gap-4 md:gap-6">
+            {/* Large probability circle */}
+            <div
+              className="relative flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center border-4"
+              style={{
+                borderColor: probabilityColor,
+                backgroundColor: `${probabilityColor}15`
+              }}
+            >
+              <span
+                className="text-xl md:text-2xl font-bold"
+                style={{ color: probabilityColor }}
+              >
+                {probability}%
+              </span>
+            </div>
+
+            {/* Context info */}
+            <div className="flex-1 min-w-0">
+              <p
+                className={`text-sm md:text-base font-semibold mb-1 ${
+                  isGoatMode ? 'text-white' : 'text-gray-900'
+                }`}
+              >
+                {(() => {
+                  if (gamesPlayed < 5) return "Season just getting started";
+                  if (probability >= 90) return "Strong playoff position";
+                  if (probability >= 70) return "On track for playoffs";
+                  if (probability >= 50) return "In the playoff hunt";
+                  if (probability >= 30) return "Need to pick up the pace";
+                  if (probability >= 10) return "Playoff hopes fading";
+                  return "Facing long odds";
+                })()}
+              </p>
+              <p
+                className={`text-xs md:text-sm ${
+                  isGoatMode ? 'text-zinc-400' : 'text-gray-600'
+                }`}
+              >
+                Need {Math.max(0, playoffTarget - totalPoints)} more points ({gamesRemaining > 0 ? ((playoffTarget - totalPoints) / gamesRemaining).toFixed(2) : '0.00'} pts/game)
+              </p>
+              <p
+                className={`text-xs md:text-sm mt-0.5 ${
+                  isGoatMode ? 'text-zinc-500' : 'text-gray-500'
+                }`}
+              >
+                Projected: {projectedPoints} pts • Target: {playoffTarget} pts
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   );
 }
@@ -318,6 +436,14 @@ function SeasonSection({
 export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearOverYearLoading, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors, teamId, showShareButton, teamName }: ProgressBarProps) {
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [playoffExpanded, setPlayoffExpanded] = useState(false);
+
+  // Calculate playoff probability
+  const probability = calculatePlayoffProbability(stats);
+  const probabilityColorRaw = getProbabilityColor(probability);
+  const probabilityColor = probabilityColorRaw === 'team'
+    ? (isGoatMode ? darkModeColors.accent : teamColors.primary)
+    : probabilityColorRaw;
 
   // Calculate the last season label dynamically
   // Current season is 2025-2026, so we get the start year (2025) and format as "24-25"
@@ -419,7 +545,17 @@ ${teamUrl}
 
       {/* Current Year Section - wrapped in relative container for share button positioning */}
       <div className="relative">
-        <SeasonSection stats={stats} isGoatMode={isGoatMode} teamColors={teamColors} darkModeColors={darkModeColors} teamId={teamId} />
+        <SeasonSection
+          stats={stats}
+          isGoatMode={isGoatMode}
+          teamColors={teamColors}
+          darkModeColors={darkModeColors}
+          teamId={teamId}
+          probability={probability}
+          probabilityColor={probabilityColor}
+          playoffExpanded={playoffExpanded}
+          onPlayoffToggle={() => setPlayoffExpanded(!playoffExpanded)}
+        />
 
         {/* Share Button - positioned relative to current season section */}
         {showShareButton && (
