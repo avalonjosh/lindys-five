@@ -440,7 +440,7 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
 
   // Calculate playoff probability
   const probability = calculatePlayoffProbability(stats);
-  const probabilityColorRaw = getProbabilityColor(probability);
+  const probabilityColorRaw = getProbabilityColor();
   const probabilityColor = probabilityColorRaw === 'team'
     ? (isGoatMode ? darkModeColors.accent : teamColors.primary)
     : probabilityColorRaw;

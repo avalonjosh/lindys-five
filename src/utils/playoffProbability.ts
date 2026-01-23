@@ -93,13 +93,8 @@ export function getPlayoffStatusMessage(probability: number, gamesPlayed: number
 
 /**
  * Get color for probability display
+ * Always returns 'team' to use team color scheme regardless of probability
  */
-export function getProbabilityColor(probability: number): string {
-  if (probability >= 70) {
-    return '#22c55e'; // green-500
-  } else if (probability >= 40) {
-    return 'team'; // Signal to use team color
-  } else {
-    return '#ef4444'; // red-500
-  }
+export function getProbabilityColor(): string {
+  return 'team';
 }
