@@ -5,6 +5,7 @@ import { fetchSabresSchedule, fetchLastSeasonComparison } from './services/nhlAp
 import { calculateChunks, calculateSeasonStats, calculateChunkStats } from './utils/chunkCalculator';
 import ChunkCard from './components/ChunkCard';
 import ProgressBar from './components/ProgressBar';
+import StandingsCard from './components/StandingsCard';
 import TeamNav from './components/TeamNav';
 import type { TeamConfig } from './teamConfig';
 import { getDarkModeColors } from './teamConfig';
@@ -583,6 +584,14 @@ function App({ team }: AppProps) {
             teamName={`${team.city} ${team.name}`}
           />
         )}
+
+        {/* Standings Card */}
+        <StandingsCard
+          teamAbbrev={team.abbreviation}
+          isGoatMode={!useClassicStyling}
+          teamColors={effectiveTeamColors}
+          darkModeColors={darkModeColors}
+        />
 
         {/* What If Mode Banner */}
         {whatIfMode && (
