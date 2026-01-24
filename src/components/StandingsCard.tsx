@@ -31,7 +31,23 @@ interface StandingTeam {
   divisionName: string;
   conferenceName: string;
   streakCode?: string;
+  streakCount?: number;
   goalDifferential?: number;
+  pointPctg?: number;
+  // Additional stats for desktop view
+  regulationWins: number;
+  regulationPlusOtWins: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  homeWins: number;
+  homeLosses: number;
+  homeOtLosses: number;
+  roadWins: number;
+  roadLosses: number;
+  roadOtLosses: number;
+  l10Wins: number;
+  l10Losses: number;
+  l10OtLosses: number;
 }
 
 interface StandingsCardProps {
@@ -53,6 +69,8 @@ export default function StandingsCard({
   const [error, setError] = useState<string | null>(null);
   const [userTeamDivision, setUserTeamDivision] = useState<string | null>(null);
   const [userTeamConference, setUserTeamConference] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'division' | 'wildcard'>('wildcard');
+  const [sortBy, setSortBy] = useState<'points' | 'pointPctg'>('points');
 
   // Fetch standings when expanded
   useEffect(() => {
@@ -94,7 +112,23 @@ export default function StandingsCard({
         divisionName: team.divisionName || '',
         conferenceName: team.conferenceName || '',
         streakCode: team.streakCode || '',
+        streakCount: team.streakCount || 0,
         goalDifferential: team.goalDifferential || 0,
+        pointPctg: team.pointPctg || 0,
+        // Additional stats for desktop view
+        regulationWins: team.regulationWins || 0,
+        regulationPlusOtWins: team.regulationPlusOtWins || 0,
+        goalsFor: team.goalFor || 0,
+        goalsAgainst: team.goalAgainst || 0,
+        homeWins: team.homeWins || 0,
+        homeLosses: team.homeLosses || 0,
+        homeOtLosses: team.homeOtLosses || 0,
+        roadWins: team.roadWins || 0,
+        roadLosses: team.roadLosses || 0,
+        roadOtLosses: team.roadOtLosses || 0,
+        l10Wins: team.l10Wins || 0,
+        l10Losses: team.l10Losses || 0,
+        l10OtLosses: team.l10OtLosses || 0,
       }));
 
       setStandings(parsedStandings);
@@ -116,16 +150,43 @@ export default function StandingsCard({
   // Get user's team position
   const userTeam = standings.find(t => t.teamAbbrev === teamAbbrev);
 
+  // Sort function based on sortBy state
+  const sortTeams = (a: StandingTeam, b: StandingTeam) => {
+    if (sortBy === 'pointPctg') {
+      return (b.pointPctg || 0) - (a.pointPctg || 0) || b.points - a.points;
+    }
+    return b.points - a.points || a.gamesPlayed - b.gamesPlayed;
+  };
+
   // Filter standings by user's division
   const divisionTeams = standings
     .filter(t => t.divisionName === userTeamDivision)
-    .sort((a, b) => a.divisionRank - b.divisionRank);
+    .sort(sortBy === 'points' ? (a, b) => a.divisionRank - b.divisionRank : sortTeams);
 
   // Get wild card teams in user's conference (teams ranked 4+ in their division)
   const wildcardTeams = standings
     .filter(t => t.conferenceName === userTeamConference && t.divisionRank > 3)
-    .sort((a, b) => b.points - a.points || a.gamesPlayed - b.gamesPlayed)
+    .sort(sortTeams)
     .slice(0, 4); // Top 4 wild card contenders
+
+  // Get all divisions in the user's conference (for wild card view)
+  const conferenceDivisions = [...new Set(
+    standings
+      .filter(t => t.conferenceName === userTeamConference)
+      .map(t => t.divisionName)
+  )];
+
+  // Get top 3 teams from each division in the conference
+  const getDivisionTop3 = (divisionName: string) =>
+    standings
+      .filter(t => t.divisionName === divisionName)
+      .sort(sortBy === 'points' ? (a, b) => a.divisionRank - b.divisionRank : sortTeams)
+      .slice(0, 3);
+
+  // Get all wild card contenders (teams ranked 4+ from both divisions in conference)
+  const allWildcardTeams = standings
+    .filter(t => t.conferenceName === userTeamConference && t.divisionRank > 3)
+    .sort(sortTeams);
 
   // Accent color for highlights
   const accentColor = isGoatMode ? darkModeColors.accent : teamColors.primary;
@@ -198,7 +259,7 @@ export default function StandingsCard({
       {/* Expandable content */}
       <div
         className={`overflow-hidden transition-all duration-300 ease-out ${
-          expanded ? 'max-h-[600px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+          expanded ? 'max-h-[900px] opacity-100 mt-4' : 'max-h-0 opacity-0'
         }`}
       >
         {loading && (
@@ -215,58 +276,168 @@ export default function StandingsCard({
 
         {!loading && !error && standings.length > 0 && (
           <div className="space-y-4">
-            {/* Division Standings */}
-            <div>
-              <h4
-                className={`text-sm font-semibold mb-2 ${
-                  isGoatMode ? 'text-zinc-300' : 'text-gray-700'
+            {/* View Mode Toggle */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setViewMode('wildcard')}
+                className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
+                  viewMode === 'wildcard'
+                    ? 'text-white'
+                    : isGoatMode
+                      ? 'text-zinc-400 hover:text-zinc-300'
+                      : 'text-gray-500 hover:text-gray-700'
                 }`}
+                style={viewMode === 'wildcard' ? { backgroundColor: accentColor } : undefined}
               >
-                {userTeamDivision} Division
-              </h4>
-              <div className="space-y-1">
-                {divisionTeams.map((team) => (
-                  <TeamRow
-                    key={team.teamAbbrev}
-                    team={team}
-                    isUserTeam={team.teamAbbrev === teamAbbrev}
-                    isGoatMode={isGoatMode}
-                    accentColor={accentColor}
-                    showDivisionRank
-                  />
-                ))}
-              </div>
+                Wild Card
+              </button>
+              <button
+                onClick={() => setViewMode('division')}
+                className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
+                  viewMode === 'division'
+                    ? 'text-white'
+                    : isGoatMode
+                      ? 'text-zinc-400 hover:text-zinc-300'
+                      : 'text-gray-500 hover:text-gray-700'
+                }`}
+                style={viewMode === 'division' ? { backgroundColor: accentColor } : undefined}
+              >
+                Division
+              </button>
             </div>
 
-            {/* Wild Card Race */}
-            {wildcardTeams.length > 0 && (
-              <div>
-                <h4
-                  className={`text-sm font-semibold mb-2 ${
-                    isGoatMode ? 'text-zinc-300' : 'text-gray-700'
-                  }`}
-                >
-                  Wild Card Race
-                </h4>
-                <div className="space-y-1">
-                  {wildcardTeams.map((team, index) => (
-                    <TeamRow
-                      key={team.teamAbbrev}
-                      team={team}
-                      isUserTeam={team.teamAbbrev === teamAbbrev}
-                      isGoatMode={isGoatMode}
-                      accentColor={accentColor}
-                      wildcardPosition={index + 1}
-                    />
-                  ))}
-                </div>
-                {wildcardTeams.length >= 2 && (
-                  <div
-                    className={`mt-2 text-xs ${
-                      isGoatMode ? 'text-zinc-500' : 'text-gray-500'
+            {/* Division View */}
+            {viewMode === 'division' && (
+              <>
+                {/* Division Standings */}
+                <div>
+                  <h4
+                    className={`text-sm font-semibold mb-2 ${
+                      isGoatMode ? 'text-zinc-300' : 'text-gray-700'
                     }`}
                   >
-                    Top 2 wild cards make playoffs
+                    {userTeamDivision} Division
+                  </h4>
+                  <StandingsHeader isGoatMode={isGoatMode} sortBy={sortBy} onSortChange={setSortBy} accentColor={accentColor} />
+                  <div className="space-y-1">
+                    {divisionTeams.map((team) => (
+                      <TeamRow
+                        key={team.teamAbbrev}
+                        team={team}
+                        isUserTeam={team.teamAbbrev === teamAbbrev}
+                        isGoatMode={isGoatMode}
+                        accentColor={accentColor}
+                        showDivisionRank
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Wild Card Race */}
+                {wildcardTeams.length > 0 && (
+                  <div>
+                    <h4
+                      className={`text-sm font-semibold mb-2 ${
+                        isGoatMode ? 'text-zinc-300' : 'text-gray-700'
+                      }`}
+                    >
+                      Wild Card Race
+                    </h4>
+                    <StandingsHeader isGoatMode={isGoatMode} sortBy={sortBy} onSortChange={setSortBy} accentColor={accentColor} />
+                    <div className="space-y-1">
+                      {wildcardTeams.map((team, index) => (
+                        <TeamRow
+                          key={team.teamAbbrev}
+                          team={team}
+                          isUserTeam={team.teamAbbrev === teamAbbrev}
+                          isGoatMode={isGoatMode}
+                          accentColor={accentColor}
+                          wildcardPosition={index + 1}
+                        />
+                      ))}
+                    </div>
+                    {wildcardTeams.length >= 2 && (
+                      <div
+                        className={`mt-2 text-xs ${
+                          isGoatMode ? 'text-zinc-500' : 'text-gray-500'
+                        }`}
+                      >
+                        Top 2 wild cards make playoffs
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Wild Card View */}
+            {viewMode === 'wildcard' && (
+              <div className="space-y-4">
+                {/* Both divisions in conference - top 3 from each */}
+                {conferenceDivisions.map((divisionName) => (
+                  <div key={divisionName}>
+                    <h4
+                      className={`text-sm font-semibold mb-2 ${
+                        isGoatMode ? 'text-zinc-300' : 'text-gray-700'
+                      }`}
+                    >
+                      {divisionName}
+                    </h4>
+                    <StandingsHeader isGoatMode={isGoatMode} sortBy={sortBy} onSortChange={setSortBy} accentColor={accentColor} />
+                    <div className="space-y-1">
+                      {getDivisionTop3(divisionName).map((team) => (
+                        <TeamRow
+                          key={team.teamAbbrev}
+                          team={team}
+                          isUserTeam={team.teamAbbrev === teamAbbrev}
+                          isGoatMode={isGoatMode}
+                          accentColor={accentColor}
+                          showDivisionRank
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Wild Card section - all teams ranked 4+ from both divisions */}
+                {allWildcardTeams.length > 0 && (
+                  <div>
+                    <h4
+                      className={`text-sm font-semibold mb-2 ${
+                        isGoatMode ? 'text-zinc-300' : 'text-gray-700'
+                      }`}
+                    >
+                      Wild Card
+                    </h4>
+                    <StandingsHeader isGoatMode={isGoatMode} sortBy={sortBy} onSortChange={setSortBy} accentColor={accentColor} />
+                    <div className="space-y-1">
+                      {allWildcardTeams.map((team, index) => (
+                        <div key={team.teamAbbrev}>
+                          <TeamRow
+                            team={team}
+                            isUserTeam={team.teamAbbrev === teamAbbrev}
+                            isGoatMode={isGoatMode}
+                            accentColor={accentColor}
+                            wildcardPosition={index + 1}
+                          />
+                          {/* Playoff cutoff line after position 2 */}
+                          {index === 1 && (
+                            <div
+                              className={`my-2 border-t-2 border-dashed ${
+                                isGoatMode ? 'border-zinc-600' : 'border-gray-300'
+                              }`}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <div
+                      className={`mt-2 text-xs ${
+                        isGoatMode ? 'text-zinc-500' : 'text-gray-500'
+                      }`}
+                    >
+                      Top 2 make playoffs
+                    </div>
                   </div>
                 )}
               </div>
@@ -278,6 +449,74 @@ export default function StandingsCard({
   );
 }
 
+// Column header component
+function StandingsHeader({
+  isGoatMode,
+  sortBy,
+  onSortChange,
+  accentColor
+}: {
+  isGoatMode: boolean;
+  sortBy: 'points' | 'pointPctg';
+  onSortChange: (sort: 'points' | 'pointPctg') => void;
+  accentColor: string;
+}) {
+  const headerColor = isGoatMode ? 'text-zinc-500' : 'text-gray-400';
+
+  return (
+    <div className={`flex items-center gap-2 px-2 pb-1 text-xs font-medium ${headerColor}`} style={{ borderLeft: '3px solid transparent' }}>
+      {/* Rank column */}
+      <span className="w-5 text-center">#</span>
+      {/* Logo spacer */}
+      <span className="w-6"></span>
+      {/* Team */}
+      <span className="w-10">Team</span>
+      {/* W */}
+      <span className="w-6 text-right">W</span>
+      {/* L */}
+      <span className="w-6 text-right">L</span>
+      {/* OT */}
+      <span className="w-6 text-right">OT</span>
+      {/* Desktop-only columns */}
+      <span className="hidden lg:block w-8 text-right">RW</span>
+      <span className="hidden lg:block w-10 text-right">ROW</span>
+      <span className="hidden lg:block w-16 text-right">HOME</span>
+      <span className="hidden lg:block w-16 text-right">AWAY</span>
+      <span className="hidden lg:block w-8 text-right">GF</span>
+      <span className="hidden lg:block w-8 text-right">GA</span>
+      <span className="hidden lg:block w-10 text-right">DIFF</span>
+      <span className="hidden lg:block w-16 text-right">L10</span>
+      <span className="hidden lg:block w-10 text-right">STRK</span>
+      {/* Spacer to push GP/PTS to right */}
+      <span className="flex-1 lg:hidden"></span>
+      {/* GP */}
+      <span className="w-8 text-right">GP</span>
+      {/* PTS - clickable */}
+      <button
+        onClick={() => onSortChange('points')}
+        className={`w-8 text-right cursor-pointer transition-colors ${
+          sortBy === 'points' ? 'font-bold' : ''
+        }`}
+        style={sortBy === 'points' ? { color: accentColor } : undefined}
+        title="Sort by Points"
+      >
+        PTS
+      </button>
+      {/* Points Percentage - clickable */}
+      <button
+        onClick={() => onSortChange('pointPctg')}
+        className={`w-10 text-right cursor-pointer transition-colors ${
+          sortBy === 'pointPctg' ? 'font-bold' : ''
+        }`}
+        style={sortBy === 'pointPctg' ? { color: accentColor } : undefined}
+        title="Sort by Points Percentage"
+      >
+        P%
+      </button>
+    </div>
+  );
+}
+
 // Team row component
 function TeamRow({
   team,
@@ -285,7 +524,8 @@ function TeamRow({
   isGoatMode,
   accentColor,
   showDivisionRank,
-  wildcardPosition
+  wildcardPosition,
+  conferenceRank
 }: {
   team: StandingTeam;
   isUserTeam: boolean;
@@ -293,9 +533,14 @@ function TeamRow({
   accentColor: string;
   showDivisionRank?: boolean;
   wildcardPosition?: number;
+  conferenceRank?: number;
 }) {
-  const rank = showDivisionRank ? team.divisionRank : wildcardPosition;
-  const inPlayoffPosition = showDivisionRank ? team.divisionRank <= 3 : (wildcardPosition && wildcardPosition <= 2);
+  const rank = showDivisionRank ? team.divisionRank : (conferenceRank ?? wildcardPosition);
+  const inPlayoffPosition = showDivisionRank
+    ? team.divisionRank <= 3
+    : conferenceRank
+      ? conferenceRank <= 8
+      : (wildcardPosition && wildcardPosition <= 2);
 
   return (
     <div
@@ -306,13 +551,13 @@ function TeamRow({
             : 'bg-blue-50'
           : ''
       }`}
-      style={isUserTeam ? {
-        borderLeft: `3px solid ${accentColor}`
-      } : undefined}
+      style={{
+        borderLeft: `3px solid ${isUserTeam ? accentColor : 'transparent'}`
+      }}
     >
       {/* Rank */}
       <span
-        className={`w-5 text-center text-sm ${
+        className={`w-5 text-center text-sm tabular-nums ${
           inPlayoffPosition
             ? `font-bold ${isGoatMode ? 'text-zinc-200' : 'text-gray-800'}`
             : `font-normal ${isGoatMode ? 'text-zinc-500' : 'text-gray-400'}`
@@ -340,25 +585,146 @@ function TeamRow({
         {team.teamAbbrev}
       </span>
 
-      {/* Record */}
+      {/* Wins */}
       <span
-        className={`flex-1 text-xs ${
+        className={`w-6 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}
       >
-        {team.wins}-{team.losses}-{team.otLosses}
+        {team.wins}
+      </span>
+
+      {/* Losses */}
+      <span
+        className={`w-6 text-right text-xs tabular-nums ${
+          isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+        }`}
+      >
+        {team.losses}
+      </span>
+
+      {/* OT Losses */}
+      <span
+        className={`w-6 text-right text-xs tabular-nums ${
+          isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+        }`}
+      >
+        {team.otLosses}
+      </span>
+
+      {/* Desktop-only columns */}
+      {/* Regulation Wins */}
+      <span
+        className={`hidden lg:block w-8 text-right text-xs tabular-nums ${
+          isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+        }`}
+      >
+        {team.regulationWins}
+      </span>
+
+      {/* Regulation + OT Wins */}
+      <span
+        className={`hidden lg:block w-10 text-right text-xs tabular-nums ${
+          isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+        }`}
+      >
+        {team.regulationPlusOtWins}
+      </span>
+
+      {/* Home Record */}
+      <span
+        className={`hidden lg:block w-16 text-right text-xs tabular-nums ${
+          isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+        }`}
+      >
+        {team.homeWins}-{team.homeLosses}-{team.homeOtLosses}
+      </span>
+
+      {/* Away Record */}
+      <span
+        className={`hidden lg:block w-16 text-right text-xs tabular-nums ${
+          isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+        }`}
+      >
+        {team.roadWins}-{team.roadLosses}-{team.roadOtLosses}
+      </span>
+
+      {/* Goals For */}
+      <span
+        className={`hidden lg:block w-8 text-right text-xs tabular-nums ${
+          isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+        }`}
+      >
+        {team.goalsFor}
+      </span>
+
+      {/* Goals Against */}
+      <span
+        className={`hidden lg:block w-8 text-right text-xs tabular-nums ${
+          isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+        }`}
+      >
+        {team.goalsAgainst}
+      </span>
+
+      {/* Goal Differential */}
+      <span
+        className={`hidden lg:block w-10 text-right text-xs tabular-nums ${
+          isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+        }`}
+      >
+        {(team.goalDifferential || 0) > 0 ? '+' : ''}{team.goalDifferential}
+      </span>
+
+      {/* Last 10 Games */}
+      <span
+        className={`hidden lg:block w-16 text-right text-xs tabular-nums ${
+          isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+        }`}
+      >
+        {team.l10Wins}-{team.l10Losses}-{team.l10OtLosses}
+      </span>
+
+      {/* Streak */}
+      <span
+        className={`hidden lg:block w-10 text-right text-xs tabular-nums ${
+          isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+        }`}
+      >
+        {team.streakCode ? `${team.streakCode}${team.streakCount || ''}` : '-'}
+      </span>
+
+      {/* Spacer to push GP/PTS to right (mobile only) */}
+      <span className="flex-1 lg:hidden"></span>
+
+      {/* Games Played */}
+      <span
+        className={`w-8 text-right text-xs tabular-nums ${
+          isGoatMode ? 'text-zinc-500' : 'text-gray-400'
+        }`}
+      >
+        {team.gamesPlayed}
       </span>
 
       {/* Points */}
       <span
-        className={`text-sm font-bold ${
+        className={`w-8 text-right text-sm font-bold tabular-nums ${
           isUserTeam
             ? ''
             : isGoatMode ? 'text-zinc-200' : 'text-gray-800'
         }`}
         style={isUserTeam ? { color: accentColor } : undefined}
       >
-        {team.points} pts
+        {team.points}
+      </span>
+
+      {/* Points Percentage */}
+      <span
+        className={`w-10 text-right text-xs tabular-nums ${
+          isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+        }`}
+      >
+        {team.pointPctg ? `.${Math.round(team.pointPctg * 1000).toString().padStart(3, '0')}` : '-'}
       </span>
     </div>
   );
