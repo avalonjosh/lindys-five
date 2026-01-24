@@ -464,37 +464,37 @@ function StandingsHeader({
   const headerColor = isGoatMode ? 'text-zinc-500' : 'text-gray-400';
 
   return (
-    <div className={`flex items-center gap-2 px-2 pb-1 text-xs font-medium ${headerColor}`} style={{ borderLeft: '3px solid transparent' }}>
+    <div className={`flex items-center gap-2 lg:gap-4 px-2 pb-1 text-xs font-medium ${headerColor}`} style={{ borderLeft: '3px solid transparent' }}>
       {/* Rank column */}
       <span className="w-5 text-center">#</span>
       {/* Logo spacer */}
       <span className="w-6"></span>
       {/* Team */}
-      <span className="w-10">Team</span>
+      <span className="w-10 lg:w-12">Team</span>
       {/* W */}
-      <span className="w-6 text-right">W</span>
+      <span className="w-6 lg:w-8 text-right">W</span>
       {/* L */}
-      <span className="w-6 text-right">L</span>
+      <span className="w-6 lg:w-8 text-right">L</span>
       {/* OT */}
-      <span className="w-6 text-right">OT</span>
+      <span className="w-6 lg:w-8 text-right">OT</span>
       {/* Desktop-only columns */}
-      <span className="hidden lg:block w-8 text-right">RW</span>
-      <span className="hidden lg:block w-10 text-right">ROW</span>
-      <span className="hidden lg:block w-16 text-right">HOME</span>
-      <span className="hidden lg:block w-16 text-right">AWAY</span>
-      <span className="hidden lg:block w-8 text-right">GF</span>
-      <span className="hidden lg:block w-8 text-right">GA</span>
-      <span className="hidden lg:block w-10 text-right">DIFF</span>
-      <span className="hidden lg:block w-16 text-right">L10</span>
-      <span className="hidden lg:block w-10 text-right">STRK</span>
+      <span className="hidden lg:block w-10 text-right">RW</span>
+      <span className="hidden lg:block w-12 text-right">ROW</span>
+      <span className="hidden lg:block w-20 text-right">HOME</span>
+      <span className="hidden lg:block w-20 text-right">AWAY</span>
+      <span className="hidden lg:block w-10 text-right">GF</span>
+      <span className="hidden lg:block w-10 text-right">GA</span>
+      <span className="hidden lg:block w-12 text-right">DIFF</span>
+      <span className="hidden lg:block w-20 text-right">L10</span>
+      <span className="hidden lg:block w-12 text-right">STRK</span>
       {/* Spacer to push GP/PTS to right */}
-      <span className="flex-1 lg:hidden"></span>
+      <span className="flex-1"></span>
       {/* GP */}
-      <span className="w-8 text-right">GP</span>
+      <span className="w-8 lg:w-10 text-right">GP</span>
       {/* PTS - clickable */}
       <button
         onClick={() => onSortChange('points')}
-        className={`w-8 text-right cursor-pointer transition-colors ${
+        className={`w-8 lg:w-10 text-right cursor-pointer transition-colors ${
           sortBy === 'points' ? 'font-bold' : ''
         }`}
         style={sortBy === 'points' ? { color: accentColor } : undefined}
@@ -505,7 +505,7 @@ function StandingsHeader({
       {/* Points Percentage - clickable */}
       <button
         onClick={() => onSortChange('pointPctg')}
-        className={`w-10 text-right cursor-pointer transition-colors ${
+        className={`w-10 lg:w-12 text-right cursor-pointer transition-colors ${
           sortBy === 'pointPctg' ? 'font-bold' : ''
         }`}
         style={sortBy === 'pointPctg' ? { color: accentColor } : undefined}
@@ -544,7 +544,7 @@ function TeamRow({
 
   return (
     <div
-      className={`flex items-center gap-2 py-1.5 px-2 rounded-lg transition-colors ${
+      className={`flex items-center gap-2 lg:gap-4 py-1.5 px-2 rounded-lg transition-colors ${
         isUserTeam
           ? isGoatMode
             ? 'bg-zinc-800'
@@ -575,7 +575,7 @@ function TeamRow({
 
       {/* Team abbrev */}
       <span
-        className={`w-10 text-sm font-semibold ${
+        className={`w-10 lg:w-12 text-sm font-semibold ${
           isUserTeam
             ? ''
             : isGoatMode ? 'text-zinc-300' : 'text-gray-700'
@@ -587,7 +587,7 @@ function TeamRow({
 
       {/* Wins */}
       <span
-        className={`w-6 text-right text-xs tabular-nums ${
+        className={`w-6 lg:w-8 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}
       >
@@ -596,7 +596,7 @@ function TeamRow({
 
       {/* Losses */}
       <span
-        className={`w-6 text-right text-xs tabular-nums ${
+        className={`w-6 lg:w-8 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}
       >
@@ -605,7 +605,7 @@ function TeamRow({
 
       {/* OT Losses */}
       <span
-        className={`w-6 text-right text-xs tabular-nums ${
+        className={`w-6 lg:w-8 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}
       >
@@ -615,7 +615,7 @@ function TeamRow({
       {/* Desktop-only columns */}
       {/* Regulation Wins */}
       <span
-        className={`hidden lg:block w-8 text-right text-xs tabular-nums ${
+        className={`hidden lg:block w-10 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}
       >
@@ -624,7 +624,7 @@ function TeamRow({
 
       {/* Regulation + OT Wins */}
       <span
-        className={`hidden lg:block w-10 text-right text-xs tabular-nums ${
+        className={`hidden lg:block w-12 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}
       >
@@ -633,7 +633,7 @@ function TeamRow({
 
       {/* Home Record */}
       <span
-        className={`hidden lg:block w-16 text-right text-xs tabular-nums ${
+        className={`hidden lg:block w-20 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}
       >
@@ -642,7 +642,7 @@ function TeamRow({
 
       {/* Away Record */}
       <span
-        className={`hidden lg:block w-16 text-right text-xs tabular-nums ${
+        className={`hidden lg:block w-20 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}
       >
@@ -651,7 +651,7 @@ function TeamRow({
 
       {/* Goals For */}
       <span
-        className={`hidden lg:block w-8 text-right text-xs tabular-nums ${
+        className={`hidden lg:block w-10 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}
       >
@@ -660,7 +660,7 @@ function TeamRow({
 
       {/* Goals Against */}
       <span
-        className={`hidden lg:block w-8 text-right text-xs tabular-nums ${
+        className={`hidden lg:block w-10 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}
       >
@@ -669,7 +669,7 @@ function TeamRow({
 
       {/* Goal Differential */}
       <span
-        className={`hidden lg:block w-10 text-right text-xs tabular-nums ${
+        className={`hidden lg:block w-12 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}
       >
@@ -678,7 +678,7 @@ function TeamRow({
 
       {/* Last 10 Games */}
       <span
-        className={`hidden lg:block w-16 text-right text-xs tabular-nums ${
+        className={`hidden lg:block w-20 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}
       >
@@ -687,19 +687,19 @@ function TeamRow({
 
       {/* Streak */}
       <span
-        className={`hidden lg:block w-10 text-right text-xs tabular-nums ${
+        className={`hidden lg:block w-12 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}
       >
         {team.streakCode ? `${team.streakCode}${team.streakCount || ''}` : '-'}
       </span>
 
-      {/* Spacer to push GP/PTS to right (mobile only) */}
-      <span className="flex-1 lg:hidden"></span>
+      {/* Spacer to push GP/PTS to right */}
+      <span className="flex-1"></span>
 
       {/* Games Played */}
       <span
-        className={`w-8 text-right text-xs tabular-nums ${
+        className={`w-8 lg:w-10 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-500' : 'text-gray-400'
         }`}
       >
@@ -708,7 +708,7 @@ function TeamRow({
 
       {/* Points */}
       <span
-        className={`w-8 text-right text-sm font-bold tabular-nums ${
+        className={`w-8 lg:w-10 text-right text-sm font-bold tabular-nums ${
           isUserTeam
             ? ''
             : isGoatMode ? 'text-zinc-200' : 'text-gray-800'
@@ -720,7 +720,7 @@ function TeamRow({
 
       {/* Points Percentage */}
       <span
-        className={`w-10 text-right text-xs tabular-nums ${
+        className={`w-10 lg:w-12 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}
       >
