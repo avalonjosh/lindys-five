@@ -202,6 +202,40 @@ export default function BlogPost() {
             <PostContent content={post.content} accent={postConfig.primary} />
           </div>
 
+          {/* Tracker CTA - Only for game recaps */}
+          {post.type === 'game-recap' && post.team === 'sabres' && (
+            <div className="mt-8">
+              <Link
+                to="/sabres"
+                className="block rounded-2xl p-6 shadow-xl border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl"
+                style={{
+                  background: `linear-gradient(135deg, ${postConfig.primary} 0%, ${postConfig.secondary} 100%)`,
+                  borderColor: postConfig.accent,
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3
+                      className="text-2xl font-bold text-white mb-1"
+                      style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+                    >
+                      Track the Sabres Season
+                    </h3>
+                    <p className="text-white/80 text-sm">
+                      Live standings, schedule, and playoff projections
+                    </p>
+                  </div>
+                  <div
+                    className="text-4xl font-bold"
+                    style={{ color: postConfig.accent, fontFamily: 'Bebas Neue, sans-serif' }}
+                  >
+                    →
+                  </div>
+                </div>
+              </Link>
+            </div>
+          )}
+
           {/* Footer */}
           <footer className="mt-12 pt-8 border-t border-gray-200">
             <Link
