@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ArrowLeft, Save, Eye, EyeOff, Send } from 'lucide-react';
-import { fetchPost, createPost, updatePost } from '../../services/blogApi';
+import { ArrowLeft, Save, Eye, EyeOff, Send, Sparkles } from 'lucide-react';
+import { fetchPost, createPost, updatePost, generateArticle } from '../../services/blogApi';
 import PostContent from '../blog/PostContent';
 import type { BlogPost } from '../../types';
 
@@ -43,6 +43,12 @@ export default function PostEditor() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+
+  // AI generation state
+  const [articleIdea, setArticleIdea] = useState('');
+  const [researchEnabled, setResearchEnabled] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isNew && slug) {
@@ -119,6 +125,35 @@ export default function PostEditor() {
   ) => {
     setFormData({ ...formData, [field]: value });
   };
+
+  async function handleGenerateArticle() {
+    if (!articleIdea.trim()) return;
+
+    setGenerating(true);
+    setGenerateError(null);
+
+    try {
+      const result = await generateArticle({
+        idea: articleIdea,
+        team: formData.team,
+        title: formData.title || undefined,
+        researchEnabled,
+      });
+
+      setFormData((prev) => ({
+        ...prev,
+        title: prev.title || result.title,
+        content: result.content,
+        metaDescription: result.metaDescription || prev.metaDescription,
+      }));
+
+      setArticleIdea(''); // Clear after success
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : 'Failed to generate article');
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -237,6 +272,90 @@ export default function PostEditor() {
                       <option value="set-recap">Set Recap</option>
                     </select>
                   </div>
+                </div>
+              )}
+
+              {/* AI Article Generator - Only for new custom articles */}
+              {isNew && formData.type === 'custom' && (
+                <div className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-xl p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-purple-400" />
+                      AI Article Generator
+                    </h3>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <span className="text-sm text-gray-400">Research</span>
+                      <div
+                        className={`relative w-11 h-6 rounded-full transition-colors ${
+                          researchEnabled ? 'bg-purple-500' : 'bg-gray-600'
+                        }`}
+                        onClick={() => setResearchEnabled(!researchEnabled)}
+                      >
+                        <div
+                          className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                            researchEnabled ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </div>
+                    </label>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                      Article Idea / Instructions
+                    </label>
+                    <textarea
+                      value={articleIdea}
+                      onChange={(e) => setArticleIdea(e.target.value)}
+                      rows={4}
+                      className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-400 transition-colors text-sm"
+                      placeholder="Describe what you want the article to cover. Be specific about topics, players, stats, comparisons, or themes you want included..."
+                    />
+                    <p className="text-gray-500 text-xs mt-1">
+                      {researchEnabled
+                        ? 'Research mode: AI will search the web for current stats and information.'
+                        : "Tip: Enable 'Research' for AI to look up current stats and news."}
+                    </p>
+                  </div>
+
+                  {generateError && (
+                    <div className="bg-red-900/30 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg mb-4 text-sm">
+                      {generateError}
+                    </div>
+                  )}
+
+                  {generating && (
+                    <div className="mb-4">
+                      <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-purple-500 to-blue-500 animate-pulse"
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      <p className="text-gray-400 text-sm mt-2 text-center">
+                        Generating your article... This may take 15-30 seconds.
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleGenerateArticle}
+                    disabled={generating || !articleIdea.trim()}
+                    className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {generating ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5" />
+                        Generate Draft
+                      </>
+                    )}
+                  </button>
                 </div>
               )}
 

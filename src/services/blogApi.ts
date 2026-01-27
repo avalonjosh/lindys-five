@@ -92,3 +92,36 @@ export async function deletePost(slug: string): Promise<{ success: boolean }> {
 
   return response.json();
 }
+
+// AI Article Generation
+interface GenerateArticleRequest {
+  idea: string;
+  team: 'sabres' | 'bills';
+  title?: string;
+  researchEnabled?: boolean;
+}
+
+interface GenerateArticleResponse {
+  success: boolean;
+  content: string;
+  title: string;
+  metaDescription: string;
+  model: string;
+}
+
+export async function generateArticle(
+  request: GenerateArticleRequest
+): Promise<GenerateArticleResponse> {
+  const response = await fetch(`${API_BASE}/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to generate article');
+  }
+
+  return response.json();
+}
