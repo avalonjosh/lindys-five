@@ -397,38 +397,32 @@ STRICT INSTRUCTIONS:
 `;
 }
 
-// Extract highlight thumbnail URL from landing data
+// Extract featured image from landing data
+// NHL API doesn't provide video thumbnails directly, so we use first goal scorer's headshot
 function extractHighlightImage(landing) {
   try {
-    // Try to get highlight clip thumbnail from summary
-    if (landing?.summary?.gameVideo?.threeMinRecap) {
-      return landing.summary.gameVideo.threeMinRecap;
-    }
+    // Get the current season for headshot URL (format: 20252026)
+    const currentYear = new Date().getFullYear();
+    const season = `${currentYear}${currentYear + 1}`;
 
-    // Try condensed game video
-    if (landing?.summary?.gameVideo?.condensedGame) {
-      return landing.summary.gameVideo.condensedGame;
-    }
-
-    // Try highlight clips array
-    if (landing?.summary?.highlightClips?.length > 0) {
-      const firstClip = landing.summary.highlightClips[0];
-      if (firstClip.thumbnail) {
-        return firstClip.thumbnail;
+    // Try to get first goal scorer's headshot from scoring summary
+    const scoring = landing?.summary?.scoring;
+    if (scoring && Array.isArray(scoring)) {
+      for (const period of scoring) {
+        if (period.goals && period.goals.length > 0) {
+          const firstGoal = period.goals[0];
+          // Get the scorer's player ID and team
+          if (firstGoal.playerId && firstGoal.teamAbbrev?.default) {
+            const playerId = firstGoal.playerId;
+            const team = firstGoal.teamAbbrev.default;
+            // NHL headshot URL pattern
+            return `https://assets.nhle.com/mugs/nhl/${season}/${team}/${playerId}.png`;
+          }
+        }
       }
     }
 
-    // Try game center recap if available
-    if (landing?.gameVideo?.threeMinRecapFr || landing?.gameVideo?.threeMinRecap) {
-      // These are video IDs, construct thumbnail URL
-      const videoId = landing.gameVideo.threeMinRecap || landing.gameVideo.threeMinRecapFr;
-      if (videoId) {
-        // NHL video thumbnail pattern
-        return `https://cms.nhl.bamgrid.com/images/photos/${videoId}/1024x576/cut.jpg`;
-      }
-    }
-
-    // Fallback: Try to construct from team logos (always available)
+    // Fallback: Use Sabres team logo if no goals found
     return null;
   } catch (error) {
     console.error('Error extracting highlight image:', error);
