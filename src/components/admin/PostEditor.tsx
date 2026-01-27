@@ -22,6 +22,15 @@ const teamConfig = {
   bills: { accent: '#C60C30' },
 };
 
+// Default trusted sources for research
+const DEFAULT_RESEARCH_DOMAINS = [
+  'nhl.com',
+  'espn.com',
+  'theathletic.com',
+  'sabres.com',
+  'wgr550.com',
+];
+
 export default function PostEditor() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -47,6 +56,8 @@ export default function PostEditor() {
   // AI generation state
   const [articleIdea, setArticleIdea] = useState('');
   const [researchEnabled, setResearchEnabled] = useState(false);
+  const [customizeResearch, setCustomizeResearch] = useState(false);
+  const [customDomains, setCustomDomains] = useState('');
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
@@ -132,12 +143,28 @@ export default function PostEditor() {
     setGenerating(true);
     setGenerateError(null);
 
+    // Determine which domains to use for research
+    let allowedDomains: string[] | undefined;
+    if (researchEnabled) {
+      if (customizeResearch && customDomains.trim()) {
+        // Parse custom domains (comma or newline separated)
+        allowedDomains = customDomains
+          .split(/[,\n]/)
+          .map((d) => d.trim())
+          .filter((d) => d.length > 0);
+      } else {
+        // Use default domains
+        allowedDomains = DEFAULT_RESEARCH_DOMAINS;
+      }
+    }
+
     try {
       const result = await generateArticle({
         idea: articleIdea,
         team: formData.team,
         title: formData.title || undefined,
         researchEnabled,
+        allowedDomains,
       });
 
       setFormData((prev) => ({
@@ -317,6 +344,50 @@ export default function PostEditor() {
                         : "Tip: Enable 'Research' for AI to look up current stats and news."}
                     </p>
                   </div>
+
+                  {/* Research Sources - Only show when research is enabled */}
+                  {researchEnabled && (
+                    <div className="mb-4 p-4 bg-black/20 rounded-lg border border-purple-500/20">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-semibold text-gray-300">
+                          Research Sources
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setCustomizeResearch(!customizeResearch)}
+                          className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                        >
+                          {customizeResearch ? 'Use Defaults' : 'Customize'}
+                        </button>
+                      </div>
+
+                      {customizeResearch ? (
+                        <div>
+                          <textarea
+                            value={customDomains}
+                            onChange={(e) => setCustomDomains(e.target.value)}
+                            rows={3}
+                            className="w-full px-3 py-2 bg-black/30 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-400 transition-colors text-xs font-mono"
+                            placeholder="Enter domains (comma or newline separated)&#10;e.g., nhl.com, espn.com"
+                          />
+                          <p className="text-gray-500 text-xs mt-1">
+                            AI will only search these domains
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {DEFAULT_RESEARCH_DOMAINS.map((domain) => (
+                            <span
+                              key={domain}
+                              className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full"
+                            >
+                              {domain}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {generateError && (
                     <div className="bg-red-900/30 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg mb-4 text-sm">

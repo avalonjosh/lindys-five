@@ -52,7 +52,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const { idea, team, title, researchEnabled = false } = req.body;
+  const { idea, team, title, researchEnabled = false, allowedDomains } = req.body;
 
   // Validate required fields
   if (!idea || !team) {
@@ -93,6 +93,7 @@ The article should be 400-800 words and follow the style guidelines provided.`;
             type: 'web_search_20250305',
             name: 'web_search',
             max_uses: 5,
+            ...(allowedDomains && allowedDomains.length > 0 && { allowed_domains: allowedDomains }),
           },
         ]
       : undefined;

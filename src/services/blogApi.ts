@@ -99,6 +99,7 @@ interface GenerateArticleRequest {
   team: 'sabres' | 'bills';
   title?: string;
   researchEnabled?: boolean;
+  allowedDomains?: string[];
 }
 
 interface GenerateArticleResponse {
