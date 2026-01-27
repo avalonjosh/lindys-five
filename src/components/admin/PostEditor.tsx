@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ArrowLeft, Save, Eye, EyeOff, Send, Sparkles, ImagePlus, X, Upload } from 'lucide-react';
+import { ArrowLeft, Save, Eye, EyeOff, Send, Sparkles, ImagePlus, X, Upload, Calendar } from 'lucide-react';
 import { fetchPost, createPost, updatePost, generateArticle, uploadImage } from '../../services/blogApi';
 import { fetchSabresSchedule } from '../../services/nhlApi';
 import PostContent from '../blog/PostContent';
@@ -28,6 +28,7 @@ type PostFormData = {
   gameDate: string;
   gameId?: number;
   metaDescription: string;
+  publishedAt: string;
 };
 
 const teamConfig = {
@@ -64,6 +65,7 @@ export default function PostEditor() {
     opponent: '',
     gameDate: '',
     metaDescription: '',
+    publishedAt: '',
   });
 
   const [existingPost, setExistingPost] = useState<BlogPost | null>(null);
@@ -158,6 +160,7 @@ export default function PostEditor() {
         opponent: data.post.opponent || '',
         gameDate: data.post.gameDate || '',
         metaDescription: data.post.metaDescription || '',
+        publishedAt: data.post.publishedAt || '',
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load post');
@@ -183,6 +186,7 @@ export default function PostEditor() {
           gameDate: formData.gameDate || undefined,
           gameId: formData.gameId || undefined,
           metaDescription: formData.metaDescription || undefined,
+          publishedAt: formData.publishedAt || undefined,
         });
         navigate(`/admin/posts/${result.post.slug}`);
       } else if (existingPost) {
@@ -193,6 +197,7 @@ export default function PostEditor() {
           opponent: formData.opponent || undefined,
           gameDate: formData.gameDate || undefined,
           metaDescription: formData.metaDescription || undefined,
+          publishedAt: formData.publishedAt || undefined,
         });
       }
       navigate('/admin/posts');
@@ -306,18 +311,10 @@ export default function PostEditor() {
         // No researchEnabled - web search disabled for game recaps
       });
 
-      // If NHL API returned a highlight image, add it to gallery and content
-      let contentWithImage = result.content;
-      if (result.highlightImage) {
-        setUploadedImages((prev) => [result.highlightImage as string, ...prev]);
-        // Prepend image to content
-        contentWithImage = `![Game Highlight](${result.highlightImage})\n\n${result.content}`;
-      }
-
       setFormData((prev) => ({
         ...prev,
         title: prev.title || result.title,
-        content: contentWithImage,
+        content: result.content,
         metaDescription: result.metaDescription || prev.metaDescription,
       }));
     } catch (err) {
@@ -908,6 +905,26 @@ export default function PostEditor() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Publish Date */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Publish Date
+                </label>
+                <input
+                  type="datetime-local"
+                  value={formData.publishedAt ? formData.publishedAt.slice(0, 16) : ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    updateField('publishedAt', value ? new Date(value).toISOString() : '');
+                  }}
+                  className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-[#FCB514] transition-colors"
+                />
+                <p className="text-gray-500 text-xs mt-1">
+                  Leave empty to use current time when publishing. Set a date to backdate or schedule.
+                </p>
               </div>
 
               {/* Actions */}

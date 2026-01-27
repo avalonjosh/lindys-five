@@ -397,39 +397,6 @@ STRICT INSTRUCTIONS:
 `;
 }
 
-// Extract featured image from landing data
-// NHL API doesn't provide video thumbnails directly, so we use first goal scorer's headshot
-function extractHighlightImage(landing) {
-  try {
-    // Get the current season for headshot URL (format: 20252026)
-    const currentYear = new Date().getFullYear();
-    const season = `${currentYear}${currentYear + 1}`;
-
-    // Try to get first goal scorer's headshot from scoring summary
-    const scoring = landing?.summary?.scoring;
-    if (scoring && Array.isArray(scoring)) {
-      for (const period of scoring) {
-        if (period.goals && period.goals.length > 0) {
-          const firstGoal = period.goals[0];
-          // Get the scorer's player ID and team
-          if (firstGoal.playerId && firstGoal.teamAbbrev?.default) {
-            const playerId = firstGoal.playerId;
-            const team = firstGoal.teamAbbrev.default;
-            // NHL headshot URL pattern
-            return `https://assets.nhle.com/mugs/nhl/${season}/${team}/${playerId}.png`;
-          }
-        }
-      }
-    }
-
-    // Fallback: Use Sabres team logo if no goals found
-    return null;
-  } catch (error) {
-    console.error('Error extracting highlight image:', error);
-    return null;
-  }
-}
-
 // Helper to find player name by ID
 function findPlayerName(playerId, sabresStats, opponentStats) {
   const allPlayers = [
@@ -570,9 +537,7 @@ export default async function handler(req, res) {
       }
 
       const verifiedGameData = formatBoxScore(boxData.boxscore, boxData.playByPlay, boxData.landing);
-      const highlightImage = extractHighlightImage(boxData.landing);
       console.log('Injected verified box score data into prompt');
-      console.log('Highlight image:', highlightImage || 'none found');
 
       const recapPrompt = `Write a game recap for the Buffalo Sabres based on the following verified box score data:
 
@@ -620,7 +585,6 @@ The article should be 400-600 words and follow the style guidelines provided.`;
         title: generatedTitle,
         metaDescription,
         model: 'claude-sonnet-4-20250514',
-        highlightImage: highlightImage || null,
       });
     }
 

@@ -108,7 +108,8 @@ export default async function handler(req, res) {
         aiGenerated = false,
         aiModel,
         metaDescription,
-        ogImage
+        ogImage,
+        publishedAt
       } = req.body;
 
       // Validate required fields
@@ -133,6 +134,11 @@ export default async function handler(req, res) {
       const now = new Date().toISOString();
       const slug = generateSlug(title, now);
 
+      // Determine publish date: use custom publishedAt if provided, else use now if publishing
+      const effectivePublishedAt = status === 'published'
+        ? (publishedAt || now)
+        : null;
+
       // Create the post object
       const post = {
         id,
@@ -144,7 +150,7 @@ export default async function handler(req, res) {
         type,
         status,
         createdAt: now,
-        publishedAt: status === 'published' ? now : null,
+        publishedAt: effectivePublishedAt,
         updatedAt: now,
         gameId: gameId || null,
         opponent: opponent || null,

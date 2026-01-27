@@ -97,7 +97,8 @@ export default async function handler(req, res) {
         gameDate,
         setNumber,
         metaDescription,
-        ogImage
+        ogImage,
+        publishedAt
       } = req.body;
 
       const now = new Date().toISOString();
@@ -118,8 +119,12 @@ export default async function handler(req, res) {
         ogImage: ogImage !== undefined ? ogImage : existingPost.ogImage
       };
 
-      // If publishing for the first time, set publishedAt
-      if (status === 'published' && !existingPost.publishedAt) {
+      // Handle publishedAt: use custom date if provided, otherwise default to now when publishing
+      if (publishedAt !== undefined) {
+        // Custom publish date provided - use it (can be set or cleared)
+        updatedPost.publishedAt = publishedAt || null;
+      } else if (status === 'published' && !existingPost.publishedAt) {
+        // Publishing for the first time without custom date - use now
         updatedPost.publishedAt = now;
       }
 
