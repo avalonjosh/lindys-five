@@ -104,3 +104,33 @@ export interface SeasonStats {
   playoffTarget: number;
   pointsAboveBelow: number;
 }
+
+// Blog System Types
+export interface BlogPost {
+  id: string;
+  slug: string;
+  title: string;
+  content: string;           // Markdown content
+  excerpt: string;           // First 200 chars for previews
+  team: 'sabres' | 'bills';
+  type: 'game-recap' | 'set-recap' | 'custom';
+  status: 'draft' | 'published';
+
+  createdAt: string;         // ISO date string
+  publishedAt: string | null;
+  updatedAt: string;         // ISO date string
+
+  // For game/set recaps
+  gameId?: number;           // NHL API game ID
+  opponent?: string;
+  gameDate?: string;
+  setNumber?: number;        // For set recaps
+
+  // AI generation tracking
+  aiGenerated: boolean;
+  aiModel?: string;
+
+  // SEO
+  metaDescription?: string;
+  ogImage?: string;
+}
