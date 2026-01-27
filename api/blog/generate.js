@@ -397,6 +397,45 @@ STRICT INSTRUCTIONS:
 `;
 }
 
+// Extract highlight thumbnail URL from landing data
+function extractHighlightImage(landing) {
+  try {
+    // Try to get highlight clip thumbnail from summary
+    if (landing?.summary?.gameVideo?.threeMinRecap) {
+      return landing.summary.gameVideo.threeMinRecap;
+    }
+
+    // Try condensed game video
+    if (landing?.summary?.gameVideo?.condensedGame) {
+      return landing.summary.gameVideo.condensedGame;
+    }
+
+    // Try highlight clips array
+    if (landing?.summary?.highlightClips?.length > 0) {
+      const firstClip = landing.summary.highlightClips[0];
+      if (firstClip.thumbnail) {
+        return firstClip.thumbnail;
+      }
+    }
+
+    // Try game center recap if available
+    if (landing?.gameVideo?.threeMinRecapFr || landing?.gameVideo?.threeMinRecap) {
+      // These are video IDs, construct thumbnail URL
+      const videoId = landing.gameVideo.threeMinRecap || landing.gameVideo.threeMinRecapFr;
+      if (videoId) {
+        // NHL video thumbnail pattern
+        return `https://cms.nhl.bamgrid.com/images/photos/${videoId}/1024x576/cut.jpg`;
+      }
+    }
+
+    // Fallback: Try to construct from team logos (always available)
+    return null;
+  } catch (error) {
+    console.error('Error extracting highlight image:', error);
+    return null;
+  }
+}
+
 // Helper to find player name by ID
 function findPlayerName(playerId, sabresStats, opponentStats) {
   const allPlayers = [
@@ -537,7 +576,9 @@ export default async function handler(req, res) {
       }
 
       const verifiedGameData = formatBoxScore(boxData.boxscore, boxData.playByPlay, boxData.landing);
+      const highlightImage = extractHighlightImage(boxData.landing);
       console.log('Injected verified box score data into prompt');
+      console.log('Highlight image:', highlightImage || 'none found');
 
       const recapPrompt = `Write a game recap for the Buffalo Sabres based on the following verified box score data:
 
@@ -585,6 +626,7 @@ The article should be 400-600 words and follow the style guidelines provided.`;
         title: generatedTitle,
         metaDescription,
         model: 'claude-sonnet-4-20250514',
+        highlightImage: highlightImage || null,
       });
     }
 

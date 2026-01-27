@@ -111,6 +111,7 @@ interface GenerateArticleResponse {
   title: string;
   metaDescription: string;
   model: string;
+  highlightImage?: string | null;
 }
 
 export async function generateArticle(

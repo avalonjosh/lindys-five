@@ -306,10 +306,18 @@ export default function PostEditor() {
         // No researchEnabled - web search disabled for game recaps
       });
 
+      // If NHL API returned a highlight image, add it to gallery and content
+      let contentWithImage = result.content;
+      if (result.highlightImage) {
+        setUploadedImages((prev) => [result.highlightImage as string, ...prev]);
+        // Prepend image to content
+        contentWithImage = `![Game Highlight](${result.highlightImage})\n\n${result.content}`;
+      }
+
       setFormData((prev) => ({
         ...prev,
         title: prev.title || result.title,
-        content: result.content,
+        content: contentWithImage,
         metaDescription: result.metaDescription || prev.metaDescription,
       }));
     } catch (err) {
