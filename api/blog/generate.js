@@ -86,22 +86,12 @@ META: [A brief meta description for SEO, max 160 characters]
 
 The article should be 400-800 words and follow the style guidelines provided.`;
 
-    // Configure tools for web search if enabled
-    let tools;
-    if (researchEnabled) {
-      const webSearchTool = { type: 'web_search_20250305' };
-      // Only add allowed_domains if provided and non-empty
-      if (allowedDomains && allowedDomains.length > 0) {
-        webSearchTool.allowed_domains = allowedDomains;
-      }
-      tools = [webSearchTool];
-    }
-
+    // Use Claude 3.5 Sonnet (known working model)
+    // Web search temporarily disabled until we resolve API issues
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
-      ...(tools && { tools }),
       messages: [{ role: 'user', content: userPrompt }],
     });
 
@@ -126,7 +116,7 @@ The article should be 400-800 words and follow the style guidelines provided.`;
       content,
       title: generatedTitle,
       metaDescription,
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-3-5-sonnet-20241022',
     });
   } catch (error) {
     console.error('Error generating article:', error);
