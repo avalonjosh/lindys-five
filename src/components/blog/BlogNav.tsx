@@ -27,12 +27,12 @@ export default function BlogNav() {
             to={tab.path}
             className={`text-lg font-semibold pb-2 transition-colors ${
               active
-                ? 'text-white'
-                : 'text-gray-400 hover:text-white border-b-2 border-transparent'
+                ? 'text-gray-900'
+                : 'text-gray-400 hover:text-gray-900 border-b-2 border-transparent'
             }`}
             style={{
               fontFamily: 'Bebas Neue, sans-serif',
-              borderBottom: active ? '3px solid #FCB514' : undefined,
+              borderBottom: active ? '3px solid #003087' : undefined,
             }}
           >
             {tab.label}

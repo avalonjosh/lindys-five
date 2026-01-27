@@ -38,12 +38,12 @@ export default function Blog() {
         <link rel="canonical" href="https://lindysfive.com/blog" />
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="max-w-7xl mx-auto px-4 py-6">
           {/* Back link */}
           <Link
             to="/"
-            className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-8"
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors mb-8"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="text-sm">Back to Tracker</span>
@@ -52,12 +52,12 @@ export default function Blog() {
           {/* Header */}
           <div className="text-center mb-12">
             <h1
-              className="text-5xl md:text-7xl font-bold text-white mb-4"
+              className="text-5xl md:text-7xl font-bold text-gray-900 mb-4"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
               Lindy's Five Blog
             </h1>
-            <p className="text-xl text-gray-300 mb-8">
+            <p className="text-xl text-gray-600 mb-8">
               Buffalo Sports Coverage
             </p>
             <div className="flex justify-center">
@@ -69,21 +69,21 @@ export default function Blog() {
           <main>
             {loading ? (
               <div className="flex justify-center py-16">
-                <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-700 border-t-[#FCB514]"></div>
+                <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-[#003087]"></div>
               </div>
             ) : error ? (
               <div className="text-center py-16">
-                <p className="text-red-400">{error}</p>
+                <p className="text-red-600">{error}</p>
               </div>
             ) : posts.length === 0 ? (
               <div className="text-center py-16">
                 <p
-                  className="text-gray-400 text-2xl mb-2"
+                  className="text-gray-500 text-2xl mb-2"
                   style={{ fontFamily: 'Bebas Neue, sans-serif' }}
                 >
                   No Posts Yet
                 </p>
-                <p className="text-gray-500 text-sm">
+                <p className="text-gray-400 text-sm">
                   Check back soon for Buffalo sports coverage!
                 </p>
               </div>

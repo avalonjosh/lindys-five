@@ -9,15 +9,11 @@ import type { BlogPost as BlogPostType } from '../../types';
 const teamConfig = {
   sabres: {
     displayName: 'Sabres',
-    gradient: 'from-[#002654] to-[#001a3d]',
-    border: 'border-[#FCB514]',
-    accent: '#FCB514',
+    primary: '#003087',
   },
   bills: {
     displayName: 'Bills',
-    gradient: 'from-[#00338D] to-[#002366]',
-    border: 'border-[#C60C30]',
-    accent: '#C60C30',
+    primary: '#00338D',
   },
 };
 
@@ -47,10 +43,10 @@ export default function BlogPost() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div
-          className="animate-spin rounded-full h-10 w-10 border-4 border-gray-700"
-          style={{ borderTopColor: config.accent }}
+          className="animate-spin rounded-full h-10 w-10 border-4 border-gray-200"
+          style={{ borderTopColor: config.primary }}
         ></div>
       </div>
     );
@@ -58,23 +54,23 @@ export default function BlogPost() {
 
   if (error || !post) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="max-w-3xl mx-auto px-4 py-12">
           <Link
             to={`/blog/${team}`}
-            className="inline-flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-8"
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors mb-8"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to posts</span>
           </Link>
           <div className="text-center py-16">
             <h1
-              className="text-3xl font-bold text-white mb-4"
+              className="text-3xl font-bold text-gray-900 mb-4"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
               Post Not Found
             </h1>
-            <p className="text-gray-400">
+            <p className="text-gray-500">
               {error || "The post you're looking for doesn't exist."}
             </p>
           </div>
@@ -137,13 +133,13 @@ export default function BlogPost() {
         </script>
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         <article className="max-w-3xl mx-auto px-4 py-8">
           {/* Back link */}
           <Link
             to={`/blog/${team}`}
-            className="inline-flex items-center gap-2 mb-8 transition-colors"
-            style={{ color: postConfig.accent }}
+            className="inline-flex items-center gap-2 mb-8 transition-colors hover:opacity-80"
+            style={{ color: postConfig.primary }}
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to {postConfig.displayName} Posts</span>
@@ -153,26 +149,26 @@ export default function BlogPost() {
           <header className="mb-8">
             <div className="flex items-center gap-3 mb-4">
               <span
-                className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-black/30"
-                style={{ color: postConfig.accent }}
+                className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-gray-100"
+                style={{ color: postConfig.primary }}
               >
                 {typeLabel}
               </span>
               {post.opponent && (
-                <span className="text-gray-400 text-sm">
+                <span className="text-gray-500 text-sm">
                   vs {post.opponent}
                 </span>
               )}
             </div>
 
             <h1
-              className="text-4xl md:text-5xl font-bold text-white mb-6"
+              className="text-4xl md:text-5xl font-bold text-gray-900 mb-6"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
               {post.title}
             </h1>
 
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-400">
+            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
               <span className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
                 {formattedDate}
@@ -182,7 +178,7 @@ export default function BlogPost() {
                 {readingTime} min read
               </span>
               {post.aiGenerated && (
-                <span className="bg-black/30 text-purple-300 px-2 py-0.5 rounded text-xs">
+                <span className="bg-purple-100 text-purple-600 px-2 py-0.5 rounded text-xs">
                   AI Generated
                 </span>
               )}
@@ -190,16 +186,16 @@ export default function BlogPost() {
           </header>
 
           {/* Content */}
-          <div className={`bg-gradient-to-br ${postConfig.gradient} rounded-2xl p-6 md:p-8 border-2 ${postConfig.border}`}>
-            <PostContent content={post.content} accent={postConfig.accent} />
+          <div className="bg-white rounded-2xl p-6 md:p-8 shadow-xl border-2 border-gray-200">
+            <PostContent content={post.content} accent={postConfig.primary} />
           </div>
 
           {/* Footer */}
-          <footer className="mt-12 pt-8 border-t border-gray-700">
+          <footer className="mt-12 pt-8 border-t border-gray-200">
             <Link
               to={`/blog/${team}`}
-              className="inline-flex items-center gap-2 transition-colors"
-              style={{ color: postConfig.accent }}
+              className="inline-flex items-center gap-2 transition-colors hover:opacity-80"
+              style={{ color: postConfig.primary }}
             >
               <ArrowLeft className="w-4 h-4" />
               More {postConfig.displayName} posts
