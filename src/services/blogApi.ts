@@ -129,3 +129,28 @@ export async function generateArticle(
 
   return response.json();
 }
+
+// Image Upload
+interface UploadImageResponse {
+  success: boolean;
+  url: string;
+  filename: string;
+}
+
+export async function uploadImage(file: File): Promise<UploadImageResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${API_BASE}/upload`, {
+    method: 'POST',
+    body: formData,
+    // Note: Don't set Content-Type header - browser sets it with boundary
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to upload image');
+  }
+
+  return response.json();
+}

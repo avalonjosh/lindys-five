@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ArrowLeft, Save, Eye, EyeOff, Send, Sparkles } from 'lucide-react';
-import { fetchPost, createPost, updatePost, generateArticle } from '../../services/blogApi';
+import { ArrowLeft, Save, Eye, EyeOff, Send, Sparkles, ImagePlus, X, Upload } from 'lucide-react';
+import { fetchPost, createPost, updatePost, generateArticle, uploadImage } from '../../services/blogApi';
 import { fetchSabresSchedule } from '../../services/nhlApi';
 import PostContent from '../blog/PostContent';
 import type { BlogPost } from '../../types';
@@ -45,6 +45,11 @@ const DEFAULT_RESEARCH_DOMAINS = [
   'sabres.com',
 ];
 
+// Image upload validation
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
 export default function PostEditor() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -78,6 +83,12 @@ export default function PostEditor() {
   // Game recap state
   const [recentGames, setRecentGames] = useState<GameOption[]>([]);
   const [loadingGames, setLoadingGames] = useState(false);
+
+  // Image upload state
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Auto-populated reference date for research accuracy
   const getTodayFormatted = () => {
@@ -306,6 +317,83 @@ export default function PostEditor() {
     } finally {
       setGenerating(false);
     }
+  }
+
+  // Image upload handlers
+  function validateFile(file: File): string | null {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      return `Invalid file type. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}`;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      return `File too large. Maximum size: ${MAX_IMAGE_SIZE / 1024 / 1024}MB`;
+    }
+    return null;
+  }
+
+  async function handleImageUpload(file: File) {
+    const validationError = validateFile(file);
+    if (validationError) {
+      setUploadError(validationError);
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      const result = await uploadImage(file);
+
+      // Track uploaded images for gallery
+      setUploadedImages((prev) => [...prev, result.url]);
+
+      // Insert markdown image reference at end of content
+      const markdownImage = `![${file.name}](${result.url})`;
+      setFormData((prev) => ({
+        ...prev,
+        content: prev.content + (prev.content ? '\n\n' : '') + markdownImage,
+      }));
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Failed to upload image');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+    // Reset input so same file can be selected again
+    e.target.value = '';
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+  }
+
+  function insertImageAtCursor(url: string, altText: string = 'Image') {
+    const markdownImage = `![${altText}](${url})`;
+    setFormData((prev) => ({
+      ...prev,
+      content: prev.content + (prev.content ? '\n\n' : '') + markdownImage,
+    }));
   }
 
   if (loading) {
@@ -720,6 +808,98 @@ export default function PostEditor() {
                 <p className="text-gray-500 text-xs mt-1">
                   {formData.metaDescription.length}/160 characters
                 </p>
+              </div>
+
+              {/* Image Upload Section */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">
+                  Image Upload
+                </label>
+
+                {/* Drop Zone */}
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                    isDragging
+                      ? 'border-[#FCB514] bg-[#FCB514]/10'
+                      : 'border-gray-600 hover:border-gray-500'
+                  }`}
+                >
+                  {uploading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="animate-spin rounded-full h-8 w-8 border-4 border-gray-700 border-t-[#FCB514]" />
+                      <span className="text-gray-400 text-sm">Uploading...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <ImagePlus className="w-8 h-8 text-gray-500 mx-auto mb-2" />
+                      <p className="text-gray-400 text-sm mb-2">
+                        Drag and drop an image here, or
+                      </p>
+                      <label className="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg cursor-pointer transition-colors">
+                        <Upload className="w-4 h-4" />
+                        Choose File
+                        <input
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.webp,.gif"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
+                      </label>
+                      <p className="text-gray-500 text-xs mt-2">
+                        JPG, PNG, WebP, GIF - Max 5MB
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                {/* Upload Error */}
+                {uploadError && (
+                  <div className="mt-2 bg-red-900/30 border border-red-500/50 text-red-300 px-3 py-2 rounded-lg text-sm flex items-center justify-between">
+                    <span>{uploadError}</span>
+                    <button
+                      type="button"
+                      onClick={() => setUploadError(null)}
+                      className="text-red-400 hover:text-red-300"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Uploaded Images Gallery */}
+                {uploadedImages.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-sm text-gray-400 mb-2">
+                      Uploaded Images (click to insert again):
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {uploadedImages.map((url, index) => (
+                        <div key={url} className="relative group">
+                          <img
+                            src={url}
+                            alt={`Uploaded ${index + 1}`}
+                            className="w-16 h-16 object-cover rounded border border-gray-600 cursor-pointer hover:border-[#FCB514] transition-colors"
+                            onClick={() => insertImageAtCursor(url, `Image ${index + 1}`)}
+                            title="Click to insert into content"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(url);
+                            }}
+                            className="absolute -top-1 -right-1 bg-gray-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                            title="Copy URL"
+                          >
+                            <ImagePlus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Actions */}
