@@ -114,7 +114,7 @@ The article should be 400-800 words and follow the style guidelines provided.`;
 
     // Configure web search tool if research is enabled
     const tools = researchEnabled
-      ? [{ type: 'web_search_20250305', max_uses: 5 }]
+      ? [{ type: 'web_search_20250305', name: 'web_search' }]
       : undefined;
 
     const message = await anthropic.messages.create({
