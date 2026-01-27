@@ -39,8 +39,8 @@ Format guidelines:
 - End with thoughtful analysis or forward-looking perspective
 
 Team context:
-- Sabres: NHL team in Buffalo, NY. Colors: blue and gold. Arena: KeyBank Center. Key players include Tage Thompson, Rasmus Dahlin, Owen Power, JJ Peterka, Dylan Cozens.
-- Bills: NFL team in Buffalo, NY. Colors: red, blue, white. Stadium: Highmark Stadium. Key players include Josh Allen, Stefon Diggs, Von Miller.
+- Sabres: NHL team in Buffalo, NY. Colors: blue and gold. Arena: KeyBank Center. Notable players include Tage Thompson, Rasmus Dahlin, Owen Power, JJ Peterka. ALWAYS verify the current roster via web search as it changes frequently.
+- Bills: NFL team in Buffalo, NY. Colors: red, blue, white. Stadium: Highmark Stadium. Notable players include Josh Allen, James Cook. ALWAYS verify the current roster via web search.
 
 IMPORTANT: Write ORIGINAL content only. Never copy from other sources. Create your own narrative and analysis based on the facts provided.`;
 
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const { idea, team, title, researchEnabled = false, allowedDomains } = req.body;
+  const { idea, team, title, researchEnabled = false, allowedDomains, referenceDate } = req.body;
 
   // Validate required fields
   if (!idea || !team) {
@@ -86,14 +86,29 @@ export default async function handler(req, res) {
     const teamName = team === 'sabres' ? 'Buffalo Sabres' : 'Buffalo Bills';
 
     // Add research instructions if enabled
+    const dateContext = referenceDate ? `\n\nTODAY'S DATE: ${referenceDate}` : '';
     const researchInstructions = researchEnabled
-      ? `\n\nIMPORTANT: Use web search to look up current, accurate information before writing. Search for:
-- Current roster and recent transactions
-- Latest stats and standings
-- Recent game results and news
-This ensures the article contains accurate, up-to-date information.${
+      ? `${dateContext}
+
+CRITICAL RESEARCH INSTRUCTIONS:
+Before writing, you MUST search for and verify the following current data:
+
+1. STANDINGS: Search "${team === 'sabres' ? 'NHL' : 'NFL'} standings ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}" to get:
+   - Current points/wins total
+   - Division/conference position
+   - Games played
+   - Current streak
+
+2. ROSTER: Search "${team === 'sabres' ? 'Buffalo Sabres' : 'Buffalo Bills'} current roster 2024-25" to verify:
+   - Active players on the team
+   - Recent trades or transactions
+   - Injured players
+
+3. RECENT GAMES: Search for recent game results and scores
+
+IMPORTANT: Do NOT rely on cached knowledge - verify all stats and roster information through web search. Reject any data that appears outdated.${
           allowedDomains?.length
-            ? `\nFocus searches on these trusted sources: ${allowedDomains.join(', ')}`
+            ? `\n\nTrusted sources to prioritize: ${allowedDomains.join(', ')}`
             : ''
         }`
       : '';

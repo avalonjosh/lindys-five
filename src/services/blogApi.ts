@@ -100,6 +100,7 @@ interface GenerateArticleRequest {
   title?: string;
   researchEnabled?: boolean;
   allowedDomains?: string[];
+  referenceDate?: string;
 }
 
 interface GenerateArticleResponse {

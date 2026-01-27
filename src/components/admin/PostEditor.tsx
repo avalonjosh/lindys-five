@@ -22,13 +22,14 @@ const teamConfig = {
   bills: { accent: '#C60C30' },
 };
 
-// Default trusted sources for research
+// Default trusted sources for research (includes specific live data pages)
 const DEFAULT_RESEARCH_DOMAINS = [
   'nhl.com',
   'espn.com',
+  'hockey-reference.com',
+  'eliteprospects.com',
   'theathletic.com',
   'sabres.com',
-  'wgr550.com',
 ];
 
 export default function PostEditor() {
@@ -60,6 +61,17 @@ export default function PostEditor() {
   const [customDomains, setCustomDomains] = useState('');
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+
+  // Auto-populated reference date for research accuracy
+  const getTodayFormatted = () => {
+    return new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+  const referenceDate = getTodayFormatted();
 
   useEffect(() => {
     if (!isNew && slug) {
@@ -165,6 +177,7 @@ export default function PostEditor() {
         title: formData.title || undefined,
         researchEnabled,
         allowedDomains,
+        referenceDate: researchEnabled ? referenceDate : undefined,
       });
 
       setFormData((prev) => ({
@@ -326,6 +339,17 @@ export default function PostEditor() {
                       </div>
                     </label>
                   </div>
+
+                  {/* Reference Date - Show when research is enabled */}
+                  {researchEnabled && (
+                    <div className="mb-4 p-3 bg-blue-900/30 border border-blue-500/30 rounded-lg flex items-center gap-3">
+                      <span className="text-blue-400 text-sm font-semibold">Reference Date:</span>
+                      <span className="text-white text-sm">{referenceDate}</span>
+                      <span className="text-gray-500 text-xs ml-auto">
+                        AI will search for data from this date
+                      </span>
+                    </div>
+                  )}
 
                   <div className="mb-4">
                     <label className="block text-sm font-semibold text-gray-300 mb-2">
