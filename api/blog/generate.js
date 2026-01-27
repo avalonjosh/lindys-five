@@ -87,20 +87,21 @@ META: [A brief meta description for SEO, max 160 characters]
 The article should be 400-800 words and follow the style guidelines provided.`;
 
     // Configure tools for web search if enabled
-    // Note: Using minimal config - domain filtering can be added if basic search works
-    const tools = researchEnabled
-      ? [
-          {
-            type: 'web_search_20250305',
-          },
-        ]
-      : undefined;
+    let tools;
+    if (researchEnabled) {
+      const webSearchTool = { type: 'web_search_20250305' };
+      // Only add allowed_domains if provided and non-empty
+      if (allowedDomains && allowedDomains.length > 0) {
+        webSearchTool.allowed_domains = allowedDomains;
+      }
+      tools = [webSearchTool];
+    }
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
-      tools,
+      ...(tools && { tools }),
       messages: [{ role: 'user', content: userPrompt }],
     });
 
@@ -129,6 +130,7 @@ The article should be 400-800 words and follow the style guidelines provided.`;
     });
   } catch (error) {
     console.error('Error generating article:', error);
+    console.error('Full error object:', JSON.stringify(error, null, 2));
 
     // Handle specific Anthropic errors
     if (error.status === 429) {
@@ -142,6 +144,7 @@ The article should be 400-800 words and follow the style guidelines provided.`;
       return res.status(400).json({
         error: 'Invalid request to AI service.',
         details: error.message,
+        errorBody: error.error || error.body || null,
       });
     }
 
