@@ -97,7 +97,7 @@ The article should be 400-800 words and follow the style guidelines provided.`;
     // Use Claude 3.5 Sonnet (known working model)
     // Web search temporarily disabled until we resolve API issues
     const message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
@@ -124,7 +124,7 @@ The article should be 400-800 words and follow the style guidelines provided.`;
       content,
       title: generatedTitle,
       metaDescription,
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-20250514',
     });
   } catch (error) {
     console.error('Error generating article:', error);
