@@ -65,6 +65,14 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid team. Must be sabres or bills' });
   }
 
+  // Check for API key
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return res.status(500).json({
+      error: 'AI service not configured',
+      details: 'ANTHROPIC_API_KEY environment variable is not set',
+    });
+  }
+
   try {
     const anthropic = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
@@ -120,7 +128,6 @@ The article should be 400-800 words and follow the style guidelines provided.`;
     });
   } catch (error) {
     console.error('Error generating article:', error);
-    console.error('Full error object:', JSON.stringify(error, null, 2));
 
     // Handle specific Anthropic errors
     if (error.status === 429) {
@@ -130,17 +137,26 @@ The article should be 400-800 words and follow the style guidelines provided.`;
       });
     }
 
+    if (error.status === 401) {
+      return res.status(500).json({
+        error: 'AI service authentication failed',
+        details: 'Invalid API key. Please check ANTHROPIC_API_KEY in Vercel settings.',
+      });
+    }
+
     if (error.status === 400) {
       return res.status(400).json({
         error: 'Invalid request to AI service.',
         details: error.message,
-        errorBody: error.error || error.body || null,
       });
     }
 
+    // Generic error with more details
     return res.status(500).json({
       error: 'Failed to generate article',
-      details: error.message,
+      details: error.message || 'Unknown error',
+      errorType: error.name || 'Error',
+      status: error.status || null,
     });
   }
 }
