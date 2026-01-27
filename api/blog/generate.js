@@ -15,19 +15,19 @@ async function verifyAdmin(req) {
   }
 }
 
-// Fetch live NHL data for Sabres
+// Fetch live NHL data for Sabres directly from NHL API
+// Note: We fetch directly from api-web.nhle.com because Vercel rewrites
+// don't apply to internal serverless-to-serverless requests
 async function fetchSabresData() {
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : 'http://localhost:3000';
+  const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
   try {
     // Fetch current season schedule (has all game results)
-    const scheduleRes = await fetch(`${baseUrl}/api/v1/club-schedule-season/BUF/20242025`);
+    const scheduleRes = await fetch(`${NHL_API_BASE}/club-schedule-season/BUF/20242025`);
     const schedule = await scheduleRes.json();
 
     // Fetch current roster
-    const rosterRes = await fetch(`${baseUrl}/api/v1/roster/BUF/current`);
+    const rosterRes = await fetch(`${NHL_API_BASE}/roster/BUF/current`);
     const roster = await rosterRes.json();
 
     return { schedule, roster };
@@ -196,23 +196,23 @@ Do NOT use different stats from web search results.
 `;
 }
 
-// Fetch complete box score data for a specific game
+// Fetch complete box score data for a specific game directly from NHL API
+// Note: We fetch directly from api-web.nhle.com because Vercel rewrites
+// don't apply to internal serverless-to-serverless requests
 async function fetchGameBoxScore(gameId) {
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : 'http://localhost:3000';
+  const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
   try {
     // Fetch boxscore (scores, shots, goalie stats)
-    const boxscoreRes = await fetch(`${baseUrl}/api/v1/gamecenter/${gameId}/boxscore`);
+    const boxscoreRes = await fetch(`${NHL_API_BASE}/gamecenter/${gameId}/boxscore`);
     const boxscore = await boxscoreRes.json();
 
     // Fetch play-by-play (goals with times/assists, penalties)
-    const pbpRes = await fetch(`${baseUrl}/api/v1/gamecenter/${gameId}/play-by-play`);
+    const pbpRes = await fetch(`${NHL_API_BASE}/gamecenter/${gameId}/play-by-play`);
     const playByPlay = await pbpRes.json();
 
     // Fetch landing page for additional game context
-    const landingRes = await fetch(`${baseUrl}/api/v1/gamecenter/${gameId}/landing`);
+    const landingRes = await fetch(`${NHL_API_BASE}/gamecenter/${gameId}/landing`);
     const landing = await landingRes.json();
 
     return { boxscore, playByPlay, landing };
