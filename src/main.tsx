@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { HelmetProvider } from 'react-helmet-async'
 import './index.css'
 import App from './App.tsx'
 import Landing from './components/Landing.tsx'
@@ -8,8 +9,9 @@ import { TEAMS } from './teamConfig'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-      <Routes>
+    <HelmetProvider>
+      <BrowserRouter>
+        <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/sabres" element={<App team={TEAMS.sabres} />} />
         <Route path="/canadiens" element={<App team={TEAMS.canadiens} />} />
@@ -43,7 +45,8 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/ducks" element={<App team={TEAMS.ducks} />} />
         <Route path="/sharks" element={<App team={TEAMS.sharks} />} />
         <Route path="/kraken" element={<App team={TEAMS.kraken} />} />
-      </Routes>
-    </BrowserRouter>
+        </Routes>
+      </BrowserRouter>
+    </HelmetProvider>
   </StrictMode>,
 )
