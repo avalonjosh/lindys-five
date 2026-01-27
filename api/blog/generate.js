@@ -196,6 +196,251 @@ Do NOT use different stats from web search results.
 `;
 }
 
+// Fetch complete box score data for a specific game
+async function fetchGameBoxScore(gameId) {
+  const baseUrl = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : 'http://localhost:3000';
+
+  try {
+    // Fetch boxscore (scores, shots, goalie stats)
+    const boxscoreRes = await fetch(`${baseUrl}/api/nhl-api?endpoint=gamecenter/${gameId}/boxscore`);
+    const boxscore = await boxscoreRes.json();
+
+    // Fetch play-by-play (goals with times/assists, penalties)
+    const pbpRes = await fetch(`${baseUrl}/api/nhl-api?endpoint=gamecenter/${gameId}/play-by-play`);
+    const playByPlay = await pbpRes.json();
+
+    // Fetch landing page for additional game context
+    const landingRes = await fetch(`${baseUrl}/api/nhl-api?endpoint=gamecenter/${gameId}/landing`);
+    const landing = await landingRes.json();
+
+    return { boxscore, playByPlay, landing };
+  } catch (error) {
+    console.error('Failed to fetch game box score:', error);
+    return null;
+  }
+}
+
+// Format box score data into comprehensive context block
+function formatBoxScore(boxscore, playByPlay, landing) {
+  // Determine which team is Sabres and which is opponent
+  const isHomeTeamSabres = boxscore.homeTeam?.abbrev === 'BUF';
+  const sabresTeam = isHomeTeamSabres ? boxscore.homeTeam : boxscore.awayTeam;
+  const opponentTeam = isHomeTeamSabres ? boxscore.awayTeam : boxscore.homeTeam;
+  const sabresPlayerStats = isHomeTeamSabres
+    ? boxscore.playerByGameStats?.homeTeam
+    : boxscore.playerByGameStats?.awayTeam;
+  const opponentPlayerStats = isHomeTeamSabres
+    ? boxscore.playerByGameStats?.awayTeam
+    : boxscore.playerByGameStats?.homeTeam;
+
+  // Get game date
+  const gameDate = landing?.gameDate || boxscore.gameDate || 'Unknown Date';
+  const formattedDate = new Date(gameDate + 'T12:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  // Determine result
+  const sabresScore = sabresTeam?.score || 0;
+  const opponentScore = opponentTeam?.score || 0;
+  const result = sabresScore > opponentScore ? 'WIN' : 'LOSS';
+  const lastPeriodType = landing?.gameOutcome?.lastPeriodType || 'REG';
+  const resultSuffix = lastPeriodType === 'OT' ? ' (OT)' : lastPeriodType === 'SO' ? ' (SO)' : '';
+
+  // Period-by-period scores
+  let periodScores = '';
+  const periods = landing?.summary?.scoring || [];
+  periods.forEach((period, idx) => {
+    const sabresGoals = isHomeTeamSabres ? period.homeScore : period.awayScore;
+    const oppGoals = isHomeTeamSabres ? period.awayScore : period.homeScore;
+    const periodName = period.periodDescriptor?.periodType === 'OT' ? 'OT' : `Period ${idx + 1}`;
+    periodScores += `${periodName}: Sabres ${sabresGoals} - ${opponentTeam?.abbrev} ${oppGoals}\n`;
+  });
+
+  // Shots on goal
+  const sabresShots = sabresTeam?.sog || 0;
+  const opponentShots = opponentTeam?.sog || 0;
+
+  // Extract all goals from play-by-play
+  let scoringSummary = '';
+  const goals = (playByPlay?.plays || []).filter((p) => p.typeDescKey === 'goal');
+  goals.forEach((goal) => {
+    const period = goal.periodDescriptor?.number || '?';
+    const periodType = goal.periodDescriptor?.periodType || 'REG';
+    const periodLabel = periodType === 'OT' ? 'OT' : `P${period}`;
+    const time = goal.timeInPeriod || '??:??';
+    const teamAbbrev = goal.details?.eventOwnerTeamId === sabresTeam?.id ? 'BUF' : opponentTeam?.abbrev;
+
+    // Get scorer and assists
+    const scorer = goal.details?.scoringPlayerId
+      ? findPlayerName(goal.details.scoringPlayerId, sabresPlayerStats, opponentPlayerStats)
+      : 'Unknown';
+    const assists = [];
+    if (goal.details?.assist1PlayerId) {
+      assists.push(findPlayerName(goal.details.assist1PlayerId, sabresPlayerStats, opponentPlayerStats));
+    }
+    if (goal.details?.assist2PlayerId) {
+      assists.push(findPlayerName(goal.details.assist2PlayerId, sabresPlayerStats, opponentPlayerStats));
+    }
+    const assistsText = assists.length > 0 ? `(${assists.join(', ')})` : '(unassisted)';
+
+    // Goal type
+    let goalType = '';
+    if (goal.details?.goalModifier === 'power-play') goalType = ' [PP]';
+    else if (goal.details?.goalModifier === 'short-handed') goalType = ' [SH]';
+    else if (goal.details?.goalModifier === 'empty-net') goalType = ' [EN]';
+    else goalType = ' [EV]';
+
+    scoringSummary += `- ${periodLabel} ${time}: ${teamAbbrev} - ${scorer} ${assistsText}${goalType}\n`;
+  });
+
+  // Goalie stats
+  let goalieStats = '';
+  const sabresGoalies = sabresPlayerStats?.goalies || [];
+  const opponentGoalies = opponentPlayerStats?.goalies || [];
+
+  sabresGoalies.forEach((g) => {
+    const name = `${g.name?.default || 'Unknown'}`;
+    const saves = g.saveShotsAgainst?.split('/')[0] || g.saves || 0;
+    const shotsAgainst = g.saveShotsAgainst?.split('/')[1] || g.shotsAgainst || 0;
+    const savePct = shotsAgainst > 0 ? ((saves / shotsAgainst) * 100).toFixed(1) : '0.0';
+    goalieStats += `Sabres: ${name} - ${saves} saves on ${shotsAgainst} shots (${savePct}% SV%)\n`;
+  });
+
+  opponentGoalies.forEach((g) => {
+    const name = `${g.name?.default || 'Unknown'}`;
+    const saves = g.saveShotsAgainst?.split('/')[0] || g.saves || 0;
+    const shotsAgainst = g.saveShotsAgainst?.split('/')[1] || g.shotsAgainst || 0;
+    const savePct = shotsAgainst > 0 ? ((saves / shotsAgainst) * 100).toFixed(1) : '0.0';
+    goalieStats += `${opponentTeam?.abbrev}: ${name} - ${saves} saves on ${shotsAgainst} shots (${savePct}% SV%)\n`;
+  });
+
+  // Power play stats
+  const sabresPP = landing?.summary?.teamGameStats?.find((s) => s.category === 'powerPlay');
+  const oppPP = landing?.summary?.teamGameStats?.find((s) => s.category === 'powerPlay');
+  let powerPlayStats = '';
+  if (sabresPP) {
+    const sabresVal = isHomeTeamSabres ? sabresPP.homeValue : sabresPP.awayValue;
+    const oppVal = isHomeTeamSabres ? sabresPP.awayValue : sabresPP.homeValue;
+    powerPlayStats = `- Sabres: ${sabresVal}\n- ${opponentTeam?.abbrev}: ${oppVal}`;
+  }
+
+  // Penalties from play-by-play
+  let penaltySummary = '';
+  const penalties = (playByPlay?.plays || []).filter((p) => p.typeDescKey === 'penalty');
+  penalties.slice(0, 10).forEach((pen) => {
+    const period = pen.periodDescriptor?.number || '?';
+    const periodType = pen.periodDescriptor?.periodType || 'REG';
+    const periodLabel = periodType === 'OT' ? 'OT' : `P${period}`;
+    const time = pen.timeInPeriod || '??:??';
+    const teamAbbrev = pen.details?.eventOwnerTeamId === sabresTeam?.id ? 'BUF' : opponentTeam?.abbrev;
+    const player = pen.details?.committedByPlayerId
+      ? findPlayerName(pen.details.committedByPlayerId, sabresPlayerStats, opponentPlayerStats)
+      : 'Unknown';
+    const infraction = pen.details?.descKey || 'penalty';
+    const minutes = pen.details?.duration || 2;
+    penaltySummary += `- ${periodLabel} ${time}: ${teamAbbrev} ${player} - ${infraction} (${minutes} min)\n`;
+  });
+
+  // Three stars if available
+  let threeStars = '';
+  if (landing?.summary?.threeStars?.length > 0) {
+    landing.summary.threeStars.forEach((star, idx) => {
+      const starNum = idx + 1;
+      threeStars += `${starNum}. ${star.name?.default || 'Unknown'} (${star.teamAbbrev?.default || '?'})\n`;
+    });
+  }
+
+  return `
+═══════════════════════════════════════════════════════
+VERIFIED GAME DATA - ${formattedDate}
+Buffalo Sabres vs ${opponentTeam?.name?.default || opponentTeam?.abbrev}
+Source: Official NHL API Box Score
+═══════════════════════════════════════════════════════
+
+FINAL SCORE: Sabres ${sabresScore} - ${opponentTeam?.abbrev} ${opponentScore}
+Result: ${result}${resultSuffix}
+Location: ${isHomeTeamSabres ? 'Home' : 'Away'}
+
+PERIOD BREAKDOWN:
+${periodScores || 'Not available'}
+
+SHOTS ON GOAL:
+- Sabres: ${sabresShots}
+- ${opponentTeam?.abbrev}: ${opponentShots}
+
+SCORING SUMMARY:
+${scoringSummary || 'No goals scored'}
+
+GOALTENDING:
+${goalieStats || 'Not available'}
+
+POWER PLAY:
+${powerPlayStats || 'Not available'}
+
+PENALTIES:
+${penaltySummary || 'No penalties'}
+
+${threeStars ? `THREE STARS:\n${threeStars}` : ''}
+
+═══════════════════════════════════════════════════════
+STRICT INSTRUCTIONS:
+- Write a NARRATIVE game recap using ONLY the data above
+- DO NOT search the web - all facts are provided
+- DO NOT invent any statistics not listed here
+- Reference specific players, goals, and moments from the data
+═══════════════════════════════════════════════════════
+`;
+}
+
+// Helper to find player name by ID
+function findPlayerName(playerId, sabresStats, opponentStats) {
+  const allPlayers = [
+    ...(sabresStats?.forwards || []),
+    ...(sabresStats?.defense || []),
+    ...(sabresStats?.goalies || []),
+    ...(opponentStats?.forwards || []),
+    ...(opponentStats?.defense || []),
+    ...(opponentStats?.goalies || []),
+  ];
+  const player = allPlayers.find((p) => p.playerId === playerId);
+  return player?.name?.default || 'Unknown';
+}
+
+// Game recap specific system prompt
+const GAME_RECAP_SYSTEM_PROMPT = `You are a professional sports journalist writing a game recap for "Lindy's Five", a Buffalo Sabres fan blog.
+
+Your task is to write an engaging, narrative game recap based ONLY on the verified box score data provided. Do NOT use web search - all the facts you need are in the data.
+
+Writing style:
+- Professional sports journalism tone - authoritative yet accessible
+- Lead with the outcome and final score
+- Highlight key moments: big goals, saves, momentum swings
+- Feature standout individual performances using the stats provided
+- Build a narrative arc: how did the game unfold period by period?
+- End with forward-looking perspective or context
+
+Structure:
+- Opening paragraph: Result, score, key takeaway
+- Game flow: Period-by-period narrative with specific plays
+- Standout performances: Players who made a difference
+- Special teams: Power play and penalty kill impact
+- Goaltending: How the netminders performed
+- Closing: What this means going forward
+
+Format guidelines:
+- Write in Markdown format
+- Use ## headers for major sections
+- Use **bold** for player names and key stats
+- Keep paragraphs concise (3-4 sentences max)
+- Article should be 400-600 words
+
+CRITICAL: Use ONLY the data provided in the VERIFIED GAME DATA block. Do not invent any statistics, player names, or game details not explicitly listed.`;
+
 // Sports journalism system prompt
 const SYSTEM_PROMPT = `You are a professional sports journalist writing for "Lindy's Five", a Buffalo sports blog covering the Sabres (NHL) and Bills (NFL).
 
@@ -246,12 +491,19 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const { idea, team, title, researchEnabled = false, allowedDomains, referenceDate } = req.body;
+  const { idea, team, title, researchEnabled = false, allowedDomains, referenceDate, gameId, postType } = req.body;
 
   // Validate required fields
   if (!idea || !team) {
     return res.status(400).json({
       error: 'Missing required fields: idea and team are required',
+    });
+  }
+
+  // For game recaps, validate gameId
+  if (postType === 'game-recap' && !gameId) {
+    return res.status(400).json({
+      error: 'gameId is required for game recap generation',
     });
   }
 
@@ -272,6 +524,71 @@ export default async function handler(req, res) {
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
 
+    // Handle game recap generation with box score injection
+    if (postType === 'game-recap' && gameId && team === 'sabres') {
+      console.log(`Generating game recap for gameId: ${gameId}`);
+
+      const boxData = await fetchGameBoxScore(gameId);
+      if (!boxData) {
+        return res.status(500).json({
+          error: 'Failed to fetch game box score',
+          details: 'Could not retrieve game data from NHL API',
+        });
+      }
+
+      const verifiedGameData = formatBoxScore(boxData.boxscore, boxData.playByPlay, boxData.landing);
+      console.log('Injected verified box score data into prompt');
+
+      const recapPrompt = `Write a game recap for the Buffalo Sabres based on the following verified box score data:
+
+${verifiedGameData}
+
+${idea}
+
+${title ? `Suggested title: "${title}"` : 'Please also suggest a compelling, SEO-friendly title.'}
+
+Please provide your response in this exact format:
+TITLE: [Your title here]
+META: [A brief meta description for SEO, max 160 characters]
+---
+[Article content in Markdown format]
+
+The article should be 400-600 words and follow the style guidelines provided.`;
+
+      const message = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
+        system: GAME_RECAP_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: recapPrompt }],
+        // NO web search tools for game recaps - we have all the data
+      });
+
+      // Extract text content from the response
+      const textContent = message.content
+        .filter((block) => block.type === 'text')
+        .map((block) => block.text)
+        .join('\n');
+
+      // Parse the response
+      const titleMatch = textContent.match(/^TITLE:\s*(.+)$/m);
+      const metaMatch = textContent.match(/^META:\s*(.+)$/m);
+      const contentSplit = textContent.split('---\n');
+
+      const generatedTitle = titleMatch ? titleMatch[1].trim() : title || 'Sabres Game Recap';
+      const metaDescription = metaMatch ? metaMatch[1].trim().slice(0, 160) : '';
+      const content =
+        contentSplit.length > 1 ? contentSplit.slice(1).join('---\n').trim() : textContent;
+
+      return res.status(200).json({
+        success: true,
+        content,
+        title: generatedTitle,
+        metaDescription,
+        model: 'claude-sonnet-4-20250514',
+      });
+    }
+
+    // Regular article generation flow (custom articles)
     // Build the user prompt
     const teamName = team === 'sabres' ? 'Buffalo Sabres' : 'Buffalo Bills';
     const currentDate = referenceDate || new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });

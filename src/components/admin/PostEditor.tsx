@@ -3,8 +3,20 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ArrowLeft, Save, Eye, EyeOff, Send, Sparkles } from 'lucide-react';
 import { fetchPost, createPost, updatePost, generateArticle } from '../../services/blogApi';
+import { fetchSabresSchedule } from '../../services/nhlApi';
 import PostContent from '../blog/PostContent';
 import type { BlogPost } from '../../types';
+
+// Game option for the selector dropdown
+interface GameOption {
+  gameId: number;
+  date: string;
+  opponent: string;
+  isHome: boolean;
+  sabresScore: number;
+  opponentScore: number;
+  outcome: 'W' | 'OTL' | 'L';
+}
 
 type PostFormData = {
   title: string;
@@ -14,6 +26,7 @@ type PostFormData = {
   status: 'draft' | 'published';
   opponent: string;
   gameDate: string;
+  gameId?: number;
   metaDescription: string;
 };
 
@@ -62,6 +75,10 @@ export default function PostEditor() {
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
+  // Game recap state
+  const [recentGames, setRecentGames] = useState<GameOption[]>([]);
+  const [loadingGames, setLoadingGames] = useState(false);
+
   // Auto-populated reference date for research accuracy
   const getTodayFormatted = () => {
     return new Date().toLocaleDateString('en-US', {
@@ -78,6 +95,43 @@ export default function PostEditor() {
       loadPost(slug);
     }
   }, [isNew, slug]);
+
+  // Fetch recent completed games when type is game-recap
+  useEffect(() => {
+    async function loadRecentGames() {
+      if (formData.type !== 'game-recap' || formData.team !== 'sabres') {
+        setRecentGames([]);
+        return;
+      }
+
+      setLoadingGames(true);
+      try {
+        const schedule = await fetchSabresSchedule();
+        // Filter to completed games and get last 10
+        const completedGames = schedule
+          .filter((g) => g.outcome !== 'PENDING' && g.gameId)
+          .slice(-10)
+          .reverse() // Most recent first
+          .map((g) => ({
+            gameId: g.gameId!,
+            date: g.date,
+            opponent: g.opponent,
+            isHome: g.isHome,
+            sabresScore: g.sabresScore,
+            opponentScore: g.opponentScore,
+            outcome: g.outcome as 'W' | 'OTL' | 'L',
+          }));
+        setRecentGames(completedGames);
+      } catch (err) {
+        console.error('Failed to load recent games:', err);
+        setRecentGames([]);
+      } finally {
+        setLoadingGames(false);
+      }
+    }
+
+    loadRecentGames();
+  }, [formData.type, formData.team]);
 
   async function loadPost(postSlug: string) {
     try {
@@ -116,6 +170,7 @@ export default function PostEditor() {
           status: formData.status,
           opponent: formData.opponent || undefined,
           gameDate: formData.gameDate || undefined,
+          gameId: formData.gameId || undefined,
           metaDescription: formData.metaDescription || undefined,
         });
         navigate(`/admin/posts/${result.post.slug}`);
@@ -190,6 +245,64 @@ export default function PostEditor() {
       setArticleIdea(''); // Clear after success
     } catch (err) {
       setGenerateError(err instanceof Error ? err.message : 'Failed to generate article');
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  function handleGameSelect(gameId: string) {
+    if (!gameId) {
+      setFormData((prev) => ({
+        ...prev,
+        gameId: undefined,
+        opponent: '',
+        gameDate: '',
+      }));
+      return;
+    }
+
+    const game = recentGames.find((g) => g.gameId === parseInt(gameId, 10));
+    if (game) {
+      // Convert date from MM/DD/YYYY to YYYY-MM-DD for date input
+      const [month, day, year] = game.date.split('/');
+      const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+
+      setFormData((prev) => ({
+        ...prev,
+        gameId: game.gameId,
+        opponent: game.opponent,
+        gameDate: isoDate,
+      }));
+    }
+  }
+
+  async function handleGenerateRecap() {
+    if (!formData.gameId) return;
+
+    const game = recentGames.find((g) => g.gameId === formData.gameId);
+    if (!game) return;
+
+    setGenerating(true);
+    setGenerateError(null);
+
+    try {
+      const result = await generateArticle({
+        idea: `Write a game recap for the Sabres ${game.outcome === 'W' ? 'victory' : 'loss'} against the ${game.opponent} on ${game.date}. Final score: Sabres ${game.sabresScore}, ${game.opponent} ${game.opponentScore}.`,
+        team: formData.team,
+        title: formData.title || undefined,
+        gameId: formData.gameId,
+        postType: 'game-recap',
+        // No researchEnabled - web search disabled for game recaps
+      });
+
+      setFormData((prev) => ({
+        ...prev,
+        title: prev.title || result.title,
+        content: result.content,
+        metaDescription: result.metaDescription || prev.metaDescription,
+      }));
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : 'Failed to generate recap');
     } finally {
       setGenerating(false);
     }
@@ -454,8 +567,101 @@ export default function PostEditor() {
                 </div>
               )}
 
-              {/* Opponent & Date (for game recaps) */}
-              {(formData.type === 'game-recap' || formData.type === 'set-recap') && (
+              {/* Game Recap: Game Selector and AI Generator */}
+              {isNew && formData.type === 'game-recap' && formData.team === 'sabres' && (
+                <div className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
+                    <Sparkles className="w-5 h-5 text-purple-400" />
+                    AI Game Recap Generator
+                  </h3>
+
+                  {/* Game Selector */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                      Select Game
+                    </label>
+                    {loadingGames ? (
+                      <div className="flex items-center gap-2 text-gray-400">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-600 border-t-purple-400" />
+                        Loading recent games...
+                      </div>
+                    ) : recentGames.length > 0 ? (
+                      <select
+                        value={formData.gameId || ''}
+                        onChange={(e) => handleGameSelect(e.target.value)}
+                        className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-400 transition-colors"
+                      >
+                        <option value="">Select a game...</option>
+                        {recentGames.map((g) => (
+                          <option key={g.gameId} value={g.gameId}>
+                            {g.date}: {g.outcome} {g.sabresScore}-{g.opponentScore} {g.isHome ? 'vs' : '@'} {g.opponent}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-gray-400 text-sm">No recent games found</p>
+                    )}
+                  </div>
+
+                  {/* Selected Game Info */}
+                  {formData.gameId && (
+                    <div className="mb-4 p-3 bg-blue-900/30 border border-blue-500/30 rounded-lg">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-400">Opponent:</span>
+                          <span className="text-white ml-2">{formData.opponent}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">Date:</span>
+                          <span className="text-white ml-2">{formData.gameDate}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {generateError && (
+                    <div className="bg-red-900/30 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg mb-4 text-sm">
+                      {generateError}
+                    </div>
+                  )}
+
+                  {generating && (
+                    <div className="mb-4">
+                      <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-purple-500 to-blue-500 animate-pulse"
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      <p className="text-gray-400 text-sm mt-2 text-center">
+                        Fetching box score and generating recap...
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleGenerateRecap}
+                    disabled={generating || !formData.gameId}
+                    className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {generating ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white" />
+                        Generating Recap...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5" />
+                        Generate Recap
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Manual Opponent & Date (for set recaps or Bills) */}
+              {(formData.type === 'set-recap' || (formData.type === 'game-recap' && formData.team === 'bills')) && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-300 mb-2">

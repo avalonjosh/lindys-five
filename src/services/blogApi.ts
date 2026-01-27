@@ -101,6 +101,8 @@ interface GenerateArticleRequest {
   researchEnabled?: boolean;
   allowedDomains?: string[];
   referenceDate?: string;
+  gameId?: number;
+  postType?: 'game-recap' | 'set-recap' | 'custom';
 }
 
 interface GenerateArticleResponse {
