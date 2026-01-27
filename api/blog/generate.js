@@ -87,13 +87,11 @@ META: [A brief meta description for SEO, max 160 characters]
 The article should be 400-800 words and follow the style guidelines provided.`;
 
     // Configure tools for web search if enabled
+    // Note: Using minimal config - domain filtering can be added if basic search works
     const tools = researchEnabled
       ? [
           {
             type: 'web_search_20250305',
-            name: 'web_search',
-            max_uses: 5,
-            ...(allowedDomains && allowedDomains.length > 0 && { allowed_domains: allowedDomains }),
           },
         ]
       : undefined;
