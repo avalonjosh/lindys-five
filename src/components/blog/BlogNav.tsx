@@ -1,6 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
 
-export default function BlogNav() {
+interface BlogNavProps {
+  variant?: 'light' | 'dark';
+}
+
+export default function BlogNav({ variant = 'light' }: BlogNavProps) {
   const location = useLocation();
   const currentPath = location.pathname;
 
@@ -17,6 +21,35 @@ export default function BlogNav() {
     return currentPath.startsWith(tab.path);
   };
 
+  // White text on blue background
+  if (variant === 'dark') {
+    return (
+      <nav className="flex gap-8">
+        {tabs.map((tab) => {
+          const active = isActive(tab);
+          return (
+            <Link
+              key={tab.path}
+              to={tab.path}
+              className={`text-lg font-semibold pb-2 transition-colors ${
+                active
+                  ? 'text-white'
+                  : 'text-white/70 hover:text-white border-b-2 border-transparent'
+              }`}
+              style={{
+                fontFamily: 'Bebas Neue, sans-serif',
+                borderBottom: active ? '3px solid #FFB81C' : undefined,
+              }}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
+      </nav>
+    );
+  }
+
+  // Dark text on light background (default)
   return (
     <nav className="flex gap-8">
       {tabs.map((tab) => {

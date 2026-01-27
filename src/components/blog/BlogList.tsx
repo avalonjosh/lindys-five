@@ -11,10 +11,14 @@ const teamConfig = {
   sabres: {
     displayName: 'Buffalo Sabres',
     primary: '#003087',
+    secondary: '#0A1128',
+    accent: '#FFB81C',
   },
   bills: {
     displayName: 'Buffalo Bills',
     primary: '#00338D',
+    secondary: '#00338D',
+    accent: '#C60C30',
   },
 };
 
@@ -62,31 +66,43 @@ export default function BlogList() {
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          {/* Back link */}
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors mb-8"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm">Back to Tracker</span>
-          </Link>
-
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1
-              className="text-5xl md:text-7xl font-bold text-gray-900 mb-4"
-              style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+        {/* Blue Header Section */}
+        <header
+          className="shadow-xl border-b-4"
+          style={{
+            background: config.primary,
+            borderBottomColor: config.secondary,
+          }}
+        >
+          <div className="max-w-7xl mx-auto px-4 py-6">
+            {/* Back link */}
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-6"
             >
-              {config.displayName}
-            </h1>
-            <p className="text-xl text-gray-600 mb-8">
-              Game Recaps & Analysis
-            </p>
-            <div className="flex justify-center">
-              <BlogNav />
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-sm">Back to Tracker</span>
+            </Link>
+
+            {/* Header Content */}
+            <div className="text-center">
+              <h1
+                className="text-5xl md:text-7xl font-bold text-white mb-2"
+                style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+              >
+                {config.displayName}
+              </h1>
+              <p className="text-xl text-white/80 mb-8">
+                Game Recaps & Analysis
+              </p>
+              <div className="flex justify-center">
+                <BlogNav variant="dark" />
+              </div>
             </div>
           </div>
+        </header>
+
+        <div className="max-w-7xl mx-auto px-4 py-6">
 
           {/* Content */}
           <main>

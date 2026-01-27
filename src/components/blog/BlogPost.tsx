@@ -10,10 +10,14 @@ const teamConfig = {
   sabres: {
     displayName: 'Sabres',
     primary: '#003087',
+    secondary: '#0A1128',
+    accent: '#FFB81C',
   },
   bills: {
     displayName: 'Bills',
     primary: '#00338D',
+    secondary: '#00338D',
+    accent: '#C60C30',
   },
 };
 
@@ -134,41 +138,47 @@ export default function BlogPost() {
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <article className="max-w-3xl mx-auto px-4 py-8">
-          {/* Back link */}
-          <Link
-            to={`/blog/${team}`}
-            className="inline-flex items-center gap-2 mb-8 transition-colors hover:opacity-80"
-            style={{ color: postConfig.primary }}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to {postConfig.displayName} Posts</span>
-          </Link>
+        {/* Blue Header Section */}
+        <header
+          className="shadow-xl border-b-4"
+          style={{
+            background: postConfig.primary,
+            borderBottomColor: postConfig.secondary,
+          }}
+        >
+          <div className="max-w-3xl mx-auto px-4 py-6">
+            {/* Back link */}
+            <Link
+              to={`/blog/${team}`}
+              className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-6"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to {postConfig.displayName} Posts</span>
+            </Link>
 
-          {/* Header */}
-          <header className="mb-8">
+            {/* Post Meta */}
             <div className="flex items-center gap-3 mb-4">
               <span
-                className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-gray-100"
-                style={{ color: postConfig.primary }}
+                className="px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide"
+                style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }}
               >
                 {typeLabel}
               </span>
               {post.opponent && (
-                <span className="text-gray-500 text-sm">
+                <span className="text-white/70 text-sm">
                   vs {post.opponent}
                 </span>
               )}
             </div>
 
             <h1
-              className="text-4xl md:text-5xl font-bold text-gray-900 mb-6"
+              className="text-4xl md:text-5xl font-bold text-white mb-4"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
               {post.title}
             </h1>
 
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+            <div className="flex flex-wrap items-center gap-4 text-sm text-white/70">
               <span className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
                 {formattedDate}
@@ -178,13 +188,15 @@ export default function BlogPost() {
                 {readingTime} min read
               </span>
               {post.aiGenerated && (
-                <span className="bg-purple-100 text-purple-600 px-2 py-0.5 rounded text-xs">
+                <span className="bg-purple-400/30 text-white px-2 py-0.5 rounded text-xs">
                   AI Generated
                 </span>
               )}
             </div>
-          </header>
+          </div>
+        </header>
 
+        <article className="max-w-3xl mx-auto px-4 py-8">
           {/* Content */}
           <div className="bg-white rounded-2xl p-6 md:p-8 shadow-xl border-2 border-gray-200">
             <PostContent content={post.content} accent={postConfig.primary} />
