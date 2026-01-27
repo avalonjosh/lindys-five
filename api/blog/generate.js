@@ -23,11 +23,11 @@ async function fetchSabresData() {
 
   try {
     // Fetch current season schedule (has all game results)
-    const scheduleRes = await fetch(`${baseUrl}/api/nhl-api?endpoint=club-schedule-season/BUF/20242025`);
+    const scheduleRes = await fetch(`${baseUrl}/api/v1/club-schedule-season/BUF/20242025`);
     const schedule = await scheduleRes.json();
 
     // Fetch current roster
-    const rosterRes = await fetch(`${baseUrl}/api/nhl-api?endpoint=roster/BUF/current`);
+    const rosterRes = await fetch(`${baseUrl}/api/v1/roster/BUF/current`);
     const roster = await rosterRes.json();
 
     return { schedule, roster };
@@ -204,15 +204,15 @@ async function fetchGameBoxScore(gameId) {
 
   try {
     // Fetch boxscore (scores, shots, goalie stats)
-    const boxscoreRes = await fetch(`${baseUrl}/api/nhl-api?endpoint=gamecenter/${gameId}/boxscore`);
+    const boxscoreRes = await fetch(`${baseUrl}/api/v1/gamecenter/${gameId}/boxscore`);
     const boxscore = await boxscoreRes.json();
 
     // Fetch play-by-play (goals with times/assists, penalties)
-    const pbpRes = await fetch(`${baseUrl}/api/nhl-api?endpoint=gamecenter/${gameId}/play-by-play`);
+    const pbpRes = await fetch(`${baseUrl}/api/v1/gamecenter/${gameId}/play-by-play`);
     const playByPlay = await pbpRes.json();
 
     // Fetch landing page for additional game context
-    const landingRes = await fetch(`${baseUrl}/api/nhl-api?endpoint=gamecenter/${gameId}/landing`);
+    const landingRes = await fetch(`${baseUrl}/api/v1/gamecenter/${gameId}/landing`);
     const landing = await landingRes.json();
 
     return { boxscore, playByPlay, landing };
