@@ -84,9 +84,23 @@ export default async function handler(req, res) {
 
     // Build the user prompt
     const teamName = team === 'sabres' ? 'Buffalo Sabres' : 'Buffalo Bills';
+
+    // Add research instructions if enabled
+    const researchInstructions = researchEnabled
+      ? `\n\nIMPORTANT: Use web search to look up current, accurate information before writing. Search for:
+- Current roster and recent transactions
+- Latest stats and standings
+- Recent game results and news
+This ensures the article contains accurate, up-to-date information.${
+          allowedDomains?.length
+            ? `\nFocus searches on these trusted sources: ${allowedDomains.join(', ')}`
+            : ''
+        }`
+      : '';
+
     const userPrompt = `Write an article for the ${teamName} based on the following idea:
 
-${idea}
+${idea}${researchInstructions}
 
 ${title ? `Suggested title: "${title}"` : 'Please also suggest a compelling, SEO-friendly title.'}
 
@@ -98,13 +112,17 @@ META: [A brief meta description for SEO, max 160 characters]
 
 The article should be 400-800 words and follow the style guidelines provided.`;
 
-    // Use Claude 3.5 Sonnet (known working model)
-    // Web search temporarily disabled until we resolve API issues
+    // Configure web search tool if research is enabled
+    const tools = researchEnabled
+      ? [{ type: 'web_search_20250305', max_uses: 5 }]
+      : undefined;
+
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
+      ...(tools && { tools }),
     });
 
     // Extract text content from the response
