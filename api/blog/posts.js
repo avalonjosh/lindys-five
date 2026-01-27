@@ -166,7 +166,10 @@ export default async function handler(req, res) {
       await kv.set(`blog:post:${id}`, post);
 
       // Add to sorted sets for querying
-      const score = new Date(now).getTime();
+      // Use publishedAt for score so posts sort by publish date, not creation date
+      const score = effectivePublishedAt
+        ? new Date(effectivePublishedAt).getTime()
+        : new Date(now).getTime();
       await kv.zadd('blog:posts', { score, member: id });
       await kv.zadd(`blog:posts:${team}`, { score, member: id });
       await kv.zadd(`blog:posts:type:${type}`, { score, member: id });

@@ -131,6 +131,21 @@ export default async function handler(req, res) {
       // Save updated post
       await kv.set(`blog:post:${postId}`, updatedPost);
 
+      // Update sorted set scores if publishedAt changed (for correct sort order)
+      const newPublishedAt = updatedPost.publishedAt;
+      const oldPublishedAt = existingPost.publishedAt;
+      if (newPublishedAt !== oldPublishedAt) {
+        // Calculate new score based on publishedAt (or createdAt for unpublished)
+        const newScore = newPublishedAt
+          ? new Date(newPublishedAt).getTime()
+          : new Date(existingPost.createdAt).getTime();
+
+        // Update all sorted sets with new score
+        await kv.zadd('blog:posts', { score: newScore, member: postId });
+        await kv.zadd(`blog:posts:${existingPost.team}`, { score: newScore, member: postId });
+        await kv.zadd(`blog:posts:type:${existingPost.type}`, { score: newScore, member: postId });
+      }
+
       return res.status(200).json({
         success: true,
         post: updatedPost

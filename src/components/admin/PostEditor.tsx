@@ -51,6 +51,27 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
 
+// Convert ISO string to datetime-local format (respects local timezone)
+function isoToDatetimeLocal(isoString: string): string {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+// Convert datetime-local string to ISO (for saving)
+function datetimeLocalToIso(localString: string): string {
+  if (!localString) return '';
+  const date = new Date(localString);
+  if (isNaN(date.getTime())) return '';
+  return date.toISOString();
+}
+
 export default function PostEditor() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -160,7 +181,8 @@ export default function PostEditor() {
         opponent: data.post.opponent || '',
         gameDate: data.post.gameDate || '',
         metaDescription: data.post.metaDescription || '',
-        publishedAt: data.post.publishedAt || '',
+        // Convert ISO to datetime-local format for the input
+        publishedAt: isoToDatetimeLocal(data.post.publishedAt || ''),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load post');
@@ -175,6 +197,9 @@ export default function PostEditor() {
     setSaving(true);
 
     try {
+      // Convert datetime-local to ISO for API
+      const publishedAtISO = datetimeLocalToIso(formData.publishedAt) || undefined;
+
       if (isNew) {
         const result = await createPost({
           title: formData.title,
@@ -186,7 +211,7 @@ export default function PostEditor() {
           gameDate: formData.gameDate || undefined,
           gameId: formData.gameId || undefined,
           metaDescription: formData.metaDescription || undefined,
-          publishedAt: formData.publishedAt || undefined,
+          publishedAt: publishedAtISO,
         });
         navigate(`/admin/posts/${result.post.slug}`);
       } else if (existingPost) {
@@ -197,7 +222,7 @@ export default function PostEditor() {
           opponent: formData.opponent || undefined,
           gameDate: formData.gameDate || undefined,
           metaDescription: formData.metaDescription || undefined,
-          publishedAt: formData.publishedAt || undefined,
+          publishedAt: publishedAtISO,
         });
       }
       navigate('/admin/posts');
@@ -915,11 +940,8 @@ export default function PostEditor() {
                 </label>
                 <input
                   type="datetime-local"
-                  value={formData.publishedAt ? formData.publishedAt.slice(0, 16) : ''}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    updateField('publishedAt', value ? new Date(value).toISOString() : '');
-                  }}
+                  value={formData.publishedAt}
+                  onChange={(e) => updateField('publishedAt', e.target.value)}
                   className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-[#FCB514] transition-colors"
                 />
                 <p className="text-gray-500 text-xs mt-1">
