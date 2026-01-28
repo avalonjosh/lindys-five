@@ -106,6 +106,8 @@ export interface SeasonStats {
 }
 
 // Blog System Types
+export type PostType = 'game-recap' | 'set-recap' | 'custom' | 'weekly-roundup' | 'news-analysis';
+
 export interface BlogPost {
   id: string;
   slug: string;
@@ -113,7 +115,7 @@ export interface BlogPost {
   content: string;           // Markdown content
   excerpt: string;           // First 200 chars for previews
   team: 'sabres' | 'bills';
-  type: 'game-recap' | 'set-recap' | 'custom';
+  type: PostType;
   status: 'draft' | 'published';
 
   createdAt: string;         // ISO date string
@@ -125,6 +127,14 @@ export interface BlogPost {
   opponent?: string;
   gameDate?: string;
   setNumber?: number;        // For set recaps
+
+  // For weekly roundup
+  weekStartDate?: string;    // ISO date - Monday of the week covered
+  weekEndDate?: string;      // ISO date - Sunday of the week covered
+
+  // For news-analysis
+  newsTopics?: string[];     // Topics covered (e.g., ["trade rumor", "injury update"])
+  sourceHeadlines?: string[]; // Headlines that triggered the article (for reference)
 
   // AI generation tracking
   aiGenerated: boolean;

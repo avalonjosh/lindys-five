@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Plus, Edit, Trash2, Eye, LogOut, FileText } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, LogOut, FileText, RefreshCw, Newspaper, Calendar } from 'lucide-react';
 import { fetchPosts, deletePost } from '../../services/blogApi';
 import { logout } from '../../utils/auth';
 import type { BlogPost } from '../../types';
@@ -11,6 +11,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [triggering, setTriggering] = useState<string | null>(null);
+  const [triggerResult, setTriggerResult] = useState<{ type: string; success: boolean; message: string } | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -49,6 +51,45 @@ export default function AdminDashboard() {
   async function handleLogout() {
     await logout();
     navigate('/admin/login');
+  }
+
+  async function triggerCron(type: 'weekly' | 'news') {
+    setTriggering(type);
+    setTriggerResult(null);
+    try {
+      const response = await fetch('/api/cron/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ type }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setTriggerResult({
+          type,
+          success: true,
+          message: data.post?.title
+            ? `Created: "${data.post.title}"`
+            : data.message || 'Triggered successfully',
+        });
+        // Reload posts to show any new ones
+        loadPosts();
+      } else {
+        setTriggerResult({
+          type,
+          success: false,
+          message: data.error || 'Failed to trigger',
+        });
+      }
+    } catch (err) {
+      setTriggerResult({
+        type,
+        success: false,
+        message: err instanceof Error ? err.message : 'Failed to trigger',
+      });
+    } finally {
+      setTriggering(null);
+    }
   }
 
   const formatDate = (dateString: string | null) => {
@@ -117,6 +158,57 @@ export default function AdminDashboard() {
               <Plus className="w-5 h-5" />
               New Post
             </Link>
+          </div>
+
+          {/* Automation Controls */}
+          <div className="mb-8 p-6 bg-gradient-to-br from-[#002654] to-[#001a3d] rounded-2xl border-2 border-gray-700">
+            <h3
+              className="text-xl font-semibold text-white mb-4"
+              style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+            >
+              Automation
+            </h3>
+            <div className="flex flex-wrap gap-4">
+              <button
+                onClick={() => triggerCron('weekly')}
+                disabled={triggering !== null}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {triggering === 'weekly' ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Calendar className="w-4 h-4" />
+                )}
+                Generate Weekly Roundup
+              </button>
+              <button
+                onClick={() => triggerCron('news')}
+                disabled={triggering !== null}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-purple-600 hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {triggering === 'news' ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Newspaper className="w-4 h-4" />
+                )}
+                Scan for News
+              </button>
+            </div>
+            {triggerResult && (
+              <div
+                className={`mt-4 p-3 rounded-lg text-sm ${
+                  triggerResult.success
+                    ? 'bg-green-900/30 text-green-400'
+                    : 'bg-red-900/30 text-red-400'
+                }`}
+              >
+                <strong>{triggerResult.type === 'weekly' ? 'Weekly Roundup' : 'News Scan'}:</strong>{' '}
+                {triggerResult.message}
+              </div>
+            )}
+            <p className="text-gray-500 text-sm mt-4">
+              Articles are created as drafts by default. Set AUTO_PUBLISH_WEEKLY or AUTO_PUBLISH_NEWS to "true" in environment variables to auto-publish.
+            </p>
           </div>
 
           {/* Content */}

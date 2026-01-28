@@ -105,6 +105,10 @@ export default async function handler(req, res) {
         opponent,
         gameDate,
         setNumber,
+        weekStartDate,
+        weekEndDate,
+        newsTopics,
+        sourceHeadlines,
         aiGenerated = false,
         aiModel,
         metaDescription,
@@ -125,7 +129,7 @@ export default async function handler(req, res) {
       }
 
       // Validate type
-      if (!['game-recap', 'set-recap', 'custom'].includes(type)) {
+      if (!['game-recap', 'set-recap', 'custom', 'weekly-roundup', 'news-analysis'].includes(type)) {
         return res.status(400).json({ error: 'Invalid type' });
       }
 
@@ -156,6 +160,10 @@ export default async function handler(req, res) {
         opponent: opponent || null,
         gameDate: gameDate || null,
         setNumber: setNumber || null,
+        weekStartDate: weekStartDate || null,
+        weekEndDate: weekEndDate || null,
+        newsTopics: newsTopics || null,
+        sourceHeadlines: sourceHeadlines || null,
         aiGenerated,
         aiModel: aiModel || null,
         metaDescription: metaDescription || generateExcerpt(content, 160),
