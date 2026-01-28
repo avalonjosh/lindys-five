@@ -1,5 +1,14 @@
 import { jwtVerify } from 'jose';
 
+// Static imports - required for Vercel bundling (dynamic imports don't work)
+import weeklyRoundupHandler from './weekly-roundup.js';
+import newsScanHandler from './news-scan.js';
+import gameRecapHandler from './game-recap.js';
+import setRecapHandler from './set-recap.js';
+import billsNewsScanHandler from './bills-news-scan.js';
+import billsWeeklyRoundupHandler from './bills-weekly-roundup.js';
+import billsGameRecapHandler from './bills-game-recap.js';
+
 // Helper to verify admin authentication
 async function verifyAdmin(req) {
   const token = req.cookies?.admin_token;
@@ -14,6 +23,21 @@ async function verifyAdmin(req) {
   }
 }
 
+// Map trigger types to their handlers
+const handlers = {
+  // Sabres
+  'weekly': weeklyRoundupHandler,
+  'news': newsScanHandler,
+  'game-recap': gameRecapHandler,
+  'set-recap': setRecapHandler,
+  // Bills
+  'bills-news': billsNewsScanHandler,
+  'bills-weekly': billsWeeklyRoundupHandler,
+  'bills-game-recap': billsGameRecapHandler
+};
+
+const validTypes = Object.keys(handlers);
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -27,13 +51,6 @@ export default async function handler(req, res) {
 
   const { type } = req.body;
 
-  const validTypes = [
-    // Sabres
-    'weekly', 'news', 'game-recap', 'set-recap',
-    // Bills
-    'bills-news', 'bills-weekly', 'bills-game-recap'
-  ];
-
   if (!type || !validTypes.includes(type)) {
     return res.status(400).json({
       error: 'Invalid trigger type',
@@ -42,21 +59,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Determine which handler to call
-    const handlerPath = {
-      // Sabres
-      'weekly': './weekly-roundup.js',
-      'news': './news-scan.js',
-      'game-recap': './game-recap.js',
-      'set-recap': './set-recap.js',
-      // Bills
-      'bills-news': './bills-news-scan.js',
-      'bills-weekly': './bills-weekly-roundup.js',
-      'bills-game-recap': './bills-game-recap.js'
-    }[type];
-
-    // Dynamically import the handler
-    const { default: cronHandler } = await import(handlerPath);
+    // Get the handler from static imports
+    const cronHandler = handlers[type];
 
     // Create a mock request with cron authorization
     const mockReq = {
