@@ -296,21 +296,25 @@ After searching, respond with a JSON array of newsworthy stories found (or empty
         continue;
       }
 
-      // Generate original analysis article
+      // Generate factual news article with web search for verification
       const articleMessage = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 2048,
         system: ARTICLE_GENERATION_PROMPT,
+        tools: [{
+          type: 'web_search_20250305',
+          name: 'web_search'
+        }],
         messages: [{
           role: 'user',
-          content: `Write an original analysis article about this news:
+          content: `Write a factual news report about this topic:
 
 NEWS TOPIC: ${story.topic}
 
-Use this verified team data for context and stats:
+Use this verified team data for context:
 ${contextText}
 
-Remember: Write ORIGINAL ANALYSIS and COMMENTARY, not a news summary. Give your perspective as a Sabres analyst.`
+IMPORTANT: Use web search to verify specific details like dates, statistics, contract values, and quotes. Only include information you can confirm from search results or the provided data. If you cannot verify a specific detail, omit it rather than guess.`
         }]
       });
 

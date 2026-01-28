@@ -97,19 +97,84 @@ async function fetchBillsContext() {
       }
     }
 
+    // Fetch schedule for recent games
+    const scheduleRes = await fetch(`${ESPN_API_BASE}/teams/buf/schedule`);
+    const scheduleData = await scheduleRes.json();
+
+    // Get last 5 completed games
+    const recentGames = [];
+    const now = new Date();
+    for (const event of (scheduleData.events || [])) {
+      const competition = event.competitions?.[0];
+      if (!competition) continue;
+
+      // Check if game is completed (has scores)
+      const hasScores = competition.competitors?.every(c => c.score?.value !== undefined);
+      if (!hasScores) continue;
+
+      const gameDate = new Date(event.date);
+      if (gameDate > now) continue;
+
+      const billsTeam = competition.competitors?.find(c => c.team?.abbreviation === 'BUF');
+      const opponent = competition.competitors?.find(c => c.team?.abbreviation !== 'BUF');
+
+      if (billsTeam && opponent) {
+        const billsScore = billsTeam.score?.displayValue || '0';
+        const oppScore = opponent.score?.displayValue || '0';
+        const result = billsTeam.winner ? 'W' : 'L';
+        const homeAway = billsTeam.homeAway === 'home' ? 'vs' : '@';
+
+        recentGames.push({
+          date: gameDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          result,
+          billsScore,
+          oppScore,
+          opponent: opponent.team?.abbreviation || 'OPP',
+          homeAway,
+          week: event.week?.text || ''
+        });
+      }
+
+      if (recentGames.length >= 5) break;
+    }
+
     // Fetch roster (Bills team ID = 2)
     const rosterRes = await fetch(`${ESPN_API_BASE}/teams/2/roster`);
     const roster = await rosterRes.json();
 
-    // Get key players by position group
-    const keyPlayers = [];
+    // Organize roster by position
+    const rosterByPosition = {
+      QB: [],
+      RB: [],
+      WR: [],
+      TE: [],
+      OL: [],
+      DL: [],
+      LB: [],
+      DB: [],
+      K: [],
+      P: []
+    };
+
     roster.athletes?.forEach(group => {
-      group.items?.slice(0, 3).forEach(player => {
-        keyPlayers.push(`${player.fullName} (${player.position?.abbreviation || 'N/A'})`);
+      group.items?.forEach(player => {
+        const pos = player.position?.abbreviation || '';
+        const name = player.fullName;
+
+        if (pos === 'QB') rosterByPosition.QB.push(name);
+        else if (['RB', 'FB'].includes(pos)) rosterByPosition.RB.push(name);
+        else if (pos === 'WR') rosterByPosition.WR.push(name);
+        else if (pos === 'TE') rosterByPosition.TE.push(name);
+        else if (['OT', 'OG', 'C', 'G', 'T'].includes(pos)) rosterByPosition.OL.push(name);
+        else if (['DE', 'DT', 'NT'].includes(pos)) rosterByPosition.DL.push(name);
+        else if (['LB', 'OLB', 'ILB', 'MLB'].includes(pos)) rosterByPosition.LB.push(name);
+        else if (['CB', 'S', 'FS', 'SS', 'DB'].includes(pos)) rosterByPosition.DB.push(name);
+        else if (pos === 'K') rosterByPosition.K.push(name);
+        else if (pos === 'P') rosterByPosition.P.push(name);
       });
     });
 
-    return { billsRecord, divisionPosition, keyPlayers };
+    return { billsRecord, divisionPosition, recentGames, rosterByPosition };
   } catch (error) {
     console.error('Failed to fetch Bills context:', error);
     return null;
@@ -120,7 +185,31 @@ async function fetchBillsContext() {
 function formatBillsContext(data) {
   if (!data) return 'Unable to fetch current team data.';
 
-  const { billsRecord, divisionPosition, keyPlayers } = data;
+  const { billsRecord, divisionPosition, recentGames, rosterByPosition } = data;
+
+  // Format recent games
+  const recentGamesText = recentGames.length > 0
+    ? recentGames.map(g =>
+        `${g.date}: ${g.result} ${g.billsScore}-${g.oppScore} ${g.homeAway} ${g.opponent}${g.week ? ` (${g.week})` : ''}`
+      ).join('\n')
+    : 'No recent games';
+
+  // Format roster by position (limit to key players per position)
+  const formatPosition = (pos, players, limit = 3) =>
+    players.length > 0 ? `${pos}: ${players.slice(0, limit).join(', ')}` : null;
+
+  const rosterLines = [
+    formatPosition('QB', rosterByPosition.QB, 2),
+    formatPosition('RB', rosterByPosition.RB, 3),
+    formatPosition('WR', rosterByPosition.WR, 4),
+    formatPosition('TE', rosterByPosition.TE, 2),
+    formatPosition('OL', rosterByPosition.OL, 5),
+    formatPosition('DL', rosterByPosition.DL, 4),
+    formatPosition('LB', rosterByPosition.LB, 4),
+    formatPosition('DB', rosterByPosition.DB, 5),
+    formatPosition('K', rosterByPosition.K, 1),
+    formatPosition('P', rosterByPosition.P, 1)
+  ].filter(Boolean).join('\n');
 
   return `
 ═══════════════════════════════════════════════════════
@@ -132,8 +221,11 @@ CURRENT STANDINGS:
 - Record: ${billsRecord}
 - Division: ${divisionPosition}
 
-KEY PLAYERS:
-${keyPlayers.slice(0, 15).join('\n') || 'N/A'}
+RECENT GAMES:
+${recentGamesText}
+
+CURRENT ROSTER:
+${rosterLines || 'N/A'}
 
 ═══════════════════════════════════════════════════════
 `;
@@ -296,21 +388,25 @@ After searching, respond with a JSON array of newsworthy stories found (or empty
         continue;
       }
 
-      // Generate original analysis article
+      // Generate factual news article with web search for verification
       const articleMessage = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 2048,
         system: ARTICLE_GENERATION_PROMPT,
+        tools: [{
+          type: 'web_search_20250305',
+          name: 'web_search'
+        }],
         messages: [{
           role: 'user',
-          content: `Write an original analysis article about this news:
+          content: `Write a factual news report about this topic:
 
 NEWS TOPIC: ${story.topic}
 
-Use this verified team data for context and stats:
+Use this verified team data for context:
 ${contextText}
 
-Remember: Write ORIGINAL ANALYSIS and COMMENTARY, not a news summary. Give your perspective as a Bills analyst.`
+IMPORTANT: Use web search to verify specific details like dates, statistics, contract values, and quotes. Only include information you can confirm from search results or the provided data. If you cannot verify a specific detail, omit it rather than guess.`
         }]
       });
 
