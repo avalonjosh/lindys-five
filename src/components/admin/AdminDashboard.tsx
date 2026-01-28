@@ -7,10 +7,15 @@ import { logout } from '../../utils/auth';
 import type { BlogPost } from '../../types';
 
 type AutoPublishSettings = {
+  // Sabres
   'auto-publish-weekly': boolean;
   'auto-publish-news': boolean;
   'auto-publish-game-recap': boolean;
   'auto-publish-set-recap': boolean;
+  // Bills
+  'auto-publish-bills-news': boolean;
+  'auto-publish-bills-weekly': boolean;
+  'auto-publish-bills-game-recap': boolean;
 };
 
 export default function AdminDashboard() {
@@ -21,10 +26,15 @@ export default function AdminDashboard() {
   const [triggering, setTriggering] = useState<string | null>(null);
   const [triggerResult, setTriggerResult] = useState<{ type: string; success: boolean; message: string } | null>(null);
   const [autoPublishSettings, setAutoPublishSettings] = useState<AutoPublishSettings>({
+    // Sabres
     'auto-publish-weekly': false,
     'auto-publish-news': false,
     'auto-publish-game-recap': false,
     'auto-publish-set-recap': false,
+    // Bills
+    'auto-publish-bills-news': false,
+    'auto-publish-bills-weekly': false,
+    'auto-publish-bills-game-recap': false,
   });
   const [togglingSettings, setTogglingSettings] = useState<string | null>(null);
   const [pinning, setPinning] = useState<string | null>(null);
@@ -118,7 +128,7 @@ export default function AdminDashboard() {
     navigate('/admin/login');
   }
 
-  async function triggerCron(type: 'weekly' | 'news' | 'game-recap' | 'set-recap') {
+  async function triggerCron(type: 'weekly' | 'news' | 'game-recap' | 'set-recap' | 'bills-news' | 'bills-weekly' | 'bills-game-recap') {
     setTriggering(type);
     setTriggerResult(null);
     try {
@@ -293,7 +303,16 @@ export default function AdminDashboard() {
                     : 'bg-red-900/30 text-red-400'
                 }`}
               >
-                <strong>{triggerResult.type === 'weekly' ? 'Weekly Roundup' : triggerResult.type === 'news' ? 'News Scan' : triggerResult.type === 'set-recap' ? 'Set Recap' : 'Game Recap'}:</strong>{' '}
+                <strong>{
+                  triggerResult.type === 'weekly' ? 'Weekly Roundup' :
+                  triggerResult.type === 'news' ? 'News Scan' :
+                  triggerResult.type === 'set-recap' ? 'Set Recap' :
+                  triggerResult.type === 'game-recap' ? 'Game Recap' :
+                  triggerResult.type === 'bills-news' ? 'Bills News Scan' :
+                  triggerResult.type === 'bills-weekly' ? 'Bills Weekly Roundup' :
+                  triggerResult.type === 'bills-game-recap' ? 'Bills Game Recap' :
+                  triggerResult.type
+                }:</strong>{' '}
                 {triggerResult.message}
               </div>
             )}
@@ -369,6 +388,114 @@ export default function AdminDashboard() {
               </div>
               <p className="text-gray-500 text-xs mt-2">
                 Toggle on to auto-publish articles. Toggle off to create as drafts for review.
+              </p>
+            </div>
+          </div>
+
+          {/* Bills Automation Controls */}
+          <div className="mb-8 p-6 bg-gradient-to-br from-[#00338D] to-[#001a4d] rounded-2xl border-2 border-gray-700">
+            <h3
+              className="text-xl font-semibold text-white mb-4"
+              style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+            >
+              Bills Automation
+            </h3>
+            <div className="flex flex-wrap gap-4">
+              <button
+                onClick={() => triggerCron('bills-news')}
+                disabled={triggering !== null}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: '#C60C30' }}
+              >
+                {triggering === 'bills-news' ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Newspaper className="w-4 h-4" />
+                )}
+                Scan for Bills News
+              </button>
+              <button
+                onClick={() => triggerCron('bills-weekly')}
+                disabled={triggering !== null}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-blue-700 hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {triggering === 'bills-weekly' ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Calendar className="w-4 h-4" />
+                )}
+                Generate Bills Weekly Roundup
+              </button>
+              <button
+                onClick={() => triggerCron('bills-game-recap')}
+                disabled={triggering !== null}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-green-700 hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {triggering === 'bills-game-recap' ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trophy className="w-4 h-4" />
+                )}
+                Generate Bills Game Recaps
+              </button>
+            </div>
+
+            {/* Bills Auto-publish toggles */}
+            <div className="mt-6 pt-4 border-t border-gray-600">
+              <p className="text-gray-400 text-sm mb-3">Bills auto-publish settings:</p>
+              <div className="flex flex-wrap gap-6">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <button
+                    onClick={() => toggleSetting('auto-publish-bills-news')}
+                    disabled={togglingSettings !== null}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      autoPublishSettings['auto-publish-bills-news'] ? 'bg-red-600' : 'bg-gray-600'
+                    } ${togglingSettings === 'auto-publish-bills-news' ? 'opacity-50' : ''}`}
+                    style={autoPublishSettings['auto-publish-bills-news'] ? { backgroundColor: '#C60C30' } : {}}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                        autoPublishSettings['auto-publish-bills-news'] ? 'translate-x-5' : ''
+                      }`}
+                    />
+                  </button>
+                  <span className="text-gray-300 text-sm">News Scan</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <button
+                    onClick={() => toggleSetting('auto-publish-bills-weekly')}
+                    disabled={togglingSettings !== null}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      autoPublishSettings['auto-publish-bills-weekly'] ? 'bg-blue-700' : 'bg-gray-600'
+                    } ${togglingSettings === 'auto-publish-bills-weekly' ? 'opacity-50' : ''}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                        autoPublishSettings['auto-publish-bills-weekly'] ? 'translate-x-5' : ''
+                      }`}
+                    />
+                  </button>
+                  <span className="text-gray-300 text-sm">Weekly Roundup</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <button
+                    onClick={() => toggleSetting('auto-publish-bills-game-recap')}
+                    disabled={togglingSettings !== null}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      autoPublishSettings['auto-publish-bills-game-recap'] ? 'bg-green-700' : 'bg-gray-600'
+                    } ${togglingSettings === 'auto-publish-bills-game-recap' ? 'opacity-50' : ''}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                        autoPublishSettings['auto-publish-bills-game-recap'] ? 'translate-x-5' : ''
+                      }`}
+                    />
+                  </button>
+                  <span className="text-gray-300 text-sm">Game Recaps</span>
+                </label>
+              </div>
+              <p className="text-gray-500 text-xs mt-2">
+                Toggle on to auto-publish Bills articles. Toggle off to create as drafts for review.
               </p>
             </div>
           </div>

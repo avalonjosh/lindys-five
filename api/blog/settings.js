@@ -17,10 +17,15 @@ async function verifyAdmin(req) {
 
 // Settings keys
 const SETTINGS_KEYS = {
+  // Sabres
   'auto-publish-weekly': 'blog:settings:auto-publish-weekly',
   'auto-publish-news': 'blog:settings:auto-publish-news',
   'auto-publish-game-recap': 'blog:settings:auto-publish-game-recap',
   'auto-publish-set-recap': 'blog:settings:auto-publish-set-recap',
+  // Bills
+  'auto-publish-bills-news': 'blog:settings:auto-publish-bills-news',
+  'auto-publish-bills-weekly': 'blog:settings:auto-publish-bills-weekly',
+  'auto-publish-bills-game-recap': 'blog:settings:auto-publish-bills-game-recap',
 };
 
 export default async function handler(req, res) {
@@ -74,10 +79,15 @@ export default async function handler(req, res) {
 // Export helper for cron jobs to check settings
 export async function getAutoPublishSetting(type) {
   const keyMap = {
+    // Sabres
     'weekly': 'blog:settings:auto-publish-weekly',
     'news': 'blog:settings:auto-publish-news',
     'game-recap': 'blog:settings:auto-publish-game-recap',
     'set-recap': 'blog:settings:auto-publish-set-recap',
+    // Bills
+    'bills-news': 'blog:settings:auto-publish-bills-news',
+    'bills-weekly': 'blog:settings:auto-publish-bills-weekly',
+    'bills-game-recap': 'blog:settings:auto-publish-bills-game-recap',
   };
 
   const kvKey = keyMap[type];
@@ -91,10 +101,15 @@ export async function getAutoPublishSetting(type) {
     }
     // Fall back to environment variable
     const envMap = {
+      // Sabres
       'weekly': 'AUTO_PUBLISH_WEEKLY',
       'news': 'AUTO_PUBLISH_NEWS',
       'game-recap': 'AUTO_PUBLISH_GAME_RECAP',
       'set-recap': 'AUTO_PUBLISH_SET_RECAP',
+      // Bills
+      'bills-news': 'AUTO_PUBLISH_BILLS_NEWS',
+      'bills-weekly': 'AUTO_PUBLISH_BILLS_WEEKLY',
+      'bills-game-recap': 'AUTO_PUBLISH_BILLS_GAME_RECAP',
     };
     return process.env[envMap[type]] === 'true';
   } catch {

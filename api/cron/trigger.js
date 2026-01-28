@@ -27,20 +27,32 @@ export default async function handler(req, res) {
 
   const { type } = req.body;
 
-  if (!type || !['weekly', 'news', 'game-recap', 'set-recap'].includes(type)) {
+  const validTypes = [
+    // Sabres
+    'weekly', 'news', 'game-recap', 'set-recap',
+    // Bills
+    'bills-news', 'bills-weekly', 'bills-game-recap'
+  ];
+
+  if (!type || !validTypes.includes(type)) {
     return res.status(400).json({
       error: 'Invalid trigger type',
-      validTypes: ['weekly', 'news', 'game-recap', 'set-recap']
+      validTypes
     });
   }
 
   try {
     // Determine which handler to call
     const handlerPath = {
+      // Sabres
       'weekly': './weekly-roundup.js',
       'news': './news-scan.js',
       'game-recap': './game-recap.js',
-      'set-recap': './set-recap.js'
+      'set-recap': './set-recap.js',
+      // Bills
+      'bills-news': './bills-news-scan.js',
+      'bills-weekly': './bills-weekly-roundup.js',
+      'bills-game-recap': './bills-game-recap.js'
     }[type];
 
     // Dynamically import the handler
