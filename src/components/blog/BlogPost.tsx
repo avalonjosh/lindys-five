@@ -98,7 +98,7 @@ export default function BlogPost() {
     'set-recap': 'Set Recap',
     'custom': 'Article',
     'weekly-roundup': 'Weekly Roundup',
-    'news-analysis': 'News Analysis',
+    'news-analysis': 'News',
   }[post.type];
 
   const postConfig = teamConfig[post.team];
