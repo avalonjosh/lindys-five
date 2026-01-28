@@ -202,8 +202,8 @@ export default function BlogPost() {
             <PostContent content={post.content} accent={postConfig.primary} />
           </div>
 
-          {/* Tracker CTA - Only for game recaps */}
-          {post.type === 'game-recap' && post.team === 'sabres' && (
+          {/* Tracker CTA - For game recaps and set recaps */}
+          {(post.type === 'game-recap' || post.type === 'set-recap') && post.team === 'sabres' && (
             <div className="mt-8">
               <Link
                 to="/sabres"
