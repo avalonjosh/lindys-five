@@ -41,17 +41,6 @@ export default function HeroCard({ post }: HeroCardProps) {
       className="group relative block bg-white rounded-2xl overflow-hidden shadow-xl border-2 transition-all duration-300 hover:shadow-2xl"
       style={{ borderColor: colors.primary }}
     >
-      {/* Featured Image */}
-      {post.ogImage && (
-        <div className="w-full h-48 md:h-64 overflow-hidden">
-          <img
-            src={post.ogImage}
-            alt={post.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-        </div>
-      )}
-
       {/* Left accent border */}
       <div
         className="absolute left-0 top-0 bottom-0 w-2"
