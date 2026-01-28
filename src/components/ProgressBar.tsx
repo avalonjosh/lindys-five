@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MoreHorizontal, X as XIcon, Link as LinkIcon, Check, ChevronDown } from 'lucide-react';
 import type { SeasonStats } from '../types';
-import { calculatePlayoffProbability, getProbabilityColor } from '../utils/playoffProbability';
+import { getProbabilityColor, probabilityForFinalPoints } from '../utils/playoffProbability';
 
 const TOTAL_GAMES = 82;
 const HISTORICAL_FLOOR = 94;
@@ -57,7 +57,9 @@ function SeasonSection({
   onPlayoffToggle,
   cutLineData,
   cutLineLoading,
-  cutLineError
+  cutLineError,
+  lindysFiveProbability,
+  teamName
 }: {
   stats: SeasonStats;
   isGoatMode: boolean;
@@ -74,6 +76,8 @@ function SeasonSection({
   cutLineData?: CutLineState | null;
   cutLineLoading?: boolean;
   cutLineError?: boolean;
+  lindysFiveProbability?: number;
+  teamName?: string;
 }) {
   const { totalPoints, gamesPlayed, gamesRemaining, currentPace, projectedPoints, playoffTarget } = stats;
 
@@ -142,7 +146,7 @@ function SeasonSection({
               title={playoffExpanded ? 'Hide playoff details' : 'Show playoff details'}
             >
               <span className={playoffExpanded ? 'underline decoration-2 underline-offset-2' : ''}>
-                Playoff Probability: {probability}%
+                Playoff Probability: {cutLineLoading && stats.gamesPlayed >= 10 ? '--%' : `${probability}%`}
               </span>
               <ChevronDown
                 size={14}
@@ -368,7 +372,7 @@ function SeasonSection({
             title={playoffExpanded ? 'Hide playoff details' : 'Show playoff details'}
           >
             <span className={playoffExpanded ? 'underline decoration-2 underline-offset-2' : ''}>
-              Playoff Probability: {probability}%
+              Playoff Probability: {cutLineLoading && stats.gamesPlayed >= 10 ? '--%' : `${probability}%`}
             </span>
             <ChevronDown
               size={12}
@@ -382,7 +386,7 @@ function SeasonSection({
       {!isLastYear && probability !== undefined && (
         <div
           className={`overflow-hidden transition-all duration-300 ease-out ${
-            playoffExpanded ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0'
+            playoffExpanded ? 'max-h-[600px] opacity-100 mt-4' : 'max-h-0 opacity-0'
           }`}
         >
           {/* Dashed divider */}
@@ -390,133 +394,187 @@ function SeasonSection({
             isGoatMode ? 'border-zinc-700' : 'border-gray-300'
           }`}></div>
 
-          {/* Probability header with circle and status */}
-          <div className="flex items-center gap-4 md:gap-6 mb-4">
-            {/* Large probability circle */}
-            <div
-              className="relative flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center border-4"
-              style={{
-                borderColor: probabilityColor,
-                backgroundColor: `${probabilityColor}15`
-              }}
-            >
-              <span
-                className="text-xl md:text-2xl font-bold"
-                style={{ color: probabilityColor }}
-              >
-                {probability}%
-              </span>
-            </div>
-
-            {/* Status message */}
-            <div className="flex-1 min-w-0">
-              <p
-                className={`text-sm md:text-base font-semibold ${
-                  isGoatMode ? 'text-white' : 'text-gray-900'
-                }`}
-              >
-                {(() => {
-                  if (gamesPlayed < 5) return "Season just getting started";
-                  if (probability >= 90) return "Strong playoff position";
-                  if (probability >= 70) return "On track for playoffs";
-                  if (probability >= 50) return "In the playoff hunt";
-                  if (probability >= 30) return "Need to pick up the pace";
-                  if (probability >= 10) return "Playoff hopes fading";
-                  return "Facing long odds";
-                })()}
-              </p>
-              <p
-                className={`text-xs md:text-sm mt-0.5 ${
-                  isGoatMode ? 'text-zinc-500' : 'text-gray-500'
-                }`}
-              >
-                Projected: {projectedPoints} pts
-              </p>
-            </div>
-          </div>
-
           {/* Two-column layout for targets */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Current Projected Cut Line - PRIMARY */}
+            <div
+              className={`rounded-lg p-3 border ${
+                isGoatMode ? 'border-zinc-700 bg-zinc-800/50' : 'border-gray-200 bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                {/* Text content */}
+                <div className="flex-1 min-w-0">
+                  <p
+                    className={`text-xs font-bold uppercase tracking-wide mb-1 ${
+                      isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+                    }`}
+                  >
+                    Current Projected Cut Line
+                  </p>
+                  {cutLineLoading ? (
+                    <p
+                      className={`text-sm ${
+                        isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+                      }`}
+                    >
+                      Loading...
+                    </p>
+                  ) : cutLineError || !cutLineData ? (
+                    <p
+                      className={`text-sm ${
+                        isGoatMode ? 'text-zinc-500' : 'text-gray-400'
+                      }`}
+                    >
+                      {gamesPlayed < 10 ? 'Available after 10 games' : 'Unable to load'}
+                    </p>
+                  ) : (() => {
+                    const cutLinePointsNeeded = Math.max(0, cutLineData.cutLine - totalPoints);
+                    const cutLinePaceNeeded = gamesRemaining > 0 ? cutLinePointsNeeded / gamesRemaining : 0;
+                    return (
+                      <>
+                        <p
+                          className={`text-lg md:text-xl font-bold ${
+                            isGoatMode ? 'text-white' : 'text-gray-900'
+                          }`}
+                        >
+                          {cutLinePointsNeeded} pts to go
+                        </p>
+                        <p
+                          className={`text-xs ${
+                            isGoatMode ? 'text-zinc-500' : 'text-gray-500'
+                          }`}
+                        >
+                          → {cutLineData.cutLine} pts • {cutLinePaceNeeded.toFixed(2)} pts/game
+                        </p>
+                      </>
+                    );
+                  })()}
+                </div>
+                {/* Probability circle - only show when data is loaded */}
+                {!cutLineLoading && cutLineData && (
+                  <div
+                    className="flex-shrink-0 w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center"
+                    style={{
+                      borderColor: probabilityColor,
+                      backgroundColor: `${probabilityColor}15`,
+                      borderWidth: '3px',
+                      borderStyle: 'solid'
+                    }}
+                  >
+                    <span
+                      className="text-base md:text-lg font-bold"
+                      style={{ color: probabilityColor }}
+                    >
+                      {probabilityForFinalPoints(projectedPoints, gamesPlayed, cutLineData.cutLine)}%
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Lindy's Five Target */}
             <div
               className={`rounded-lg p-3 border ${
                 isGoatMode ? 'border-zinc-700 bg-zinc-800/50' : 'border-gray-200 bg-gray-50'
               }`}
             >
-              <p
-                className={`text-xs font-bold uppercase tracking-wide mb-1 ${
-                  isGoatMode ? 'text-zinc-400' : 'text-gray-500'
-                }`}
-              >
-                Lindy's Five Target
-              </p>
-              <p
-                className={`text-lg md:text-xl font-bold ${
-                  isGoatMode ? 'text-white' : 'text-gray-900'
-                }`}
-              >
-                {Math.max(0, playoffTarget - totalPoints)} pts to go
-              </p>
-              <p
-                className={`text-xs ${
-                  isGoatMode ? 'text-zinc-500' : 'text-gray-500'
-                }`}
-              >
-                → {playoffTarget} pts • {gamesRemaining > 0 ? ((playoffTarget - totalPoints) / gamesRemaining).toFixed(2) : '0.00'} pts/game
-              </p>
+              <div className="flex items-center gap-3">
+                {/* Text content */}
+                <div className="flex-1 min-w-0">
+                  <p
+                    className={`text-xs font-bold uppercase tracking-wide mb-1 ${
+                      isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+                    }`}
+                  >
+                    Lindy's Five Target
+                  </p>
+                  <p
+                    className={`text-lg md:text-xl font-bold ${
+                      isGoatMode ? 'text-white' : 'text-gray-900'
+                    }`}
+                  >
+                    {Math.max(0, playoffTarget - totalPoints)} pts to go
+                  </p>
+                  <p
+                    className={`text-xs ${
+                      isGoatMode ? 'text-zinc-500' : 'text-gray-500'
+                    }`}
+                  >
+                    → {playoffTarget} pts • {gamesRemaining > 0 ? ((playoffTarget - totalPoints) / gamesRemaining).toFixed(2) : '0.00'} pts/game
+                  </p>
+                </div>
+                {/* Probability circle */}
+                <div
+                  className="flex-shrink-0 w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center border-3"
+                  style={{
+                    borderColor: probabilityColor,
+                    backgroundColor: `${probabilityColor}15`,
+                    borderWidth: '3px'
+                  }}
+                >
+                  <span
+                    className="text-base md:text-lg font-bold"
+                    style={{ color: probabilityColor }}
+                  >
+                    {lindysFiveProbability}%
+                  </span>
+                </div>
+              </div>
             </div>
+          </div>
 
-            {/* Current Season Cut Line */}
-            <div
-              className={`rounded-lg p-3 border ${
-                isGoatMode ? 'border-zinc-700 bg-zinc-800/50' : 'border-gray-200 bg-gray-50'
-              }`}
-            >
-              <p
-                className={`text-xs font-bold uppercase tracking-wide mb-1 ${
-                  isGoatMode ? 'text-zinc-400' : 'text-gray-500'
-                }`}
-              >
-                Current Season Cut Line
-              </p>
-              {cutLineLoading ? (
-                <p
-                  className={`text-sm ${
-                    isGoatMode ? 'text-zinc-400' : 'text-gray-500'
-                  }`}
-                >
-                  Loading...
-                </p>
-              ) : cutLineError || !cutLineData ? (
-                <p
-                  className={`text-sm ${
-                    isGoatMode ? 'text-zinc-500' : 'text-gray-400'
-                  }`}
-                >
-                  {gamesPlayed < 10 ? 'Available after 10 games' : 'Unable to load'}
-                </p>
-              ) : (() => {
-                // Calculate dynamically using stats (responds to What If mode)
-                const cutLinePointsNeeded = Math.max(0, cutLineData.cutLine - totalPoints);
-                const cutLinePaceNeeded = gamesRemaining > 0 ? cutLinePointsNeeded / gamesRemaining : 0;
-                return (
-                  <>
-                    <p
-                      className={`text-lg md:text-xl font-bold ${
+          {/* Probability Breakdown Table */}
+          <div className={`mt-4 pt-4 border-t border-dashed ${
+            isGoatMode ? 'border-zinc-700' : 'border-gray-300'
+          }`}>
+            <p className={`text-xs font-bold uppercase tracking-wide mb-2 ${
+              isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+            }`}>
+              If the {teamName?.split(' ').pop() || 'Team'} Finish With...
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+              {(() => {
+                // Dynamic range: span both cut line and projected points
+                const cutLine = cutLineData?.cutLine ?? 96;
+                const gap = Math.abs(projectedPoints - cutLine);
+                let start: number;
+                if (gap <= 5) {
+                  // Both anchors fit nicely in 8 values
+                  const lower = Math.min(cutLine, projectedPoints);
+                  start = lower - 2;
+                } else {
+                  // Large gap - center on cut line (the threshold that matters)
+                  start = cutLine - 3;
+                }
+                const pointRange = Array.from({length: 8}, (_, i) => start + i);
+
+                return pointRange.map((pts) => {
+                  const prob = probabilityForFinalPoints(pts, gamesPlayed, cutLine);
+                  const isProjected = pts === projectedPoints;
+                  const isCutLine = pts === cutLine;
+                  return (
+                    <div
+                      key={pts}
+                      className={`text-center px-2 py-2 rounded-lg border ${
+                        isProjected
+                          ? isGoatMode ? 'bg-zinc-700 border-zinc-600' : 'bg-blue-100 border-blue-200'
+                          : isCutLine
+                            ? isGoatMode ? 'bg-zinc-800/50 border-zinc-500' : 'bg-gray-50 border-gray-400'
+                            : isGoatMode ? 'bg-zinc-800/50 border-zinc-700' : 'bg-gray-50 border-gray-200'
+                      }`}
+                    >
+                      <p className={`text-xs ${isGoatMode ? 'text-zinc-500' : 'text-gray-500'}`}>
+                        {pts} pts
+                      </p>
+                      <p className={`text-lg font-bold ${
                         isGoatMode ? 'text-white' : 'text-gray-900'
-                      }`}
-                    >
-                      {cutLinePointsNeeded} pts to go
-                    </p>
-                    <p
-                      className={`text-xs ${
-                        isGoatMode ? 'text-zinc-500' : 'text-gray-500'
-                      }`}
-                    >
-                      → {cutLineData.cutLine} pts ({cutLineData.wc2TeamAbbrev} pace) • {cutLinePaceNeeded.toFixed(2)} pts/game
-                    </p>
-                  </>
-                );
+                      }`}>
+                        {prob}%
+                      </p>
+                    </div>
+                  );
+                });
               })()}
             </div>
           </div>
@@ -535,12 +593,12 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
   const [cutLineLoading, setCutLineLoading] = useState(false);
   const [cutLineError, setCutLineError] = useState(false);
 
-  // Fetch cut line data when dropdown expands
+  // Fetch cut line data on mount (when enough games played)
   useEffect(() => {
-    if (playoffExpanded && !cutLineData && !cutLineLoading && stats.gamesPlayed >= 10) {
+    if (!cutLineData && !cutLineLoading && stats.gamesPlayed >= 10) {
       fetchCutLine();
     }
-  }, [playoffExpanded]);
+  }, [stats.gamesPlayed]);
 
   const fetchCutLine = async () => {
     setCutLineLoading(true);
@@ -617,8 +675,19 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
     }
   };
 
-  // Calculate playoff probability
-  const probability = calculatePlayoffProbability(stats);
+  // Calculate playoff probabilities
+  // Main probability uses cut line when available, fallback to Lindy's Five target (96)
+  const probability = probabilityForFinalPoints(
+    stats.projectedPoints,
+    stats.gamesPlayed,
+    cutLineData?.cutLine ?? stats.playoffTarget
+  );
+  // Lindy's Five probability always uses the fixed 96-point target
+  const lindysFiveProbability = probabilityForFinalPoints(
+    stats.projectedPoints,
+    stats.gamesPlayed,
+    stats.playoffTarget
+  );
   const probabilityColorRaw = getProbabilityColor();
   const probabilityColor = probabilityColorRaw === 'team'
     ? (isGoatMode ? darkModeColors.accent : teamColors.primary)
@@ -737,10 +806,12 @@ ${teamUrl}
           cutLineData={cutLineData}
           cutLineLoading={cutLineLoading}
           cutLineError={cutLineError}
+          lindysFiveProbability={lindysFiveProbability}
+          teamName={teamName}
         />
 
-        {/* Share Button - positioned relative to current season section */}
-        {showShareButton && (
+        {/* Share Button - positioned relative to current season section, hidden when playoff dropdown is open */}
+        {showShareButton && !playoffExpanded && (
           <div className="relative">
             {/* Share Menu */}
             {shareMenuOpen && (

@@ -98,3 +98,38 @@ export function getPlayoffStatusMessage(probability: number, gamesPlayed: number
 export function getProbabilityColor(): string {
   return 'team';
 }
+
+/**
+ * Calculate probability for a hypothetical final point total
+ * Uses a logistic (S-curve) function for more realistic probability distribution:
+ * - Steep changes near the cut line where each point matters most
+ * - Flattens at extremes (diminishing returns for being way above/below)
+ *
+ * @param finalPoints - The hypothetical final point total
+ * @param gamesPlayed - Games played so far (affects curve steepness)
+ * @param cutLine - The current season's projected cut line (defaults to 96)
+ */
+export function probabilityForFinalPoints(
+  finalPoints: number,
+  gamesPlayed: number,
+  cutLine: number = 96
+): number {
+  // How far above/below the current season's projected cut line
+  const diff = finalPoints - cutLine;
+
+  // Confidence factor increases as season progresses
+  const confidenceFactor = Math.min(gamesPlayed / 82, 1);
+
+  // Steepness (k) of the S-curve - intentionally flat to be conservative
+  // Early season: very gentle curve (k=0.10) - high uncertainty
+  // Late season: still gentle (k=0.18) - accounts for cut line variance
+  // This keeps teams within ~10 points of cut line in the 25-75% range
+  const k = 0.10 + (confidenceFactor * 0.08);
+
+  // Logistic function: P = 100 / (1 + e^(-k * diff))
+  // At diff=0: 50%, curves toward 0% and 100% at extremes
+  const probability = 100 / (1 + Math.exp(-k * diff));
+
+  // Cap at 99/1 - never show 100% or 0% unless mathematically clinched/eliminated
+  return Math.max(1, Math.min(99, Math.round(probability)));
+}
