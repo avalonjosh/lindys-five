@@ -623,6 +623,7 @@ function App({ team }: AppProps) {
             teamId={team.id}
             showShareButton={true}
             teamName={`${team.city} ${team.name}`}
+            teamAbbrev={team.abbreviation}
           />
         )}
 
@@ -633,6 +634,7 @@ function App({ team }: AppProps) {
           teamColors={effectiveTeamColors}
           darkModeColors={darkModeColors}
         />
+
 
         {/* What If Mode Banner */}
         {whatIfMode && (

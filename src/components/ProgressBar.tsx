@@ -1,7 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MoreHorizontal, X as XIcon, Link as LinkIcon, Check, ChevronDown } from 'lucide-react';
 import type { SeasonStats } from '../types';
 import { calculatePlayoffProbability, getProbabilityColor } from '../utils/playoffProbability';
+
+const TOTAL_GAMES = 82;
+const HISTORICAL_FLOOR = 94;
+
+interface CutLineState {
+  cutLine: number;
+  pointsNeeded: number;
+  gamesRemaining: number;
+  paceNeeded: number;
+  wc2TeamAbbrev: string;
+}
 
 interface TeamColors {
   primary: string;
@@ -30,6 +41,7 @@ interface ProgressBarProps {
   teamId: string;
   showShareButton?: boolean;
   teamName?: string;
+  teamAbbrev: string;
 }
 
 // Helper function to render a season section
@@ -45,7 +57,10 @@ function SeasonSection({
   probability,
   probabilityColor,
   playoffExpanded,
-  onPlayoffToggle
+  onPlayoffToggle,
+  cutLineData,
+  cutLineLoading,
+  cutLineError
 }: {
   stats: SeasonStats;
   isGoatMode: boolean;
@@ -59,6 +74,9 @@ function SeasonSection({
   probabilityColor?: string;
   playoffExpanded?: boolean;
   onPlayoffToggle?: () => void;
+  cutLineData?: CutLineState | null;
+  cutLineLoading?: boolean;
+  cutLineError?: boolean;
 }) {
   const { totalPoints, gamesPlayed, gamesRemaining, currentPace, projectedPoints, playoffTarget } = stats;
 
@@ -367,7 +385,7 @@ function SeasonSection({
       {!isLastYear && probability !== undefined && (
         <div
           className={`overflow-hidden transition-all duration-300 ease-out ${
-            playoffExpanded ? 'max-h-48 opacity-100 mt-4' : 'max-h-0 opacity-0'
+            playoffExpanded ? 'max-h-96 opacity-100 mt-4' : 'max-h-0 opacity-0'
           }`}
         >
           {/* Dashed divider */}
@@ -375,8 +393,8 @@ function SeasonSection({
             isGoatMode ? 'border-zinc-700' : 'border-gray-300'
           }`}></div>
 
-          {/* Probability details */}
-          <div className="flex items-center gap-4 md:gap-6">
+          {/* Probability header with circle and status */}
+          <div className="flex items-center gap-4 md:gap-6 mb-4">
             {/* Large probability circle */}
             <div
               className="relative flex-shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center border-4"
@@ -393,10 +411,10 @@ function SeasonSection({
               </span>
             </div>
 
-            {/* Context info */}
+            {/* Status message */}
             <div className="flex-1 min-w-0">
               <p
-                className={`text-sm md:text-base font-semibold mb-1 ${
+                className={`text-sm md:text-base font-semibold ${
                   isGoatMode ? 'text-white' : 'text-gray-900'
                 }`}
               >
@@ -411,19 +429,93 @@ function SeasonSection({
                 })()}
               </p>
               <p
-                className={`text-xs md:text-sm ${
-                  isGoatMode ? 'text-zinc-400' : 'text-gray-600'
-                }`}
-              >
-                Need {Math.max(0, playoffTarget - totalPoints)} more points ({gamesRemaining > 0 ? ((playoffTarget - totalPoints) / gamesRemaining).toFixed(2) : '0.00'} pts/game)
-              </p>
-              <p
                 className={`text-xs md:text-sm mt-0.5 ${
                   isGoatMode ? 'text-zinc-500' : 'text-gray-500'
                 }`}
               >
-                Projected: {projectedPoints} pts • Target: {playoffTarget} pts
+                Projected: {projectedPoints} pts
               </p>
+            </div>
+          </div>
+
+          {/* Two-column layout for targets */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Lindy's Five Target */}
+            <div
+              className={`rounded-lg p-3 border ${
+                isGoatMode ? 'border-zinc-700 bg-zinc-800/50' : 'border-gray-200 bg-gray-50'
+              }`}
+            >
+              <p
+                className={`text-xs font-bold uppercase tracking-wide mb-1 ${
+                  isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+                }`}
+              >
+                Lindy's Five Target
+              </p>
+              <p
+                className={`text-lg md:text-xl font-bold ${
+                  isGoatMode ? 'text-white' : 'text-gray-900'
+                }`}
+              >
+                {Math.max(0, playoffTarget - totalPoints)} pts to go
+              </p>
+              <p
+                className={`text-xs ${
+                  isGoatMode ? 'text-zinc-500' : 'text-gray-500'
+                }`}
+              >
+                → {playoffTarget} pts • {gamesRemaining > 0 ? ((playoffTarget - totalPoints) / gamesRemaining).toFixed(2) : '0.00'} pts/game
+              </p>
+            </div>
+
+            {/* Current Season Cut Line */}
+            <div
+              className={`rounded-lg p-3 border ${
+                isGoatMode ? 'border-zinc-700 bg-zinc-800/50' : 'border-gray-200 bg-gray-50'
+              }`}
+            >
+              <p
+                className={`text-xs font-bold uppercase tracking-wide mb-1 ${
+                  isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+                }`}
+              >
+                Current Season Cut Line
+              </p>
+              {cutLineLoading ? (
+                <p
+                  className={`text-sm ${
+                    isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+                  }`}
+                >
+                  Loading...
+                </p>
+              ) : cutLineError || !cutLineData ? (
+                <p
+                  className={`text-sm ${
+                    isGoatMode ? 'text-zinc-500' : 'text-gray-400'
+                  }`}
+                >
+                  {gamesPlayed < 10 ? 'Available after 10 games' : 'Unable to load'}
+                </p>
+              ) : (
+                <>
+                  <p
+                    className={`text-lg md:text-xl font-bold ${
+                      isGoatMode ? 'text-white' : 'text-gray-900'
+                    }`}
+                  >
+                    {cutLineData.pointsNeeded} pts to go
+                  </p>
+                  <p
+                    className={`text-xs ${
+                      isGoatMode ? 'text-zinc-500' : 'text-gray-500'
+                    }`}
+                  >
+                    → {cutLineData.cutLine} pts ({cutLineData.wc2TeamAbbrev} pace) • {cutLineData.paceNeeded.toFixed(2)} pts/game
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -433,10 +525,103 @@ function SeasonSection({
   );
 }
 
-export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearOverYearLoading, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors, teamId, showShareButton, teamName }: ProgressBarProps) {
+export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearOverYearLoading, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors, teamId, showShareButton, teamName, teamAbbrev }: ProgressBarProps) {
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [playoffExpanded, setPlayoffExpanded] = useState(false);
+  const [cutLineData, setCutLineData] = useState<CutLineState | null>(null);
+  const [cutLineLoading, setCutLineLoading] = useState(false);
+  const [cutLineError, setCutLineError] = useState(false);
+
+  // Fetch cut line data when dropdown expands
+  useEffect(() => {
+    if (playoffExpanded && !cutLineData && !cutLineLoading && stats.gamesPlayed >= 10) {
+      fetchCutLine();
+    }
+  }, [playoffExpanded]);
+
+  const fetchCutLine = async () => {
+    setCutLineLoading(true);
+    setCutLineError(false);
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await fetch(`/api/v1/standings/${today}`);
+
+      if (!response.ok) {
+        throw new Error(`API returned status ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.standings || !Array.isArray(data.standings)) {
+        throw new Error('Invalid standings data');
+      }
+
+      interface StandingTeam {
+        teamAbbrev: string;
+        points: number;
+        gamesPlayed: number;
+        divisionRank: number;
+        conferenceName: string;
+      }
+
+      const parsedStandings: StandingTeam[] = data.standings.map((team: any) => ({
+        teamAbbrev: team.teamAbbrev?.default || '',
+        points: team.points || 0,
+        gamesPlayed: team.gamesPlayed || 0,
+        divisionRank: team.divisionSequence || 0,
+        conferenceName: team.conferenceName || '',
+      }));
+
+      // Find user's team
+      const userTeam = parsedStandings.find(t => t.teamAbbrev === teamAbbrev);
+      if (!userTeam) {
+        throw new Error('Team not found in standings');
+      }
+
+      // Get user's conference
+      const userConference = userTeam.conferenceName;
+
+      // Find WC2 team in user's conference
+      const wildcardTeams = parsedStandings
+        .filter(t => t.conferenceName === userConference && t.divisionRank > 3)
+        .sort((a, b) => b.points - a.points);
+
+      const wc2Team = wildcardTeams[1]; // Second wild card (index 1)
+
+      if (!wc2Team) {
+        throw new Error('Could not determine WC2 team');
+      }
+
+      // Calculate projected cut line
+      const wc2Pace = wc2Team.gamesPlayed > 0
+        ? wc2Team.points / wc2Team.gamesPlayed
+        : 0;
+      const projectedCutLine = Math.ceil(wc2Pace * TOTAL_GAMES);
+
+      // Use higher of: projection OR historical floor
+      const cutLine = Math.max(projectedCutLine, HISTORICAL_FLOOR);
+
+      // Calculate user team needs
+      const pointsNeeded = Math.max(0, cutLine - userTeam.points);
+      const gamesRemaining = TOTAL_GAMES - userTeam.gamesPlayed;
+      const paceNeeded = gamesRemaining > 0 ? pointsNeeded / gamesRemaining : 0;
+
+      setCutLineData({
+        cutLine,
+        pointsNeeded,
+        gamesRemaining,
+        paceNeeded,
+        wc2TeamAbbrev: wc2Team.teamAbbrev,
+      });
+    } catch (err) {
+      console.error('Error calculating cut line:', err);
+      setCutLineError(true);
+    } finally {
+      setCutLineLoading(false);
+    }
+  };
 
   // Calculate playoff probability
   const probability = calculatePlayoffProbability(stats);
@@ -555,6 +740,9 @@ ${teamUrl}
           probabilityColor={probabilityColor}
           playoffExpanded={playoffExpanded}
           onPlayoffToggle={() => setPlayoffExpanded(!playoffExpanded)}
+          cutLineData={cutLineData}
+          cutLineLoading={cutLineLoading}
+          cutLineError={cutLineError}
         />
 
         {/* Share Button - positioned relative to current season section */}

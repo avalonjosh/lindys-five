@@ -105,6 +105,23 @@ export interface SeasonStats {
   pointsAboveBelow: number;
 }
 
+export interface CutLineData {
+  cutLine: number;           // Projected points for WC2 team (pace × 82)
+  userPoints: number;
+  userGamesPlayed: number;
+  pointsNeeded: number;      // cutLine - userPoints
+  gamesRemaining: number;    // 82 - userGamesPlayed
+  paceNeeded: number;        // pointsNeeded / gamesRemaining
+  wc2Team: {
+    abbrev: string;
+    points: number;
+    gamesPlayed: number;
+    pace: number;
+  };
+  isInPlayoffPosition: boolean;
+  playoffRank?: string;      // e.g., "1st in Atlantic" or "Wild Card 1"
+}
+
 // Blog System Types
 export type PostType = 'game-recap' | 'set-recap' | 'custom' | 'weekly-roundup' | 'news-analysis';
 
