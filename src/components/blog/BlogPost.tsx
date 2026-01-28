@@ -195,21 +195,20 @@ export default function BlogPost() {
         </header>
 
         <article className="max-w-3xl mx-auto px-4 py-8">
-          {/* Featured Image */}
-          {post.ogImage && (
-            <div className="mb-8">
+          {/* Content */}
+          <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-200 overflow-hidden">
+            {/* Featured Image */}
+            {post.ogImage && (
               <img
                 src={post.ogImage}
                 alt={post.title}
-                className="w-full h-auto rounded-2xl shadow-xl border-2 border-gray-200"
+                className="w-full h-auto"
               />
+            )}
+            <div className="p-6 md:p-8">
+              <PostContent content={post.content} accent={postConfig.primary} />
+              <AuthorByline accentColor={postConfig.primary} />
             </div>
-          )}
-
-          {/* Content */}
-          <div className="bg-white rounded-2xl p-6 md:p-8 shadow-xl border-2 border-gray-200">
-            <PostContent content={post.content} accent={postConfig.primary} />
-            <AuthorByline accentColor={postConfig.primary} />
           </div>
 
           {/* Tracker CTA - For game recaps and set recaps */}
