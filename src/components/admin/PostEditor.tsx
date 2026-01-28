@@ -4,8 +4,9 @@ import { Helmet } from 'react-helmet-async';
 import { ArrowLeft, Save, Eye, EyeOff, Send, Sparkles, ImagePlus, X, Upload, Calendar } from 'lucide-react';
 import { fetchPost, createPost, updatePost, generateArticle, uploadImage } from '../../services/blogApi';
 import { fetchSabresSchedule } from '../../services/nhlApi';
+import { calculateChunks } from '../../utils/chunkCalculator';
 import PostContent from '../blog/PostContent';
-import type { BlogPost } from '../../types';
+import type { BlogPost, GameChunk } from '../../types';
 
 // Game option for the selector dropdown
 interface GameOption {
@@ -27,6 +28,7 @@ type PostFormData = {
   opponent: string;
   gameDate: string;
   gameId?: number;
+  setNumber?: number;
   metaDescription: string;
   publishedAt: string;
 };
@@ -107,6 +109,10 @@ export default function PostEditor() {
   const [recentGames, setRecentGames] = useState<GameOption[]>([]);
   const [loadingGames, setLoadingGames] = useState(false);
 
+  // Set recap state
+  const [completedSets, setCompletedSets] = useState<GameChunk[]>([]);
+  const [loadingSets, setLoadingSets] = useState(false);
+
   // Image upload state
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -165,6 +171,32 @@ export default function PostEditor() {
     }
 
     loadRecentGames();
+  }, [formData.type, formData.team]);
+
+  // Fetch completed sets when type is set-recap
+  useEffect(() => {
+    async function loadCompletedSets() {
+      if (formData.type !== 'set-recap' || formData.team !== 'sabres') {
+        setCompletedSets([]);
+        return;
+      }
+
+      setLoadingSets(true);
+      try {
+        const schedule = await fetchSabresSchedule();
+        const chunks = calculateChunks(schedule);
+        // Filter to only completed sets
+        const completed = chunks.filter((chunk) => chunk.isComplete);
+        setCompletedSets(completed);
+      } catch (err) {
+        console.error('Failed to load completed sets:', err);
+        setCompletedSets([]);
+      } finally {
+        setLoadingSets(false);
+      }
+    }
+
+    loadCompletedSets();
   }, [formData.type, formData.team]);
 
   async function loadPost(postSlug: string) {
@@ -344,6 +376,68 @@ export default function PostEditor() {
       }));
     } catch (err) {
       setGenerateError(err instanceof Error ? err.message : 'Failed to generate recap');
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  function handleSetSelect(setNum: string) {
+    if (!setNum) {
+      setFormData((prev) => ({
+        ...prev,
+        setNumber: undefined,
+        opponent: '',
+        gameDate: '',
+      }));
+      return;
+    }
+
+    const selectedSet = completedSets.find((s) => s.chunkNumber === parseInt(setNum, 10));
+    if (selectedSet && selectedSet.games.length > 0) {
+      // Build opponents string
+      const opponents = selectedSet.games.map((g) => g.opponent).join(', ');
+
+      // Get date range
+      const firstGame = selectedSet.games[0];
+      const lastGame = selectedSet.games[selectedSet.games.length - 1];
+      const dateRange = `${firstGame.date} - ${lastGame.date}`;
+
+      setFormData((prev) => ({
+        ...prev,
+        setNumber: selectedSet.chunkNumber,
+        opponent: opponents,
+        gameDate: dateRange,
+      }));
+    }
+  }
+
+  async function handleGenerateSetRecap() {
+    if (!formData.setNumber) return;
+
+    const selectedSet = completedSets.find((s) => s.chunkNumber === formData.setNumber);
+    if (!selectedSet) return;
+
+    setGenerating(true);
+    setGenerateError(null);
+
+    try {
+      const result = await generateArticle({
+        idea: `Write a set recap for the Sabres' Set #${formData.setNumber}. They went ${selectedSet.wins}-${selectedSet.losses}-${selectedSet.otLosses} earning ${selectedSet.points} out of a possible ${selectedSet.maxPoints} points.`,
+        team: formData.team,
+        title: formData.title || undefined,
+        setNumber: formData.setNumber,
+        postType: 'set-recap',
+        // No researchEnabled - use verified data only
+      });
+
+      setFormData((prev) => ({
+        ...prev,
+        title: prev.title || result.title,
+        content: result.content,
+        metaDescription: result.metaDescription || prev.metaDescription,
+      }));
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : 'Failed to generate set recap');
     } finally {
       setGenerating(false);
     }
@@ -778,8 +872,124 @@ export default function PostEditor() {
                 </div>
               )}
 
-              {/* Manual Opponent & Date (for set recaps or Bills) */}
-              {(formData.type === 'set-recap' || (formData.type === 'game-recap' && formData.team === 'bills')) && (
+              {/* Set Recap: Set Selector and AI Generator */}
+              {isNew && formData.type === 'set-recap' && formData.team === 'sabres' && (
+                <div className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
+                    <Sparkles className="w-5 h-5 text-purple-400" />
+                    AI Set Recap Generator
+                  </h3>
+
+                  {/* Set Selector */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                      Select Set
+                    </label>
+                    {loadingSets ? (
+                      <div className="flex items-center gap-2 text-gray-400">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-600 border-t-purple-400" />
+                        Loading completed sets...
+                      </div>
+                    ) : completedSets.length > 0 ? (
+                      <select
+                        value={formData.setNumber || ''}
+                        onChange={(e) => handleSetSelect(e.target.value)}
+                        className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-400 transition-colors"
+                      >
+                        <option value="">Select a set...</option>
+                        {completedSets.map((set) => {
+                          const firstDate = set.games[0]?.date || '';
+                          const lastDate = set.games[set.games.length - 1]?.date || '';
+                          return (
+                            <option key={set.chunkNumber} value={set.chunkNumber}>
+                              Set {set.chunkNumber}: {firstDate} - {lastDate} | {set.wins}-{set.losses}-{set.otLosses} ({set.points} pts)
+                            </option>
+                          );
+                        })}
+                      </select>
+                    ) : (
+                      <p className="text-gray-400 text-sm">No completed sets found</p>
+                    )}
+                  </div>
+
+                  {/* Selected Set Info */}
+                  {formData.setNumber && (
+                    <div className="mb-4 p-3 bg-blue-900/30 border border-blue-500/30 rounded-lg">
+                      {(() => {
+                        const selectedSet = completedSets.find((s) => s.chunkNumber === formData.setNumber);
+                        if (!selectedSet) return null;
+                        const pointsPct = ((selectedSet.points / selectedSet.maxPoints) * 100).toFixed(0);
+                        return (
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-400">Set:</span>
+                              <span className="text-white ml-2">#{formData.setNumber}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400">Record:</span>
+                              <span className="text-white ml-2">
+                                {selectedSet.wins}-{selectedSet.losses}-{selectedSet.otLosses}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400">Points:</span>
+                              <span className="text-white ml-2">
+                                {selectedSet.points}/{selectedSet.maxPoints} ({pointsPct}%)
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400">Opponents:</span>
+                              <span className="text-white ml-2">{formData.opponent}</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {generateError && (
+                    <div className="bg-red-900/30 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg mb-4 text-sm">
+                      {generateError}
+                    </div>
+                  )}
+
+                  {generating && (
+                    <div className="mb-4">
+                      <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-purple-500 to-blue-500 animate-pulse"
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      <p className="text-gray-400 text-sm mt-2 text-center">
+                        Fetching game data and generating set recap...
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleGenerateSetRecap}
+                    disabled={generating || !formData.setNumber}
+                    className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {generating ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white" />
+                        Generating Set Recap...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5" />
+                        Generate Set Recap
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Manual Opponent & Date (for Bills game recaps only) */}
+              {(formData.type === 'game-recap' && formData.team === 'bills') && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-300 mb-2">

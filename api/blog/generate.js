@@ -222,6 +222,46 @@ async function fetchGameBoxScore(gameId) {
   }
 }
 
+// Fetch all data for a set (5 games) from NHL API
+async function fetchSetData(setNumber) {
+  const NHL_API_BASE = 'https://api-web.nhle.com/v1';
+
+  try {
+    // Fetch season schedule to identify games in this set
+    const scheduleRes = await fetch(`${NHL_API_BASE}/club-schedule-season/BUF/20252026`);
+    const schedule = await scheduleRes.json();
+
+    // Filter to regular season completed games
+    const completedGames = (schedule.games || [])
+      .filter((g) => g.gameType === 2) // Regular season
+      .filter((g) => g.gameState === 'FINAL' || g.gameState === 'OFF');
+
+    // Calculate set boundaries (5 games per set)
+    const startIndex = (setNumber - 1) * 5;
+    const endIndex = startIndex + 5;
+    const setGames = completedGames.slice(startIndex, endIndex);
+
+    if (setGames.length === 0) {
+      throw new Error(`Set ${setNumber} has no completed games`);
+    }
+
+    // Fetch box score for each game in parallel
+    const boxScorePromises = setGames.map((game) => fetchGameBoxScore(game.id));
+    const boxScores = await Promise.all(boxScorePromises);
+
+    return {
+      setNumber,
+      games: setGames,
+      boxScores: boxScores.filter((b) => b !== null),
+      startDate: setGames[0].gameDate,
+      endDate: setGames[setGames.length - 1].gameDate,
+    };
+  } catch (error) {
+    console.error('Failed to fetch set data:', error);
+    return null;
+  }
+}
+
 // Format box score data into comprehensive context block
 function formatBoxScore(boxscore, playByPlay, landing) {
   // Determine which team is Sabres and which is opponent
@@ -397,6 +437,134 @@ STRICT INSTRUCTIONS:
 `;
 }
 
+// Format set data into comprehensive context block for set recaps
+function formatSetData(setData) {
+  const { setNumber, games, boxScores, startDate, endDate } = setData;
+
+  // Format date range
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr + 'T12:00:00');
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+  const dateRange = `${formatDate(startDate)} - ${formatDate(endDate)}`;
+
+  // Calculate aggregate set statistics
+  let totalWins = 0,
+    totalOTL = 0,
+    totalLosses = 0;
+  let totalGoalsFor = 0,
+    totalGoalsAgainst = 0;
+  let totalShotsFor = 0,
+    totalShotsAgainst = 0;
+
+  // Process each game
+  const gamesSummary = [];
+  boxScores.forEach((boxData, index) => {
+    if (!boxData) return;
+
+    const game = games[index];
+    const { boxscore, landing } = boxData;
+    const isHome = boxscore.homeTeam?.abbrev === 'BUF';
+    const sabresTeam = isHome ? boxscore.homeTeam : boxscore.awayTeam;
+    const oppTeam = isHome ? boxscore.awayTeam : boxscore.homeTeam;
+
+    const sabresScore = sabresTeam?.score || 0;
+    const oppScore = oppTeam?.score || 0;
+    const lastPeriodType = landing?.gameOutcome?.lastPeriodType || 'REG';
+
+    // Determine outcome
+    let outcome;
+    if (sabresScore > oppScore) {
+      outcome = 'W';
+      totalWins++;
+    } else if (lastPeriodType === 'OT' || lastPeriodType === 'SO') {
+      outcome = 'OTL';
+      totalOTL++;
+    } else {
+      outcome = 'L';
+      totalLosses++;
+    }
+
+    // Aggregate stats
+    totalGoalsFor += sabresScore;
+    totalGoalsAgainst += oppScore;
+    totalShotsFor += sabresTeam?.sog || 0;
+    totalShotsAgainst += oppTeam?.sog || 0;
+
+    // Build game summary
+    const resultSuffix = lastPeriodType !== 'REG' ? ` (${lastPeriodType})` : '';
+    gamesSummary.push({
+      gameNum: index + 1,
+      date: formatDate(game.gameDate),
+      opponent: oppTeam?.name?.default || oppTeam?.abbrev,
+      oppAbbrev: oppTeam?.abbrev,
+      location: isHome ? 'Home' : 'Away',
+      result: `${outcome}${resultSuffix}`,
+      score: `${sabresScore}-${oppScore}`,
+      sabresShots: sabresTeam?.sog || 0,
+      oppShots: oppTeam?.sog || 0,
+    });
+  });
+
+  const totalPoints = totalWins * 2 + totalOTL;
+  const gamesPlayed = boxScores.filter((b) => b !== null).length;
+  const maxPoints = gamesPlayed * 2;
+
+  // Build game-by-game section
+  let gameByGameText = '';
+  gamesSummary.forEach((g) => {
+    gameByGameText += `Game ${g.gameNum} (${g.date}): ${g.result} ${g.score} ${g.location === 'Home' ? 'vs' : '@'} ${g.oppAbbrev}
+  - Location: ${g.location}
+  - Shots: Sabres ${g.sabresShots} - ${g.oppAbbrev} ${g.oppShots}
+`;
+  });
+
+  // Build opponents list
+  const opponents = gamesSummary.map((g) => g.opponent).join(', ');
+
+  // Calculate per-game averages
+  const goalsForPerGame = gamesPlayed > 0 ? (totalGoalsFor / gamesPlayed).toFixed(2) : '0.00';
+  const goalsAgainstPerGame = gamesPlayed > 0 ? (totalGoalsAgainst / gamesPlayed).toFixed(2) : '0.00';
+  const shotsForPerGame = gamesPlayed > 0 ? (totalShotsFor / gamesPlayed).toFixed(1) : '0.0';
+  const shotsAgainstPerGame = gamesPlayed > 0 ? (totalShotsAgainst / gamesPlayed).toFixed(1) : '0.0';
+  const goalDifferential = totalGoalsFor - totalGoalsAgainst;
+  const goalDiffStr = goalDifferential > 0 ? `+${goalDifferential}` : `${goalDifferential}`;
+
+  return `
+═══════════════════════════════════════════════════════
+VERIFIED SET DATA - Set #${setNumber}
+Buffalo Sabres | ${dateRange} | 2025-26 Season
+Source: Official NHL API Box Scores
+═══════════════════════════════════════════════════════
+
+SET OVERVIEW:
+- Set Number: ${setNumber} of 17
+- Date Range: ${dateRange}
+- Record: ${totalWins}-${totalLosses}-${totalOTL} (${totalPoints} of ${maxPoints} points)
+- Opponents: ${opponents}
+
+SET STATISTICS:
+- Goals For: ${totalGoalsFor} (${goalsForPerGame} per game)
+- Goals Against: ${totalGoalsAgainst} (${goalsAgainstPerGame} per game)
+- Goal Differential: ${goalDiffStr}
+- Shots For: ${totalShotsFor} (${shotsForPerGame} per game)
+- Shots Against: ${totalShotsAgainst} (${shotsAgainstPerGame} per game)
+
+GAME-BY-GAME BREAKDOWN:
+${gameByGameText}
+
+═══════════════════════════════════════════════════════
+STRICT INSTRUCTIONS:
+- Write a NARRATIVE set recap using ONLY the data above
+- DO NOT search the web - all facts are provided
+- DO NOT invent any statistics not listed here
+- Analyze trends across the 5 games
+- Identify what worked and what didn't
+- Reference specific games and outcomes
+═══════════════════════════════════════════════════════
+`;
+}
+
 // Helper to find player name by ID
 function findPlayerName(playerId, sabresStats, opponentStats) {
   const allPlayers = [
@@ -440,6 +608,51 @@ Format guidelines:
 - Article should be 400-600 words
 
 CRITICAL: Use ONLY the data provided in the VERIFIED GAME DATA block. Do not invent any statistics, player names, or game details not explicitly listed.`;
+
+// Set recap specific system prompt
+const SET_RECAP_SYSTEM_PROMPT = `You are a professional sports journalist writing a set recap for "Lindy's Five", a Buffalo Sabres fan blog focused on tracking the season in 5-game chunks called "sets."
+
+Your task is to write an engaging, analytical set recap based ONLY on the verified data provided. Do NOT use web search - all the facts you need are in the data.
+
+Context about "Lindy's Five":
+- The blog tracks the Sabres season in 5-game "sets" (16-17 sets per season)
+- Each set is evaluated based on points earned out of a maximum 10
+- 6+ points in a set is considered a success (playoff pace)
+- 5 points is break-even
+- 0-4 points indicates struggles
+- The blog name honors Lindy Ruff, beloved former Sabres coach
+
+Writing style:
+- Professional sports journalism tone - analytical yet accessible
+- Focus on the set as a whole, not just individual games
+- Identify patterns, trends, and storylines across the 5 games
+- Be honest about struggles while remaining constructive
+- Reference specific games to support your analysis
+
+Structure:
+- Opening: Set result, points earned, key takeaway
+- Set narrative: How did the 5 games unfold? What was the story?
+- What worked: Strengths and positive trends
+- Areas of concern: Issues that need addressing
+- Standout performances: Players who made an impact across the set
+- Closing: What this set means for the season trajectory
+
+Format guidelines:
+- Write in Markdown format
+- Use ## headers for major sections
+- Use **bold** for player names and key stats
+- Keep paragraphs concise (3-4 sentences max)
+- Article should be 600-900 words
+
+Set evaluation context:
+- 10 points (5-0-0): Perfect set
+- 8-9 points: Excellent performance
+- 6-7 points: Successful set (playoff pace)
+- 5 points: Break-even, needs improvement
+- 3-4 points: Concerning struggles
+- 0-2 points: Disastrous stretch
+
+CRITICAL: Use ONLY the data provided in the VERIFIED SET DATA block. Do not invent any statistics, player names, or game details not explicitly listed.`;
 
 // Sports journalism system prompt
 const SYSTEM_PROMPT = `You are a professional sports journalist writing for "Lindy's Five", a Buffalo sports blog covering the Sabres (NHL) and Bills (NFL).
@@ -491,7 +704,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const { idea, team, title, researchEnabled = false, allowedDomains, referenceDate, gameId, postType } = req.body;
+  const { idea, team, title, researchEnabled = false, allowedDomains, referenceDate, gameId, postType, setNumber } = req.body;
 
   // Validate required fields
   if (!idea || !team) {
@@ -504,6 +717,20 @@ export default async function handler(req, res) {
   if (postType === 'game-recap' && !gameId) {
     return res.status(400).json({
       error: 'gameId is required for game recap generation',
+    });
+  }
+
+  // For set recaps, validate setNumber
+  if (postType === 'set-recap' && !setNumber) {
+    return res.status(400).json({
+      error: 'setNumber is required for set recap generation',
+    });
+  }
+
+  // Validate setNumber range if provided
+  if (setNumber && (!Number.isInteger(setNumber) || setNumber < 1 || setNumber > 17)) {
+    return res.status(400).json({
+      error: 'Invalid setNumber. Must be an integer between 1 and 17.',
     });
   }
 
@@ -575,6 +802,78 @@ The article should be 400-600 words and follow the style guidelines provided.`;
       const contentSplit = textContent.split('---\n');
 
       const generatedTitle = titleMatch ? titleMatch[1].trim() : title || 'Sabres Game Recap';
+      const metaDescription = metaMatch ? metaMatch[1].trim().slice(0, 160) : '';
+      const content =
+        contentSplit.length > 1 ? contentSplit.slice(1).join('---\n').trim() : textContent;
+
+      return res.status(200).json({
+        success: true,
+        content,
+        title: generatedTitle,
+        metaDescription,
+        model: 'claude-sonnet-4-20250514',
+      });
+    }
+
+    // Handle set recap generation with aggregated box score injection
+    if (postType === 'set-recap' && setNumber && team === 'sabres') {
+      console.log(`Generating set recap for set #${setNumber}`);
+
+      const setData = await fetchSetData(setNumber);
+      if (!setData || setData.boxScores.length === 0) {
+        return res.status(500).json({
+          error: 'Failed to fetch set data',
+          details: `Could not retrieve game data for set ${setNumber} from NHL API. The set may not be complete yet.`,
+        });
+      }
+
+      // Require at least 3 games to proceed
+      if (setData.boxScores.length < 3) {
+        return res.status(400).json({
+          error: 'Insufficient game data',
+          details: `Set ${setNumber} only has ${setData.boxScores.length} completed games. Need at least 3 games to generate a set recap.`,
+        });
+      }
+
+      const verifiedSetData = formatSetData(setData);
+      console.log(`Injected verified set data for ${setData.boxScores.length} games into prompt`);
+
+      const setRecapPrompt = `Write a set recap for the Buffalo Sabres' Set #${setNumber} of the 2025-26 season:
+
+${verifiedSetData}
+
+${idea}
+
+${title ? `Suggested title: "${title}"` : 'Please also suggest a compelling, SEO-friendly title.'}
+
+Please provide your response in this exact format:
+TITLE: [Your title here]
+META: [A brief meta description for SEO, max 160 characters]
+---
+[Article content in Markdown format]
+
+The article should be 600-900 words and follow the style guidelines provided.`;
+
+      const message = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
+        system: SET_RECAP_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: setRecapPrompt }],
+        // NO web search tools for set recaps - we have all verified data
+      });
+
+      // Extract text content from the response
+      const textContent = message.content
+        .filter((block) => block.type === 'text')
+        .map((block) => block.text)
+        .join('\n');
+
+      // Parse the response
+      const titleMatch = textContent.match(/^TITLE:\s*(.+)$/m);
+      const metaMatch = textContent.match(/^META:\s*(.+)$/m);
+      const contentSplit = textContent.split('---\n');
+
+      const generatedTitle = titleMatch ? titleMatch[1].trim() : title || `Sabres Set ${setNumber} Recap`;
       const metaDescription = metaMatch ? metaMatch[1].trim().slice(0, 160) : '';
       const content =
         contentSplit.length > 1 ? contentSplit.slice(1).join('---\n').trim() : textContent;

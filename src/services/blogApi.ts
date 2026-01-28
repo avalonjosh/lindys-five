@@ -102,6 +102,7 @@ interface GenerateArticleRequest {
   allowedDomains?: string[];
   referenceDate?: string;
   gameId?: number;
+  setNumber?: number;
   postType?: 'game-recap' | 'set-recap' | 'custom';
 }
 
