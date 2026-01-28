@@ -35,7 +35,26 @@ export default function Blog() {
         <meta property="og:title" content="Blog | Lindy's Five" />
         <meta property="og:description" content="Buffalo sports coverage - Sabres game recaps, Bills analysis, and more." />
         <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://lindysfive.com/blog" />
+        <meta property="og:site_name" content="Lindy's Five" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="Blog | Lindy's Five" />
+        <meta name="twitter:description" content="Buffalo sports coverage - Sabres game recaps, Bills analysis, and more." />
         <link rel="canonical" href="https://lindysfive.com/blog" />
+
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            "name": "Lindy's Five Blog",
+            "description": "Buffalo sports coverage - Sabres game recaps, Bills analysis, and more",
+            "url": "https://lindysfive.com/blog",
+            "publisher": {
+              "@type": "Organization",
+              "name": "Lindy's Five"
+            }
+          })}
+        </script>
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">

@@ -62,7 +62,30 @@ export default function BlogList() {
         <meta property="og:title" content={`${config.displayName} | Lindy's Five Blog`} />
         <meta property="og:description" content={`${config.displayName} coverage - game recaps, analysis, and more.`} />
         <meta property="og:type" content="website" />
+        <meta property="og:url" content={`https://lindysfive.com/blog/${team}`} />
+        <meta property="og:site_name" content="Lindy's Five" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content={`${config.displayName} | Lindy's Five Blog`} />
+        <meta name="twitter:description" content={`${config.displayName} coverage - game recaps, analysis, and more.`} />
         <link rel="canonical" href={`https://lindysfive.com/blog/${team}`} />
+
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            "name": `${config.displayName} - Lindy's Five Blog`,
+            "description": `${config.displayName} coverage - game recaps, analysis, and more`,
+            "url": `https://lindysfive.com/blog/${team}`,
+            "publisher": {
+              "@type": "Organization",
+              "name": "Lindy's Five"
+            },
+            "about": {
+              "@type": "SportsTeam",
+              "name": config.displayName
+            }
+          })}
+        </script>
       </Helmet>
 
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">

@@ -1,9 +1,46 @@
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { TEAMS } from '../teamConfig';
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+    <>
+      <Helmet>
+        <title>Lindy's Five - Track Your Team's Road to the Playoffs</title>
+        <meta name="description" content="Track your NHL team's playoff race with 5-game set analysis. Live standings, projections, and insights for all 32 teams. Target: 6+ points per set." />
+
+        {/* Open Graph */}
+        <meta property="og:title" content="Lindy's Five - Track Your Team's Road to the Playoffs" />
+        <meta property="og:description" content="Track your NHL team's playoff race with 5-game set analysis. Live standings, projections, and insights for all 32 teams." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://lindysfive.com/" />
+        <meta property="og:site_name" content="Lindy's Five" />
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Lindy's Five - Track Your Team's Road to the Playoffs" />
+        <meta name="twitter:description" content="Track your NHL team's playoff race with 5-game set analysis. Live standings, projections, and insights for all 32 teams." />
+
+        {/* Canonical */}
+        <link rel="canonical" href="https://lindysfive.com/" />
+
+        {/* JSON-LD Schema */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "Lindy's Five",
+            "description": "Track your NHL team's playoff race with 5-game set analysis",
+            "url": "https://lindysfive.com",
+            "publisher": {
+              "@type": "Organization",
+              "name": "JRR Apps"
+            }
+          })}
+        </script>
+      </Helmet>
+
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
       <div className="max-w-4xl w-full">
         {/* Header */}
         <div className="text-center mb-12">
@@ -615,5 +652,6 @@ export default function Landing() {
         </div>
       </div>
     </div>
+    </>
   );
 }

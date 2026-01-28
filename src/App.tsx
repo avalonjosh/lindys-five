@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import type { GameChunk, SeasonStats, ChunkStats, GameResult } from './types';
 import { fetchSabresSchedule, fetchLastSeasonComparison } from './services/nhlApi';
 import { calculateChunks, calculateSeasonStats, calculateChunkStats } from './utils/chunkCalculator';
@@ -390,13 +391,53 @@ function App({ team }: AppProps) {
   } : team.colors;
 
   return (
-    <div
-      className={`min-h-screen ${
-        useClassicStyling
-          ? 'bg-gradient-to-br from-slate-50 to-blue-50'
-          : `bg-gradient-to-br ${darkModeColors.backgroundGradient}`
-      }`}
-    >
+    <>
+      <Helmet>
+        <title>{team.city} {team.name} Playoff Tracker | Lindy's Five</title>
+        <meta name="description" content={`Track the ${team.city} ${team.name}'s road to the playoffs with 5-game set analysis. Live standings, schedule, point projections, and playoff scenarios updated daily.`} />
+        <meta property="og:title" content={`${team.city} ${team.name} Playoff Tracker | Lindy's Five`} />
+        <meta property="og:description" content={`Track the ${team.city} ${team.name}'s road to the playoffs with 5-game set analysis, live standings, and playoff projections.`} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={`https://lindysfive.com/${team.id}`} />
+        <meta property="og:image" content={team.logo} />
+        <meta property="og:site_name" content="Lindy's Five" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content={`${team.city} ${team.name} Playoff Tracker | Lindy's Five`} />
+        <meta name="twitter:description" content={`Track the ${team.city} ${team.name}'s road to the playoffs with 5-game set analysis and playoff projections.`} />
+        <meta name="twitter:image" content={team.logo} />
+        <link rel="canonical" href={`https://lindysfive.com/${team.id}`} />
+
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": `${team.city} ${team.name} Playoff Tracker`,
+            "description": `Track the ${team.city} ${team.name}'s road to the playoffs with 5-game set analysis`,
+            "url": `https://lindysfive.com/${team.id}`,
+            "publisher": {
+              "@type": "Organization",
+              "name": "Lindy's Five"
+            },
+            "about": {
+              "@type": "SportsTeam",
+              "name": `${team.city} ${team.name}`,
+              "sport": "Ice Hockey",
+              "memberOf": {
+                "@type": "SportsOrganization",
+                "name": "National Hockey League"
+              }
+            }
+          })}
+        </script>
+      </Helmet>
+
+      <div
+        className={`min-h-screen ${
+          useClassicStyling
+            ? 'bg-gradient-to-br from-slate-50 to-blue-50'
+            : `bg-gradient-to-br ${darkModeColors.backgroundGradient}`
+        }`}
+      >
       {/* Header */}
       <header
         className={`shadow-xl border-b-4 ${
@@ -770,6 +811,7 @@ function App({ team }: AppProps) {
         </footer>
       </main>
     </div>
+    </>
   );
 }
 
