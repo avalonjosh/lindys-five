@@ -57,8 +57,11 @@ export default function Blog() {
     const pinnedPost = posts.find(p => p.pinned);
     const hero = pinnedPost || posts[0];
 
-    // Filter remaining posts by type (exclude hero)
-    const remaining = posts.filter(p => p.id !== hero?.id);
+    // Only exclude hero from category listings if it's the "most recent" fallback
+    // Pinned posts should appear in BOTH the hero AND their category section
+    const remaining = pinnedPost
+      ? posts  // Keep all posts including the pinned one
+      : posts.filter(p => p.id !== hero?.id);  // Only exclude if it's just the most recent
 
     return {
       heroPost: hero,
