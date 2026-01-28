@@ -27,6 +27,8 @@ export default function PostCard({ post }: PostCardProps) {
     'game-recap': 'Game Recap',
     'set-recap': 'Set Recap',
     'custom': 'Article',
+    'weekly-roundup': 'Weekly Roundup',
+    'news-analysis': 'News Analysis',
   }[post.type];
 
   const colors = teamColors[post.team];

@@ -23,7 +23,7 @@ type PostFormData = {
   title: string;
   content: string;
   team: 'sabres' | 'bills';
-  type: 'game-recap' | 'set-recap' | 'custom';
+  type: 'game-recap' | 'set-recap' | 'custom' | 'weekly-roundup' | 'news-analysis';
   status: 'draft' | 'published';
   opponent: string;
   gameDate: string;

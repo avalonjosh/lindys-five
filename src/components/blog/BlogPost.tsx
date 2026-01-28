@@ -97,6 +97,8 @@ export default function BlogPost() {
     'game-recap': 'Game Recap',
     'set-recap': 'Set Recap',
     'custom': 'Article',
+    'weekly-roundup': 'Weekly Roundup',
+    'news-analysis': 'News Analysis',
   }[post.type];
 
   const postConfig = teamConfig[post.team];
