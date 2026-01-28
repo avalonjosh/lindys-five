@@ -1,5 +1,6 @@
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
+import { getAutoPublishSetting } from '../blog/settings.js';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
@@ -279,7 +280,7 @@ After searching, respond with a JSON array of newsworthy stories found (or empty
     const results = [];
     const sabresContext = await fetchSabresContext();
     const contextText = formatSabresContext(sabresContext);
-    const autoPublish = process.env.AUTO_PUBLISH_NEWS === 'true';
+    const autoPublish = await getAutoPublishSetting('news');
 
     // Only process high-importance stories (7+)
     const importantStories = stories.filter(s => s.importance >= 7);

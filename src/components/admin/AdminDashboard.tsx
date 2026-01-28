@@ -6,6 +6,12 @@ import { fetchPosts, deletePost } from '../../services/blogApi';
 import { logout } from '../../utils/auth';
 import type { BlogPost } from '../../types';
 
+type AutoPublishSettings = {
+  'auto-publish-weekly': boolean;
+  'auto-publish-news': boolean;
+  'auto-publish-game-recap': boolean;
+};
+
 export default function AdminDashboard() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -13,11 +19,50 @@ export default function AdminDashboard() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [triggering, setTriggering] = useState<string | null>(null);
   const [triggerResult, setTriggerResult] = useState<{ type: string; success: boolean; message: string } | null>(null);
+  const [autoPublishSettings, setAutoPublishSettings] = useState<AutoPublishSettings>({
+    'auto-publish-weekly': false,
+    'auto-publish-news': false,
+    'auto-publish-game-recap': false,
+  });
+  const [togglingSettings, setTogglingSettings] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     loadPosts();
+    loadSettings();
   }, []);
+
+  async function loadSettings() {
+    try {
+      const response = await fetch('/api/blog/settings');
+      if (response.ok) {
+        const data = await response.json();
+        setAutoPublishSettings(data.settings);
+      }
+    } catch (err) {
+      console.error('Failed to load settings:', err);
+    }
+  }
+
+  async function toggleSetting(key: keyof AutoPublishSettings) {
+    setTogglingSettings(key);
+    const newValue = !autoPublishSettings[key];
+    try {
+      const response = await fetch('/api/blog/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ key, value: newValue }),
+      });
+      if (response.ok) {
+        setAutoPublishSettings((prev) => ({ ...prev, [key]: newValue }));
+      }
+    } catch (err) {
+      console.error('Failed to toggle setting:', err);
+    } finally {
+      setTogglingSettings(null);
+    }
+  }
 
   async function loadPosts() {
     try {
@@ -220,9 +265,64 @@ export default function AdminDashboard() {
                 {triggerResult.message}
               </div>
             )}
-            <p className="text-gray-500 text-sm mt-4">
-              Articles are created as drafts by default. Set AUTO_PUBLISH_WEEKLY, AUTO_PUBLISH_NEWS, or AUTO_PUBLISH_GAME_RECAP to "true" in environment variables to auto-publish.
-            </p>
+
+            {/* Auto-publish toggles */}
+            <div className="mt-6 pt-4 border-t border-gray-700">
+              <p className="text-gray-400 text-sm mb-3">Auto-publish settings:</p>
+              <div className="flex flex-wrap gap-6">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <button
+                    onClick={() => toggleSetting('auto-publish-weekly')}
+                    disabled={togglingSettings !== null}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      autoPublishSettings['auto-publish-weekly'] ? 'bg-blue-600' : 'bg-gray-600'
+                    } ${togglingSettings === 'auto-publish-weekly' ? 'opacity-50' : ''}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                        autoPublishSettings['auto-publish-weekly'] ? 'translate-x-5' : ''
+                      }`}
+                    />
+                  </button>
+                  <span className="text-gray-300 text-sm">Weekly Roundup</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <button
+                    onClick={() => toggleSetting('auto-publish-news')}
+                    disabled={togglingSettings !== null}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      autoPublishSettings['auto-publish-news'] ? 'bg-purple-600' : 'bg-gray-600'
+                    } ${togglingSettings === 'auto-publish-news' ? 'opacity-50' : ''}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                        autoPublishSettings['auto-publish-news'] ? 'translate-x-5' : ''
+                      }`}
+                    />
+                  </button>
+                  <span className="text-gray-300 text-sm">News Scan</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <button
+                    onClick={() => toggleSetting('auto-publish-game-recap')}
+                    disabled={togglingSettings !== null}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      autoPublishSettings['auto-publish-game-recap'] ? 'bg-green-600' : 'bg-gray-600'
+                    } ${togglingSettings === 'auto-publish-game-recap' ? 'opacity-50' : ''}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                        autoPublishSettings['auto-publish-game-recap'] ? 'translate-x-5' : ''
+                      }`}
+                    />
+                  </button>
+                  <span className="text-gray-300 text-sm">Game Recaps</span>
+                </label>
+              </div>
+              <p className="text-gray-500 text-xs mt-2">
+                Toggle on to auto-publish articles. Toggle off to create as drafts for review.
+              </p>
+            </div>
           </div>
 
           {/* Content */}

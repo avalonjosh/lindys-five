@@ -1,5 +1,6 @@
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
+import { getAutoPublishSetting } from '../blog/settings.js';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
@@ -379,7 +380,7 @@ export default async function handler(req, res) {
     // Process each unprocessed game
     const results = [];
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const autoPublish = process.env.AUTO_PUBLISH_GAME_RECAP === 'true';
+    const autoPublish = await getAutoPublishSetting('game-recap');
 
     for (const game of unprocessedGames) {
       try {

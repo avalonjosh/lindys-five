@@ -1,5 +1,6 @@
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
+import { getAutoPublishSetting } from '../blog/settings.js';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
@@ -401,8 +402,8 @@ export default async function handler(req, res) {
     const title = generateWeeklyTitle(weekStart, weekWins, weekLosses, weekOtLosses);
     const metaDescription = `Buffalo Sabres week in review: ${weekWins}-${weekLosses}-${weekOtLosses} from ${formatDate(weekStart)} to ${formatDate(weekEnd)}. Game recaps, standout performers, and standings update.`;
 
-    // Determine publish status from env var
-    const autoPublish = process.env.AUTO_PUBLISH_WEEKLY === 'true';
+    // Determine publish status from KV settings (falls back to env var)
+    const autoPublish = await getAutoPublishSetting('weekly');
 
     // Create the post
     const post = await createPost({
