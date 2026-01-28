@@ -237,13 +237,13 @@ export default function AdminDashboard() {
             </Link>
           </div>
 
-          {/* Automation Controls */}
+          {/* Sabres Automation Controls */}
           <div className="mb-8 p-6 bg-gradient-to-br from-[#002654] to-[#001a3d] rounded-2xl border-2 border-gray-700">
             <h3
               className="text-xl font-semibold text-white mb-4"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
-              Automation
+              Sabres Automation
             </h3>
             <div className="flex flex-wrap gap-4">
               <button
