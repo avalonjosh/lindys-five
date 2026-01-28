@@ -98,7 +98,8 @@ export default async function handler(req, res) {
         setNumber,
         metaDescription,
         ogImage,
-        publishedAt
+        publishedAt,
+        pinned
       } = req.body;
 
       const now = new Date().toISOString();
@@ -116,8 +117,32 @@ export default async function handler(req, res) {
         gameDate: gameDate !== undefined ? gameDate : existingPost.gameDate,
         setNumber: setNumber !== undefined ? setNumber : existingPost.setNumber,
         metaDescription: metaDescription !== undefined ? metaDescription : existingPost.metaDescription,
-        ogImage: ogImage !== undefined ? ogImage : existingPost.ogImage
+        ogImage: ogImage !== undefined ? ogImage : existingPost.ogImage,
+        pinned: pinned !== undefined ? pinned : existingPost.pinned
       };
+
+      // Handle pinning logic
+      if (pinned !== undefined) {
+        if (pinned) {
+          // Pinning this post - unpin any currently pinned post first
+          const currentPinnedId = await kv.get('blog:pinned');
+          if (currentPinnedId && currentPinnedId !== postId) {
+            const currentPinnedPost = await kv.get(`blog:post:${currentPinnedId}`);
+            if (currentPinnedPost) {
+              currentPinnedPost.pinned = false;
+              await kv.set(`blog:post:${currentPinnedId}`, currentPinnedPost);
+            }
+          }
+          // Set this post as pinned
+          await kv.set('blog:pinned', postId);
+        } else {
+          // Unpinning this post
+          const currentPinnedId = await kv.get('blog:pinned');
+          if (currentPinnedId === postId) {
+            await kv.del('blog:pinned');
+          }
+        }
+      }
 
       // Handle publishedAt: use custom date if provided, otherwise default to now when publishing
       if (publishedAt !== undefined) {
@@ -179,6 +204,14 @@ export default async function handler(req, res) {
         await kv.zrem('blog:posts', postId);
         await kv.zrem(`blog:posts:${post.team}`, postId);
         await kv.zrem(`blog:posts:type:${post.type}`, postId);
+
+        // If this was the pinned post, remove the pinned key
+        if (post.pinned) {
+          const currentPinnedId = await kv.get('blog:pinned');
+          if (currentPinnedId === postId) {
+            await kv.del('blog:pinned');
+          }
+        }
       }
 
       // Delete the post and slug mapping

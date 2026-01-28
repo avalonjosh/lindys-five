@@ -1,22 +1,42 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ArrowLeft } from 'lucide-react';
 import BlogNav from './BlogNav';
 import PostCard from './PostCard';
+import HeroCard from './HeroCard';
+import BlogSection from './BlogSection';
 import { fetchPosts } from '../../services/blogApi';
-import type { BlogPost } from '../../types';
+import type { BlogPost, PostType } from '../../types';
+
+const TYPE_LABELS: Record<string, string> = {
+  'news-analysis': 'News',
+  'news': 'News',
+  'game-recap': 'Game Recaps',
+  'set-recap': 'Set Recaps',
+  'weekly-roundup': 'Weekly Roundup',
+  'custom': 'Articles',
+};
 
 export default function Blog() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+
+  // Check for type filter in URL
+  const typeFilter = searchParams.get('type') as PostType | null;
 
   useEffect(() => {
     async function loadPosts() {
       try {
         setLoading(true);
-        const data = await fetchPosts({ status: 'published', limit: 10 });
+        // Fetch more posts for sectioned view, or all of a type for filtered view
+        const data = await fetchPosts({
+          status: 'published',
+          limit: typeFilter ? 50 : 30,
+          type: typeFilter || undefined,
+        });
         setPosts(data.posts);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load posts');
@@ -25,7 +45,88 @@ export default function Blog() {
       }
     }
     loadPosts();
-  }, []);
+  }, [typeFilter]);
+
+  // Group posts for sectioned layout
+  const { heroPost, newsPosts, gameRecapPosts, setRecapPosts } = useMemo(() => {
+    if (typeFilter || posts.length === 0) {
+      return { heroPost: null, newsPosts: [], gameRecapPosts: [], setRecapPosts: [] };
+    }
+
+    // Find pinned post or use most recent
+    const pinnedPost = posts.find(p => p.pinned);
+    const hero = pinnedPost || posts[0];
+
+    // Filter remaining posts by type (exclude hero)
+    const remaining = posts.filter(p => p.id !== hero?.id);
+
+    return {
+      heroPost: hero,
+      newsPosts: remaining.filter(p =>
+        p.type === 'news-analysis' || p.type === 'weekly-roundup'
+      ),
+      gameRecapPosts: remaining.filter(p => p.type === 'game-recap'),
+      setRecapPosts: remaining.filter(p => p.type === 'set-recap'),
+    };
+  }, [posts, typeFilter]);
+
+  // Render filtered view when type param is present
+  const renderFilteredView = () => (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2
+          className="text-2xl md:text-3xl font-bold text-gray-900"
+          style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+        >
+          {TYPE_LABELS[typeFilter || ''] || 'All Posts'}
+        </h2>
+        <Link
+          to="/blog"
+          className="text-[#003087] hover:text-[#002060] font-semibold text-sm transition-colors"
+        >
+          ← Back to All Posts
+        </Link>
+      </div>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {posts.map((post) => (
+          <PostCard key={post.id} post={post} />
+        ))}
+      </div>
+    </div>
+  );
+
+  // Render sectioned view (default)
+  const renderSectionedView = () => (
+    <>
+      {/* Hero Section */}
+      {heroPost && (
+        <section className="mb-12">
+          <HeroCard post={heroPost} />
+        </section>
+      )}
+
+      {/* News Section */}
+      <BlogSection
+        title="Latest News"
+        posts={newsPosts.slice(0, 3)}
+        viewAllLink="/blog?type=news-analysis"
+      />
+
+      {/* Game Recaps Section */}
+      <BlogSection
+        title="Game Recaps"
+        posts={gameRecapPosts.slice(0, 3)}
+        viewAllLink="/blog?type=game-recap"
+      />
+
+      {/* Set Recaps Section */}
+      <BlogSection
+        title="Set Recaps"
+        posts={setRecapPosts.slice(0, 3)}
+        viewAllLink="/blog?type=set-recap"
+      />
+    </>
+  );
 
   return (
     <>
@@ -94,7 +195,7 @@ export default function Blog() {
           </div>
         </header>
 
-        <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="max-w-7xl mx-auto px-4 py-8">
 
           {/* Content */}
           <main>
@@ -118,12 +219,10 @@ export default function Blog() {
                   Check back soon for Buffalo sports coverage!
                 </p>
               </div>
+            ) : typeFilter ? (
+              renderFilteredView()
             ) : (
-              <div className="grid gap-6 md:grid-cols-2">
-                {posts.map((post) => (
-                  <PostCard key={post.id} post={post} />
-                ))}
-              </div>
+              renderSectionedView()
             )}
           </main>
 

@@ -143,4 +143,7 @@ export interface BlogPost {
   // SEO
   metaDescription?: string;
   ogImage?: string;
+
+  // Featured/pinned
+  pinned?: boolean;
 }

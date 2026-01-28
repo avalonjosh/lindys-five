@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Plus, Edit, Trash2, Eye, LogOut, FileText, RefreshCw, Newspaper, Calendar, Trophy, Layers } from 'lucide-react';
-import { fetchPosts, deletePost } from '../../services/blogApi';
+import { Plus, Edit, Trash2, Eye, LogOut, FileText, RefreshCw, Newspaper, Calendar, Trophy, Layers, Pin } from 'lucide-react';
+import { fetchPosts, deletePost, updatePost } from '../../services/blogApi';
 import { logout } from '../../utils/auth';
 import type { BlogPost } from '../../types';
 
@@ -27,6 +27,7 @@ export default function AdminDashboard() {
     'auto-publish-set-recap': false,
   });
   const [togglingSettings, setTogglingSettings] = useState<string | null>(null);
+  const [pinning, setPinning] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -92,6 +93,23 @@ export default function AdminDashboard() {
       alert(err instanceof Error ? err.message : 'Failed to delete post');
     } finally {
       setDeleting(null);
+    }
+  }
+
+  async function handlePin(post: BlogPost) {
+    setPinning(post.id);
+    try {
+      const newPinned = !post.pinned;
+      await updatePost(post.slug, { pinned: newPinned });
+      // Update local state - if pinning, unpin all others
+      setPosts(posts.map((p) => ({
+        ...p,
+        pinned: p.id === post.id ? newPinned : (newPinned ? false : p.pinned)
+      })));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update pin status');
+    } finally {
+      setPinning(null);
     }
   }
 
@@ -415,7 +433,14 @@ export default function AdminDashboard() {
                     >
                       <td className="px-6 py-4">
                         <div>
-                          <p className="text-white font-medium">{post.title}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-white font-medium">{post.title}</p>
+                            {post.pinned && (
+                              <span className="px-2 py-0.5 bg-amber-900/30 text-amber-400 text-xs rounded font-semibold">
+                                Pinned
+                              </span>
+                            )}
+                          </div>
                           <p className="text-gray-500 text-sm md:hidden">
                             {post.team} • {post.status}
                           </p>
@@ -451,6 +476,22 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handlePin(post)}
+                            disabled={pinning === post.id}
+                            className={`p-2 transition-colors disabled:opacity-50 ${
+                              post.pinned
+                                ? 'text-amber-400 hover:text-amber-300'
+                                : 'text-gray-400 hover:text-amber-400'
+                            }`}
+                            title={post.pinned ? 'Unpin' : 'Pin to featured'}
+                          >
+                            {pinning === post.id ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-500 border-t-amber-400"></div>
+                            ) : (
+                              <Pin className={`w-4 h-4 ${post.pinned ? 'fill-current' : ''}`} />
+                            )}
+                          </button>
                           {post.status === 'published' && (
                             <a
                               href={`/blog/${post.team}/${post.slug}`}

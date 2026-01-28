@@ -16,7 +16,7 @@ interface PostResponse {
 export async function fetchPosts(options?: {
   team?: 'sabres' | 'bills';
   status?: 'draft' | 'published';
-  type?: 'game-recap' | 'set-recap' | 'custom';
+  type?: 'game-recap' | 'set-recap' | 'custom' | 'weekly-roundup' | 'news-analysis';
   limit?: number;
   offset?: number;
 }): Promise<PostsResponse> {

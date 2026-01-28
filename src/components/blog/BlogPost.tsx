@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ArrowLeft, Calendar, Clock } from 'lucide-react';
 import PostContent from './PostContent';
+import AuthorByline from './AuthorByline';
 import { fetchPost } from '../../services/blogApi';
 import type { BlogPost as BlogPostType } from '../../types';
 
@@ -197,6 +198,7 @@ export default function BlogPost() {
           {/* Content */}
           <div className="bg-white rounded-2xl p-6 md:p-8 shadow-xl border-2 border-gray-200">
             <PostContent content={post.content} accent={postConfig.primary} />
+            <AuthorByline accentColor={postConfig.primary} />
           </div>
 
           {/* Tracker CTA - For game recaps and set recaps */}

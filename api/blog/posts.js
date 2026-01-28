@@ -113,7 +113,8 @@ export default async function handler(req, res) {
         aiModel,
         metaDescription,
         ogImage,
-        publishedAt
+        publishedAt,
+        pinned = false
       } = req.body;
 
       // Validate required fields
@@ -167,8 +168,25 @@ export default async function handler(req, res) {
         aiGenerated,
         aiModel: aiModel || null,
         metaDescription: metaDescription || generateExcerpt(content, 160),
-        ogImage: ogImage || null
+        ogImage: ogImage || null,
+        pinned: pinned || false
       };
+
+      // Handle pinning - only one post can be pinned at a time
+      if (pinned) {
+        // Get currently pinned post ID
+        const currentPinnedId = await kv.get('blog:pinned');
+        if (currentPinnedId && currentPinnedId !== id) {
+          // Unpin the currently pinned post
+          const currentPinnedPost = await kv.get(`blog:post:${currentPinnedId}`);
+          if (currentPinnedPost) {
+            currentPinnedPost.pinned = false;
+            await kv.set(`blog:post:${currentPinnedId}`, currentPinnedPost);
+          }
+        }
+        // Set this post as pinned
+        await kv.set('blog:pinned', id);
+      }
 
       // Save to KV
       await kv.set(`blog:post:${id}`, post);

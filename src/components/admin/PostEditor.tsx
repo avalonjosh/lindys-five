@@ -31,6 +31,7 @@ type PostFormData = {
   setNumber?: number;
   metaDescription: string;
   publishedAt: string;
+  pinned: boolean;
 };
 
 const teamConfig = {
@@ -89,6 +90,7 @@ export default function PostEditor() {
     gameDate: '',
     metaDescription: '',
     publishedAt: '',
+    pinned: false,
   });
 
   const [existingPost, setExistingPost] = useState<BlogPost | null>(null);
@@ -215,6 +217,7 @@ export default function PostEditor() {
         metaDescription: data.post.metaDescription || '',
         // Convert ISO to datetime-local format for the input
         publishedAt: isoToDatetimeLocal(data.post.publishedAt || ''),
+        pinned: data.post.pinned || false,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load post');
@@ -244,6 +247,7 @@ export default function PostEditor() {
           gameId: formData.gameId || undefined,
           metaDescription: formData.metaDescription || undefined,
           publishedAt: publishedAtISO,
+          pinned: formData.pinned,
         });
         navigate(`/admin/posts/${result.post.slug}`);
       } else if (existingPost) {
@@ -255,6 +259,7 @@ export default function PostEditor() {
           gameDate: formData.gameDate || undefined,
           metaDescription: formData.metaDescription || undefined,
           publishedAt: publishedAtISO,
+          pinned: formData.pinned,
         });
       }
       navigate('/admin/posts');
@@ -1156,6 +1161,29 @@ export default function PostEditor() {
                 />
                 <p className="text-gray-500 text-xs mt-1">
                   Leave empty to use current time when publishing. Set a date to backdate or schedule.
+                </p>
+              </div>
+
+              {/* Pin to Featured */}
+              <div className="flex items-center gap-4 p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <button
+                    type="button"
+                    onClick={() => updateField('pinned', !formData.pinned)}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      formData.pinned ? 'bg-amber-500' : 'bg-gray-600'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                        formData.pinned ? 'translate-x-5' : ''
+                      }`}
+                    />
+                  </button>
+                  <span className="text-gray-300 text-sm font-semibold">Pin to Featured Section</span>
+                </label>
+                <p className="text-gray-500 text-xs">
+                  Pinned posts appear at the top of the blog. Only one post can be pinned at a time.
                 </p>
               </div>
 
