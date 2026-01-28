@@ -76,19 +76,14 @@ export default function BlogList() {
     const pinnedPost = posts.find(p => p.pinned);
     const hero = pinnedPost || posts[0];
 
-    // Only exclude hero from category listings if it's the "most recent" fallback
-    // Pinned posts should appear in BOTH the hero AND their category section
-    const remaining = pinnedPost
-      ? posts  // Keep all posts including the pinned one
-      : posts.filter(p => p.id !== hero?.id);  // Only exclude if it's just the most recent
-
+    // Hero post should always appear in BOTH hero section AND its category section
     return {
       heroPost: hero,
-      newsPosts: remaining.filter(p =>
+      newsPosts: posts.filter(p =>
         p.type === 'news-analysis' || p.type === 'weekly-roundup'
       ),
-      gameRecapPosts: remaining.filter(p => p.type === 'game-recap'),
-      setRecapPosts: remaining.filter(p => p.type === 'set-recap'),
+      gameRecapPosts: posts.filter(p => p.type === 'game-recap'),
+      setRecapPosts: posts.filter(p => p.type === 'set-recap'),
     };
   }, [posts, typeFilter]);
 
