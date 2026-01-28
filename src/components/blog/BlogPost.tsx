@@ -189,11 +189,6 @@ export default function BlogPost() {
                 <Clock className="w-4 h-4" />
                 {readingTime} min read
               </span>
-              {post.aiGenerated && (
-                <span className="bg-purple-400/30 text-white px-2 py-0.5 rounded text-xs">
-                  AI Generated
-                </span>
-              )}
             </div>
           </div>
         </header>

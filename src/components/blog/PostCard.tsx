@@ -69,11 +69,6 @@ export default function PostCard({ post }: PostCardProps) {
             {formattedDate}
           </time>
           <div className="flex items-center gap-3">
-            {post.aiGenerated && (
-              <span className="bg-purple-100 text-purple-600 px-2 py-0.5 rounded text-xs">
-                AI
-              </span>
-            )}
             <span
               className="font-semibold text-sm"
               style={{ color: colors.primary }}
