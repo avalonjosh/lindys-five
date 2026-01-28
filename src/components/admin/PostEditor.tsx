@@ -75,6 +75,36 @@ function datetimeLocalToIso(localString: string): string {
   return date.toISOString();
 }
 
+// Extract images from markdown content
+interface ContentImage {
+  url: string;
+  alt: string;
+  fullMatch: string;
+}
+
+function extractImagesFromContent(content: string): ContentImage[] {
+  const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+  const images: ContentImage[] = [];
+  let match;
+  while ((match = imageRegex.exec(content)) !== null) {
+    images.push({
+      alt: match[1],
+      url: match[2],
+      fullMatch: match[0],
+    });
+  }
+  return images;
+}
+
+// Remove an image from markdown content
+function removeImageFromContent(content: string, url: string): string {
+  // Escape special regex characters in the URL
+  const escapedUrl = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Match the full markdown image syntax with this URL, plus surrounding whitespace
+  const imageRegex = new RegExp(`\\n*!\\[[^\\]]*\\]\\(${escapedUrl}\\)\\n*`, 'g');
+  return content.replace(imageRegex, '\n\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
 export default function PostEditor() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -1048,6 +1078,64 @@ export default function PostEditor() {
                   required
                 />
               </div>
+
+              {/* Content Images Gallery */}
+              {(() => {
+                const contentImages = extractImagesFromContent(formData.content);
+                if (contentImages.length === 0) return null;
+                return (
+                  <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                    <label className="block text-sm font-semibold text-gray-300 mb-3">
+                      Images in Content ({contentImages.length})
+                    </label>
+                    <div className="flex flex-wrap gap-3">
+                      {contentImages.map((img, index) => (
+                        <div key={img.url} className="relative group">
+                          <img
+                            src={img.url}
+                            alt={img.alt || `Image ${index + 1}`}
+                            className="w-20 h-20 object-cover rounded-lg border border-gray-600"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newContent = removeImageFromContent(formData.content, img.url);
+                              setFormData((prev) => ({ ...prev, content: newContent }));
+                            }}
+                            className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remove from content"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!featuredImage) {
+                                // Promote to featured and remove from content
+                                setFeaturedImage(img.url);
+                                const newContent = removeImageFromContent(formData.content, img.url);
+                                setFormData((prev) => ({ ...prev, content: newContent }));
+                              }
+                            }}
+                            className={`absolute -bottom-2 left-1/2 -translate-x-1/2 text-xs px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity ${
+                              featuredImage
+                                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                : 'bg-amber-600 hover:bg-amber-500 text-white cursor-pointer'
+                            }`}
+                            title={featuredImage ? 'Remove current featured image first' : 'Make featured image'}
+                            disabled={!!featuredImage}
+                          >
+                            ★
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-gray-500 text-xs mt-2">
+                      Hover to remove or promote to featured (★)
+                    </p>
+                  </div>
+                );
+              })()}
 
               {/* Meta Description */}
               <div>
