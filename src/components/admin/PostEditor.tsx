@@ -1,0 +1,1216 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
+import { ArrowLeft, Save, Eye, EyeOff, Send, Sparkles, ImagePlus, X, Upload, Calendar } from 'lucide-react';
+import { fetchPost, createPost, updatePost, generateArticle, uploadImage } from '../../services/blogApi';
+import { fetchSabresSchedule } from '../../services/nhlApi';
+import { calculateChunks } from '../../utils/chunkCalculator';
+import PostContent from '../blog/PostContent';
+import type { BlogPost, GameChunk } from '../../types';
+
+// Game option for the selector dropdown
+interface GameOption {
+  gameId: number;
+  date: string;
+  opponent: string;
+  isHome: boolean;
+  sabresScore: number;
+  opponentScore: number;
+  outcome: 'W' | 'OTL' | 'L';
+}
+
+type PostFormData = {
+  title: string;
+  content: string;
+  team: 'sabres' | 'bills';
+  type: 'game-recap' | 'set-recap' | 'custom' | 'weekly-roundup' | 'news-analysis';
+  status: 'draft' | 'published';
+  opponent: string;
+  gameDate: string;
+  gameId?: number;
+  setNumber?: number;
+  metaDescription: string;
+  publishedAt: string;
+};
+
+const teamConfig = {
+  sabres: { accent: '#FCB514' },
+  bills: { accent: '#C60C30' },
+};
+
+// Default trusted sources for research (includes specific live data pages)
+const DEFAULT_RESEARCH_DOMAINS = [
+  'nhl.com',
+  'espn.com',
+  'hockey-reference.com',
+  'eliteprospects.com',
+  'theathletic.com',
+  'sabres.com',
+];
+
+// Image upload validation
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
+// Convert ISO string to datetime-local format (respects local timezone)
+function isoToDatetimeLocal(isoString: string): string {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+// Convert datetime-local string to ISO (for saving)
+function datetimeLocalToIso(localString: string): string {
+  if (!localString) return '';
+  const date = new Date(localString);
+  if (isNaN(date.getTime())) return '';
+  return date.toISOString();
+}
+
+export default function PostEditor() {
+  const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+  const isNew = slug === 'new';
+
+  const [formData, setFormData] = useState<PostFormData>({
+    title: '',
+    content: '',
+    team: 'sabres',
+    type: 'custom',
+    status: 'draft',
+    opponent: '',
+    gameDate: '',
+    metaDescription: '',
+    publishedAt: '',
+  });
+
+  const [existingPost, setExistingPost] = useState<BlogPost | null>(null);
+  const [loading, setLoading] = useState(!isNew);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+
+  // AI generation state
+  const [articleIdea, setArticleIdea] = useState('');
+  const [researchEnabled, setResearchEnabled] = useState(false);
+  const [customizeResearch, setCustomizeResearch] = useState(false);
+  const [customDomains, setCustomDomains] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+
+  // Game recap state
+  const [recentGames, setRecentGames] = useState<GameOption[]>([]);
+  const [loadingGames, setLoadingGames] = useState(false);
+
+  // Set recap state
+  const [completedSets, setCompletedSets] = useState<GameChunk[]>([]);
+  const [loadingSets, setLoadingSets] = useState(false);
+
+  // Image upload state
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Auto-populated reference date for research accuracy
+  const getTodayFormatted = () => {
+    return new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+  const referenceDate = getTodayFormatted();
+
+  useEffect(() => {
+    if (!isNew && slug) {
+      loadPost(slug);
+    }
+  }, [isNew, slug]);
+
+  // Fetch recent completed games when type is game-recap
+  useEffect(() => {
+    async function loadRecentGames() {
+      if (formData.type !== 'game-recap' || formData.team !== 'sabres') {
+        setRecentGames([]);
+        return;
+      }
+
+      setLoadingGames(true);
+      try {
+        const schedule = await fetchSabresSchedule();
+        // Filter to completed games and get last 10
+        const completedGames = schedule
+          .filter((g) => g.outcome !== 'PENDING' && g.gameId)
+          .slice(-10)
+          .reverse() // Most recent first
+          .map((g) => ({
+            gameId: g.gameId!,
+            date: g.date,
+            opponent: g.opponent,
+            isHome: g.isHome,
+            sabresScore: g.sabresScore,
+            opponentScore: g.opponentScore,
+            outcome: g.outcome as 'W' | 'OTL' | 'L',
+          }));
+        setRecentGames(completedGames);
+      } catch (err) {
+        console.error('Failed to load recent games:', err);
+        setRecentGames([]);
+      } finally {
+        setLoadingGames(false);
+      }
+    }
+
+    loadRecentGames();
+  }, [formData.type, formData.team]);
+
+  // Fetch completed sets when type is set-recap
+  useEffect(() => {
+    async function loadCompletedSets() {
+      if (formData.type !== 'set-recap' || formData.team !== 'sabres') {
+        setCompletedSets([]);
+        return;
+      }
+
+      setLoadingSets(true);
+      try {
+        const schedule = await fetchSabresSchedule();
+        const chunks = calculateChunks(schedule);
+        // Filter to only completed sets
+        const completed = chunks.filter((chunk) => chunk.isComplete);
+        setCompletedSets(completed);
+      } catch (err) {
+        console.error('Failed to load completed sets:', err);
+        setCompletedSets([]);
+      } finally {
+        setLoadingSets(false);
+      }
+    }
+
+    loadCompletedSets();
+  }, [formData.type, formData.team]);
+
+  async function loadPost(postSlug: string) {
+    try {
+      setLoading(true);
+      const data = await fetchPost(postSlug);
+      setExistingPost(data.post);
+      setFormData({
+        title: data.post.title,
+        content: data.post.content,
+        team: data.post.team,
+        type: data.post.type,
+        status: data.post.status,
+        opponent: data.post.opponent || '',
+        gameDate: data.post.gameDate || '',
+        metaDescription: data.post.metaDescription || '',
+        // Convert ISO to datetime-local format for the input
+        publishedAt: isoToDatetimeLocal(data.post.publishedAt || ''),
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load post');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSaving(true);
+
+    try {
+      // Convert datetime-local to ISO for API
+      const publishedAtISO = datetimeLocalToIso(formData.publishedAt) || undefined;
+
+      if (isNew) {
+        const result = await createPost({
+          title: formData.title,
+          content: formData.content,
+          team: formData.team,
+          type: formData.type,
+          status: formData.status,
+          opponent: formData.opponent || undefined,
+          gameDate: formData.gameDate || undefined,
+          gameId: formData.gameId || undefined,
+          metaDescription: formData.metaDescription || undefined,
+          publishedAt: publishedAtISO,
+        });
+        navigate(`/admin/posts/${result.post.slug}`);
+      } else if (existingPost) {
+        await updatePost(existingPost.slug, {
+          title: formData.title,
+          content: formData.content,
+          status: formData.status,
+          opponent: formData.opponent || undefined,
+          gameDate: formData.gameDate || undefined,
+          metaDescription: formData.metaDescription || undefined,
+          publishedAt: publishedAtISO,
+        });
+      }
+      navigate('/admin/posts');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save post');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handlePublish() {
+    setFormData({ ...formData, status: 'published' });
+    // Submit will be triggered by form
+  }
+
+  const updateField = <K extends keyof PostFormData>(
+    field: K,
+    value: PostFormData[K]
+  ) => {
+    setFormData({ ...formData, [field]: value });
+  };
+
+  async function handleGenerateArticle() {
+    if (!articleIdea.trim()) return;
+
+    setGenerating(true);
+    setGenerateError(null);
+
+    // Determine which domains to use for research
+    let allowedDomains: string[] | undefined;
+    if (researchEnabled) {
+      if (customizeResearch && customDomains.trim()) {
+        // Parse custom domains (comma or newline separated)
+        allowedDomains = customDomains
+          .split(/[,\n]/)
+          .map((d) => d.trim())
+          .filter((d) => d.length > 0);
+      } else {
+        // Use default domains
+        allowedDomains = DEFAULT_RESEARCH_DOMAINS;
+      }
+    }
+
+    try {
+      const result = await generateArticle({
+        idea: articleIdea,
+        team: formData.team,
+        title: formData.title || undefined,
+        researchEnabled,
+        allowedDomains,
+        referenceDate: researchEnabled ? referenceDate : undefined,
+      });
+
+      setFormData((prev) => ({
+        ...prev,
+        title: prev.title || result.title,
+        content: result.content,
+        metaDescription: result.metaDescription || prev.metaDescription,
+      }));
+
+      setArticleIdea(''); // Clear after success
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : 'Failed to generate article');
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  function handleGameSelect(gameId: string) {
+    if (!gameId) {
+      setFormData((prev) => ({
+        ...prev,
+        gameId: undefined,
+        opponent: '',
+        gameDate: '',
+      }));
+      return;
+    }
+
+    const game = recentGames.find((g) => g.gameId === parseInt(gameId, 10));
+    if (game) {
+      // Convert date from MM/DD/YYYY to YYYY-MM-DD for date input
+      const [month, day, year] = game.date.split('/');
+      const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+
+      setFormData((prev) => ({
+        ...prev,
+        gameId: game.gameId,
+        opponent: game.opponent,
+        gameDate: isoDate,
+      }));
+    }
+  }
+
+  async function handleGenerateRecap() {
+    if (!formData.gameId) return;
+
+    const game = recentGames.find((g) => g.gameId === formData.gameId);
+    if (!game) return;
+
+    setGenerating(true);
+    setGenerateError(null);
+
+    try {
+      const result = await generateArticle({
+        idea: `Write a game recap for the Sabres ${game.outcome === 'W' ? 'victory' : 'loss'} against the ${game.opponent} on ${game.date}. Final score: Sabres ${game.sabresScore}, ${game.opponent} ${game.opponentScore}.`,
+        team: formData.team,
+        title: formData.title || undefined,
+        gameId: formData.gameId,
+        postType: 'game-recap',
+        // No researchEnabled - web search disabled for game recaps
+      });
+
+      setFormData((prev) => ({
+        ...prev,
+        title: prev.title || result.title,
+        content: result.content,
+        metaDescription: result.metaDescription || prev.metaDescription,
+      }));
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : 'Failed to generate recap');
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  function handleSetSelect(setNum: string) {
+    if (!setNum) {
+      setFormData((prev) => ({
+        ...prev,
+        setNumber: undefined,
+        opponent: '',
+        gameDate: '',
+      }));
+      return;
+    }
+
+    const selectedSet = completedSets.find((s) => s.chunkNumber === parseInt(setNum, 10));
+    if (selectedSet && selectedSet.games.length > 0) {
+      // Build opponents string
+      const opponents = selectedSet.games.map((g) => g.opponent).join(', ');
+
+      // Get date range
+      const firstGame = selectedSet.games[0];
+      const lastGame = selectedSet.games[selectedSet.games.length - 1];
+      const dateRange = `${firstGame.date} - ${lastGame.date}`;
+
+      setFormData((prev) => ({
+        ...prev,
+        setNumber: selectedSet.chunkNumber,
+        opponent: opponents,
+        gameDate: dateRange,
+      }));
+    }
+  }
+
+  async function handleGenerateSetRecap() {
+    if (!formData.setNumber) return;
+
+    const selectedSet = completedSets.find((s) => s.chunkNumber === formData.setNumber);
+    if (!selectedSet) return;
+
+    setGenerating(true);
+    setGenerateError(null);
+
+    try {
+      const result = await generateArticle({
+        idea: `Write a set recap for the Sabres' Set #${formData.setNumber}. They went ${selectedSet.wins}-${selectedSet.losses}-${selectedSet.otLosses} earning ${selectedSet.points} out of a possible ${selectedSet.maxPoints} points.`,
+        team: formData.team,
+        title: formData.title || undefined,
+        setNumber: formData.setNumber,
+        postType: 'set-recap',
+        // No researchEnabled - use verified data only
+      });
+
+      setFormData((prev) => ({
+        ...prev,
+        title: prev.title || result.title,
+        content: result.content,
+        metaDescription: result.metaDescription || prev.metaDescription,
+      }));
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : 'Failed to generate set recap');
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  // Image upload handlers
+  function validateFile(file: File): string | null {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      return `Invalid file type. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}`;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      return `File too large. Maximum size: ${MAX_IMAGE_SIZE / 1024 / 1024}MB`;
+    }
+    return null;
+  }
+
+  async function handleImageUpload(file: File) {
+    const validationError = validateFile(file);
+    if (validationError) {
+      setUploadError(validationError);
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      const result = await uploadImage(file);
+
+      // Track uploaded images for gallery
+      setUploadedImages((prev) => [...prev, result.url]);
+
+      // Insert markdown image reference at end of content
+      const markdownImage = `![${file.name}](${result.url})`;
+      setFormData((prev) => ({
+        ...prev,
+        content: prev.content + (prev.content ? '\n\n' : '') + markdownImage,
+      }));
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Failed to upload image');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+    // Reset input so same file can be selected again
+    e.target.value = '';
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+  }
+
+  function insertImageAtCursor(url: string, altText: string = 'Image') {
+    const markdownImage = `![${altText}](${url})`;
+    setFormData((prev) => ({
+      ...prev,
+      content: prev.content + (prev.content ? '\n\n' : '') + markdownImage,
+    }));
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-700 border-t-[#FCB514]"></div>
+      </div>
+    );
+  }
+
+  const accent = teamConfig[formData.team].accent;
+
+  return (
+    <>
+      <Helmet>
+        <title>{isNew ? 'New Post' : 'Edit Post'} | Lindy's Five Admin</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
+
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        {/* Header */}
+        <header className="border-b border-gray-700">
+          <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link
+                to="/admin/posts"
+                className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </Link>
+              <h1
+                className="text-2xl font-bold text-white"
+                style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+              >
+                {isNew ? 'New Post' : 'Edit Post'}
+              </h1>
+            </div>
+            <button
+              onClick={() => setShowPreview(!showPreview)}
+              className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors"
+            >
+              {showPreview ? (
+                <>
+                  <EyeOff className="w-4 h-4" />
+                  Hide Preview
+                </>
+              ) : (
+                <>
+                  <Eye className="w-4 h-4" />
+                  Preview
+                </>
+              )}
+            </button>
+          </div>
+        </header>
+
+        <main className="max-w-6xl mx-auto px-4 py-8">
+          {error && (
+            <div className="bg-red-900/30 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg mb-6">
+              {error}
+            </div>
+          )}
+
+          <div className={`grid gap-8 ${showPreview ? 'lg:grid-cols-2' : ''}`}>
+            {/* Editor */}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => updateField('title', e.target.value)}
+                  className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#FCB514] transition-colors"
+                  placeholder="Post title"
+                  required
+                />
+              </div>
+
+              {/* Team & Type (only for new posts) */}
+              {isNew && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                      Team
+                    </label>
+                    <select
+                      value={formData.team}
+                      onChange={(e) =>
+                        updateField('team', e.target.value as 'sabres' | 'bills')
+                      }
+                      className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-[#FCB514] transition-colors"
+                    >
+                      <option value="sabres">Sabres</option>
+                      <option value="bills">Bills</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                      Type
+                    </label>
+                    <select
+                      value={formData.type}
+                      onChange={(e) =>
+                        updateField(
+                          'type',
+                          e.target.value as 'game-recap' | 'set-recap' | 'custom'
+                        )
+                      }
+                      className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-[#FCB514] transition-colors"
+                    >
+                      <option value="custom">Custom Article</option>
+                      <option value="game-recap">Game Recap</option>
+                      <option value="set-recap">Set Recap</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* AI Article Generator - Only for new custom articles */}
+              {isNew && formData.type === 'custom' && (
+                <div className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-xl p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-purple-400" />
+                      AI Article Generator
+                    </h3>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <span className="text-sm text-gray-400">Research</span>
+                      <div
+                        className={`relative w-11 h-6 rounded-full transition-colors ${
+                          researchEnabled ? 'bg-purple-500' : 'bg-gray-600'
+                        }`}
+                        onClick={() => setResearchEnabled(!researchEnabled)}
+                      >
+                        <div
+                          className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
+                            researchEnabled ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Reference Date - Show when research is enabled */}
+                  {researchEnabled && (
+                    <div className="mb-4 p-3 bg-blue-900/30 border border-blue-500/30 rounded-lg flex items-center gap-3">
+                      <span className="text-blue-400 text-sm font-semibold">Reference Date:</span>
+                      <span className="text-white text-sm">{referenceDate}</span>
+                      <span className="text-gray-500 text-xs ml-auto">
+                        AI will search for data from this date
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                      Article Idea / Instructions
+                    </label>
+                    <textarea
+                      value={articleIdea}
+                      onChange={(e) => setArticleIdea(e.target.value)}
+                      rows={4}
+                      className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-400 transition-colors text-sm"
+                      placeholder="Describe what you want the article to cover. Be specific about topics, players, stats, comparisons, or themes you want included..."
+                    />
+                    <p className="text-gray-500 text-xs mt-1">
+                      {researchEnabled
+                        ? 'Research mode: AI will search the web for current stats and information.'
+                        : "Tip: Enable 'Research' for AI to look up current stats and news."}
+                    </p>
+                  </div>
+
+                  {/* Research Sources - Only show when research is enabled */}
+                  {researchEnabled && (
+                    <div className="mb-4 p-4 bg-black/20 rounded-lg border border-purple-500/20">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-semibold text-gray-300">
+                          Research Sources
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setCustomizeResearch(!customizeResearch)}
+                          className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                        >
+                          {customizeResearch ? 'Use Defaults' : 'Customize'}
+                        </button>
+                      </div>
+
+                      {customizeResearch ? (
+                        <div>
+                          <textarea
+                            value={customDomains}
+                            onChange={(e) => setCustomDomains(e.target.value)}
+                            rows={3}
+                            className="w-full px-3 py-2 bg-black/30 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-400 transition-colors text-xs font-mono"
+                            placeholder="Enter domains (comma or newline separated)&#10;e.g., nhl.com, espn.com"
+                          />
+                          <p className="text-gray-500 text-xs mt-1">
+                            AI will only search these domains
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {DEFAULT_RESEARCH_DOMAINS.map((domain) => (
+                            <span
+                              key={domain}
+                              className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full"
+                            >
+                              {domain}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {generateError && (
+                    <div className="bg-red-900/30 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg mb-4 text-sm">
+                      {generateError}
+                    </div>
+                  )}
+
+                  {generating && (
+                    <div className="mb-4">
+                      <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-purple-500 to-blue-500 animate-pulse"
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      <p className="text-gray-400 text-sm mt-2 text-center">
+                        Generating your article... This may take 15-30 seconds.
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleGenerateArticle}
+                    disabled={generating || !articleIdea.trim()}
+                    className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {generating ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5" />
+                        Generate Draft
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Game Recap: Game Selector and AI Generator */}
+              {isNew && formData.type === 'game-recap' && formData.team === 'sabres' && (
+                <div className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
+                    <Sparkles className="w-5 h-5 text-purple-400" />
+                    AI Game Recap Generator
+                  </h3>
+
+                  {/* Game Selector */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                      Select Game
+                    </label>
+                    {loadingGames ? (
+                      <div className="flex items-center gap-2 text-gray-400">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-600 border-t-purple-400" />
+                        Loading recent games...
+                      </div>
+                    ) : recentGames.length > 0 ? (
+                      <select
+                        value={formData.gameId || ''}
+                        onChange={(e) => handleGameSelect(e.target.value)}
+                        className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-400 transition-colors"
+                      >
+                        <option value="">Select a game...</option>
+                        {recentGames.map((g) => (
+                          <option key={g.gameId} value={g.gameId}>
+                            {g.date}: {g.outcome} {g.sabresScore}-{g.opponentScore} {g.isHome ? 'vs' : '@'} {g.opponent}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-gray-400 text-sm">No recent games found</p>
+                    )}
+                  </div>
+
+                  {/* Selected Game Info */}
+                  {formData.gameId && (
+                    <div className="mb-4 p-3 bg-blue-900/30 border border-blue-500/30 rounded-lg">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-400">Opponent:</span>
+                          <span className="text-white ml-2">{formData.opponent}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">Date:</span>
+                          <span className="text-white ml-2">{formData.gameDate}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {generateError && (
+                    <div className="bg-red-900/30 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg mb-4 text-sm">
+                      {generateError}
+                    </div>
+                  )}
+
+                  {generating && (
+                    <div className="mb-4">
+                      <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-purple-500 to-blue-500 animate-pulse"
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      <p className="text-gray-400 text-sm mt-2 text-center">
+                        Fetching box score and generating recap...
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleGenerateRecap}
+                    disabled={generating || !formData.gameId}
+                    className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {generating ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white" />
+                        Generating Recap...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5" />
+                        Generate Recap
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Set Recap: Set Selector and AI Generator */}
+              {isNew && formData.type === 'set-recap' && formData.team === 'sabres' && (
+                <div className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
+                    <Sparkles className="w-5 h-5 text-purple-400" />
+                    AI Set Recap Generator
+                  </h3>
+
+                  {/* Set Selector */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                      Select Set
+                    </label>
+                    {loadingSets ? (
+                      <div className="flex items-center gap-2 text-gray-400">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-600 border-t-purple-400" />
+                        Loading completed sets...
+                      </div>
+                    ) : completedSets.length > 0 ? (
+                      <select
+                        value={formData.setNumber || ''}
+                        onChange={(e) => handleSetSelect(e.target.value)}
+                        className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-400 transition-colors"
+                      >
+                        <option value="">Select a set...</option>
+                        {completedSets.map((set) => {
+                          const firstDate = set.games[0]?.date || '';
+                          const lastDate = set.games[set.games.length - 1]?.date || '';
+                          return (
+                            <option key={set.chunkNumber} value={set.chunkNumber}>
+                              Set {set.chunkNumber}: {firstDate} - {lastDate} | {set.wins}-{set.losses}-{set.otLosses} ({set.points} pts)
+                            </option>
+                          );
+                        })}
+                      </select>
+                    ) : (
+                      <p className="text-gray-400 text-sm">No completed sets found</p>
+                    )}
+                  </div>
+
+                  {/* Selected Set Info */}
+                  {formData.setNumber && (
+                    <div className="mb-4 p-3 bg-blue-900/30 border border-blue-500/30 rounded-lg">
+                      {(() => {
+                        const selectedSet = completedSets.find((s) => s.chunkNumber === formData.setNumber);
+                        if (!selectedSet) return null;
+                        const pointsPct = ((selectedSet.points / selectedSet.maxPoints) * 100).toFixed(0);
+                        return (
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-400">Set:</span>
+                              <span className="text-white ml-2">#{formData.setNumber}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400">Record:</span>
+                              <span className="text-white ml-2">
+                                {selectedSet.wins}-{selectedSet.losses}-{selectedSet.otLosses}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400">Points:</span>
+                              <span className="text-white ml-2">
+                                {selectedSet.points}/{selectedSet.maxPoints} ({pointsPct}%)
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-400">Opponents:</span>
+                              <span className="text-white ml-2">{formData.opponent}</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {generateError && (
+                    <div className="bg-red-900/30 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg mb-4 text-sm">
+                      {generateError}
+                    </div>
+                  )}
+
+                  {generating && (
+                    <div className="mb-4">
+                      <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-purple-500 to-blue-500 animate-pulse"
+                          style={{ width: '100%' }}
+                        />
+                      </div>
+                      <p className="text-gray-400 text-sm mt-2 text-center">
+                        Fetching game data and generating set recap...
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleGenerateSetRecap}
+                    disabled={generating || !formData.setNumber}
+                    className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {generating ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white" />
+                        Generating Set Recap...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5" />
+                        Generate Set Recap
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Manual Opponent & Date (for Bills game recaps only) */}
+              {(formData.type === 'game-recap' && formData.team === 'bills') && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                      Opponent
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.opponent}
+                      onChange={(e) => updateField('opponent', e.target.value)}
+                      className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#FCB514] transition-colors"
+                      placeholder="e.g., Rangers"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                      Game Date
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.gameDate}
+                      onChange={(e) => updateField('gameDate', e.target.value)}
+                      className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-[#FCB514] transition-colors"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Content */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">
+                  Content (Markdown)
+                </label>
+                <textarea
+                  value={formData.content}
+                  onChange={(e) => updateField('content', e.target.value)}
+                  rows={20}
+                  className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#FCB514] transition-colors font-mono text-sm"
+                  placeholder="Write your post content in Markdown..."
+                  required
+                />
+              </div>
+
+              {/* Meta Description */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">
+                  Meta Description (SEO)
+                </label>
+                <textarea
+                  value={formData.metaDescription}
+                  onChange={(e) => updateField('metaDescription', e.target.value)}
+                  rows={2}
+                  maxLength={160}
+                  className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#FCB514] transition-colors text-sm"
+                  placeholder="Brief description for search results (max 160 chars)"
+                />
+                <p className="text-gray-500 text-xs mt-1">
+                  {formData.metaDescription.length}/160 characters
+                </p>
+              </div>
+
+              {/* Image Upload Section */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">
+                  Image Upload
+                </label>
+
+                {/* Drop Zone */}
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                    isDragging
+                      ? 'border-[#FCB514] bg-[#FCB514]/10'
+                      : 'border-gray-600 hover:border-gray-500'
+                  }`}
+                >
+                  {uploading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="animate-spin rounded-full h-8 w-8 border-4 border-gray-700 border-t-[#FCB514]" />
+                      <span className="text-gray-400 text-sm">Uploading...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <ImagePlus className="w-8 h-8 text-gray-500 mx-auto mb-2" />
+                      <p className="text-gray-400 text-sm mb-2">
+                        Drag and drop an image here, or
+                      </p>
+                      <label className="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg cursor-pointer transition-colors">
+                        <Upload className="w-4 h-4" />
+                        Choose File
+                        <input
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.webp,.gif"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
+                      </label>
+                      <p className="text-gray-500 text-xs mt-2">
+                        JPG, PNG, WebP, GIF - Max 5MB
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                {/* Upload Error */}
+                {uploadError && (
+                  <div className="mt-2 bg-red-900/30 border border-red-500/50 text-red-300 px-3 py-2 rounded-lg text-sm flex items-center justify-between">
+                    <span>{uploadError}</span>
+                    <button
+                      type="button"
+                      onClick={() => setUploadError(null)}
+                      className="text-red-400 hover:text-red-300"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Uploaded Images Gallery */}
+                {uploadedImages.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-sm text-gray-400 mb-2">
+                      Uploaded Images (click to insert again):
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {uploadedImages.map((url, index) => (
+                        <div key={url} className="relative group">
+                          <img
+                            src={url}
+                            alt={`Uploaded ${index + 1}`}
+                            className="w-16 h-16 object-cover rounded border border-gray-600 cursor-pointer hover:border-[#FCB514] transition-colors"
+                            onClick={() => insertImageAtCursor(url, `Image ${index + 1}`)}
+                            title="Click to insert into content"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(url);
+                            }}
+                            className="absolute -top-1 -right-1 bg-gray-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                            title="Copy URL"
+                          >
+                            <ImagePlus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Publish Date */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Publish Date
+                </label>
+                <input
+                  type="datetime-local"
+                  value={formData.publishedAt}
+                  onChange={(e) => updateField('publishedAt', e.target.value)}
+                  className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-[#FCB514] transition-colors"
+                />
+                <p className="text-gray-500 text-xs mt-1">
+                  Leave empty to use current time when publishing. Set a date to backdate or schedule.
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-4 pt-4">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-gray-700 hover:bg-gray-600 transition-colors disabled:opacity-50"
+                >
+                  <Save className="w-5 h-5" />
+                  {saving ? 'Saving...' : 'Save Draft'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  onClick={handlePublish}
+                  className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-black transition-all duration-300 hover:scale-105 disabled:opacity-50"
+                  style={{ backgroundColor: accent }}
+                >
+                  <Send className="w-5 h-5" />
+                  {saving ? 'Publishing...' : 'Publish'}
+                </button>
+              </div>
+            </form>
+
+            {/* Preview */}
+            {showPreview && (
+              <div className="bg-gradient-to-br from-[#002654] to-[#001a3d] rounded-2xl border-2 border-[#FCB514] p-6 overflow-auto max-h-[calc(100vh-200px)]">
+                <h2
+                  className="text-2xl font-bold text-white mb-4"
+                  style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+                >
+                  Preview
+                </h2>
+                {formData.title && (
+                  <h3
+                    className="text-3xl font-bold text-white mb-6"
+                    style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+                  >
+                    {formData.title}
+                  </h3>
+                )}
+                {formData.content ? (
+                  <PostContent content={formData.content} accent={accent} />
+                ) : (
+                  <p className="text-gray-500 italic">
+                    Start typing to see preview...
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+    </>
+  );
+}

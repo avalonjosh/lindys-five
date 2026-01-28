@@ -1,15 +1,24 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { HelmetProvider } from 'react-helmet-async'
 import './index.css'
 import App from './App.tsx'
 import Landing from './components/Landing.tsx'
+import Blog from './components/blog/Blog.tsx'
+import BlogList from './components/blog/BlogList.tsx'
+import BlogPost from './components/blog/BlogPost.tsx'
+import AdminLogin from './components/admin/AdminLogin.tsx'
+import AdminDashboard from './components/admin/AdminDashboard.tsx'
+import PostEditor from './components/admin/PostEditor.tsx'
+import ProtectedRoute from './components/admin/ProtectedRoute.tsx'
 import { TEAMS } from './teamConfig'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-      <Routes>
+    <HelmetProvider>
+      <BrowserRouter>
+        <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/sabres" element={<App team={TEAMS.sabres} />} />
         <Route path="/canadiens" element={<App team={TEAMS.canadiens} />} />
@@ -43,7 +52,17 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/ducks" element={<App team={TEAMS.ducks} />} />
         <Route path="/sharks" element={<App team={TEAMS.sharks} />} />
         <Route path="/kraken" element={<App team={TEAMS.kraken} />} />
-      </Routes>
-    </BrowserRouter>
+        {/* Blog Routes */}
+        <Route path="/blog" element={<Blog />} />
+        <Route path="/blog/:team" element={<BlogList />} />
+        <Route path="/blog/:team/:slug" element={<BlogPost />} />
+        {/* Admin Routes */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/posts" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/admin/posts/:slug" element={<ProtectedRoute><PostEditor /></ProtectedRoute>} />
+        </Routes>
+      </BrowserRouter>
+    </HelmetProvider>
   </StrictMode>,
 )

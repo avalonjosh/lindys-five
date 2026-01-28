@@ -2,7 +2,25 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
+  "crons": [
+    {
+      "path": "/api/cron/weekly-roundup",
+      "schedule": "0 10 * * 1"
+    },
+    {
+      "path": "/api/cron/news-scan",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/game-recap",
+      "schedule": "0 4,9 * * *"
+    }
+  ],
   "rewrites": [
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
     {
       "source": "/api/v1/:path*",
       "destination": "/api/nhl-api?path=:path*"
