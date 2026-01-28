@@ -8,9 +8,6 @@ const HISTORICAL_FLOOR = 94;
 
 interface CutLineState {
   cutLine: number;
-  pointsNeeded: number;
-  gamesRemaining: number;
-  paceNeeded: number;
   wc2TeamAbbrev: string;
 }
 
@@ -498,24 +495,29 @@ function SeasonSection({
                 >
                   {gamesPlayed < 10 ? 'Available after 10 games' : 'Unable to load'}
                 </p>
-              ) : (
-                <>
-                  <p
-                    className={`text-lg md:text-xl font-bold ${
-                      isGoatMode ? 'text-white' : 'text-gray-900'
-                    }`}
-                  >
-                    {cutLineData.pointsNeeded} pts to go
-                  </p>
-                  <p
-                    className={`text-xs ${
-                      isGoatMode ? 'text-zinc-500' : 'text-gray-500'
-                    }`}
-                  >
-                    → {cutLineData.cutLine} pts ({cutLineData.wc2TeamAbbrev} pace) • {cutLineData.paceNeeded.toFixed(2)} pts/game
-                  </p>
-                </>
-              )}
+              ) : (() => {
+                // Calculate dynamically using stats (responds to What If mode)
+                const cutLinePointsNeeded = Math.max(0, cutLineData.cutLine - totalPoints);
+                const cutLinePaceNeeded = gamesRemaining > 0 ? cutLinePointsNeeded / gamesRemaining : 0;
+                return (
+                  <>
+                    <p
+                      className={`text-lg md:text-xl font-bold ${
+                        isGoatMode ? 'text-white' : 'text-gray-900'
+                      }`}
+                    >
+                      {cutLinePointsNeeded} pts to go
+                    </p>
+                    <p
+                      className={`text-xs ${
+                        isGoatMode ? 'text-zinc-500' : 'text-gray-500'
+                      }`}
+                    >
+                      → {cutLineData.cutLine} pts ({cutLineData.wc2TeamAbbrev} pace) • {cutLinePaceNeeded.toFixed(2)} pts/game
+                    </p>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -603,16 +605,8 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
       // Use higher of: projection OR historical floor
       const cutLine = Math.max(projectedCutLine, HISTORICAL_FLOOR);
 
-      // Calculate user team needs
-      const pointsNeeded = Math.max(0, cutLine - userTeam.points);
-      const gamesRemaining = TOTAL_GAMES - userTeam.gamesPlayed;
-      const paceNeeded = gamesRemaining > 0 ? pointsNeeded / gamesRemaining : 0;
-
       setCutLineData({
         cutLine,
-        pointsNeeded,
-        gamesRemaining,
-        paceNeeded,
         wc2TeamAbbrev: wc2Team.teamAbbrev,
       });
     } catch (err) {
