@@ -120,6 +120,7 @@ export default function PostEditor() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [featuredImage, setFeaturedImage] = useState<string | null>(null);
 
   // Auto-populated reference date for research accuracy
   const getTodayFormatted = () => {
@@ -219,6 +220,10 @@ export default function PostEditor() {
         publishedAt: isoToDatetimeLocal(data.post.publishedAt || ''),
         pinned: data.post.pinned || false,
       });
+      // Load existing featured image
+      if (data.post.ogImage) {
+        setFeaturedImage(data.post.ogImage);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load post');
     } finally {
@@ -246,6 +251,7 @@ export default function PostEditor() {
           gameDate: formData.gameDate || undefined,
           gameId: formData.gameId || undefined,
           metaDescription: formData.metaDescription || undefined,
+          ogImage: featuredImage || undefined,
           publishedAt: publishedAtISO,
           pinned: formData.pinned,
         });
@@ -258,6 +264,7 @@ export default function PostEditor() {
           opponent: formData.opponent || undefined,
           gameDate: formData.gameDate || undefined,
           metaDescription: formData.metaDescription || undefined,
+          ogImage: featuredImage || undefined,
           publishedAt: publishedAtISO,
           pinned: formData.pinned,
         });
@@ -475,12 +482,17 @@ export default function PostEditor() {
       // Track uploaded images for gallery
       setUploadedImages((prev) => [...prev, result.url]);
 
-      // Insert markdown image reference at end of content
-      const markdownImage = `![${file.name}](${result.url})`;
-      setFormData((prev) => ({
-        ...prev,
-        content: prev.content + (prev.content ? '\n\n' : '') + markdownImage,
-      }));
+      // First image becomes the featured image (ogImage), subsequent images embed in content
+      if (!featuredImage) {
+        setFeaturedImage(result.url);
+      } else {
+        // Insert markdown image reference at end of content
+        const markdownImage = `![${file.name}](${result.url})`;
+        setFormData((prev) => ({
+          ...prev,
+          content: prev.content + (prev.content ? '\n\n' : '') + markdownImage,
+        }));
+      }
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Failed to upload image');
     } finally {
@@ -1055,10 +1067,38 @@ export default function PostEditor() {
                 </p>
               </div>
 
+              {/* Featured Image Section */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">
+                  Featured Image
+                </label>
+                {featuredImage ? (
+                  <div className="relative inline-block">
+                    <img
+                      src={featuredImage}
+                      alt="Featured"
+                      className="w-full max-w-md h-auto rounded-lg border-2 border-[#FCB514]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFeaturedImage(null)}
+                      className="absolute top-2 right-2 bg-red-600 hover:bg-red-500 text-white rounded-full p-1.5 transition-colors"
+                      title="Remove featured image"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm italic">
+                    No featured image set. Upload an image below - the first upload will become the featured image.
+                  </p>
+                )}
+              </div>
+
               {/* Image Upload Section */}
               <div>
                 <label className="block text-sm font-semibold text-gray-300 mb-2">
-                  Image Upload
+                  {featuredImage ? 'Add More Images to Content' : 'Image Upload'}
                 </label>
 
                 {/* Drop Zone */}
