@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Plus, Edit, Trash2, Eye, LogOut, FileText, RefreshCw, Newspaper, Calendar } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, LogOut, FileText, RefreshCw, Newspaper, Calendar, Trophy } from 'lucide-react';
 import { fetchPosts, deletePost } from '../../services/blogApi';
 import { logout } from '../../utils/auth';
 import type { BlogPost } from '../../types';
@@ -53,7 +53,7 @@ export default function AdminDashboard() {
     navigate('/admin/login');
   }
 
-  async function triggerCron(type: 'weekly' | 'news') {
+  async function triggerCron(type: 'weekly' | 'news' | 'game-recap') {
     setTriggering(type);
     setTriggerResult(null);
     try {
@@ -68,7 +68,9 @@ export default function AdminDashboard() {
         setTriggerResult({
           type,
           success: true,
-          message: data.post?.title
+          message: data.results?.length
+            ? `Processed ${data.gamesProcessed} game(s): ${data.results.map((r: { title?: string }) => r.title).filter(Boolean).join(', ')}`
+            : data.post?.title
             ? `Created: "${data.post.title}"`
             : data.message || 'Triggered successfully',
         });
@@ -193,6 +195,18 @@ export default function AdminDashboard() {
                 )}
                 Scan for News
               </button>
+              <button
+                onClick={() => triggerCron('game-recap')}
+                disabled={triggering !== null}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {triggering === 'game-recap' ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trophy className="w-4 h-4" />
+                )}
+                Generate Game Recaps
+              </button>
             </div>
             {triggerResult && (
               <div
@@ -202,12 +216,12 @@ export default function AdminDashboard() {
                     : 'bg-red-900/30 text-red-400'
                 }`}
               >
-                <strong>{triggerResult.type === 'weekly' ? 'Weekly Roundup' : 'News Scan'}:</strong>{' '}
+                <strong>{triggerResult.type === 'weekly' ? 'Weekly Roundup' : triggerResult.type === 'news' ? 'News Scan' : 'Game Recap'}:</strong>{' '}
                 {triggerResult.message}
               </div>
             )}
             <p className="text-gray-500 text-sm mt-4">
-              Articles are created as drafts by default. Set AUTO_PUBLISH_WEEKLY or AUTO_PUBLISH_NEWS to "true" in environment variables to auto-publish.
+              Articles are created as drafts by default. Set AUTO_PUBLISH_WEEKLY, AUTO_PUBLISH_NEWS, or AUTO_PUBLISH_GAME_RECAP to "true" in environment variables to auto-publish.
             </p>
           </div>
 

@@ -27,16 +27,20 @@ export default async function handler(req, res) {
 
   const { type } = req.body;
 
-  if (!type || !['weekly', 'news'].includes(type)) {
+  if (!type || !['weekly', 'news', 'game-recap'].includes(type)) {
     return res.status(400).json({
       error: 'Invalid trigger type',
-      validTypes: ['weekly', 'news']
+      validTypes: ['weekly', 'news', 'game-recap']
     });
   }
 
   try {
     // Determine which handler to call
-    const handlerPath = type === 'weekly' ? './weekly-roundup.js' : './news-scan.js';
+    const handlerPath = {
+      'weekly': './weekly-roundup.js',
+      'news': './news-scan.js',
+      'game-recap': './game-recap.js'
+    }[type];
 
     // Dynamically import the handler
     const { default: cronHandler } = await import(handlerPath);
