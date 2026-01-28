@@ -20,6 +20,7 @@ const SETTINGS_KEYS = {
   'auto-publish-weekly': 'blog:settings:auto-publish-weekly',
   'auto-publish-news': 'blog:settings:auto-publish-news',
   'auto-publish-game-recap': 'blog:settings:auto-publish-game-recap',
+  'auto-publish-set-recap': 'blog:settings:auto-publish-set-recap',
 };
 
 export default async function handler(req, res) {
@@ -76,6 +77,7 @@ export async function getAutoPublishSetting(type) {
     'weekly': 'blog:settings:auto-publish-weekly',
     'news': 'blog:settings:auto-publish-news',
     'game-recap': 'blog:settings:auto-publish-game-recap',
+    'set-recap': 'blog:settings:auto-publish-set-recap',
   };
 
   const kvKey = keyMap[type];
@@ -92,6 +94,7 @@ export async function getAutoPublishSetting(type) {
       'weekly': 'AUTO_PUBLISH_WEEKLY',
       'news': 'AUTO_PUBLISH_NEWS',
       'game-recap': 'AUTO_PUBLISH_GAME_RECAP',
+      'set-recap': 'AUTO_PUBLISH_SET_RECAP',
     };
     return process.env[envMap[type]] === 'true';
   } catch {

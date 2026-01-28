@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Plus, Edit, Trash2, Eye, LogOut, FileText, RefreshCw, Newspaper, Calendar, Trophy } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, LogOut, FileText, RefreshCw, Newspaper, Calendar, Trophy, Layers } from 'lucide-react';
 import { fetchPosts, deletePost } from '../../services/blogApi';
 import { logout } from '../../utils/auth';
 import type { BlogPost } from '../../types';
@@ -10,6 +10,7 @@ type AutoPublishSettings = {
   'auto-publish-weekly': boolean;
   'auto-publish-news': boolean;
   'auto-publish-game-recap': boolean;
+  'auto-publish-set-recap': boolean;
 };
 
 export default function AdminDashboard() {
@@ -23,6 +24,7 @@ export default function AdminDashboard() {
     'auto-publish-weekly': false,
     'auto-publish-news': false,
     'auto-publish-game-recap': false,
+    'auto-publish-set-recap': false,
   });
   const [togglingSettings, setTogglingSettings] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -98,7 +100,7 @@ export default function AdminDashboard() {
     navigate('/admin/login');
   }
 
-  async function triggerCron(type: 'weekly' | 'news' | 'game-recap') {
+  async function triggerCron(type: 'weekly' | 'news' | 'game-recap' | 'set-recap') {
     setTriggering(type);
     setTriggerResult(null);
     try {
@@ -252,6 +254,18 @@ export default function AdminDashboard() {
                 )}
                 Generate Game Recaps
               </button>
+              <button
+                onClick={() => triggerCron('set-recap')}
+                disabled={triggering !== null}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-orange-600 hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {triggering === 'set-recap' ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Layers className="w-4 h-4" />
+                )}
+                Generate Set Recap
+              </button>
             </div>
             {triggerResult && (
               <div
@@ -261,7 +275,7 @@ export default function AdminDashboard() {
                     : 'bg-red-900/30 text-red-400'
                 }`}
               >
-                <strong>{triggerResult.type === 'weekly' ? 'Weekly Roundup' : triggerResult.type === 'news' ? 'News Scan' : 'Game Recap'}:</strong>{' '}
+                <strong>{triggerResult.type === 'weekly' ? 'Weekly Roundup' : triggerResult.type === 'news' ? 'News Scan' : triggerResult.type === 'set-recap' ? 'Set Recap' : 'Game Recap'}:</strong>{' '}
                 {triggerResult.message}
               </div>
             )}
@@ -317,6 +331,22 @@ export default function AdminDashboard() {
                     />
                   </button>
                   <span className="text-gray-300 text-sm">Game Recaps</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <button
+                    onClick={() => toggleSetting('auto-publish-set-recap')}
+                    disabled={togglingSettings !== null}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      autoPublishSettings['auto-publish-set-recap'] ? 'bg-orange-600' : 'bg-gray-600'
+                    } ${togglingSettings === 'auto-publish-set-recap' ? 'opacity-50' : ''}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                        autoPublishSettings['auto-publish-set-recap'] ? 'translate-x-5' : ''
+                      }`}
+                    />
+                  </button>
+                  <span className="text-gray-300 text-sm">Set Recaps</span>
                 </label>
               </div>
               <p className="text-gray-500 text-xs mt-2">
