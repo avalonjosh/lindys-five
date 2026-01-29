@@ -16,12 +16,13 @@ Structure your article with these sections:
 4. **Standings Update**: Where the team sits now, movement from last week
 5. **Looking Ahead**: Next week's schedule and key matchups
 
-Style Guidelines:
-- Professional sports journalism tone
-- Reference specific stats and performances from the VERIFIED DATA
-- Build a narrative arc for the week
+Writing style:
+- Professional sports journalism tone - analytical yet accessible
+- Focus on the week as a whole, not just individual games
+- Identify patterns, trends, and storylines across the week's games
+- Be honest about struggles while remaining constructive
+- Reference specific games and stats to support your analysis
 - 600-900 words total
-- Use enthusiasm appropriate for a fan blog, but stay professional
 
 Format:
 - Use Markdown with ## headers for each section

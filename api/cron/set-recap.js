@@ -199,7 +199,8 @@ STRICT INSTRUCTIONS:
       goalsAgainst: totalGoalsAgainst,
       startDate,
       endDate
-    }
+    },
+    opponents
   };
 }
 
@@ -257,6 +258,7 @@ async function createPost(postData) {
     setNumber: postData.setNumber,
     setStartDate: postData.setStartDate,
     setEndDate: postData.setEndDate,
+    opponent: postData.opponent,
     aiGenerated: true,
     aiModel: postData.aiModel,
     metaDescription: postData.metaDescription
@@ -370,7 +372,7 @@ export default async function handler(req, res) {
     }
 
     // Format set data
-    const { context: verifiedSetData, stats } = formatSetData(latestSetNumber, setGames, boxScores);
+    const { context: verifiedSetData, stats, opponents } = formatSetData(latestSetNumber, setGames, boxScores);
 
     // Generate article
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -405,6 +407,7 @@ export default async function handler(req, res) {
       setNumber: latestSetNumber,
       setStartDate: stats.startDate,
       setEndDate: stats.endDate,
+      opponent: opponents,
       metaDescription,
       aiModel: 'claude-sonnet-4-20250514'
     });

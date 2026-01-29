@@ -185,35 +185,43 @@ export default function AdminDashboard() {
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        {/* Header */}
-        <header className="border-b border-gray-700">
-          <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-            <h1
-              className="text-2xl font-bold text-white"
-              style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-            >
-              Admin Dashboard
-            </h1>
-            <div className="flex items-center gap-4">
-              <Link
-                to="/blog"
-                className="text-gray-400 hover:text-white text-sm transition-colors"
+      <div className="min-h-screen bg-gradient-to-br from-slate-700 to-slate-800">
+        {/* Header - Blog Style */}
+        <header
+          className="shadow-xl border-b-4"
+          style={{
+            background: '#003087',
+            borderBottomColor: '#0A1128',
+          }}
+        >
+          <div className="max-w-7xl mx-auto px-4 py-6">
+            <div className="flex items-center justify-between">
+              <h1
+                className="text-4xl md:text-5xl font-bold text-white"
+                style={{ fontFamily: 'Bebas Neue, sans-serif' }}
               >
-                View Blog
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                Logout
-              </button>
+                Admin Dashboard
+              </h1>
+              <div className="flex items-center gap-4">
+                <Link
+                  to="/blog"
+                  className="text-white/70 hover:text-white text-sm transition-colors"
+                >
+                  View Blog
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 text-white/70 hover:text-white text-sm transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </button>
+              </div>
             </div>
           </div>
         </header>
 
-        <main className="max-w-6xl mx-auto px-4 py-8">
+        <main className="max-w-7xl mx-auto px-4 py-8">
           {/* Actions */}
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -223,13 +231,13 @@ export default function AdminDashboard() {
               >
                 Posts
               </h2>
-              <p className="text-gray-400 text-sm mt-1">
+              <p className="text-slate-400 text-sm mt-1">
                 {posts.length} post{posts.length !== 1 ? 's' : ''} total
               </p>
             </div>
             <Link
               to="/admin/posts/new"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-black transition-all duration-300 hover:scale-105"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-black shadow-lg transition-all duration-300 hover:scale-105"
               style={{ backgroundColor: '#FCB514' }}
             >
               <Plus className="w-5 h-5" />
@@ -238,9 +246,9 @@ export default function AdminDashboard() {
           </div>
 
           {/* Sabres Automation Controls */}
-          <div className="mb-8 p-6 bg-gradient-to-br from-[#002654] to-[#001a3d] rounded-2xl border-2 border-gray-700">
+          <div className="mb-8 p-6 bg-slate-600/50 rounded-2xl border-2 border-slate-500 shadow-xl">
             <h3
-              className="text-xl font-semibold text-white mb-4"
+              className="text-2xl font-semibold text-white mb-4 pb-2 border-b border-[#FCB514]/30"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
               Sabres Automation
@@ -318,15 +326,15 @@ export default function AdminDashboard() {
             )}
 
             {/* Auto-publish toggles */}
-            <div className="mt-6 pt-4 border-t border-gray-700">
-              <p className="text-gray-400 text-sm mb-3">Auto-publish settings:</p>
+            <div className="mt-6 pt-4 border-t border-slate-500">
+              <p className="text-slate-300 text-sm mb-3">Auto-publish settings:</p>
               <div className="flex flex-wrap gap-6">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <button
                     onClick={() => toggleSetting('auto-publish-weekly')}
                     disabled={togglingSettings !== null}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-weekly'] ? 'bg-blue-600' : 'bg-gray-600'
+                      autoPublishSettings['auto-publish-weekly'] ? 'bg-blue-600' : 'bg-slate-500'
                     } ${togglingSettings === 'auto-publish-weekly' ? 'opacity-50' : ''}`}
                   >
                     <span
@@ -335,14 +343,14 @@ export default function AdminDashboard() {
                       }`}
                     />
                   </button>
-                  <span className="text-gray-300 text-sm">Weekly Roundup</span>
+                  <span className="text-slate-300 text-sm">Weekly Roundup</span>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer">
                   <button
                     onClick={() => toggleSetting('auto-publish-news')}
                     disabled={togglingSettings !== null}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-news'] ? 'bg-purple-600' : 'bg-gray-600'
+                      autoPublishSettings['auto-publish-news'] ? 'bg-purple-600' : 'bg-slate-500'
                     } ${togglingSettings === 'auto-publish-news' ? 'opacity-50' : ''}`}
                   >
                     <span
@@ -351,14 +359,14 @@ export default function AdminDashboard() {
                       }`}
                     />
                   </button>
-                  <span className="text-gray-300 text-sm">News Scan</span>
+                  <span className="text-slate-300 text-sm">News Scan</span>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer">
                   <button
                     onClick={() => toggleSetting('auto-publish-game-recap')}
                     disabled={togglingSettings !== null}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-game-recap'] ? 'bg-green-600' : 'bg-gray-600'
+                      autoPublishSettings['auto-publish-game-recap'] ? 'bg-green-600' : 'bg-slate-500'
                     } ${togglingSettings === 'auto-publish-game-recap' ? 'opacity-50' : ''}`}
                   >
                     <span
@@ -367,14 +375,14 @@ export default function AdminDashboard() {
                       }`}
                     />
                   </button>
-                  <span className="text-gray-300 text-sm">Game Recaps</span>
+                  <span className="text-slate-300 text-sm">Game Recaps</span>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer">
                   <button
                     onClick={() => toggleSetting('auto-publish-set-recap')}
                     disabled={togglingSettings !== null}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-set-recap'] ? 'bg-orange-600' : 'bg-gray-600'
+                      autoPublishSettings['auto-publish-set-recap'] ? 'bg-orange-600' : 'bg-slate-500'
                     } ${togglingSettings === 'auto-publish-set-recap' ? 'opacity-50' : ''}`}
                   >
                     <span
@@ -383,19 +391,19 @@ export default function AdminDashboard() {
                       }`}
                     />
                   </button>
-                  <span className="text-gray-300 text-sm">Set Recaps</span>
+                  <span className="text-slate-300 text-sm">Set Recaps</span>
                 </label>
               </div>
-              <p className="text-gray-500 text-xs mt-2">
+              <p className="text-slate-400 text-xs mt-2">
                 Toggle on to auto-publish articles. Toggle off to create as drafts for review.
               </p>
             </div>
           </div>
 
           {/* Bills Automation Controls */}
-          <div className="mb-8 p-6 bg-gradient-to-br from-[#00338D] to-[#001a4d] rounded-2xl border-2 border-gray-700">
+          <div className="mb-8 p-6 bg-slate-600/50 rounded-2xl border-2 border-slate-500 shadow-xl">
             <h3
-              className="text-xl font-semibold text-white mb-4"
+              className="text-2xl font-semibold text-white mb-4 pb-2 border-b border-[#C60C30]/30"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
               Bills Automation
@@ -441,15 +449,15 @@ export default function AdminDashboard() {
             </div>
 
             {/* Bills Auto-publish toggles */}
-            <div className="mt-6 pt-4 border-t border-gray-600">
-              <p className="text-gray-400 text-sm mb-3">Bills auto-publish settings:</p>
+            <div className="mt-6 pt-4 border-t border-slate-500">
+              <p className="text-slate-300 text-sm mb-3">Bills auto-publish settings:</p>
               <div className="flex flex-wrap gap-6">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <button
                     onClick={() => toggleSetting('auto-publish-bills-news')}
                     disabled={togglingSettings !== null}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-bills-news'] ? 'bg-red-600' : 'bg-gray-600'
+                      autoPublishSettings['auto-publish-bills-news'] ? 'bg-red-600' : 'bg-slate-500'
                     } ${togglingSettings === 'auto-publish-bills-news' ? 'opacity-50' : ''}`}
                     style={autoPublishSettings['auto-publish-bills-news'] ? { backgroundColor: '#C60C30' } : {}}
                   >
@@ -459,14 +467,14 @@ export default function AdminDashboard() {
                       }`}
                     />
                   </button>
-                  <span className="text-gray-300 text-sm">News Scan</span>
+                  <span className="text-slate-300 text-sm">News Scan</span>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer">
                   <button
                     onClick={() => toggleSetting('auto-publish-bills-weekly')}
                     disabled={togglingSettings !== null}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-bills-weekly'] ? 'bg-blue-700' : 'bg-gray-600'
+                      autoPublishSettings['auto-publish-bills-weekly'] ? 'bg-blue-700' : 'bg-slate-500'
                     } ${togglingSettings === 'auto-publish-bills-weekly' ? 'opacity-50' : ''}`}
                   >
                     <span
@@ -475,14 +483,14 @@ export default function AdminDashboard() {
                       }`}
                     />
                   </button>
-                  <span className="text-gray-300 text-sm">Weekly Roundup</span>
+                  <span className="text-slate-300 text-sm">Weekly Roundup</span>
                 </label>
                 <label className="flex items-center gap-3 cursor-pointer">
                   <button
                     onClick={() => toggleSetting('auto-publish-bills-game-recap')}
                     disabled={togglingSettings !== null}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-bills-game-recap'] ? 'bg-green-700' : 'bg-gray-600'
+                      autoPublishSettings['auto-publish-bills-game-recap'] ? 'bg-green-700' : 'bg-slate-500'
                     } ${togglingSettings === 'auto-publish-bills-game-recap' ? 'opacity-50' : ''}`}
                   >
                     <span
@@ -491,10 +499,10 @@ export default function AdminDashboard() {
                       }`}
                     />
                   </button>
-                  <span className="text-gray-300 text-sm">Game Recaps</span>
+                  <span className="text-slate-300 text-sm">Game Recaps</span>
                 </label>
               </div>
-              <p className="text-gray-500 text-xs mt-2">
+              <p className="text-slate-400 text-xs mt-2">
                 Toggle on to auto-publish Bills articles. Toggle off to create as drafts for review.
               </p>
             </div>
@@ -503,27 +511,27 @@ export default function AdminDashboard() {
           {/* Content */}
           {loading ? (
             <div className="flex justify-center py-16">
-              <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-700 border-t-[#FCB514]"></div>
+              <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-600 border-t-[#FCB514]"></div>
             </div>
           ) : error ? (
             <div className="text-center py-16">
               <p className="text-red-400">{error}</p>
             </div>
           ) : posts.length === 0 ? (
-            <div className="text-center py-16 bg-gradient-to-br from-[#002654] to-[#001a3d] rounded-2xl border-2 border-[#FCB514]">
-              <FileText className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+            <div className="text-center py-16 bg-slate-600/50 rounded-2xl border-2 border-slate-500 shadow-xl">
+              <FileText className="w-16 h-16 text-slate-400 mx-auto mb-4" />
               <p
-                className="text-gray-400 text-2xl mb-2"
+                className="text-slate-300 text-2xl mb-2"
                 style={{ fontFamily: 'Bebas Neue, sans-serif' }}
               >
                 No Posts Yet
               </p>
-              <p className="text-gray-500 text-sm mb-6">
+              <p className="text-slate-400 text-sm mb-6">
                 Create your first post to get started
               </p>
               <Link
                 to="/admin/posts/new"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-black transition-all duration-300 hover:scale-105"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-black shadow-lg transition-all duration-300 hover:scale-105"
                 style={{ backgroundColor: '#FCB514' }}
               >
                 <Plus className="w-5 h-5" />
@@ -531,23 +539,23 @@ export default function AdminDashboard() {
               </Link>
             </div>
           ) : (
-            <div className="bg-gradient-to-br from-[#002654] to-[#001a3d] rounded-2xl border-2 border-[#FCB514] overflow-hidden">
+            <div className="bg-slate-600/50 rounded-2xl border-2 border-slate-500 shadow-xl overflow-hidden">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-600">
-                    <th className="text-left px-6 py-4 text-gray-400 font-semibold text-sm uppercase tracking-wide">
+                  <tr className="bg-slate-700/50 border-b border-slate-500">
+                    <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide">
                       Title
                     </th>
-                    <th className="text-left px-6 py-4 text-gray-400 font-semibold text-sm uppercase tracking-wide hidden md:table-cell">
+                    <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide hidden md:table-cell">
                       Team
                     </th>
-                    <th className="text-left px-6 py-4 text-gray-400 font-semibold text-sm uppercase tracking-wide hidden md:table-cell">
+                    <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide hidden md:table-cell">
                       Status
                     </th>
-                    <th className="text-left px-6 py-4 text-gray-400 font-semibold text-sm uppercase tracking-wide hidden lg:table-cell">
+                    <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide hidden lg:table-cell">
                       Date
                     </th>
-                    <th className="text-right px-6 py-4 text-gray-400 font-semibold text-sm uppercase tracking-wide">
+                    <th className="text-right px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide">
                       Actions
                     </th>
                   </tr>
@@ -556,19 +564,19 @@ export default function AdminDashboard() {
                   {posts.map((post) => (
                     <tr
                       key={post.id}
-                      className="border-b border-gray-700 last:border-b-0 hover:bg-black/20 transition-colors"
+                      className="border-b border-slate-600 last:border-b-0 hover:bg-slate-500/30 transition-colors"
                     >
                       <td className="px-6 py-4">
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="text-white font-medium">{post.title}</p>
                             {post.pinned && (
-                              <span className="px-2 py-0.5 bg-amber-900/30 text-amber-400 text-xs rounded font-semibold">
+                              <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded font-semibold">
                                 Pinned
                               </span>
                             )}
                           </div>
-                          <p className="text-gray-500 text-sm md:hidden">
+                          <p className="text-slate-400 text-sm md:hidden">
                             {post.team} • {post.status}
                           </p>
                         </div>
@@ -598,7 +606,7 @@ export default function AdminDashboard() {
                           {post.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-gray-400 text-sm hidden lg:table-cell">
+                      <td className="px-6 py-4 text-slate-400 text-sm hidden lg:table-cell">
                         {formatDate(post.publishedAt || post.createdAt)}
                       </td>
                       <td className="px-6 py-4">
@@ -609,12 +617,12 @@ export default function AdminDashboard() {
                             className={`p-2 transition-colors disabled:opacity-50 ${
                               post.pinned
                                 ? 'text-amber-400 hover:text-amber-300'
-                                : 'text-gray-400 hover:text-amber-400'
+                                : 'text-slate-400 hover:text-amber-400'
                             }`}
                             title={post.pinned ? 'Unpin' : 'Pin to featured'}
                           >
                             {pinning === post.id ? (
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-500 border-t-amber-400"></div>
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-500 border-t-amber-400"></div>
                             ) : (
                               <Pin className={`w-4 h-4 ${post.pinned ? 'fill-current' : ''}`} />
                             )}
@@ -624,7 +632,7 @@ export default function AdminDashboard() {
                               href={`/blog/${post.team}/${post.slug}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="p-2 text-gray-400 hover:text-white transition-colors"
+                              className="p-2 text-slate-400 hover:text-white transition-colors"
                               title="View"
                             >
                               <Eye className="w-4 h-4" />
@@ -632,7 +640,7 @@ export default function AdminDashboard() {
                           )}
                           <Link
                             to={`/admin/posts/${post.slug}`}
-                            className="p-2 text-gray-400 hover:text-white transition-colors"
+                            className="p-2 text-slate-400 hover:text-white transition-colors"
                             title="Edit"
                           >
                             <Edit className="w-4 h-4" />
@@ -640,11 +648,11 @@ export default function AdminDashboard() {
                           <button
                             onClick={() => handleDelete(post)}
                             disabled={deleting === post.id}
-                            className="p-2 text-gray-400 hover:text-red-400 transition-colors disabled:opacity-50"
+                            className="p-2 text-slate-400 hover:text-red-400 transition-colors disabled:opacity-50"
                             title="Delete"
                           >
                             {deleting === post.id ? (
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-500 border-t-red-400"></div>
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-500 border-t-red-400"></div>
                             ) : (
                               <Trash2 className="w-4 h-4" />
                             )}
