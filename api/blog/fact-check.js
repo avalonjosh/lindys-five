@@ -19,6 +19,169 @@ async function verifyAdmin(req) {
   }
 }
 
+// Helper to find player name by ID (same as game-recap.js)
+function findPlayerName(playerId, sabresStats, opponentStats) {
+  const allPlayers = [
+    ...(sabresStats?.forwards || []),
+    ...(sabresStats?.defense || []),
+    ...(sabresStats?.goalies || []),
+    ...(opponentStats?.forwards || []),
+    ...(opponentStats?.defense || []),
+    ...(opponentStats?.goalies || []),
+  ];
+  const player = allPlayers.find((p) => p.playerId === playerId);
+  return player?.name?.default || 'Unknown';
+}
+
+// Fetch FULL game box score data - SAME as game-recap.js
+async function fetchFullGameBoxScore(gameId) {
+  try {
+    const [boxscore, playByPlay, landing] = await Promise.all([
+      fetchJsonWithRetry(`${NHL_API_BASE}/gamecenter/${gameId}/boxscore`),
+      fetchJsonWithRetry(`${NHL_API_BASE}/gamecenter/${gameId}/play-by-play`),
+      fetchJsonWithRetry(`${NHL_API_BASE}/gamecenter/${gameId}/landing`)
+    ]);
+
+    if (!boxscore?.homeTeam || !boxscore?.awayTeam) {
+      console.error(`Incomplete box score data for game ${gameId}`);
+      return null;
+    }
+
+    return { boxscore, playByPlay, landing };
+  } catch (error) {
+    console.error(`Failed to fetch box score for game ${gameId}:`, error);
+    return null;
+  }
+}
+
+// Format box score data - SAME format as game-recap.js uses
+function formatGameBoxScore(boxscore, playByPlay, landing) {
+  const isHomeTeamSabres = boxscore.homeTeam?.abbrev === 'BUF';
+  const sabresTeam = isHomeTeamSabres ? boxscore.homeTeam : boxscore.awayTeam;
+  const opponentTeam = isHomeTeamSabres ? boxscore.awayTeam : boxscore.homeTeam;
+  const sabresPlayerStats = isHomeTeamSabres
+    ? boxscore.playerByGameStats?.homeTeam
+    : boxscore.playerByGameStats?.awayTeam;
+  const opponentPlayerStats = isHomeTeamSabres
+    ? boxscore.playerByGameStats?.awayTeam
+    : boxscore.playerByGameStats?.homeTeam;
+
+  const gameDate = landing?.gameDate || boxscore.gameDate || 'Unknown Date';
+  const formattedDate = new Date(gameDate + 'T12:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  const sabresScore = sabresTeam?.score || 0;
+  const opponentScore = opponentTeam?.score || 0;
+  const result = sabresScore > opponentScore ? 'WIN' : 'LOSS';
+  const lastPeriodType = landing?.gameOutcome?.lastPeriodType || 'REG';
+  const resultSuffix = lastPeriodType === 'OT' ? ' (OT)' : lastPeriodType === 'SO' ? ' (SO)' : '';
+
+  // Period-by-period scores
+  let periodScores = '';
+  const periods = landing?.summary?.scoring || [];
+  periods.forEach((period, idx) => {
+    const sabresGoals = isHomeTeamSabres ? period.homeScore : period.awayScore;
+    const oppGoals = isHomeTeamSabres ? period.awayScore : period.homeScore;
+    const periodName = period.periodDescriptor?.periodType === 'OT' ? 'OT' : `Period ${idx + 1}`;
+    periodScores += `${periodName}: Sabres ${sabresGoals} - ${opponentTeam?.abbrev} ${oppGoals}\n`;
+  });
+
+  const sabresShots = sabresTeam?.sog || 0;
+  const opponentShots = opponentTeam?.sog || 0;
+
+  // Extract goals from play-by-play - FULL SCORING SUMMARY
+  let scoringSummary = '';
+  const goals = (playByPlay?.plays || []).filter((p) => p.typeDescKey === 'goal');
+  goals.forEach((goal) => {
+    const period = goal.periodDescriptor?.number || '?';
+    const periodType = goal.periodDescriptor?.periodType || 'REG';
+    const periodLabel = periodType === 'OT' ? 'OT' : `P${period}`;
+    const time = goal.timeInPeriod || '??:??';
+    const teamAbbrev = goal.details?.eventOwnerTeamId === sabresTeam?.id ? 'BUF' : opponentTeam?.abbrev;
+
+    const scorer = goal.details?.scoringPlayerId
+      ? findPlayerName(goal.details.scoringPlayerId, sabresPlayerStats, opponentPlayerStats)
+      : 'Unknown';
+    const assists = [];
+    if (goal.details?.assist1PlayerId) {
+      assists.push(findPlayerName(goal.details.assist1PlayerId, sabresPlayerStats, opponentPlayerStats));
+    }
+    if (goal.details?.assist2PlayerId) {
+      assists.push(findPlayerName(goal.details.assist2PlayerId, sabresPlayerStats, opponentPlayerStats));
+    }
+    const assistsText = assists.length > 0 ? `(${assists.join(', ')})` : '(unassisted)';
+
+    let goalType = '';
+    if (goal.details?.goalModifier === 'power-play') goalType = ' [PP]';
+    else if (goal.details?.goalModifier === 'short-handed') goalType = ' [SH]';
+    else if (goal.details?.goalModifier === 'empty-net') goalType = ' [EN]';
+    else goalType = ' [EV]';
+
+    scoringSummary += `- ${periodLabel} ${time}: ${teamAbbrev} - ${scorer} ${assistsText}${goalType}\n`;
+  });
+
+  // Goalie stats
+  let goalieStats = '';
+  const sabresGoalies = sabresPlayerStats?.goalies || [];
+  const opponentGoalies = opponentPlayerStats?.goalies || [];
+
+  sabresGoalies.forEach((g) => {
+    const name = `${g.name?.default || 'Unknown'}`;
+    const saves = g.saveShotsAgainst?.split('/')[0] || g.saves || 0;
+    const shotsAgainst = g.saveShotsAgainst?.split('/')[1] || g.shotsAgainst || 0;
+    const savePct = shotsAgainst > 0 ? ((saves / shotsAgainst) * 100).toFixed(1) : '0.0';
+    goalieStats += `Sabres: ${name} - ${saves} saves on ${shotsAgainst} shots (${savePct}% SV%)\n`;
+  });
+
+  opponentGoalies.forEach((g) => {
+    const name = `${g.name?.default || 'Unknown'}`;
+    const saves = g.saveShotsAgainst?.split('/')[0] || g.saves || 0;
+    const shotsAgainst = g.saveShotsAgainst?.split('/')[1] || g.shotsAgainst || 0;
+    const savePct = shotsAgainst > 0 ? ((saves / shotsAgainst) * 100).toFixed(1) : '0.0';
+    goalieStats += `${opponentTeam?.abbrev}: ${name} - ${saves} saves on ${shotsAgainst} shots (${savePct}% SV%)\n`;
+  });
+
+  // Power play stats
+  const sabresPP = landing?.summary?.teamGameStats?.find((s) => s.category === 'powerPlay');
+  let powerPlayStats = '';
+  if (sabresPP) {
+    const sabresVal = isHomeTeamSabres ? sabresPP.homeValue : sabresPP.awayValue;
+    const oppVal = isHomeTeamSabres ? sabresPP.awayValue : sabresPP.homeValue;
+    powerPlayStats = `- Sabres: ${sabresVal}\n- ${opponentTeam?.abbrev}: ${oppVal}`;
+  }
+
+  // Three stars
+  let threeStars = '';
+  if (landing?.summary?.threeStars?.length > 0) {
+    landing.summary.threeStars.forEach((star, idx) => {
+      const starNum = idx + 1;
+      threeStars += `${starNum}. ${star.name?.default || 'Unknown'} (${star.teamAbbrev?.default || '?'})\n`;
+    });
+  }
+
+  return {
+    formattedDate,
+    sabresScore,
+    opponentScore,
+    opponentName: opponentTeam?.name?.default || opponentTeam?.abbrev,
+    opponentAbbrev: opponentTeam?.abbrev,
+    result,
+    resultSuffix,
+    isHome: isHomeTeamSabres,
+    periodScores,
+    sabresShots,
+    opponentShots,
+    scoringSummary,
+    goalieStats,
+    powerPlayStats,
+    threeStars
+  };
+}
+
 // Fetch Sabres data for fact checking
 async function fetchSabresData() {
   try {
@@ -36,7 +199,7 @@ async function fetchSabresData() {
     const completedGames = (schedule.games || [])
       .filter(g => g.gameType === 2 && (g.gameState === 'FINAL' || g.gameState === 'OFF'));
 
-    // Build roster list
+    // Build roster list with full names
     const rosterNames = [];
     if (roster.forwards) {
       roster.forwards.forEach(p => rosterNames.push(`${p.firstName?.default} ${p.lastName?.default}`));
@@ -79,7 +242,6 @@ async function fetchBillsData() {
       fetchJsonWithRetry(`${ESPN_API_BASE}/teams/2/roster`)
     ]);
 
-    // Find Bills in standings
     let billsRecord = 'N/A';
     let divisionPosition = 'N/A';
 
@@ -100,7 +262,6 @@ async function fetchBillsData() {
       }
     }
 
-    // Build roster list
     const rosterNames = [];
     rosterData.athletes?.forEach(group => {
       group.items?.forEach(player => {
@@ -120,46 +281,9 @@ async function fetchBillsData() {
   }
 }
 
-// Fetch specific game data for game recaps
-async function fetchGameData(gameId) {
-  try {
-    const [boxscore, landing] = await Promise.all([
-      fetchJsonWithRetry(`${NHL_API_BASE}/gamecenter/${gameId}/boxscore`),
-      fetchJsonWithRetry(`${NHL_API_BASE}/gamecenter/${gameId}/landing`)
-    ]);
-
-    if (!boxscore?.homeTeam || !boxscore?.awayTeam) {
-      return null;
-    }
-
-    const isHomeTeamSabres = boxscore.homeTeam?.abbrev === 'BUF';
-    const sabresTeam = isHomeTeamSabres ? boxscore.homeTeam : boxscore.awayTeam;
-    const opponentTeam = isHomeTeamSabres ? boxscore.awayTeam : boxscore.homeTeam;
-
-    return {
-      gameId,
-      date: landing?.gameDate || boxscore.gameDate,
-      sabresScore: sabresTeam?.score || 0,
-      opponentScore: opponentTeam?.score || 0,
-      opponent: opponentTeam?.name?.default || opponentTeam?.abbrev,
-      sabresShots: sabresTeam?.sog || 0,
-      opponentShots: opponentTeam?.sog || 0,
-      isHome: isHomeTeamSabres
-    };
-  } catch (error) {
-    console.error(`Failed to fetch game data for ${gameId}:`, error);
-    return null;
-  }
-}
-
-// Format verified data for the AI prompt
-function formatVerifiedData(teamData, gameData = null) {
+// Format verified data for basic team info
+function formatTeamData(teamData) {
   let dataBlock = `
-═══════════════════════════════════════════════════════
-VERIFIED DATA FOR FACT CHECKING
-Source: Official ${teamData.team === 'sabres' ? 'NHL' : 'ESPN'} API
-═══════════════════════════════════════════════════════
-
 TEAM: ${teamData.team.toUpperCase()}
 RECORD: ${teamData.record}
 ${teamData.points ? `POINTS: ${teamData.points}` : ''}
@@ -169,16 +293,6 @@ ${teamData.divisionPosition ? `DIVISION: ${teamData.divisionPosition}` : ''}
 CURRENT ROSTER (${teamData.roster.length} players):
 ${teamData.roster.join(', ')}
 `;
-
-  if (gameData) {
-    dataBlock += `
-GAME DATA (Game ID: ${gameData.gameId}):
-- Date: ${gameData.date}
-- Score: Sabres ${gameData.sabresScore} - ${gameData.opponent} ${gameData.opponentScore}
-- Location: ${gameData.isHome ? 'Home' : 'Away'}
-- Shots: Sabres ${gameData.sabresShots} - ${gameData.opponent} ${gameData.opponentShots}
-`;
-  }
 
   if (teamData.recentGames?.length > 0) {
     dataBlock += `
@@ -193,38 +307,74 @@ ${teamData.recentGames.map(g => {
 `;
   }
 
-  dataBlock += `
-═══════════════════════════════════════════════════════
-`;
-
   return dataBlock;
 }
 
-// System prompt for fact checking
-const FACT_CHECK_SYSTEM_PROMPT = `You are a fact-checking assistant for a sports blog. Your job is to analyze article content and identify potential factual issues.
+// Format FULL game data for game-recap fact checking
+function formatFullGameData(gameData) {
+  return `
+GAME DATA (${gameData.formattedDate}):
+═══════════════════════════════════════════════════════
 
-Given an article and verified data from official APIs, you must:
+FINAL SCORE: Sabres ${gameData.sabresScore} - ${gameData.opponentAbbrev} ${gameData.opponentScore}
+Result: ${gameData.result}${gameData.resultSuffix}
+Location: ${gameData.isHome ? 'Home' : 'Away'}
+Opponent: ${gameData.opponentName}
 
-1. VERIFY each factual claim in the article against the provided data
-2. IDENTIFY any potential issues:
-   - Player names not on the current roster
-   - Incorrect scores or statistics
-   - Wrong record or standings information
-   - Dates that don't match
-   - Made-up quotes (flag any quotes as unverifiable unless from web search)
-   - Statistics that can't be verified
+PERIOD BREAKDOWN:
+${gameData.periodScores || 'Not available'}
 
-3. CATEGORIZE findings as:
-   - "verified": Facts that match the official data exactly
-   - "issue": Facts that contradict the official data (include what's wrong and what's correct)
-   - "unverifiable": Facts that cannot be confirmed from the provided data (not necessarily wrong, just can't verify)
-   - "warning": Potential concerns or things to double-check
+SHOTS ON GOAL:
+- Sabres: ${gameData.sabresShots}
+- ${gameData.opponentAbbrev}: ${gameData.opponentShots}
 
-4. For each finding, provide:
-   - The specific claim from the article
-   - The category (verified/issue/unverifiable/warning)
-   - Explanation of why
-   - If an issue: what the correct information is
+SCORING SUMMARY (every goal with scorer and assists):
+${gameData.scoringSummary || 'No goals scored'}
+
+GOALTENDING:
+${gameData.goalieStats || 'Not available'}
+
+POWER PLAY:
+${gameData.powerPlayStats || 'Not available'}
+
+${gameData.threeStars ? `THREE STARS:\n${gameData.threeStars}` : ''}
+═══════════════════════════════════════════════════════
+`;
+}
+
+// System prompt for fact checking - CONSERVATIVE and PRECISE
+const FACT_CHECK_SYSTEM_PROMPT = `You are a fact-checking assistant for a sports blog. Your job is to compare article content against VERIFIED DATA and identify ONLY clear factual errors.
+
+IMPORTANT RULES:
+1. Only flag something as an "issue" if there is a DIRECT NUMERICAL CONTRADICTION with the verified data
+2. If the article mentions a player, goal, assist, or stat - verify it EXACTLY against the SCORING SUMMARY and GOALTENDING sections
+3. If a claim cannot be verified from the provided data, mark it as "unverifiable" - this is NOT an error
+4. Do NOT flag opinions, analysis, or narrative descriptions
+5. Do NOT flag writing style or tone
+6. Be CONSERVATIVE - when in doubt, mark as "unverifiable" not "issue"
+
+WHAT TO CHECK:
+- Final score (must match exactly)
+- Goal scorers (must appear in SCORING SUMMARY)
+- Assists (must match the assists listed for each goal)
+- Goalie stats (saves, shots against, save %)
+- Player names (must be on the roster OR in the game data)
+- Period scores (if mentioned)
+- Shot totals (if mentioned)
+- Power play results (if mentioned)
+
+WHAT NOT TO FLAG:
+- General commentary or analysis
+- Descriptions of momentum or gameplay
+- Forward-looking statements
+- Historical context not in the data
+- Subjective assessments
+
+CATEGORY DEFINITIONS:
+- "verified": The claim EXACTLY matches the verified data
+- "issue": The claim DIRECTLY CONTRADICTS the verified data (specify what's wrong vs what's correct)
+- "unverifiable": Cannot confirm from available data (NOT an error)
+- "warning": Minor concern but not a clear error
 
 Respond in JSON format:
 {
@@ -236,30 +386,18 @@ Respond in JSON format:
       "claim": "The specific text from the article",
       "category": "verified|issue|unverifiable|warning",
       "explanation": "Why this is categorized this way",
-      "correction": "The correct information (only for issues)"
+      "correction": "The correct information (ONLY for issues)"
     }
   ]
 }
 
-Focus on:
-- Player names (check against roster)
-- Scores and game results
-- Statistics (goals, assists, saves, etc.)
-- Record and standings
-- Dates and opponents
-
-Do NOT flag:
-- Writing style or tone
-- Opinions or analysis (unless stated as fact)
-- General sports knowledge that's commonly known`;
+CRITICAL: Only include findings for verifiable factual claims. Skip narrative text, opinions, and analysis.`;
 
 export default async function handler(req, res) {
-  // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Verify admin authentication
   const isAdmin = await verifyAdmin(req);
   if (!isAdmin) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -267,7 +405,6 @@ export default async function handler(req, res) {
 
   const { content, team, type, gameId } = req.body;
 
-  // Validate required fields
   if (!content || !team) {
     return res.status(400).json({
       error: 'Missing required fields: content and team are required'
@@ -278,7 +415,6 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid team. Must be sabres or bills' });
   }
 
-  // Check for API key
   if (!process.env.ANTHROPIC_API_KEY) {
     return res.status(500).json({
       error: 'AI service not configured',
@@ -287,14 +423,19 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Fetch verified data based on team
     let teamData;
-    let gameData = null;
+    let fullGameData = null;
+    let verifiedDataBlock = '';
 
     if (team === 'sabres') {
       teamData = await fetchSabresData();
-      if (gameId && type === 'game-recap') {
-        gameData = await fetchGameData(gameId);
+
+      // For game-recap articles, fetch FULL game data (same as generator)
+      if (type === 'game-recap' && gameId) {
+        const boxData = await fetchFullGameBoxScore(gameId);
+        if (boxData) {
+          fullGameData = formatGameBoxScore(boxData.boxscore, boxData.playByPlay, boxData.landing);
+        }
       }
     } else {
       teamData = await fetchBillsData();
@@ -307,14 +448,36 @@ export default async function handler(req, res) {
       });
     }
 
-    const verifiedDataBlock = formatVerifiedData(teamData, gameData);
+    // Build the verified data block based on article type
+    verifiedDataBlock = `
+═══════════════════════════════════════════════════════
+VERIFIED DATA FOR FACT CHECKING
+Source: Official ${teamData.team === 'sabres' ? 'NHL' : 'ESPN'} API
+Fetched: ${new Date().toISOString()}
+═══════════════════════════════════════════════════════
 
-    // Initialize Anthropic client
+${formatTeamData(teamData)}
+`;
+
+    // Add full game data if available (for game-recaps)
+    if (fullGameData) {
+      verifiedDataBlock += formatFullGameData(fullGameData);
+    }
+
+    verifiedDataBlock += `
+═══════════════════════════════════════════════════════
+INSTRUCTIONS FOR FACT CHECKER:
+- Compare the article ONLY against the data above
+- Every goal scorer/assist mentioned MUST appear in SCORING SUMMARY
+- Every stat must match the numbers above exactly
+- If something cannot be verified from this data, mark as "unverifiable"
+═══════════════════════════════════════════════════════
+`;
+
     const anthropic = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY
     });
 
-    // Use Claude to analyze the content
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
@@ -330,20 +493,17 @@ ARTICLE TO CHECK:
 ${content}
 ---
 
-Analyze the article and return your findings in JSON format.`
+Analyze the article and return your findings in JSON format. Focus ONLY on verifiable factual claims.`
       }]
     });
 
-    // Extract the response
     const responseText = message.content
       .filter(block => block.type === 'text')
       .map(block => block.text)
       .join('\n');
 
-    // Parse the JSON response
     let findings;
     try {
-      // Extract JSON from the response (it might be wrapped in markdown code blocks)
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         findings = JSON.parse(jsonMatch[0]);
@@ -366,7 +526,12 @@ Analyze the article and return your findings in JSON format.`
         team: teamData.team,
         record: teamData.record,
         rosterCount: teamData.roster.length,
-        hasGameData: !!gameData
+        hasGameData: !!fullGameData,
+        gameDataDetails: fullGameData ? {
+          opponent: fullGameData.opponentName,
+          score: `${fullGameData.sabresScore}-${fullGameData.opponentScore}`,
+          result: fullGameData.result
+        } : null
       }
     });
 
