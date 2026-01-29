@@ -1,9 +1,13 @@
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '../blog/settings.js';
+import { fetchJsonWithRetry } from '../utils/fetchWithRetry.js';
 
 const ESPN_API_BASE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 const BILLS_TEAM_ID = 2; // Buffalo Bills ESPN team ID
+
+// Minimum time (in ms) after game ends before processing
+const GAME_END_BUFFER_MS = 30 * 60 * 1000; // 30 minutes
 
 // Game recap system prompt
 const GAME_RECAP_SYSTEM_PROMPT = `You are a professional sports journalist writing a game recap for "Lindy's Five", a Buffalo Bills fan blog.
@@ -34,26 +38,24 @@ Format guidelines:
 
 CRITICAL: Use ONLY the data provided in the VERIFIED GAME DATA block. Do not invent any statistics, player names, or game details not explicitly listed.`;
 
-// Fetch Bills schedule
+// Fetch Bills schedule with retry logic
 async function fetchBillsSchedule() {
   try {
-    const res = await fetch(`${ESPN_API_BASE}/teams/buf/schedule`);
-    const data = await res.json();
+    const data = await fetchJsonWithRetry(`${ESPN_API_BASE}/teams/buf/schedule`);
     return data.events || [];
   } catch (error) {
-    console.error('Failed to fetch Bills schedule:', error);
+    console.error('Failed to fetch Bills schedule after retries:', error);
     return [];
   }
 }
 
-// Fetch game summary (box score) from ESPN
+// Fetch game summary (box score) from ESPN with retry logic
 async function fetchGameSummary(gameId) {
   try {
-    const res = await fetch(`${ESPN_API_BASE}/summary?event=${gameId}`);
-    const data = await res.json();
+    const data = await fetchJsonWithRetry(`${ESPN_API_BASE}/summary?event=${gameId}`);
     return data;
   } catch (error) {
-    console.error(`Failed to fetch game summary for ${gameId}:`, error);
+    console.error(`Failed to fetch game summary for ${gameId} after retries:`, error);
     return null;
   }
 }

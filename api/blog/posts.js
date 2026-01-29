@@ -26,6 +26,32 @@ function generateSlug(title, date) {
   return `${titleSlug}-${dateStr}`;
 }
 
+// Generate a unique slug by checking for existing slugs and appending suffix if needed
+async function generateUniqueSlug(title, date, maxAttempts = 10) {
+  const baseSlug = generateSlug(title, date);
+
+  // Check if base slug is available
+  const existingId = await kv.get(`blog:slug:${baseSlug}`);
+  if (!existingId) {
+    return baseSlug;
+  }
+
+  // Try adding numeric suffixes
+  for (let i = 2; i <= maxAttempts + 1; i++) {
+    const suffixedSlug = `${baseSlug}-${i}`;
+    const existingSuffixedId = await kv.get(`blog:slug:${suffixedSlug}`);
+    if (!existingSuffixedId) {
+      console.log(`Slug collision detected for "${baseSlug}", using "${suffixedSlug}" instead`);
+      return suffixedSlug;
+    }
+  }
+
+  // Fallback: append timestamp for guaranteed uniqueness
+  const fallbackSlug = `${baseSlug}-${Date.now()}`;
+  console.log(`Multiple slug collisions for "${baseSlug}", using timestamp fallback: "${fallbackSlug}"`);
+  return fallbackSlug;
+}
+
 // Generate excerpt from content
 function generateExcerpt(content, maxLength = 200) {
   // Remove markdown formatting
@@ -134,10 +160,10 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Invalid type' });
       }
 
-      // Generate ID and slug
+      // Generate ID and unique slug (checks for collisions)
       const id = crypto.randomUUID();
       const now = new Date().toISOString();
-      const slug = generateSlug(title, now);
+      const slug = await generateUniqueSlug(title, now);
 
       // Determine publish date: use custom publishedAt if provided, else use now if publishing
       const effectivePublishedAt = status === 'published'

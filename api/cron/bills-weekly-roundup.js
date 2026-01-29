@@ -1,6 +1,7 @@
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '../blog/settings.js';
+import { fetchJsonWithRetry } from '../utils/fetchWithRetry.js';
 
 const ESPN_API_BASE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 
@@ -30,12 +31,11 @@ Format:
 
 CRITICAL: Focus on the verified news topics provided. Supplement with general NFL knowledge but don't invent specific details.`;
 
-// Fetch Bills standings and roster
+// Fetch Bills standings and roster with retry logic
 async function fetchBillsContext() {
   try {
-    // Fetch standings
-    const standingsRes = await fetch(`${ESPN_API_BASE}/standings`);
-    const standingsData = await standingsRes.json();
+    // Fetch standings with retry
+    const standingsData = await fetchJsonWithRetry(`${ESPN_API_BASE}/standings`);
 
     let billsRecord = 'N/A';
     let divisionPosition = 'N/A';
@@ -60,7 +60,7 @@ async function fetchBillsContext() {
 
     return { billsRecord, divisionPosition };
   } catch (error) {
-    console.error('Failed to fetch Bills context:', error);
+    console.error('Failed to fetch Bills context after retries:', error);
     return null;
   }
 }

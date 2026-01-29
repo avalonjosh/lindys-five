@@ -1,6 +1,7 @@
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '../blog/settings.js';
+import { fetchJsonWithRetry } from '../utils/fetchWithRetry.js';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
@@ -49,18 +50,23 @@ Set evaluation context:
 
 CRITICAL: Use ONLY the data provided in the VERIFIED SET DATA block. Do not invent any statistics, player names, or game details not explicitly listed.`;
 
-// Fetch game box score data
+// Fetch game box score data with retry logic
 async function fetchGameBoxScore(gameId) {
   try {
-    const boxscoreRes = await fetch(`${NHL_API_BASE}/gamecenter/${gameId}/boxscore`);
-    const boxscore = await boxscoreRes.json();
+    const [boxscore, landing] = await Promise.all([
+      fetchJsonWithRetry(`${NHL_API_BASE}/gamecenter/${gameId}/boxscore`),
+      fetchJsonWithRetry(`${NHL_API_BASE}/gamecenter/${gameId}/landing`)
+    ]);
 
-    const landingRes = await fetch(`${NHL_API_BASE}/gamecenter/${gameId}/landing`);
-    const landing = await landingRes.json();
+    // Verify essential data exists
+    if (!boxscore?.homeTeam || !boxscore?.awayTeam) {
+      console.error(`Incomplete box score data for game ${gameId}`);
+      return null;
+    }
 
     return { boxscore, landing };
   } catch (error) {
-    console.error(`Failed to fetch box score for game ${gameId}:`, error);
+    console.error(`Failed to fetch box score for game ${gameId} after retries:`, error);
     return null;
   }
 }
@@ -221,15 +227,37 @@ function generateSetTitle(setNumber, wins, losses, otLosses, points) {
   }
 }
 
-// Create post in KV
-async function createPost(postData) {
-  const dateStr = new Date().toISOString().split('T')[0];
-  const titleSlug = postData.title
+// Generate a unique slug by checking for collisions
+async function generateUniqueSlug(title, date, maxAttempts = 10) {
+  const dateStr = new Date(date).toISOString().split('T')[0];
+  const titleSlug = title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
     .substring(0, 50);
-  const slug = `${titleSlug}-${dateStr}`;
+  const baseSlug = `${titleSlug}-${dateStr}`;
+
+  const existingId = await kv.get(`blog:slug:${baseSlug}`);
+  if (!existingId) return baseSlug;
+
+  for (let i = 2; i <= maxAttempts + 1; i++) {
+    const suffixedSlug = `${baseSlug}-${i}`;
+    const existingSuffixedId = await kv.get(`blog:slug:${suffixedSlug}`);
+    if (!existingSuffixedId) {
+      console.log(`Slug collision for "${baseSlug}", using "${suffixedSlug}"`);
+      return suffixedSlug;
+    }
+  }
+
+  const fallbackSlug = `${baseSlug}-${Date.now()}`;
+  console.log(`Multiple slug collisions for "${baseSlug}", using timestamp fallback`);
+  return fallbackSlug;
+}
+
+// Create post in KV
+async function createPost(postData) {
+  const now = new Date().toISOString();
+  const slug = await generateUniqueSlug(postData.title, now);
 
   const excerpt = postData.content
     .replace(/#{1,6}\s/g, '')
@@ -241,7 +269,6 @@ async function createPost(postData) {
     .substring(0, 200) + '...';
 
   const id = crypto.randomUUID();
-  const now = new Date().toISOString();
 
   const post = {
     id,
@@ -303,9 +330,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Fetch season schedule
-    const scheduleRes = await fetch(`${NHL_API_BASE}/club-schedule-season/BUF/20252026`);
-    const schedule = await scheduleRes.json();
+    // Fetch season schedule with retry logic
+    const schedule = await fetchJsonWithRetry(`${NHL_API_BASE}/club-schedule-season/BUF/20252026`);
 
     // Get all completed regular season games
     const completedGames = (schedule.games || [])

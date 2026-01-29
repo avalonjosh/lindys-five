@@ -1,6 +1,7 @@
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '../blog/settings.js';
+import { fetchJsonWithRetry } from '../utils/fetchWithRetry.js';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
@@ -31,28 +32,31 @@ Format:
 
 CRITICAL: Use ONLY the data provided in the VERIFIED WEEKLY DATA block. Do not make up stats or use external information.`;
 
-// Fetch game box score data
+// Fetch game box score data with retry logic
 async function fetchGameBoxScore(gameId) {
   try {
-    const boxscoreRes = await fetch(`${NHL_API_BASE}/gamecenter/${gameId}/boxscore`);
-    const boxscore = await boxscoreRes.json();
+    const [boxscore, landing] = await Promise.all([
+      fetchJsonWithRetry(`${NHL_API_BASE}/gamecenter/${gameId}/boxscore`),
+      fetchJsonWithRetry(`${NHL_API_BASE}/gamecenter/${gameId}/landing`)
+    ]);
 
-    const landingRes = await fetch(`${NHL_API_BASE}/gamecenter/${gameId}/landing`);
-    const landing = await landingRes.json();
+    if (!boxscore?.homeTeam || !boxscore?.awayTeam) {
+      console.error(`Incomplete box score data for game ${gameId}`);
+      return null;
+    }
 
     return { boxscore, landing };
   } catch (error) {
-    console.error(`Failed to fetch box score for game ${gameId}:`, error);
+    console.error(`Failed to fetch box score for game ${gameId} after retries:`, error);
     return null;
   }
 }
 
-// Fetch current standings
+// Fetch current standings with retry logic
 async function fetchStandings() {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const res = await fetch(`${NHL_API_BASE}/standings/${today}`);
-    const data = await res.json();
+    const data = await fetchJsonWithRetry(`${NHL_API_BASE}/standings/${today}`);
 
     // Find Sabres in standings
     const sabres = data.standings?.find(t => t.teamAbbrev?.default === 'BUF');
@@ -74,7 +78,7 @@ async function fetchStandings() {
       l10OtLosses: sabres.l10OtLosses
     };
   } catch (error) {
-    console.error('Failed to fetch standings:', error);
+    console.error('Failed to fetch standings after retries:', error);
     return null;
   }
 }

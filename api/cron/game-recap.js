@@ -1,8 +1,12 @@
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '../blog/settings.js';
+import { fetchJsonWithRetry } from '../utils/fetchWithRetry.js';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
+
+// Minimum time (in ms) after game ends before processing (allows stats to finalize)
+const GAME_END_BUFFER_MS = 30 * 60 * 1000; // 30 minutes
 
 // Game recap system prompt (same as generate.js)
 const GAME_RECAP_SYSTEM_PROMPT = `You are a professional sports journalist writing a game recap for "Lindy's Five", a Buffalo Sabres fan blog.
@@ -34,21 +38,25 @@ Format guidelines:
 
 CRITICAL: Use ONLY the data provided in the VERIFIED GAME DATA block. Do not invent any statistics, player names, or game details not explicitly listed.`;
 
-// Fetch game box score data
+// Fetch game box score data with retry logic
 async function fetchGameBoxScore(gameId) {
   try {
-    const boxscoreRes = await fetch(`${NHL_API_BASE}/gamecenter/${gameId}/boxscore`);
-    const boxscore = await boxscoreRes.json();
+    // Fetch all three endpoints with retry logic
+    const [boxscore, playByPlay, landing] = await Promise.all([
+      fetchJsonWithRetry(`${NHL_API_BASE}/gamecenter/${gameId}/boxscore`),
+      fetchJsonWithRetry(`${NHL_API_BASE}/gamecenter/${gameId}/play-by-play`),
+      fetchJsonWithRetry(`${NHL_API_BASE}/gamecenter/${gameId}/landing`)
+    ]);
 
-    const pbpRes = await fetch(`${NHL_API_BASE}/gamecenter/${gameId}/play-by-play`);
-    const playByPlay = await pbpRes.json();
-
-    const landingRes = await fetch(`${NHL_API_BASE}/gamecenter/${gameId}/landing`);
-    const landing = await landingRes.json();
+    // Verify box score has essential data before returning
+    if (!boxscore?.homeTeam || !boxscore?.awayTeam) {
+      console.error(`Incomplete box score data for game ${gameId}`);
+      return null;
+    }
 
     return { boxscore, playByPlay, landing };
   } catch (error) {
-    console.error(`Failed to fetch box score for game ${gameId}:`, error);
+    console.error(`Failed to fetch box score for game ${gameId} after retries:`, error);
     return null;
   }
 }
@@ -266,15 +274,40 @@ function generateTitle(isWin, sabresScore, oppScore, opponent, periodType) {
   }
 }
 
-// Create post in KV (same pattern as weekly-roundup.js)
-async function createPost(postData) {
-  const dateStr = new Date().toISOString().split('T')[0];
-  const titleSlug = postData.title
+// Generate a unique slug by checking for collisions
+async function generateUniqueSlug(title, date, maxAttempts = 10) {
+  const dateStr = new Date(date).toISOString().split('T')[0];
+  const titleSlug = title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
     .substring(0, 50);
-  const slug = `${titleSlug}-${dateStr}`;
+  const baseSlug = `${titleSlug}-${dateStr}`;
+
+  // Check if base slug is available
+  const existingId = await kv.get(`blog:slug:${baseSlug}`);
+  if (!existingId) return baseSlug;
+
+  // Try adding numeric suffixes
+  for (let i = 2; i <= maxAttempts + 1; i++) {
+    const suffixedSlug = `${baseSlug}-${i}`;
+    const existingSuffixedId = await kv.get(`blog:slug:${suffixedSlug}`);
+    if (!existingSuffixedId) {
+      console.log(`Slug collision detected for "${baseSlug}", using "${suffixedSlug}"`);
+      return suffixedSlug;
+    }
+  }
+
+  // Fallback: append timestamp
+  const fallbackSlug = `${baseSlug}-${Date.now()}`;
+  console.log(`Multiple slug collisions for "${baseSlug}", using timestamp fallback`);
+  return fallbackSlug;
+}
+
+// Create post in KV (same pattern as weekly-roundup.js)
+async function createPost(postData) {
+  const now = new Date().toISOString();
+  const slug = await generateUniqueSlug(postData.title, now);
 
   const excerpt = postData.content
     .replace(/#{1,6}\s/g, '')
@@ -286,7 +319,6 @@ async function createPost(postData) {
     .substring(0, 200) + '...';
 
   const id = crypto.randomUUID();
-  const now = new Date().toISOString();
 
   const post = {
     id,
@@ -347,9 +379,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Fetch season schedule
-    const scheduleRes = await fetch(`${NHL_API_BASE}/club-schedule-season/BUF/20252026`);
-    const schedule = await scheduleRes.json();
+    // Fetch season schedule with retry logic
+    const schedule = await fetchJsonWithRetry(`${NHL_API_BASE}/club-schedule-season/BUF/20252026`);
 
     // Find completed games in the last 48 hours
     const now = new Date();
@@ -358,7 +389,15 @@ export default async function handler(req, res) {
     const completedGames = (schedule.games || [])
       .filter(g => g.gameType === 2) // Regular season
       .filter(g => g.gameState === 'FINAL' || g.gameState === 'OFF')
-      .filter(g => new Date(g.gameDate) >= cutoff);
+      .filter(g => new Date(g.gameDate) >= cutoff)
+      // Wait at least 30 minutes after game ends to ensure stats are finalized
+      .filter(g => {
+        // Estimate game end time: game date + ~3 hours for typical game length
+        const gameStartTime = new Date(g.startTimeUTC || g.gameDate);
+        const estimatedEndTime = new Date(gameStartTime.getTime() + 3 * 60 * 60 * 1000);
+        const timeSinceEnd = now.getTime() - estimatedEndTime.getTime();
+        return timeSinceEnd >= GAME_END_BUFFER_MS;
+      });
 
     // Filter to unprocessed games
     const unprocessedGames = [];

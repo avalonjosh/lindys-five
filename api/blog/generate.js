@@ -607,7 +607,21 @@ Format guidelines:
 - Keep paragraphs concise (3-4 sentences max)
 - Article should be 400-600 words
 
-CRITICAL: Use ONLY the data provided in the VERIFIED GAME DATA block. Do not invent any statistics, player names, or game details not explicitly listed.`;
+CRITICAL ACCURACY REQUIREMENTS:
+1. Use ONLY the data provided in the VERIFIED GAME DATA block
+2. DO NOT invent any statistics, player names, or game details not explicitly listed
+3. Every goal you mention MUST appear in the SCORING SUMMARY
+4. Every player name MUST appear in the provided data
+5. All shot totals, save percentages, and scores MUST match the data exactly
+6. DO NOT fabricate quotes, crowd reactions, or atmosphere descriptions
+7. DO NOT guess at time-of-game details not provided (attendance, weather, etc.)
+8. If the data is incomplete, write a shorter article rather than inventing details
+
+PROHIBITED:
+- Making up assists or goal scorers not in the data
+- Inventing penalty details beyond what's listed
+- Fabricating three stars if not provided
+- Creating fictional momentum shifts or turning points without data support`;
 
 // Set recap specific system prompt
 const SET_RECAP_SYSTEM_PROMPT = `You are a professional sports journalist writing a set recap for "Lindy's Five", a Buffalo Sabres fan blog focused on tracking the season in 5-game chunks called "sets."
@@ -652,7 +666,21 @@ Set evaluation context:
 - 3-4 points: Concerning struggles
 - 0-2 points: Disastrous stretch
 
-CRITICAL: Use ONLY the data provided in the VERIFIED SET DATA block. Do not invent any statistics, player names, or game details not explicitly listed.`;
+CRITICAL ACCURACY REQUIREMENTS:
+1. Use ONLY the data provided in the VERIFIED SET DATA block
+2. DO NOT invent any statistics, player names, or game details not explicitly listed
+3. Every game result you mention MUST match the GAME-BY-GAME BREAKDOWN
+4. All aggregate stats (goals for/against, shots, points) MUST match exactly
+5. DO NOT fabricate individual player performances unless explicitly provided
+6. DO NOT make up quotes, injury reports, or lineup changes
+7. Reference specific games by their actual results (e.g., "the 4-2 loss to Toronto")
+8. If data is incomplete, acknowledge it rather than filling gaps with invented details
+
+PROHIBITED:
+- Making up goal scorers or standout players without data support
+- Inventing trends or patterns not supported by the provided stats
+- Fabricating comparisons to previous sets without data
+- Creating fictional narratives about team morale or chemistry`;
 
 // Sports journalism system prompt
 const SYSTEM_PROMPT = `You are a professional sports journalist writing for "Lindy's Five", a Buffalo sports blog covering the Sabres (NHL) and Bills (NFL).
@@ -681,16 +709,37 @@ Team context:
 - Sabres: NHL team in Buffalo, NY. Colors: blue and gold. Arena: KeyBank Center.
 - Bills: NFL team in Buffalo, NY. Colors: red, blue, white. Stadium: Highmark Stadium.
 
-ACCURACY REQUIREMENTS:
-- When VERIFIED DATA is provided in the prompt, use ONLY those stats for standings, points, record, and roster
-- If web search returns different point totals or records than the VERIFIED DATA, trust the VERIFIED DATA
-- For player names, only reference players confirmed on the current roster in the VERIFIED DATA
-- Never invent specific statistics (point totals, goal counts, save percentages, passing yards) unless provided
-- If you cannot verify a fact, use hedging language ("according to recent reports", "the team has reportedly...")
-- If uncertain about a detail, omit it rather than guess
-- Cite sources when using information from web search (e.g., "per ESPN", "according to The Athletic")
+CRITICAL ACCURACY REQUIREMENTS (MUST FOLLOW):
+1. VERIFIED DATA PRIORITY: When "VERIFIED DATA" is provided in the prompt, those stats are the SINGLE SOURCE OF TRUTH. Use ONLY those stats for standings, points, record, and roster. Do NOT use web search to find different numbers.
 
-IMPORTANT: Write ORIGINAL content only. Never copy from other sources. Create your own narrative and analysis based on the facts provided.`;
+2. NEVER HALLUCINATE STATISTICS: Do NOT invent, estimate, or guess ANY specific numbers:
+   - No made-up point totals, goal counts, assist counts
+   - No fabricated save percentages, passing yards, or win-loss records
+   - No invented contract values, salary cap figures, or draft positions
+   - If a stat is not in the VERIFIED DATA and you cannot confirm it via web search, OMIT IT ENTIRELY
+
+3. PLAYER NAME VERIFICATION: Only mention players who are:
+   - Listed in the VERIFIED DATA roster, OR
+   - Confirmed via web search with a specific source citation
+   - NEVER guess or assume a player is on the team
+
+4. SOURCE CITATION: When using web search information:
+   - Always cite the source (e.g., "per ESPN", "according to The Athletic")
+   - If conflicting information exists, note the discrepancy
+   - Trust VERIFIED DATA over web search for official stats
+
+5. UNCERTAINTY HANDLING:
+   - If you cannot verify a fact, use hedging language ("reportedly", "according to sources")
+   - If uncertain about a detail, OMIT IT rather than guess
+   - Better to write a shorter, accurate article than a longer one with fabricated details
+
+6. PROHIBITED ACTIONS:
+   - DO NOT make up quotes from players or coaches
+   - DO NOT invent game details or play descriptions
+   - DO NOT create fictional historical comparisons with made-up stats
+   - DO NOT fabricate injury reports or transaction details
+
+IMPORTANT: Write ORIGINAL content only. Never copy from other sources. Create your own narrative and analysis based on the VERIFIED FACTS provided.`;
 
 export default async function handler(req, res) {
   // Only allow POST

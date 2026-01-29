@@ -1,8 +1,12 @@
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '../blog/settings.js';
+import { fetchJsonWithRetry, calculateJaccardSimilarity } from '../utils/fetchWithRetry.js';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
+
+// Similarity threshold for semantic deduplication (0.4 = 40% keyword overlap)
+const SEMANTIC_SIMILARITY_THRESHOLD = 0.4;
 
 // System prompt for news detection
 const NEWS_DETECTION_PROMPT = `You are a sports news analyst for a Buffalo Sabres fan blog.
@@ -63,24 +67,47 @@ Style Guidelines:
 - Do not speculate about future implications
 - Do not include fan reactions or sentiment
 
+ACCURACY REQUIREMENTS (MANDATORY):
+1. VERIFIED DATA IS TRUTH: The NHL data provided (standings, roster, recent games) is authoritative. Use these exact numbers.
+
+2. NEVER HALLUCINATE:
+   - Do NOT invent statistics (goals, assists, points, contract values)
+   - Do NOT make up quotes from players, coaches, or management
+   - Do NOT fabricate dates, game scores, or transaction details
+   - Do NOT guess at injury specifics or recovery timelines
+
+3. WEB SEARCH VERIFICATION:
+   - Use web search to verify specific details before including them
+   - If you cannot verify a detail via search, OMIT IT
+   - Cite sources for information from web search (e.g., "per NHL.com")
+   - If web search conflicts with VERIFIED DATA, trust VERIFIED DATA for stats
+
+4. WHEN UNCERTAIN:
+   - Use hedging language ("reportedly," "according to sources")
+   - Prefer shorter, accurate articles over longer ones with guessed details
+   - Acknowledge when details are unconfirmed
+
+PROHIBITED:
+- Fabricating quotes or statements
+- Making up contract terms or salary figures
+- Inventing injury details beyond what's confirmed
+- Creating fictional historical comparisons with fake stats
+
 Do NOT include "TITLE:" or "META:" prefixes in your response.`;
 
-// Fetch current Sabres data for context
+// Fetch current Sabres data for context with retry logic
 async function fetchSabresContext() {
   try {
-    // Fetch current standings
     const today = new Date().toISOString().split('T')[0];
-    const standingsRes = await fetch(`${NHL_API_BASE}/standings/${today}`);
-    const standingsData = await standingsRes.json();
+
+    // Fetch all data in parallel with retry logic
+    const [standingsData, roster, schedule] = await Promise.all([
+      fetchJsonWithRetry(`${NHL_API_BASE}/standings/${today}`),
+      fetchJsonWithRetry(`${NHL_API_BASE}/roster/BUF/current`),
+      fetchJsonWithRetry(`${NHL_API_BASE}/club-schedule-season/BUF/20252026`)
+    ]);
+
     const sabres = standingsData.standings?.find(t => t.teamAbbrev?.default === 'BUF');
-
-    // Fetch roster
-    const rosterRes = await fetch(`${NHL_API_BASE}/roster/BUF/current`);
-    const roster = await rosterRes.json();
-
-    // Fetch recent schedule
-    const scheduleRes = await fetch(`${NHL_API_BASE}/club-schedule-season/BUF/20252026`);
-    const schedule = await scheduleRes.json();
 
     const recentGames = (schedule.games || [])
       .filter(g => g.gameType === 2 && (g.gameState === 'FINAL' || g.gameState === 'OFF'))
@@ -89,7 +116,7 @@ async function fetchSabresContext() {
 
     return { sabres, roster, recentGames };
   } catch (error) {
-    console.error('Failed to fetch Sabres context:', error);
+    console.error('Failed to fetch Sabres context after retries:', error);
     return null;
   }
 }
@@ -142,14 +169,57 @@ async function hasStoryBeenProcessed(storyKey) {
   return await kv.sismember('blog:news:processed', storyKey);
 }
 
-// Mark a story as processed
-async function markStoryProcessed(storyKey, postId = null) {
+// Mark a story as processed (with keywords for semantic deduplication)
+async function markStoryProcessed(storyKey, postId = null, keywords = []) {
   await kv.sadd('blog:news:processed', storyKey);
-  await kv.set(`blog:news:log:${storyKey}`, {
+  const logData = {
     processedAt: new Date().toISOString(),
     postId,
-    skipped: !postId
-  });
+    skipped: !postId,
+    keywords: keywords || []
+  };
+  await kv.set(`blog:news:log:${storyKey}`, logData);
+
+  // Store in recent stories list for semantic deduplication (keep last 50)
+  if (keywords && keywords.length > 0) {
+    const recentStory = { storyKey, keywords, processedAt: logData.processedAt };
+    await kv.lpush('blog:news:recent-keywords', JSON.stringify(recentStory));
+    await kv.ltrim('blog:news:recent-keywords', 0, 49); // Keep only last 50
+  }
+}
+
+// Check for semantically similar stories that were recently processed
+async function findSemanticDuplicate(keywords) {
+  if (!keywords || keywords.length === 0) return null;
+
+  try {
+    // Get recent stories with their keywords
+    const recentStories = await kv.lrange('blog:news:recent-keywords', 0, 49);
+
+    for (const storyJson of recentStories) {
+      try {
+        const story = typeof storyJson === 'string' ? JSON.parse(storyJson) : storyJson;
+        if (!story.keywords || story.keywords.length === 0) continue;
+
+        const similarity = calculateJaccardSimilarity(keywords, story.keywords);
+        if (similarity >= SEMANTIC_SIMILARITY_THRESHOLD) {
+          return {
+            matchedStoryKey: story.storyKey,
+            similarity: Math.round(similarity * 100),
+            processedAt: story.processedAt
+          };
+        }
+      } catch (parseError) {
+        console.error('Failed to parse recent story:', parseError);
+        continue;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error checking semantic duplicates:', error);
+    return null; // Don't block on errors, just skip the check
+  }
 }
 
 // Generate article title from topic
@@ -167,15 +237,40 @@ function generateTitle(topic) {
     .substring(0, 80);
 }
 
-// Create post via KV
-async function createPost(postData) {
-  const dateStr = new Date().toISOString().split('T')[0];
-  const titleSlug = postData.title
+// Generate unique slug with collision handling
+async function generateUniqueSlug(title, date) {
+  const dateStr = date.toISOString().split('T')[0];
+  const titleSlug = title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
     .substring(0, 50);
-  const slug = `${titleSlug}-${dateStr}`;
+  const baseSlug = `${titleSlug}-${dateStr}`;
+
+  // Check if slug already exists
+  const existingId = await kv.get(`blog:slug:${baseSlug}`);
+  if (!existingId) return baseSlug;
+
+  // Try numbered suffixes
+  for (let i = 2; i <= 10; i++) {
+    const suffixedSlug = `${baseSlug}-${i}`;
+    const existingSuffixedId = await kv.get(`blog:slug:${suffixedSlug}`);
+    if (!existingSuffixedId) {
+      console.log(`Slug collision detected for "${baseSlug}", using "${suffixedSlug}" instead`);
+      return suffixedSlug;
+    }
+  }
+
+  // Fallback to timestamp
+  const fallbackSlug = `${baseSlug}-${Date.now()}`;
+  console.log(`Multiple slug collisions for "${baseSlug}", using timestamp fallback`);
+  return fallbackSlug;
+}
+
+// Create post via KV
+async function createPost(postData) {
+  const nowDate = new Date();
+  const slug = await generateUniqueSlug(postData.title, nowDate);
 
   const excerpt = postData.content
     .replace(/#{1,6}\s/g, '')
@@ -187,7 +282,7 @@ async function createPost(postData) {
     .substring(0, 200) + '...';
 
   const id = crypto.randomUUID();
-  const now = new Date().toISOString();
+  const now = nowDate.toISOString();
 
   const post = {
     id,
@@ -289,10 +384,26 @@ After searching, respond with a JSON array of newsworthy stories found (or empty
 
     for (const story of importantStories) {
       const storyKey = story.storyKey || story.topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 50);
+      const keywords = story.keywords || [];
 
-      // Check if already processed
+      // Check if already processed (exact match)
       if (await hasStoryBeenProcessed(storyKey)) {
         results.push({ storyKey, skipped: true, reason: 'already processed' });
+        continue;
+      }
+
+      // Check for semantic duplicates (similar keywords)
+      const semanticMatch = await findSemanticDuplicate(keywords);
+      if (semanticMatch) {
+        console.log(`Semantic duplicate detected: "${storyKey}" matches "${semanticMatch.matchedStoryKey}" with ${semanticMatch.similarity}% similarity`);
+        await markStoryProcessed(storyKey, null, keywords); // Mark as skipped
+        results.push({
+          storyKey,
+          skipped: true,
+          reason: 'semantic duplicate',
+          matchedStory: semanticMatch.matchedStoryKey,
+          similarity: semanticMatch.similarity
+        });
         continue;
       }
 
@@ -337,8 +448,8 @@ IMPORTANT: Use web search to verify specific details like dates, statistics, con
         metaDescription
       });
 
-      // Mark as processed
-      await markStoryProcessed(storyKey, post.id);
+      // Mark as processed with keywords for future deduplication
+      await markStoryProcessed(storyKey, post.id, keywords);
 
       results.push({
         storyKey,
@@ -353,8 +464,9 @@ IMPORTANT: Use web search to verify specific details like dates, statistics, con
     const skippedStories = stories.filter(s => s.importance < 7);
     for (const story of skippedStories) {
       const storyKey = story.storyKey || story.topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 50);
+      const keywords = story.keywords || [];
       if (!(await hasStoryBeenProcessed(storyKey))) {
-        await markStoryProcessed(storyKey, null); // Mark as processed but skipped
+        await markStoryProcessed(storyKey, null, keywords); // Mark as processed but skipped
         results.push({ storyKey, skipped: true, reason: 'low importance', importance: story.importance });
       }
     }
