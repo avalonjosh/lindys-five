@@ -924,6 +924,9 @@ export default function AdminDashboard() {
                     <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide hidden md:table-cell">
                       Status
                     </th>
+                    <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide hidden md:table-cell">
+                      Views
+                    </th>
                     <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide hidden lg:table-cell">
                       <button
                         onClick={() => setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc')}
@@ -1002,6 +1005,9 @@ export default function AdminDashboard() {
                         >
                           {post.status}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-400 text-sm hidden md:table-cell">
+                        {post.views?.toLocaleString() ?? '0'}
                       </td>
                       <td className="px-6 py-4 text-slate-400 text-sm hidden lg:table-cell">
                         {formatDate(post.publishedAt || post.createdAt)}

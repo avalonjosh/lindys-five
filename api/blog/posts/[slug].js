@@ -59,7 +59,18 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Post not found' });
       }
 
-      return res.status(200).json({ post });
+      // Track view for published posts (but not for admin views)
+      if (post.status === 'published' && !isAdmin) {
+        await kv.incr(`blog:views:${postId}`);
+      }
+
+      // Fetch view count for admin
+      let views = 0;
+      if (isAdmin) {
+        views = await kv.get(`blog:views:${postId}`) || 0;
+      }
+
+      return res.status(200).json({ post, views });
     } catch (error) {
       console.error('Error fetching post:', error);
       return res.status(500).json({ error: 'Failed to fetch post' });

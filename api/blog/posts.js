@@ -82,6 +82,9 @@ export default async function handler(req, res) {
         postIds = await kv.zrange(`blog:posts:${team}`, 0, -1, { rev: true }) || [];
       }
 
+      // Check admin status once
+      const isAdmin = await verifyAdmin(req);
+
       // Fetch post data
       const posts = [];
       for (const id of postIds) {
@@ -92,8 +95,13 @@ export default async function handler(req, res) {
           if (type && post.type !== type) continue;
 
           // For public requests, only show published posts
-          const isAdmin = await verifyAdmin(req);
           if (!isAdmin && post.status !== 'published') continue;
+
+          // Include view count for admin
+          if (isAdmin) {
+            const views = await kv.get(`blog:views:${id}`) || 0;
+            post.views = views;
+          }
 
           posts.push(post);
         }

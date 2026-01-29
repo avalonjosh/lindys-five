@@ -163,4 +163,7 @@ export interface BlogPost {
 
   // Featured/pinned
   pinned?: boolean;
+
+  // Analytics (admin only)
+  views?: number;
 }
