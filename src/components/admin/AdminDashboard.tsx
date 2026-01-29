@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Plus, Edit, Trash2, Eye, LogOut, FileText, RefreshCw, Newspaper, Calendar, Trophy, Layers, Pin, ChevronUp, ChevronDown, Filter, Clock } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, LogOut, FileText, RefreshCw, Newspaper, Calendar, Trophy, Layers, Pin, ChevronUp, ChevronDown, Filter, Clock, CheckSquare, Square, X } from 'lucide-react';
 import { fetchPosts, deletePost, updatePost } from '../../services/blogApi';
 import { logout } from '../../utils/auth';
 import type { BlogPost } from '../../types';
@@ -43,6 +43,8 @@ export default function AdminDashboard() {
   });
   const [togglingSettings, setTogglingSettings] = useState<string | null>(null);
   const [pinning, setPinning] = useState<string | null>(null);
+  const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set());
+  const [bulkOperating, setBulkOperating] = useState(false);
   const [filterTeam, setFilterTeam] = useState<FilterTeam>('all');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [filterType, setFilterType] = useState<FilterType>('all');
@@ -155,6 +157,64 @@ export default function AdminDashboard() {
       alert(err instanceof Error ? err.message : 'Failed to update pin status');
     } finally {
       setPinning(null);
+    }
+  }
+
+  function toggleSelection(slug: string) {
+    setSelectedSlugs(prev => {
+      const next = new Set(prev);
+      if (next.has(slug)) {
+        next.delete(slug);
+      } else {
+        next.add(slug);
+      }
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedSlugs.size === filteredPosts.length) {
+      setSelectedSlugs(new Set());
+    } else {
+      setSelectedSlugs(new Set(filteredPosts.map(p => p.slug)));
+    }
+  }
+
+  async function handleBulkDelete() {
+    if (selectedSlugs.size === 0) return;
+    if (!confirm(`Delete ${selectedSlugs.size} post${selectedSlugs.size !== 1 ? 's' : ''}? This cannot be undone.`)) {
+      return;
+    }
+
+    setBulkOperating(true);
+    try {
+      const slugsToDelete = Array.from(selectedSlugs);
+      await Promise.all(slugsToDelete.map(slug => deletePost(slug)));
+      setPosts(posts.filter(p => !selectedSlugs.has(p.slug)));
+      setSelectedSlugs(new Set());
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete some posts');
+    } finally {
+      setBulkOperating(false);
+    }
+  }
+
+  async function handleBulkStatusChange(newStatus: 'published' | 'draft') {
+    if (selectedSlugs.size === 0) return;
+    if (!confirm(`Change ${selectedSlugs.size} post${selectedSlugs.size !== 1 ? 's' : ''} to ${newStatus}?`)) {
+      return;
+    }
+
+    setBulkOperating(true);
+    try {
+      const slugsToUpdate = Array.from(selectedSlugs);
+      await Promise.all(slugsToUpdate.map(slug => updatePost(slug, { status: newStatus })));
+      setPosts(posts.map(p => selectedSlugs.has(p.slug) ? { ...p, status: newStatus } : p));
+      setSelectedSlugs(new Set());
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update some posts');
+    } finally {
+      setBulkOperating(false);
     }
   }
 
@@ -609,6 +669,48 @@ export default function AdminDashboard() {
             )}
           </div>
 
+          {/* Bulk Action Bar */}
+          {selectedSlugs.size > 0 && (
+            <div className="mb-6 p-4 bg-[#FCB514]/10 border-2 border-[#FCB514]/50 rounded-xl flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2 text-white">
+                <CheckSquare className="w-5 h-5 text-[#FCB514]" />
+                <span className="font-semibold">
+                  {selectedSlugs.size} selected
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleBulkStatusChange('published')}
+                  disabled={bulkOperating}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {bulkOperating ? 'Working...' : 'Publish'}
+                </button>
+                <button
+                  onClick={() => handleBulkStatusChange('draft')}
+                  disabled={bulkOperating}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {bulkOperating ? 'Working...' : 'Set Draft'}
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={bulkOperating}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {bulkOperating ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+              <button
+                onClick={() => setSelectedSlugs(new Set())}
+                className="ml-auto text-slate-400 hover:text-white transition-colors flex items-center gap-1"
+              >
+                <X className="w-4 h-4" />
+                Clear selection
+              </button>
+            </div>
+          )}
+
           {/* Filters */}
           {posts.length > 0 && (
             <div className="mb-6 p-4 bg-slate-600/30 rounded-xl border border-slate-500 flex flex-wrap items-center gap-4">
@@ -722,6 +824,19 @@ export default function AdminDashboard() {
               <table className="w-full">
                 <thead>
                   <tr className="bg-slate-700/50 border-b border-slate-500">
+                    <th className="w-12 px-4 py-4">
+                      <button
+                        onClick={toggleSelectAll}
+                        className="text-slate-400 hover:text-white transition-colors"
+                        title={selectedSlugs.size === filteredPosts.length ? 'Deselect all' : 'Select all'}
+                      >
+                        {selectedSlugs.size === filteredPosts.length && filteredPosts.length > 0 ? (
+                          <CheckSquare className="w-5 h-5" />
+                        ) : (
+                          <Square className="w-5 h-5" />
+                        )}
+                      </button>
+                    </th>
                     <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide">
                       Title
                     </th>
@@ -753,8 +868,22 @@ export default function AdminDashboard() {
                   {filteredPosts.map((post) => (
                     <tr
                       key={post.id}
-                      className="border-b border-slate-600 last:border-b-0 hover:bg-slate-500/30 transition-colors"
+                      className={`border-b border-slate-600 last:border-b-0 hover:bg-slate-500/30 transition-colors ${
+                        selectedSlugs.has(post.slug) ? 'bg-slate-500/20' : ''
+                      }`}
                     >
+                      <td className="w-12 px-4 py-4">
+                        <button
+                          onClick={() => toggleSelection(post.slug)}
+                          className="text-slate-400 hover:text-white transition-colors"
+                        >
+                          {selectedSlugs.has(post.slug) ? (
+                            <CheckSquare className="w-5 h-5 text-[#FCB514]" />
+                          ) : (
+                            <Square className="w-5 h-5" />
+                          )}
+                        </button>
+                      </td>
                       <td className="px-6 py-4">
                         <div>
                           <div className="flex items-center gap-2">
