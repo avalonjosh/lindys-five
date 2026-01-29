@@ -1321,26 +1321,77 @@ export default function PostEditor() {
                 </p>
               </div>
 
+              {/* Status Toggle for existing posts */}
+              {!isNew && existingPost && (
+                <div className="flex items-center gap-4 p-4 bg-slate-700/50 border border-slate-600 rounded-lg">
+                  <span className="text-slate-300 text-sm font-semibold">Status:</span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => updateField('status', 'draft')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        formData.status === 'draft'
+                          ? 'bg-amber-500 text-black'
+                          : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
+                      }`}
+                    >
+                      Draft
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updateField('status', 'published')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        formData.status === 'published'
+                          ? 'text-black'
+                          : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
+                      }`}
+                      style={formData.status === 'published' ? { backgroundColor: accent } : {}}
+                    >
+                      Published
+                    </button>
+                  </div>
+                  {formData.status !== existingPost.status && (
+                    <span className="text-amber-400 text-xs ml-auto">
+                      Status will change on save
+                    </span>
+                  )}
+                </div>
+              )}
+
               {/* Actions */}
               <div className="flex items-center gap-4 pt-4">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-slate-600 hover:bg-slate-500 transition-colors disabled:opacity-50"
-                >
-                  <Save className="w-5 h-5" />
-                  {saving ? 'Saving...' : 'Save Draft'}
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  onClick={handlePublish}
-                  className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-black transition-all duration-300 hover:scale-105 disabled:opacity-50"
-                  style={{ backgroundColor: accent }}
-                >
-                  <Send className="w-5 h-5" />
-                  {saving ? 'Publishing...' : 'Publish'}
-                </button>
+                {isNew ? (
+                  <>
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-slate-600 hover:bg-slate-500 transition-colors disabled:opacity-50"
+                    >
+                      <Save className="w-5 h-5" />
+                      {saving ? 'Saving...' : 'Save Draft'}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      onClick={handlePublish}
+                      className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-black transition-all duration-300 hover:scale-105 disabled:opacity-50"
+                      style={{ backgroundColor: accent }}
+                    >
+                      <Send className="w-5 h-5" />
+                      {saving ? 'Publishing...' : 'Publish'}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-black transition-all duration-300 hover:scale-105 disabled:opacity-50"
+                    style={{ backgroundColor: accent }}
+                  >
+                    <Save className="w-5 h-5" />
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                )}
               </div>
             </form>
 
