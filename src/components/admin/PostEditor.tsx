@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ArrowLeft, Save, Eye, EyeOff, Send, Sparkles, ImagePlus, X, Upload, Calendar, Images } from 'lucide-react';
-import { fetchPost, createPost, updatePost, generateArticle, uploadImage, fetchImages } from '../../services/blogApi';
+import { ArrowLeft, Save, Eye, EyeOff, Send, Sparkles, ImagePlus, X, Upload, Calendar, Images, ShieldCheck, AlertTriangle, CheckCircle2, HelpCircle, AlertCircle } from 'lucide-react';
+import { fetchPost, createPost, updatePost, generateArticle, uploadImage, fetchImages, factCheckArticle, type FactCheckResponse, type FactCheckFinding } from '../../services/blogApi';
 import { fetchSabresSchedule } from '../../services/nhlApi';
 import { calculateChunks } from '../../utils/chunkCalculator';
 import PostContent from '../blog/PostContent';
@@ -156,6 +156,12 @@ export default function PostEditor() {
   const [showGallery, setShowGallery] = useState(false);
   const [galleryImages, setGalleryImages] = useState<{ url: string; filename: string; uploadedAt: string }[]>([]);
   const [loadingGallery, setLoadingGallery] = useState(false);
+
+  // Fact check state
+  const [factChecking, setFactChecking] = useState(false);
+  const [factCheckResults, setFactCheckResults] = useState<FactCheckResponse | null>(null);
+  const [factCheckError, setFactCheckError] = useState<string | null>(null);
+  const [showFactCheckResults, setShowFactCheckResults] = useState(false);
 
   // Auto-populated reference date for research accuracy
   const getTodayFormatted = () => {
@@ -596,6 +602,59 @@ export default function PostEditor() {
       insertImageAtCursor(url, 'Image');
     }
     setShowGallery(false);
+  }
+
+  async function handleFactCheck() {
+    if (!formData.content.trim()) {
+      setFactCheckError('No content to fact-check');
+      return;
+    }
+
+    setFactChecking(true);
+    setFactCheckError(null);
+    setFactCheckResults(null);
+
+    try {
+      const results = await factCheckArticle({
+        content: formData.content,
+        team: formData.team,
+        type: formData.type,
+        gameId: formData.gameId,
+      });
+
+      setFactCheckResults(results);
+      setShowFactCheckResults(true);
+    } catch (err) {
+      setFactCheckError(err instanceof Error ? err.message : 'Failed to fact-check article');
+    } finally {
+      setFactChecking(false);
+    }
+  }
+
+  function getCategoryIcon(category: FactCheckFinding['category']) {
+    switch (category) {
+      case 'verified':
+        return <CheckCircle2 className="w-4 h-4 text-green-400" />;
+      case 'issue':
+        return <AlertCircle className="w-4 h-4 text-red-400" />;
+      case 'warning':
+        return <AlertTriangle className="w-4 h-4 text-amber-400" />;
+      case 'unverifiable':
+        return <HelpCircle className="w-4 h-4 text-slate-400" />;
+    }
+  }
+
+  function getCategoryColor(category: FactCheckFinding['category']) {
+    switch (category) {
+      case 'verified':
+        return 'border-green-500/30 bg-green-900/20';
+      case 'issue':
+        return 'border-red-500/30 bg-red-900/20';
+      case 'warning':
+        return 'border-amber-500/30 bg-amber-900/20';
+      case 'unverifiable':
+        return 'border-slate-500/30 bg-slate-700/20';
+    }
   }
 
   if (loading) {
@@ -1400,7 +1459,7 @@ export default function PostEditor() {
               )}
 
               {/* Actions */}
-              <div className="flex items-center gap-4 pt-4">
+              <div className="flex items-center gap-4 pt-4 flex-wrap">
                 {isNew ? (
                   <>
                     <button
@@ -1433,7 +1492,74 @@ export default function PostEditor() {
                     {saving ? 'Saving...' : 'Save Changes'}
                   </button>
                 )}
+
+                {/* Fact Check Button */}
+                <button
+                  type="button"
+                  onClick={handleFactCheck}
+                  disabled={factChecking || !formData.content.trim()}
+                  className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-emerald-700 hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
+                  title="Verify facts against live data"
+                >
+                  {factChecking ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white" />
+                      Checking...
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-5 h-5" />
+                      Verify Facts
+                    </>
+                  )}
+                </button>
               </div>
+
+              {/* Fact Check Error */}
+              {factCheckError && (
+                <div className="bg-red-900/30 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg flex items-center justify-between">
+                  <span>{factCheckError}</span>
+                  <button
+                    type="button"
+                    onClick={() => setFactCheckError(null)}
+                    className="text-red-400 hover:text-red-300"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Fact Check Results Summary */}
+              {factCheckResults && !showFactCheckResults && (
+                <button
+                  type="button"
+                  onClick={() => setShowFactCheckResults(true)}
+                  className={`w-full p-4 rounded-lg border text-left transition-colors ${
+                    factCheckResults.issueCount > 0
+                      ? 'border-red-500/50 bg-red-900/20 hover:bg-red-900/30'
+                      : factCheckResults.warningCount > 0
+                      ? 'border-amber-500/50 bg-amber-900/20 hover:bg-amber-900/30'
+                      : 'border-green-500/50 bg-green-900/20 hover:bg-green-900/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {factCheckResults.issueCount > 0 ? (
+                      <AlertCircle className="w-5 h-5 text-red-400" />
+                    ) : factCheckResults.warningCount > 0 ? (
+                      <AlertTriangle className="w-5 h-5 text-amber-400" />
+                    ) : (
+                      <CheckCircle2 className="w-5 h-5 text-green-400" />
+                    )}
+                    <div>
+                      <p className="font-semibold text-white">
+                        Fact Check Complete: {factCheckResults.issueCount} issue{factCheckResults.issueCount !== 1 ? 's' : ''}, {factCheckResults.warningCount} warning{factCheckResults.warningCount !== 1 ? 's' : ''}
+                      </p>
+                      <p className="text-slate-400 text-sm">{factCheckResults.summary}</p>
+                    </div>
+                    <span className="text-slate-400 ml-auto text-sm">Click to view details</span>
+                  </div>
+                </button>
+              )}
             </form>
 
             {/* Preview */}
@@ -1542,6 +1668,125 @@ export default function PostEditor() {
               <p className="text-slate-400 text-sm">
                 {galleryImages.length} image{galleryImages.length !== 1 ? 's' : ''} in gallery
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fact Check Results Modal */}
+      {showFactCheckResults && factCheckResults && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-2xl border border-slate-600 w-full max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-600">
+              <div className="flex items-center gap-3">
+                <ShieldCheck className="w-6 h-6 text-emerald-400" />
+                <h3
+                  className="text-xl font-bold text-white"
+                  style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+                >
+                  Fact Check Results
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFactCheckResults(false)}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Summary */}
+            <div className={`p-4 border-b border-slate-600 ${
+              factCheckResults.issueCount > 0
+                ? 'bg-red-900/20'
+                : factCheckResults.warningCount > 0
+                ? 'bg-amber-900/20'
+                : 'bg-green-900/20'
+            }`}>
+              <div className="flex items-center gap-4 mb-2">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-400" />
+                  <span className="text-red-400 font-semibold">{factCheckResults.issueCount} Issues</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  <span className="text-amber-400 font-semibold">{factCheckResults.warningCount} Warnings</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-400" />
+                  <span className="text-green-400 font-semibold">
+                    {factCheckResults.findings.filter(f => f.category === 'verified').length} Verified
+                  </span>
+                </div>
+              </div>
+              <p className="text-white">{factCheckResults.summary}</p>
+              <p className="text-slate-400 text-sm mt-2">
+                Data source: {factCheckResults.verifiedDataSummary.team.toUpperCase()} |
+                Record: {factCheckResults.verifiedDataSummary.record} |
+                Roster: {factCheckResults.verifiedDataSummary.rosterCount} players
+                {factCheckResults.verifiedDataSummary.hasGameData && ' | Game data included'}
+              </p>
+            </div>
+
+            {/* Findings List */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {factCheckResults.findings.length === 0 ? (
+                <div className="text-center py-8">
+                  <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto mb-3" />
+                  <p className="text-white font-semibold">No findings to report</p>
+                  <p className="text-slate-400 text-sm">The article appears to be factually accurate</p>
+                </div>
+              ) : (
+                factCheckResults.findings.map((finding, index) => (
+                  <div
+                    key={index}
+                    className={`p-4 rounded-lg border ${getCategoryColor(finding.category)}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      {getCategoryIcon(finding.category)}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-xs font-semibold uppercase px-2 py-0.5 rounded ${
+                            finding.category === 'verified' ? 'bg-green-500/20 text-green-400' :
+                            finding.category === 'issue' ? 'bg-red-500/20 text-red-400' :
+                            finding.category === 'warning' ? 'bg-amber-500/20 text-amber-400' :
+                            'bg-slate-500/20 text-slate-400'
+                          }`}>
+                            {finding.category}
+                          </span>
+                        </div>
+                        <p className="text-white text-sm mb-2">
+                          <span className="text-slate-400">Claim: </span>
+                          "{finding.claim}"
+                        </p>
+                        <p className="text-slate-300 text-sm">{finding.explanation}</p>
+                        {finding.correction && (
+                          <p className="text-green-400 text-sm mt-2">
+                            <span className="font-semibold">Correction: </span>
+                            {finding.correction}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-600 flex items-center justify-between">
+              <p className="text-slate-400 text-sm">
+                {factCheckResults.findings.length} finding{factCheckResults.findings.length !== 1 ? 's' : ''} analyzed
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowFactCheckResults(false)}
+                className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

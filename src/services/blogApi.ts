@@ -181,3 +181,49 @@ export async function fetchImages(): Promise<FetchImagesResponse> {
 
   return response.json();
 }
+
+// Fact Check Article
+export interface FactCheckFinding {
+  claim: string;
+  category: 'verified' | 'issue' | 'unverifiable' | 'warning';
+  explanation: string;
+  correction?: string;
+}
+
+export interface FactCheckResponse {
+  success: boolean;
+  summary: string;
+  issueCount: number;
+  warningCount: number;
+  findings: FactCheckFinding[];
+  verifiedDataSummary: {
+    team: string;
+    record: string;
+    rosterCount: number;
+    hasGameData: boolean;
+  };
+}
+
+interface FactCheckRequest {
+  content: string;
+  team: 'sabres' | 'bills';
+  type?: 'game-recap' | 'set-recap' | 'custom' | 'weekly-roundup' | 'news-analysis';
+  gameId?: number;
+}
+
+export async function factCheckArticle(
+  request: FactCheckRequest
+): Promise<FactCheckResponse> {
+  const response = await fetch(`${API_BASE}/fact-check`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fact-check article');
+  }
+
+  return response.json();
+}
