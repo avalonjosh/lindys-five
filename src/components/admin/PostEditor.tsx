@@ -569,8 +569,8 @@ export default function PostEditor() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-700 border-t-[#FCB514]"></div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-600 border-t-[#FCB514]"></div>
       </div>
     );
   }
@@ -584,14 +584,20 @@ export default function PostEditor() {
         <meta name="robots" content="noindex, nofollow" />
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="min-h-screen bg-gradient-to-br from-slate-700 to-slate-800">
         {/* Header */}
-        <header className="border-b border-gray-700">
+        <header
+          className="shadow-xl border-b-4"
+          style={{
+            background: '#003087',
+            borderBottomColor: '#0A1128',
+          }}
+        >
           <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link
                 to="/admin/posts"
-                className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+                className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back
@@ -605,7 +611,7 @@ export default function PostEditor() {
             </div>
             <button
               onClick={() => setShowPreview(!showPreview)}
-              className="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition-colors"
+              className="flex items-center gap-2 text-white/70 hover:text-white text-sm transition-colors"
             >
               {showPreview ? (
                 <>
@@ -634,14 +640,14 @@ export default function PostEditor() {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Title */}
               <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-2">
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
                   Title
                 </label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => updateField('title', e.target.value)}
-                  className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#FCB514] transition-colors"
+                  className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-[#FCB514] transition-colors"
                   placeholder="Post title"
                   required
                 />
@@ -651,7 +657,7 @@ export default function PostEditor() {
               {isNew && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">
                       Team
                     </label>
                     <select
@@ -659,14 +665,14 @@ export default function PostEditor() {
                       onChange={(e) =>
                         updateField('team', e.target.value as 'sabres' | 'bills')
                       }
-                      className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-[#FCB514] transition-colors"
+                      className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white focus:outline-none focus:border-[#FCB514] transition-colors"
                     >
                       <option value="sabres">Sabres</option>
                       <option value="bills">Bills</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">
                       Type
                     </label>
                     <select
@@ -677,7 +683,7 @@ export default function PostEditor() {
                           e.target.value as 'game-recap' | 'set-recap' | 'custom'
                         )
                       }
-                      className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-[#FCB514] transition-colors"
+                      className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white focus:outline-none focus:border-[#FCB514] transition-colors"
                     >
                       <option value="custom">Custom Article</option>
                       <option value="game-recap">Game Recap</option>
@@ -696,10 +702,10 @@ export default function PostEditor() {
                       AI Article Generator
                     </h3>
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <span className="text-sm text-gray-400">Research</span>
+                      <span className="text-sm text-slate-400">Research</span>
                       <div
                         className={`relative w-11 h-6 rounded-full transition-colors ${
-                          researchEnabled ? 'bg-purple-500' : 'bg-gray-600'
+                          researchEnabled ? 'bg-purple-500' : 'bg-slate-500'
                         }`}
                         onClick={() => setResearchEnabled(!researchEnabled)}
                       >
@@ -717,24 +723,24 @@ export default function PostEditor() {
                     <div className="mb-4 p-3 bg-blue-900/30 border border-blue-500/30 rounded-lg flex items-center gap-3">
                       <span className="text-blue-400 text-sm font-semibold">Reference Date:</span>
                       <span className="text-white text-sm">{referenceDate}</span>
-                      <span className="text-gray-500 text-xs ml-auto">
+                      <span className="text-slate-400 text-xs ml-auto">
                         AI will search for data from this date
                       </span>
                     </div>
                   )}
 
                   <div className="mb-4">
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">
                       Article Idea / Instructions
                     </label>
                     <textarea
                       value={articleIdea}
                       onChange={(e) => setArticleIdea(e.target.value)}
                       rows={4}
-                      className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-400 transition-colors text-sm"
+                      className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-purple-400 transition-colors text-sm"
                       placeholder="Describe what you want the article to cover. Be specific about topics, players, stats, comparisons, or themes you want included..."
                     />
-                    <p className="text-gray-500 text-xs mt-1">
+                    <p className="text-slate-400 text-xs mt-1">
                       {researchEnabled
                         ? 'Research mode: AI will search the web for current stats and information.'
                         : "Tip: Enable 'Research' for AI to look up current stats and news."}
@@ -745,7 +751,7 @@ export default function PostEditor() {
                   {researchEnabled && (
                     <div className="mb-4 p-4 bg-black/20 rounded-lg border border-purple-500/20">
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-semibold text-gray-300">
+                        <span className="text-sm font-semibold text-slate-300">
                           Research Sources
                         </span>
                         <button
@@ -763,10 +769,10 @@ export default function PostEditor() {
                             value={customDomains}
                             onChange={(e) => setCustomDomains(e.target.value)}
                             rows={3}
-                            className="w-full px-3 py-2 bg-black/30 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-400 transition-colors text-xs font-mono"
+                            className="w-full px-3 py-2 bg-black/30 border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-purple-400 transition-colors text-xs font-mono"
                             placeholder="Enter domains (comma or newline separated)&#10;e.g., nhl.com, espn.com"
                           />
-                          <p className="text-gray-500 text-xs mt-1">
+                          <p className="text-slate-400 text-xs mt-1">
                             AI will only search these domains
                           </p>
                         </div>
@@ -793,13 +799,13 @@ export default function PostEditor() {
 
                   {generating && (
                     <div className="mb-4">
-                      <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <div className="h-2 bg-slate-600 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-purple-500 to-blue-500 animate-pulse"
                           style={{ width: '100%' }}
                         />
                       </div>
-                      <p className="text-gray-400 text-sm mt-2 text-center">
+                      <p className="text-slate-400 text-sm mt-2 text-center">
                         Generating your article... This may take 15-30 seconds.
                       </p>
                     </div>
@@ -836,19 +842,19 @@ export default function PostEditor() {
 
                   {/* Game Selector */}
                   <div className="mb-4">
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">
                       Select Game
                     </label>
                     {loadingGames ? (
-                      <div className="flex items-center gap-2 text-gray-400">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-600 border-t-purple-400" />
+                      <div className="flex items-center gap-2 text-slate-400">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-500 border-t-purple-400" />
                         Loading recent games...
                       </div>
                     ) : recentGames.length > 0 ? (
                       <select
                         value={formData.gameId || ''}
                         onChange={(e) => handleGameSelect(e.target.value)}
-                        className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-400 transition-colors"
+                        className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white focus:outline-none focus:border-purple-400 transition-colors"
                       >
                         <option value="">Select a game...</option>
                         {recentGames.map((g) => (
@@ -858,7 +864,7 @@ export default function PostEditor() {
                         ))}
                       </select>
                     ) : (
-                      <p className="text-gray-400 text-sm">No recent games found</p>
+                      <p className="text-slate-400 text-sm">No recent games found</p>
                     )}
                   </div>
 
@@ -867,11 +873,11 @@ export default function PostEditor() {
                     <div className="mb-4 p-3 bg-blue-900/30 border border-blue-500/30 rounded-lg">
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <span className="text-gray-400">Opponent:</span>
+                          <span className="text-slate-400">Opponent:</span>
                           <span className="text-white ml-2">{formData.opponent}</span>
                         </div>
                         <div>
-                          <span className="text-gray-400">Date:</span>
+                          <span className="text-slate-400">Date:</span>
                           <span className="text-white ml-2">{formData.gameDate}</span>
                         </div>
                       </div>
@@ -886,13 +892,13 @@ export default function PostEditor() {
 
                   {generating && (
                     <div className="mb-4">
-                      <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <div className="h-2 bg-slate-600 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-purple-500 to-blue-500 animate-pulse"
                           style={{ width: '100%' }}
                         />
                       </div>
-                      <p className="text-gray-400 text-sm mt-2 text-center">
+                      <p className="text-slate-400 text-sm mt-2 text-center">
                         Fetching box score and generating recap...
                       </p>
                     </div>
@@ -929,19 +935,19 @@ export default function PostEditor() {
 
                   {/* Set Selector */}
                   <div className="mb-4">
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">
                       Select Set
                     </label>
                     {loadingSets ? (
-                      <div className="flex items-center gap-2 text-gray-400">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-600 border-t-purple-400" />
+                      <div className="flex items-center gap-2 text-slate-400">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-500 border-t-purple-400" />
                         Loading completed sets...
                       </div>
                     ) : completedSets.length > 0 ? (
                       <select
                         value={formData.setNumber || ''}
                         onChange={(e) => handleSetSelect(e.target.value)}
-                        className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-400 transition-colors"
+                        className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white focus:outline-none focus:border-purple-400 transition-colors"
                       >
                         <option value="">Select a set...</option>
                         {completedSets.map((set) => {
@@ -955,7 +961,7 @@ export default function PostEditor() {
                         })}
                       </select>
                     ) : (
-                      <p className="text-gray-400 text-sm">No completed sets found</p>
+                      <p className="text-slate-400 text-sm">No completed sets found</p>
                     )}
                   </div>
 
@@ -969,23 +975,23 @@ export default function PostEditor() {
                         return (
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
-                              <span className="text-gray-400">Set:</span>
+                              <span className="text-slate-400">Set:</span>
                               <span className="text-white ml-2">#{formData.setNumber}</span>
                             </div>
                             <div>
-                              <span className="text-gray-400">Record:</span>
+                              <span className="text-slate-400">Record:</span>
                               <span className="text-white ml-2">
                                 {selectedSet.wins}-{selectedSet.losses}-{selectedSet.otLosses}
                               </span>
                             </div>
                             <div>
-                              <span className="text-gray-400">Points:</span>
+                              <span className="text-slate-400">Points:</span>
                               <span className="text-white ml-2">
                                 {selectedSet.points}/{selectedSet.maxPoints} ({pointsPct}%)
                               </span>
                             </div>
                             <div>
-                              <span className="text-gray-400">Opponents:</span>
+                              <span className="text-slate-400">Opponents:</span>
                               <span className="text-white ml-2">{formData.opponent}</span>
                             </div>
                           </div>
@@ -1002,13 +1008,13 @@ export default function PostEditor() {
 
                   {generating && (
                     <div className="mb-4">
-                      <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <div className="h-2 bg-slate-600 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-purple-500 to-blue-500 animate-pulse"
                           style={{ width: '100%' }}
                         />
                       </div>
-                      <p className="text-gray-400 text-sm mt-2 text-center">
+                      <p className="text-slate-400 text-sm mt-2 text-center">
                         Fetching game data and generating set recap...
                       </p>
                     </div>
@@ -1039,26 +1045,26 @@ export default function PostEditor() {
               {(formData.type === 'game-recap' && formData.team === 'bills') && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">
                       Opponent
                     </label>
                     <input
                       type="text"
                       value={formData.opponent}
                       onChange={(e) => updateField('opponent', e.target.value)}
-                      className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#FCB514] transition-colors"
+                      className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-[#FCB514] transition-colors"
                       placeholder="e.g., Rangers"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-300 mb-2">
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">
                       Game Date
                     </label>
                     <input
                       type="date"
                       value={formData.gameDate}
                       onChange={(e) => updateField('gameDate', e.target.value)}
-                      className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-[#FCB514] transition-colors"
+                      className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white focus:outline-none focus:border-[#FCB514] transition-colors"
                     />
                   </div>
                 </div>
@@ -1066,14 +1072,14 @@ export default function PostEditor() {
 
               {/* Content */}
               <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-2">
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
                   Content (Markdown)
                 </label>
                 <textarea
                   value={formData.content}
                   onChange={(e) => updateField('content', e.target.value)}
                   rows={20}
-                  className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#FCB514] transition-colors font-mono text-sm"
+                  className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-[#FCB514] transition-colors font-mono text-sm"
                   placeholder="Write your post content in Markdown..."
                   required
                 />
@@ -1084,8 +1090,8 @@ export default function PostEditor() {
                 const contentImages = extractImagesFromContent(formData.content);
                 if (contentImages.length === 0) return null;
                 return (
-                  <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-                    <label className="block text-sm font-semibold text-gray-300 mb-3">
+                  <div className="bg-slate-700/50 rounded-lg p-4 border border-slate-600">
+                    <label className="block text-sm font-semibold text-slate-300 mb-3">
                       Images in Content ({contentImages.length})
                     </label>
                     <div className="flex flex-wrap gap-3">
@@ -1094,7 +1100,7 @@ export default function PostEditor() {
                           <img
                             src={img.url}
                             alt={img.alt || `Image ${index + 1}`}
-                            className="w-20 h-20 object-cover rounded-lg border border-gray-600"
+                            className="w-20 h-20 object-cover rounded-lg border border-slate-500"
                           />
                           <button
                             type="button"
@@ -1119,7 +1125,7 @@ export default function PostEditor() {
                             }}
                             className={`absolute -bottom-2 left-1/2 -translate-x-1/2 text-xs px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity ${
                               featuredImage
-                                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                ? 'bg-slate-500 text-slate-400 cursor-not-allowed'
                                 : 'bg-amber-600 hover:bg-amber-500 text-white cursor-pointer'
                             }`}
                             title={featuredImage ? 'Remove current featured image first' : 'Make featured image'}
@@ -1130,7 +1136,7 @@ export default function PostEditor() {
                         </div>
                       ))}
                     </div>
-                    <p className="text-gray-500 text-xs mt-2">
+                    <p className="text-slate-400 text-xs mt-2">
                       Hover to remove or promote to featured (★)
                     </p>
                   </div>
@@ -1139,7 +1145,7 @@ export default function PostEditor() {
 
               {/* Meta Description */}
               <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-2">
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
                   Meta Description (SEO)
                 </label>
                 <textarea
@@ -1147,17 +1153,17 @@ export default function PostEditor() {
                   onChange={(e) => updateField('metaDescription', e.target.value)}
                   rows={2}
                   maxLength={160}
-                  className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#FCB514] transition-colors text-sm"
+                  className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-[#FCB514] transition-colors text-sm"
                   placeholder="Brief description for search results (max 160 chars)"
                 />
-                <p className="text-gray-500 text-xs mt-1">
+                <p className="text-slate-400 text-xs mt-1">
                   {formData.metaDescription.length}/160 characters
                 </p>
               </div>
 
               {/* Featured Image Section */}
               <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-2">
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
                   Featured Image
                 </label>
                 {featuredImage ? (
@@ -1177,7 +1183,7 @@ export default function PostEditor() {
                     </button>
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-sm italic">
+                  <p className="text-slate-400 text-sm italic">
                     No featured image set. Upload an image below - the first upload will become the featured image.
                   </p>
                 )}
@@ -1185,7 +1191,7 @@ export default function PostEditor() {
 
               {/* Image Upload Section */}
               <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-2">
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
                   {featuredImage ? 'Add More Images to Content' : 'Image Upload'}
                 </label>
 
@@ -1197,21 +1203,21 @@ export default function PostEditor() {
                   className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                     isDragging
                       ? 'border-[#FCB514] bg-[#FCB514]/10'
-                      : 'border-gray-600 hover:border-gray-500'
+                      : 'border-slate-500 hover:border-slate-400'
                   }`}
                 >
                   {uploading ? (
                     <div className="flex flex-col items-center gap-2">
-                      <div className="animate-spin rounded-full h-8 w-8 border-4 border-gray-700 border-t-[#FCB514]" />
-                      <span className="text-gray-400 text-sm">Uploading...</span>
+                      <div className="animate-spin rounded-full h-8 w-8 border-4 border-slate-600 border-t-[#FCB514]" />
+                      <span className="text-slate-400 text-sm">Uploading...</span>
                     </div>
                   ) : (
                     <>
-                      <ImagePlus className="w-8 h-8 text-gray-500 mx-auto mb-2" />
-                      <p className="text-gray-400 text-sm mb-2">
+                      <ImagePlus className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                      <p className="text-slate-400 text-sm mb-2">
                         Drag and drop an image here, or
                       </p>
-                      <label className="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg cursor-pointer transition-colors">
+                      <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg cursor-pointer transition-colors">
                         <Upload className="w-4 h-4" />
                         Choose File
                         <input
@@ -1221,7 +1227,7 @@ export default function PostEditor() {
                           className="hidden"
                         />
                       </label>
-                      <p className="text-gray-500 text-xs mt-2">
+                      <p className="text-slate-400 text-xs mt-2">
                         JPG, PNG, WebP, GIF - Max 5MB
                       </p>
                     </>
@@ -1245,7 +1251,7 @@ export default function PostEditor() {
                 {/* Uploaded Images Gallery */}
                 {uploadedImages.length > 0 && (
                   <div className="mt-4">
-                    <p className="text-sm text-gray-400 mb-2">
+                    <p className="text-sm text-slate-400 mb-2">
                       Uploaded Images (click to insert again):
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -1254,7 +1260,7 @@ export default function PostEditor() {
                           <img
                             src={url}
                             alt={`Uploaded ${index + 1}`}
-                            className="w-16 h-16 object-cover rounded border border-gray-600 cursor-pointer hover:border-[#FCB514] transition-colors"
+                            className="w-16 h-16 object-cover rounded border border-slate-500 cursor-pointer hover:border-[#FCB514] transition-colors"
                             onClick={() => insertImageAtCursor(url, `Image ${index + 1}`)}
                             title="Click to insert into content"
                           />
@@ -1263,7 +1269,7 @@ export default function PostEditor() {
                             onClick={() => {
                               navigator.clipboard.writeText(url);
                             }}
-                            className="absolute -top-1 -right-1 bg-gray-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                            className="absolute -top-1 -right-1 bg-slate-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
                             title="Copy URL"
                           >
                             <ImagePlus className="w-3 h-3" />
@@ -1277,7 +1283,7 @@ export default function PostEditor() {
 
               {/* Publish Date */}
               <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
+                <label className="block text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
                   Publish Date
                 </label>
@@ -1285,9 +1291,9 @@ export default function PostEditor() {
                   type="datetime-local"
                   value={formData.publishedAt}
                   onChange={(e) => updateField('publishedAt', e.target.value)}
-                  className="w-full px-4 py-3 bg-black/30 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-[#FCB514] transition-colors"
+                  className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white focus:outline-none focus:border-[#FCB514] transition-colors"
                 />
-                <p className="text-gray-500 text-xs mt-1">
+                <p className="text-slate-400 text-xs mt-1">
                   Leave empty to use current time when publishing. Set a date to backdate or schedule.
                 </p>
               </div>
@@ -1299,7 +1305,7 @@ export default function PostEditor() {
                     type="button"
                     onClick={() => updateField('pinned', !formData.pinned)}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
-                      formData.pinned ? 'bg-amber-500' : 'bg-gray-600'
+                      formData.pinned ? 'bg-amber-500' : 'bg-slate-500'
                     }`}
                   >
                     <span
@@ -1308,9 +1314,9 @@ export default function PostEditor() {
                       }`}
                     />
                   </button>
-                  <span className="text-gray-300 text-sm font-semibold">Pin to Featured Section</span>
+                  <span className="text-slate-300 text-sm font-semibold">Pin to Featured Section</span>
                 </label>
-                <p className="text-gray-500 text-xs">
+                <p className="text-slate-400 text-xs">
                   Pinned posts appear at the top of the blog. Only one post can be pinned at a time.
                 </p>
               </div>
@@ -1320,7 +1326,7 @@ export default function PostEditor() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-gray-700 hover:bg-gray-600 transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-slate-600 hover:bg-slate-500 transition-colors disabled:opacity-50"
                 >
                   <Save className="w-5 h-5" />
                   {saving ? 'Saving...' : 'Save Draft'}
@@ -1358,7 +1364,7 @@ export default function PostEditor() {
                 {formData.content ? (
                   <PostContent content={formData.content} accent={accent} />
                 ) : (
-                  <p className="text-gray-500 italic">
+                  <p className="text-slate-400 italic">
                     Start typing to see preview...
                   </p>
                 )}

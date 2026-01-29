@@ -257,7 +257,7 @@ export default function AdminDashboard() {
               <button
                 onClick={() => triggerCron('weekly')}
                 disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-500 hover:bg-slate-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {triggering === 'weekly' ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -269,7 +269,7 @@ export default function AdminDashboard() {
               <button
                 onClick={() => triggerCron('news')}
                 disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-purple-600 hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-500 hover:bg-slate-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {triggering === 'news' ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -281,7 +281,7 @@ export default function AdminDashboard() {
               <button
                 onClick={() => triggerCron('game-recap')}
                 disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-green-600 hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-500 hover:bg-slate-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {triggering === 'game-recap' ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -293,7 +293,7 @@ export default function AdminDashboard() {
               <button
                 onClick={() => triggerCron('set-recap')}
                 disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-orange-600 hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-500 hover:bg-slate-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {triggering === 'set-recap' ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -334,7 +334,7 @@ export default function AdminDashboard() {
                     onClick={() => toggleSetting('auto-publish-weekly')}
                     disabled={togglingSettings !== null}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-weekly'] ? 'bg-blue-600' : 'bg-slate-500'
+                      autoPublishSettings['auto-publish-weekly'] ? 'bg-green-600' : 'bg-slate-500'
                     } ${togglingSettings === 'auto-publish-weekly' ? 'opacity-50' : ''}`}
                   >
                     <span
@@ -350,7 +350,7 @@ export default function AdminDashboard() {
                     onClick={() => toggleSetting('auto-publish-news')}
                     disabled={togglingSettings !== null}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-news'] ? 'bg-purple-600' : 'bg-slate-500'
+                      autoPublishSettings['auto-publish-news'] ? 'bg-green-600' : 'bg-slate-500'
                     } ${togglingSettings === 'auto-publish-news' ? 'opacity-50' : ''}`}
                   >
                     <span
@@ -382,7 +382,7 @@ export default function AdminDashboard() {
                     onClick={() => toggleSetting('auto-publish-set-recap')}
                     disabled={togglingSettings !== null}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-set-recap'] ? 'bg-orange-600' : 'bg-slate-500'
+                      autoPublishSettings['auto-publish-set-recap'] ? 'bg-green-600' : 'bg-slate-500'
                     } ${togglingSettings === 'auto-publish-set-recap' ? 'opacity-50' : ''}`}
                   >
                     <span
@@ -412,8 +412,7 @@ export default function AdminDashboard() {
               <button
                 onClick={() => triggerCron('bills-news')}
                 disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: '#C60C30' }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-500 hover:bg-slate-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {triggering === 'bills-news' ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -425,7 +424,7 @@ export default function AdminDashboard() {
               <button
                 onClick={() => triggerCron('bills-weekly')}
                 disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-blue-700 hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-500 hover:bg-slate-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {triggering === 'bills-weekly' ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -437,7 +436,7 @@ export default function AdminDashboard() {
               <button
                 onClick={() => triggerCron('bills-game-recap')}
                 disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-green-700 hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-500 hover:bg-slate-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {triggering === 'bills-game-recap' ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -457,9 +456,8 @@ export default function AdminDashboard() {
                     onClick={() => toggleSetting('auto-publish-bills-news')}
                     disabled={togglingSettings !== null}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-bills-news'] ? 'bg-red-600' : 'bg-slate-500'
+                      autoPublishSettings['auto-publish-bills-news'] ? 'bg-green-600' : 'bg-slate-500'
                     } ${togglingSettings === 'auto-publish-bills-news' ? 'opacity-50' : ''}`}
-                    style={autoPublishSettings['auto-publish-bills-news'] ? { backgroundColor: '#C60C30' } : {}}
                   >
                     <span
                       className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
@@ -474,7 +472,7 @@ export default function AdminDashboard() {
                     onClick={() => toggleSetting('auto-publish-bills-weekly')}
                     disabled={togglingSettings !== null}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-bills-weekly'] ? 'bg-blue-700' : 'bg-slate-500'
+                      autoPublishSettings['auto-publish-bills-weekly'] ? 'bg-green-600' : 'bg-slate-500'
                     } ${togglingSettings === 'auto-publish-bills-weekly' ? 'opacity-50' : ''}`}
                   >
                     <span
@@ -490,7 +488,7 @@ export default function AdminDashboard() {
                     onClick={() => toggleSetting('auto-publish-bills-game-recap')}
                     disabled={togglingSettings !== null}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-bills-game-recap'] ? 'bg-green-700' : 'bg-slate-500'
+                      autoPublishSettings['auto-publish-bills-game-recap'] ? 'bg-green-600' : 'bg-slate-500'
                     } ${togglingSettings === 'auto-publish-bills-game-recap' ? 'opacity-50' : ''}`}
                   >
                     <span
