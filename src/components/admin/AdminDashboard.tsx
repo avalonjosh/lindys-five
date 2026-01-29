@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Plus, Edit, Trash2, Eye, LogOut, FileText, RefreshCw, Newspaper, Calendar, Trophy, Layers, Pin, ChevronUp, ChevronDown, Filter } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, LogOut, FileText, RefreshCw, Newspaper, Calendar, Trophy, Layers, Pin, ChevronUp, ChevronDown, Filter, Clock } from 'lucide-react';
 import { fetchPosts, deletePost, updatePost } from '../../services/blogApi';
 import { logout } from '../../utils/auth';
 import type { BlogPost } from '../../types';
@@ -47,6 +47,7 @@ export default function AdminDashboard() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [showSchedule, setShowSchedule] = useState(false);
   const navigate = useNavigate();
 
   // Filter and sort posts
@@ -543,6 +544,71 @@ export default function AdminDashboard() {
             </div>
           </div>
 
+          {/* Schedule Reference */}
+          <div className="mb-8">
+            <button
+              onClick={() => setShowSchedule(!showSchedule)}
+              className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors mb-2"
+            >
+              <Clock className="w-4 h-4" />
+              <span>Automation Schedule Reference</span>
+              {showSchedule ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
+            </button>
+            {showSchedule && (
+              <div className="p-4 bg-slate-600/30 rounded-xl border border-slate-500">
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Sabres Schedule */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-[#FCB514] mb-3">Sabres</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Weekly Roundup</span>
+                        <span className="text-slate-300">Mondays ~5-6 AM</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">News Scan</span>
+                        <span className="text-slate-300">Every 6 hours</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Game Recap</span>
+                        <span className="text-slate-300">Daily ~11 PM & ~4 AM</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Set Recap</span>
+                        <span className="text-slate-300">Daily ~6 AM</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Bills Schedule */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-[#C60C30] mb-3">Bills</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Weekly Roundup</span>
+                        <span className="text-slate-300">Mondays ~5-6 AM</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">News Scan</span>
+                        <span className="text-slate-300">Every 4 hours</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Game Recap</span>
+                        <span className="text-slate-300">Mondays ~12 AM & ~5 AM</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-slate-500 text-xs mt-4 text-center">
+                  All times approximate Eastern. Cron jobs run on Vercel's schedule.
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Filters */}
           {posts.length > 0 && (
             <div className="mb-6 p-4 bg-slate-600/30 rounded-xl border border-slate-500 flex flex-wrap items-center gap-4">
@@ -711,10 +777,9 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-6 py-4 hidden md:table-cell">
                         <span
-                          className="px-2 py-1 rounded text-xs font-semibold uppercase border"
+                          className="px-2 py-1 rounded text-xs font-semibold uppercase text-white"
                           style={{
-                            borderColor: post.team === 'sabres' ? '#FCB514' : '#C60C30',
-                            color: post.team === 'sabres' ? '#FCB514' : '#C60C30',
+                            backgroundColor: post.team === 'sabres' ? '#003087' : '#C60C30',
                           }}
                         >
                           {post.team}
@@ -722,10 +787,10 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-6 py-4 hidden md:table-cell">
                         <span
-                          className={`px-2 py-1 rounded text-xs font-semibold border ${
+                          className={`px-2 py-1 rounded text-xs font-semibold ${
                             post.status === 'published'
-                              ? 'border-green-500 text-green-400'
-                              : 'border-amber-500 text-amber-400'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-amber-500 text-black'
                           }`}
                         >
                           {post.status}
