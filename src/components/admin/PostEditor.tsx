@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ArrowLeft, Save, Eye, EyeOff, Send, Sparkles, ImagePlus, X, Upload, Calendar } from 'lucide-react';
-import { fetchPost, createPost, updatePost, generateArticle, uploadImage } from '../../services/blogApi';
+import { ArrowLeft, Save, Eye, EyeOff, Send, Sparkles, ImagePlus, X, Upload, Calendar, Images } from 'lucide-react';
+import { fetchPost, createPost, updatePost, generateArticle, uploadImage, fetchImages } from '../../services/blogApi';
 import { fetchSabresSchedule } from '../../services/nhlApi';
 import { calculateChunks } from '../../utils/chunkCalculator';
 import PostContent from '../blog/PostContent';
@@ -151,6 +151,11 @@ export default function PostEditor() {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [featuredImage, setFeaturedImage] = useState<string | null>(null);
+
+  // Image gallery state
+  const [showGallery, setShowGallery] = useState(false);
+  const [galleryImages, setGalleryImages] = useState<{ url: string; filename: string; uploadedAt: string }[]>([]);
+  const [loadingGallery, setLoadingGallery] = useState(false);
 
   // Auto-populated reference date for research accuracy
   const getTodayFormatted = () => {
@@ -567,6 +572,32 @@ export default function PostEditor() {
     }));
   }
 
+  async function loadGalleryImages() {
+    setLoadingGallery(true);
+    try {
+      const result = await fetchImages();
+      setGalleryImages(result.images);
+    } catch (err) {
+      console.error('Failed to load gallery images:', err);
+    } finally {
+      setLoadingGallery(false);
+    }
+  }
+
+  function openGallery() {
+    setShowGallery(true);
+    loadGalleryImages();
+  }
+
+  function selectFromGallery(url: string, asFeatured: boolean) {
+    if (asFeatured) {
+      setFeaturedImage(url);
+    } else {
+      insertImageAtCursor(url, 'Image');
+    }
+    setShowGallery(false);
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
@@ -695,17 +726,17 @@ export default function PostEditor() {
 
               {/* AI Article Generator - Only for new custom articles */}
               {isNew && formData.type === 'custom' && (
-                <div className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-xl p-6">
+                <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-purple-400" />
+                      <Sparkles className="w-5 h-5 text-indigo-400" />
                       AI Article Generator
                     </h3>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <span className="text-sm text-slate-400">Research</span>
                       <div
                         className={`relative w-11 h-6 rounded-full transition-colors ${
-                          researchEnabled ? 'bg-purple-500' : 'bg-slate-500'
+                          researchEnabled ? 'bg-indigo-500' : 'bg-slate-500'
                         }`}
                         onClick={() => setResearchEnabled(!researchEnabled)}
                       >
@@ -737,7 +768,7 @@ export default function PostEditor() {
                       value={articleIdea}
                       onChange={(e) => setArticleIdea(e.target.value)}
                       rows={4}
-                      className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-purple-400 transition-colors text-sm"
+                      className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400 transition-colors text-sm"
                       placeholder="Describe what you want the article to cover. Be specific about topics, players, stats, comparisons, or themes you want included..."
                     />
                     <p className="text-slate-400 text-xs mt-1">
@@ -749,7 +780,7 @@ export default function PostEditor() {
 
                   {/* Research Sources - Only show when research is enabled */}
                   {researchEnabled && (
-                    <div className="mb-4 p-4 bg-black/20 rounded-lg border border-purple-500/20">
+                    <div className="mb-4 p-4 bg-black/20 rounded-lg border border-indigo-500/20">
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-sm font-semibold text-slate-300">
                           Research Sources
@@ -757,7 +788,7 @@ export default function PostEditor() {
                         <button
                           type="button"
                           onClick={() => setCustomizeResearch(!customizeResearch)}
-                          className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                          className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
                         >
                           {customizeResearch ? 'Use Defaults' : 'Customize'}
                         </button>
@@ -769,7 +800,7 @@ export default function PostEditor() {
                             value={customDomains}
                             onChange={(e) => setCustomDomains(e.target.value)}
                             rows={3}
-                            className="w-full px-3 py-2 bg-black/30 border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-purple-400 transition-colors text-xs font-mono"
+                            className="w-full px-3 py-2 bg-black/30 border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400 transition-colors text-xs font-mono"
                             placeholder="Enter domains (comma or newline separated)&#10;e.g., nhl.com, espn.com"
                           />
                           <p className="text-slate-400 text-xs mt-1">
@@ -781,7 +812,7 @@ export default function PostEditor() {
                           {DEFAULT_RESEARCH_DOMAINS.map((domain) => (
                             <span
                               key={domain}
-                              className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full"
+                              className="px-2 py-1 bg-indigo-500/20 text-indigo-300 text-xs rounded-full"
                             >
                               {domain}
                             </span>
@@ -801,7 +832,7 @@ export default function PostEditor() {
                     <div className="mb-4">
                       <div className="h-2 bg-slate-600 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-purple-500 to-blue-500 animate-pulse"
+                          className="h-full bg-indigo-500 animate-pulse"
                           style={{ width: '100%' }}
                         />
                       </div>
@@ -815,7 +846,7 @@ export default function PostEditor() {
                     type="button"
                     onClick={handleGenerateArticle}
                     disabled={generating || !articleIdea.trim()}
-                    className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {generating ? (
                       <>
@@ -834,9 +865,9 @@ export default function PostEditor() {
 
               {/* Game Recap: Game Selector and AI Generator */}
               {isNew && formData.type === 'game-recap' && formData.team === 'sabres' && (
-                <div className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-xl p-6">
+                <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-6">
                   <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
-                    <Sparkles className="w-5 h-5 text-purple-400" />
+                    <Sparkles className="w-5 h-5 text-indigo-400" />
                     AI Game Recap Generator
                   </h3>
 
@@ -847,14 +878,14 @@ export default function PostEditor() {
                     </label>
                     {loadingGames ? (
                       <div className="flex items-center gap-2 text-slate-400">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-500 border-t-purple-400" />
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-500 border-t-indigo-400" />
                         Loading recent games...
                       </div>
                     ) : recentGames.length > 0 ? (
                       <select
                         value={formData.gameId || ''}
                         onChange={(e) => handleGameSelect(e.target.value)}
-                        className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white focus:outline-none focus:border-purple-400 transition-colors"
+                        className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white focus:outline-none focus:border-indigo-400 transition-colors"
                       >
                         <option value="">Select a game...</option>
                         {recentGames.map((g) => (
@@ -894,7 +925,7 @@ export default function PostEditor() {
                     <div className="mb-4">
                       <div className="h-2 bg-slate-600 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-purple-500 to-blue-500 animate-pulse"
+                          className="h-full bg-indigo-500 animate-pulse"
                           style={{ width: '100%' }}
                         />
                       </div>
@@ -908,7 +939,7 @@ export default function PostEditor() {
                     type="button"
                     onClick={handleGenerateRecap}
                     disabled={generating || !formData.gameId}
-                    className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {generating ? (
                       <>
@@ -927,9 +958,9 @@ export default function PostEditor() {
 
               {/* Set Recap: Set Selector and AI Generator */}
               {isNew && formData.type === 'set-recap' && formData.team === 'sabres' && (
-                <div className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-xl p-6">
+                <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-6">
                   <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
-                    <Sparkles className="w-5 h-5 text-purple-400" />
+                    <Sparkles className="w-5 h-5 text-indigo-400" />
                     AI Set Recap Generator
                   </h3>
 
@@ -940,14 +971,14 @@ export default function PostEditor() {
                     </label>
                     {loadingSets ? (
                       <div className="flex items-center gap-2 text-slate-400">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-500 border-t-purple-400" />
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-500 border-t-indigo-400" />
                         Loading completed sets...
                       </div>
                     ) : completedSets.length > 0 ? (
                       <select
                         value={formData.setNumber || ''}
                         onChange={(e) => handleSetSelect(e.target.value)}
-                        className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white focus:outline-none focus:border-purple-400 transition-colors"
+                        className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white focus:outline-none focus:border-indigo-400 transition-colors"
                       >
                         <option value="">Select a set...</option>
                         {completedSets.map((set) => {
@@ -1010,7 +1041,7 @@ export default function PostEditor() {
                     <div className="mb-4">
                       <div className="h-2 bg-slate-600 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-purple-500 to-blue-500 animate-pulse"
+                          className="h-full bg-indigo-500 animate-pulse"
                           style={{ width: '100%' }}
                         />
                       </div>
@@ -1024,7 +1055,7 @@ export default function PostEditor() {
                     type="button"
                     onClick={handleGenerateSetRecap}
                     disabled={generating || !formData.setNumber}
-                    className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {generating ? (
                       <>
@@ -1217,16 +1248,26 @@ export default function PostEditor() {
                       <p className="text-slate-400 text-sm mb-2">
                         Drag and drop an image here, or
                       </p>
-                      <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg cursor-pointer transition-colors">
-                        <Upload className="w-4 h-4" />
-                        Choose File
-                        <input
-                          type="file"
-                          accept=".jpg,.jpeg,.png,.webp,.gif"
-                          onChange={handleFileSelect}
-                          className="hidden"
-                        />
-                      </label>
+                      <div className="flex items-center justify-center gap-3">
+                        <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg cursor-pointer transition-colors">
+                          <Upload className="w-4 h-4" />
+                          Upload New
+                          <input
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.webp,.gif"
+                            onChange={handleFileSelect}
+                            className="hidden"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={openGallery}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors"
+                        >
+                          <Images className="w-4 h-4" />
+                          Browse Gallery
+                        </button>
+                      </div>
                       <p className="text-slate-400 text-xs mt-2">
                         JPG, PNG, WebP, GIF - Max 5MB
                       </p>
@@ -1424,6 +1465,87 @@ export default function PostEditor() {
           </div>
         </main>
       </div>
+
+      {/* Image Gallery Modal */}
+      {showGallery && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-2xl border border-slate-600 w-full max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-600">
+              <h3
+                className="text-xl font-bold text-white"
+                style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+              >
+                Image Gallery
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowGallery(false)}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {loadingGallery ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-600 border-t-[#FCB514]" />
+                </div>
+              ) : galleryImages.length === 0 ? (
+                <div className="text-center py-12">
+                  <Images className="w-16 h-16 text-slate-500 mx-auto mb-4" />
+                  <p className="text-slate-400">No images uploaded yet</p>
+                  <p className="text-slate-500 text-sm mt-1">
+                    Upload images to build your gallery
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                  {galleryImages.map((image) => (
+                    <div
+                      key={image.url}
+                      className="relative group aspect-square rounded-lg overflow-hidden border border-slate-600 hover:border-[#FCB514] transition-colors cursor-pointer"
+                    >
+                      <img
+                        src={image.url}
+                        alt={image.filename}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
+                        {!featuredImage && (
+                          <button
+                            type="button"
+                            onClick={() => selectFromGallery(image.url, true)}
+                            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold rounded transition-colors w-full"
+                          >
+                            Set as Featured
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => selectFromGallery(image.url, false)}
+                          className="px-3 py-1.5 bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold rounded transition-colors w-full"
+                        >
+                          Insert in Content
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-600 text-center">
+              <p className="text-slate-400 text-sm">
+                {galleryImages.length} image{galleryImages.length !== 1 ? 's' : ''} in gallery
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

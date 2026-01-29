@@ -156,3 +156,28 @@ export async function uploadImage(file: File): Promise<UploadImageResponse> {
 
   return response.json();
 }
+
+// Image Gallery
+interface GalleryImage {
+  url: string;
+  filename: string;
+  size: number;
+  uploadedAt: string;
+}
+
+interface FetchImagesResponse {
+  success: boolean;
+  images: GalleryImage[];
+  count: number;
+}
+
+export async function fetchImages(): Promise<FetchImagesResponse> {
+  const response = await fetch(`${API_BASE}/images`);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch images');
+  }
+
+  return response.json();
+}
