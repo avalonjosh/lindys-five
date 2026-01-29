@@ -21,7 +21,7 @@
     },
     {
       "path": "/api/cron/bills-news-scan",
-      "schedule": "0 */12 * * *"
+      "schedule": "0 1,13 * * *"
     },
     {
       "path": "/api/cron/bills-weekly-roundup",
