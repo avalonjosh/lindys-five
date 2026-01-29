@@ -211,8 +211,8 @@ export default function BlogPost() {
             </div>
           </div>
 
-          {/* Tracker CTA - For game recaps and set recaps */}
-          {(post.type === 'game-recap' || post.type === 'set-recap') && post.team === 'sabres' && (
+          {/* Tracker CTA - For Sabres articles */}
+          {(post.type === 'game-recap' || post.type === 'set-recap' || post.type === 'news-analysis') && post.team === 'sabres' && (
             <div className="mt-8">
               <Link
                 to="/sabres"
