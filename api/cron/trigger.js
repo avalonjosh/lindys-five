@@ -49,7 +49,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized - admin access required' });
   }
 
-  const { type } = req.body;
+  const { type, setNumber, force } = req.body;
 
   if (!type || !validTypes.includes(type)) {
     return res.status(400).json({
@@ -63,11 +63,17 @@ export default async function handler(req, res) {
     const cronHandler = handlers[type];
 
     // Create a mock request with cron authorization
+    // Include additional params for set-recap
     const mockReq = {
       ...req,
       headers: {
         ...req.headers,
         authorization: `Bearer ${process.env.CRON_SECRET}`
+      },
+      body: {
+        ...req.body,
+        setNumber: type === 'set-recap' ? setNumber : undefined,
+        force: type === 'set-recap' ? force : undefined
       }
     };
 

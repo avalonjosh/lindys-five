@@ -11,6 +11,13 @@ type FilterStatus = 'all' | 'published' | 'draft';
 type FilterType = 'all' | 'game-recap' | 'set-recap' | 'news-analysis' | 'weekly-roundup' | 'custom';
 type SortDirection = 'desc' | 'asc';
 
+interface SetOption {
+  setNumber: number;
+  processed: boolean;
+  startDate: string;
+  endDate: string;
+}
+
 type AutoPublishSettings = {
   // Sabres
   'auto-publish-weekly': boolean;
@@ -50,6 +57,9 @@ export default function AdminDashboard() {
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [showSchedule, setShowSchedule] = useState(false);
+  const [setOptions, setSetOptions] = useState<SetOption[]>([]);
+  const [selectedSetNumber, setSelectedSetNumber] = useState<number | null>(null);
+  const [loadingSets, setLoadingSets] = useState(false);
   const navigate = useNavigate();
 
   // Filter and sort posts
@@ -80,7 +90,32 @@ export default function AdminDashboard() {
   useEffect(() => {
     loadPosts();
     loadSettings();
+    loadSetOptions();
   }, []);
+
+  async function loadSetOptions() {
+    setLoadingSets(true);
+    try {
+      const response = await fetch('/api/blog/set-availability', {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSetOptions(data.sets || []);
+        // Default to latest unprocessed set, or latest set if all processed
+        const unprocessedSet = data.sets?.find((s: SetOption) => !s.processed);
+        if (unprocessedSet) {
+          setSelectedSetNumber(unprocessedSet.setNumber);
+        } else if (data.sets?.length > 0) {
+          setSelectedSetNumber(data.sets[data.sets.length - 1].setNumber);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load set options:', err);
+    } finally {
+      setLoadingSets(false);
+    }
+  }
 
   async function loadSettings() {
     try {
@@ -223,15 +258,25 @@ export default function AdminDashboard() {
     navigate('/admin/login');
   }
 
-  async function triggerCron(type: 'weekly' | 'news' | 'game-recap' | 'set-recap' | 'bills-news' | 'bills-weekly' | 'bills-game-recap') {
+  async function triggerCron(
+    type: 'weekly' | 'news' | 'game-recap' | 'set-recap' | 'bills-news' | 'bills-weekly' | 'bills-game-recap',
+    options?: { setNumber?: number; force?: boolean }
+  ) {
     setTriggering(type);
     setTriggerResult(null);
     try {
+      const body: { type: string; setNumber?: number; force?: boolean } = { type };
+      if (options?.setNumber !== undefined) {
+        body.setNumber = options.setNumber;
+      }
+      if (options?.force) {
+        body.force = true;
+      }
       const response = await fetch('/api/cron/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ type }),
+        body: JSON.stringify(body),
       });
       const data = await response.json();
       if (response.ok) {
@@ -246,6 +291,10 @@ export default function AdminDashboard() {
         });
         // Reload posts to show any new ones
         loadPosts();
+        // Reload set options if we just generated a set recap
+        if (type === 'set-recap') {
+          loadSetOptions();
+        }
       } else {
         setTriggerResult({
           type,
@@ -388,18 +437,47 @@ export default function AdminDashboard() {
                 )}
                 Generate Game Recaps
               </button>
-              <button
-                onClick={() => triggerCron('set-recap')}
-                disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {triggering === 'set-recap' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Layers className="w-4 h-4" />
-                )}
-                Generate Set Recap
-              </button>
+              {/* Set Recap with Dropdown */}
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedSetNumber ?? ''}
+                  onChange={(e) => setSelectedSetNumber(e.target.value ? parseInt(e.target.value, 10) : null)}
+                  disabled={triggering !== null || loadingSets || setOptions.length === 0}
+                  className="px-3 py-2 bg-slate-700 border border-slate-500 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-400 disabled:opacity-50"
+                >
+                  {loadingSets ? (
+                    <option value="">Loading...</option>
+                  ) : setOptions.length === 0 ? (
+                    <option value="">No sets available</option>
+                  ) : (
+                    setOptions.map((set) => (
+                      <option key={set.setNumber} value={set.setNumber}>
+                        Set {set.setNumber} {set.processed ? '✓' : ''}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <button
+                  onClick={() => {
+                    if (selectedSetNumber) {
+                      const set = setOptions.find(s => s.setNumber === selectedSetNumber);
+                      triggerCron('set-recap', {
+                        setNumber: selectedSetNumber,
+                        force: set?.processed ?? false
+                      });
+                    }
+                  }}
+                  disabled={triggering !== null || !selectedSetNumber}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {triggering === 'set-recap' ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Layers className="w-4 h-4" />
+                  )}
+                  Generate Set Recap
+                </button>
+              </div>
             </div>
             {triggerResult && (
               <div

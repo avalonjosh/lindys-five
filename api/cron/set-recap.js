@@ -329,6 +329,10 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  // Optional parameters from body (for manual triggers)
+  const requestedSetNumber = req.body?.setNumber;
+  const forceRegenerate = req.body?.force === true;
+
   try {
     // Fetch season schedule with retry logic
     const schedule = await fetchJsonWithRetry(`${NHL_API_BASE}/club-schedule-season/BUF/20252026`);
@@ -340,7 +344,7 @@ export default async function handler(req, res) {
 
     const totalGames = completedGames.length;
 
-    // Calculate current completed set number
+    // Calculate current completed set count
     // Set is complete when we have 5, 10, 15, etc. games
     const completedSetCount = Math.floor(totalGames / 5);
 
@@ -353,36 +357,53 @@ export default async function handler(req, res) {
       });
     }
 
-    // Check the most recent completed set
-    const latestSetNumber = completedSetCount;
+    // Determine which set to process
+    // If a specific set is requested, validate and use it
+    // Otherwise, use the latest completed set
+    let targetSetNumber;
+    if (requestedSetNumber !== undefined && requestedSetNumber !== null) {
+      const setNum = parseInt(requestedSetNumber, 10);
+      if (isNaN(setNum) || setNum < 1 || setNum > completedSetCount) {
+        return res.status(400).json({
+          error: `Invalid set number. Must be between 1 and ${completedSetCount}`,
+          requestedSet: requestedSetNumber,
+          completedSets: completedSetCount
+        });
+      }
+      targetSetNumber = setNum;
+    } else {
+      targetSetNumber = completedSetCount;
+    }
 
-    // Check if already processed
-    if (await hasSetBeenProcessed(latestSetNumber)) {
+    // Check if already processed (unless force flag is set)
+    const alreadyProcessed = await hasSetBeenProcessed(targetSetNumber);
+    if (alreadyProcessed && !forceRegenerate) {
       return res.status(200).json({
         success: true,
-        message: `Set ${latestSetNumber} already processed`,
+        message: `Set ${targetSetNumber} already processed`,
         totalGames,
         completedSets: completedSetCount,
-        latestSet: latestSetNumber
+        latestSet: targetSetNumber,
+        hint: 'Use force=true to regenerate'
       });
     }
 
     // Get the 5 games for this set
-    const setStartIndex = (latestSetNumber - 1) * 5;
+    const setStartIndex = (targetSetNumber - 1) * 5;
     const setEndIndex = setStartIndex + 5;
     const setGames = completedGames.slice(setStartIndex, setEndIndex);
 
     if (setGames.length < 5) {
       return res.status(200).json({
         success: true,
-        message: `Set ${latestSetNumber} not complete yet`,
+        message: `Set ${targetSetNumber} not complete yet`,
         totalGames,
         gamesInSet: setGames.length
       });
     }
 
     // Fetch box scores for all games in the set
-    console.log(`Processing Set ${latestSetNumber} with games:`, setGames.map(g => g.id));
+    console.log(`Processing Set ${targetSetNumber} with games:`, setGames.map(g => g.id));
 
     const boxScorePromises = setGames.map(game => fetchGameBoxScore(game.id));
     const boxScores = await Promise.all(boxScorePromises);
@@ -398,7 +419,7 @@ export default async function handler(req, res) {
     }
 
     // Format set data
-    const { context: verifiedSetData, stats, opponents } = formatSetData(latestSetNumber, setGames, boxScores);
+    const { context: verifiedSetData, stats, opponents } = formatSetData(targetSetNumber, setGames, boxScores);
 
     // Generate article
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -410,7 +431,7 @@ export default async function handler(req, res) {
       system: SET_RECAP_SYSTEM_PROMPT,
       messages: [{
         role: 'user',
-        content: `Write a set recap for the Buffalo Sabres' Set #${latestSetNumber} of the 2025-26 season:\n\n${verifiedSetData}\n\nThe article should be 600-900 words.`
+        content: `Write a set recap for the Buffalo Sabres' Set #${targetSetNumber} of the 2025-26 season:\n\n${verifiedSetData}\n\nThe article should be 600-900 words.`
       }]
     });
 
@@ -420,8 +441,8 @@ export default async function handler(req, res) {
       .join('\n');
 
     // Generate title and meta description
-    const title = generateSetTitle(latestSetNumber, stats.wins, stats.losses, stats.otLosses, stats.points);
-    const metaDescription = `Buffalo Sabres Set ${latestSetNumber} recap: ${stats.wins}-${stats.losses}-${stats.otLosses} (${stats.points} points) from ${formatDate(stats.startDate)} to ${formatDate(stats.endDate)}.`;
+    const title = generateSetTitle(targetSetNumber, stats.wins, stats.losses, stats.otLosses, stats.points);
+    const metaDescription = `Buffalo Sabres Set ${targetSetNumber} recap: ${stats.wins}-${stats.losses}-${stats.otLosses} (${stats.points} points) from ${formatDate(stats.startDate)} to ${formatDate(stats.endDate)}.`;
 
     // Create post
     const post = await createPost({
@@ -430,7 +451,7 @@ export default async function handler(req, res) {
       team: 'sabres',
       type: 'set-recap',
       status: autoPublish ? 'published' : 'draft',
-      setNumber: latestSetNumber,
+      setNumber: targetSetNumber,
       setStartDate: stats.startDate,
       setEndDate: stats.endDate,
       opponent: opponents,
@@ -439,7 +460,7 @@ export default async function handler(req, res) {
     });
 
     // Mark as processed
-    await markSetProcessed(latestSetNumber, post.id, {
+    await markSetProcessed(targetSetNumber, post.id, {
       record: `${stats.wins}-${stats.losses}-${stats.otLosses}`,
       points: stats.points,
       startDate: stats.startDate,
@@ -448,7 +469,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
-      setNumber: latestSetNumber,
+      setNumber: targetSetNumber,
       postId: post.id,
       postSlug: post.slug,
       status: post.status,
