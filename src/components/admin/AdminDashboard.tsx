@@ -1,10 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Plus, Edit, Trash2, Eye, LogOut, FileText, RefreshCw, Newspaper, Calendar, Trophy, Layers, Pin } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, LogOut, FileText, RefreshCw, Newspaper, Calendar, Trophy, Layers, Pin, ChevronUp, ChevronDown, Filter } from 'lucide-react';
 import { fetchPosts, deletePost, updatePost } from '../../services/blogApi';
 import { logout } from '../../utils/auth';
 import type { BlogPost } from '../../types';
+
+type FilterTeam = 'all' | 'sabres' | 'bills';
+type FilterStatus = 'all' | 'published' | 'draft';
+type FilterType = 'all' | 'game-recap' | 'set-recap' | 'news-analysis' | 'weekly-roundup' | 'custom';
+type SortDirection = 'desc' | 'asc';
 
 type AutoPublishSettings = {
   // Sabres
@@ -38,7 +43,36 @@ export default function AdminDashboard() {
   });
   const [togglingSettings, setTogglingSettings] = useState<string | null>(null);
   const [pinning, setPinning] = useState<string | null>(null);
+  const [filterTeam, setFilterTeam] = useState<FilterTeam>('all');
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+  const [filterType, setFilterType] = useState<FilterType>('all');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const navigate = useNavigate();
+
+  // Filter and sort posts
+  const filteredPosts = useMemo(() => {
+    let result = [...posts];
+
+    // Apply filters
+    if (filterTeam !== 'all') {
+      result = result.filter(p => p.team === filterTeam);
+    }
+    if (filterStatus !== 'all') {
+      result = result.filter(p => p.status === filterStatus);
+    }
+    if (filterType !== 'all') {
+      result = result.filter(p => p.type === filterType);
+    }
+
+    // Apply sort
+    result.sort((a, b) => {
+      const dateA = new Date(a.publishedAt || a.createdAt).getTime();
+      const dateB = new Date(b.publishedAt || b.createdAt).getTime();
+      return sortDirection === 'desc' ? dateB - dateA : dateA - dateB;
+    });
+
+    return result;
+  }, [posts, filterTeam, filterStatus, filterType, sortDirection]);
 
   useEffect(() => {
     loadPosts();
@@ -171,10 +205,13 @@ export default function AdminDashboard() {
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Draft';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
     });
   };
 
@@ -257,7 +294,7 @@ export default function AdminDashboard() {
               <button
                 onClick={() => triggerCron('weekly')}
                 disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-500 hover:bg-slate-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {triggering === 'weekly' ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -269,7 +306,7 @@ export default function AdminDashboard() {
               <button
                 onClick={() => triggerCron('news')}
                 disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-500 hover:bg-slate-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {triggering === 'news' ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -281,7 +318,7 @@ export default function AdminDashboard() {
               <button
                 onClick={() => triggerCron('game-recap')}
                 disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-500 hover:bg-slate-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {triggering === 'game-recap' ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -293,7 +330,7 @@ export default function AdminDashboard() {
               <button
                 onClick={() => triggerCron('set-recap')}
                 disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-500 hover:bg-slate-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {triggering === 'set-recap' ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -412,7 +449,7 @@ export default function AdminDashboard() {
               <button
                 onClick={() => triggerCron('bills-news')}
                 disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-500 hover:bg-slate-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {triggering === 'bills-news' ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -424,7 +461,7 @@ export default function AdminDashboard() {
               <button
                 onClick={() => triggerCron('bills-weekly')}
                 disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-500 hover:bg-slate-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {triggering === 'bills-weekly' ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -436,7 +473,7 @@ export default function AdminDashboard() {
               <button
                 onClick={() => triggerCron('bills-game-recap')}
                 disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-slate-500 hover:bg-slate-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {triggering === 'bills-game-recap' ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -506,6 +543,61 @@ export default function AdminDashboard() {
             </div>
           </div>
 
+          {/* Filters */}
+          {posts.length > 0 && (
+            <div className="mb-6 p-4 bg-slate-600/30 rounded-xl border border-slate-500 flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2 text-slate-400">
+                <Filter className="w-4 h-4" />
+                <span className="text-sm font-medium">Filters:</span>
+              </div>
+              <select
+                value={filterTeam}
+                onChange={(e) => setFilterTeam(e.target.value as FilterTeam)}
+                className="px-3 py-1.5 bg-slate-700 border border-slate-500 rounded-lg text-white text-sm focus:outline-none focus:border-[#FCB514]"
+              >
+                <option value="all">All Teams</option>
+                <option value="sabres">Sabres</option>
+                <option value="bills">Bills</option>
+              </select>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
+                className="px-3 py-1.5 bg-slate-700 border border-slate-500 rounded-lg text-white text-sm focus:outline-none focus:border-[#FCB514]"
+              >
+                <option value="all">All Status</option>
+                <option value="published">Published</option>
+                <option value="draft">Draft</option>
+              </select>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value as FilterType)}
+                className="px-3 py-1.5 bg-slate-700 border border-slate-500 rounded-lg text-white text-sm focus:outline-none focus:border-[#FCB514]"
+              >
+                <option value="all">All Types</option>
+                <option value="game-recap">Game Recap</option>
+                <option value="set-recap">Set Recap</option>
+                <option value="news-analysis">News</option>
+                <option value="weekly-roundup">Weekly Roundup</option>
+                <option value="custom">Custom</option>
+              </select>
+              {(filterTeam !== 'all' || filterStatus !== 'all' || filterType !== 'all') && (
+                <button
+                  onClick={() => {
+                    setFilterTeam('all');
+                    setFilterStatus('all');
+                    setFilterType('all');
+                  }}
+                  className="px-3 py-1.5 text-slate-400 hover:text-white text-sm transition-colors"
+                >
+                  Clear filters
+                </button>
+              )}
+              <span className="ml-auto text-slate-400 text-sm">
+                {filteredPosts.length} of {posts.length} posts
+              </span>
+            </div>
+          )}
+
           {/* Content */}
           {loading ? (
             <div className="flex justify-center py-16">
@@ -514,6 +606,29 @@ export default function AdminDashboard() {
           ) : error ? (
             <div className="text-center py-16">
               <p className="text-red-400">{error}</p>
+            </div>
+          ) : filteredPosts.length === 0 && posts.length > 0 ? (
+            <div className="text-center py-16 bg-slate-600/50 rounded-2xl border-2 border-slate-500 shadow-xl">
+              <FileText className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+              <p
+                className="text-slate-300 text-2xl mb-2"
+                style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+              >
+                No Matching Posts
+              </p>
+              <p className="text-slate-400 text-sm mb-6">
+                Try adjusting your filters
+              </p>
+              <button
+                onClick={() => {
+                  setFilterTeam('all');
+                  setFilterStatus('all');
+                  setFilterType('all');
+                }}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white bg-slate-600 hover:bg-slate-500 transition-colors"
+              >
+                Clear Filters
+              </button>
             </div>
           ) : posts.length === 0 ? (
             <div className="text-center py-16 bg-slate-600/50 rounded-2xl border-2 border-slate-500 shadow-xl">
@@ -551,7 +666,17 @@ export default function AdminDashboard() {
                       Status
                     </th>
                     <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide hidden lg:table-cell">
-                      Date
+                      <button
+                        onClick={() => setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc')}
+                        className="flex items-center gap-1 hover:text-white transition-colors"
+                      >
+                        Date
+                        {sortDirection === 'desc' ? (
+                          <ChevronDown className="w-4 h-4" />
+                        ) : (
+                          <ChevronUp className="w-4 h-4" />
+                        )}
+                      </button>
                     </th>
                     <th className="text-right px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide">
                       Actions
@@ -559,7 +684,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {posts.map((post) => (
+                  {filteredPosts.map((post) => (
                     <tr
                       key={post.id}
                       className="border-b border-slate-600 last:border-b-0 hover:bg-slate-500/30 transition-colors"
@@ -567,7 +692,12 @@ export default function AdminDashboard() {
                       <td className="px-6 py-4">
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="text-white font-medium">{post.title}</p>
+                            <Link
+                              to={`/admin/posts/${post.slug}`}
+                              className="text-white font-medium hover:text-[#FCB514] transition-colors"
+                            >
+                              {post.title}
+                            </Link>
                             {post.pinned && (
                               <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded font-semibold">
                                 Pinned
@@ -581,12 +711,9 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-6 py-4 hidden md:table-cell">
                         <span
-                          className="px-2 py-1 rounded text-xs font-semibold uppercase"
+                          className="px-2 py-1 rounded text-xs font-semibold uppercase border"
                           style={{
-                            backgroundColor:
-                              post.team === 'sabres'
-                                ? 'rgba(252, 181, 20, 0.2)'
-                                : 'rgba(198, 12, 48, 0.2)',
+                            borderColor: post.team === 'sabres' ? '#FCB514' : '#C60C30',
                             color: post.team === 'sabres' ? '#FCB514' : '#C60C30',
                           }}
                         >
@@ -595,10 +722,10 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-6 py-4 hidden md:table-cell">
                         <span
-                          className={`px-2 py-1 rounded text-xs font-semibold ${
+                          className={`px-2 py-1 rounded text-xs font-semibold border ${
                             post.status === 'published'
-                              ? 'bg-green-900/30 text-green-400'
-                              : 'bg-yellow-900/30 text-yellow-400'
+                              ? 'border-green-500 text-green-400'
+                              : 'border-amber-500 text-amber-400'
                           }`}
                         >
                           {post.status}
