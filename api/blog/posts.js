@@ -1,5 +1,6 @@
 import { kv } from '@vercel/kv';
 import { jwtVerify } from 'jose';
+import { truncateAtWordBoundary } from '../utils/fetchWithRetry.js';
 
 // Helper to verify admin authentication
 async function verifyAdmin(req) {
@@ -63,8 +64,8 @@ function generateExcerpt(content, maxLength = 200) {
     .replace(/\n+/g, ' ')      // Newlines
     .trim();
 
-  if (plainText.length <= maxLength) return plainText;
-  return plainText.substring(0, maxLength).trim() + '...';
+  // Truncate at word boundary to avoid cutting mid-word
+  return truncateAtWordBoundary(plainText, maxLength, '...');
 }
 
 export default async function handler(req, res) {

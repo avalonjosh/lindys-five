@@ -42,9 +42,16 @@ export default async function handler(req, res) {
       limit: 100,
     });
 
-    // Sort by upload date (most recent first) and format response
+    // Filter to image files (by extension if contentType not available)
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
     const images = blobs
-      .filter(blob => blob.contentType?.startsWith('image/'))
+      .filter(blob => {
+        // Check contentType first
+        if (blob.contentType?.startsWith('image/')) return true;
+        // Fallback to checking file extension
+        const pathname = blob.pathname?.toLowerCase() || '';
+        return imageExtensions.some(ext => pathname.endsWith(ext));
+      })
       .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))
       .map(blob => ({
         url: blob.url,
@@ -57,6 +64,7 @@ export default async function handler(req, res) {
       success: true,
       images,
       count: images.length,
+      totalBlobs: blobs.length, // Debug info
     });
   } catch (error) {
     console.error('Error listing images:', error);

@@ -1,7 +1,7 @@
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '../blog/settings.js';
-import { fetchJsonWithRetry, calculateJaccardSimilarity } from '../utils/fetchWithRetry.js';
+import { fetchJsonWithRetry, calculateJaccardSimilarity, truncateAtWordBoundary } from '../utils/fetchWithRetry.js';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
@@ -230,11 +230,13 @@ function generateTitle(topic) {
     .replace(/^sabres /i, 'Sabres ');
 
   // Capitalize first letter of each word for title case
-  return cleaned
+  const titleCased = cleaned
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ')
-    .substring(0, 80);
+    .join(' ');
+
+  // Truncate at word boundary to avoid cutting mid-word
+  return truncateAtWordBoundary(titleCased, 80);
 }
 
 // Generate unique slug with collision handling
@@ -272,14 +274,14 @@ async function createPost(postData) {
   const nowDate = new Date();
   const slug = await generateUniqueSlug(postData.title, nowDate);
 
-  const excerpt = postData.content
+  const plainText = postData.content
     .replace(/#{1,6}\s/g, '')
     .replace(/\*\*|__/g, '')
     .replace(/\*|_/g, '')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/\n+/g, ' ')
-    .trim()
-    .substring(0, 200) + '...';
+    .trim();
+  const excerpt = truncateAtWordBoundary(plainText, 200, '...');
 
   const id = crypto.randomUUID();
   const now = nowDate.toISOString();

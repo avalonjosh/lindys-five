@@ -1,7 +1,7 @@
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '../blog/settings.js';
-import { fetchJsonWithRetry } from '../utils/fetchWithRetry.js';
+import { fetchJsonWithRetry, truncateAtWordBoundary } from '../utils/fetchWithRetry.js';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
@@ -309,14 +309,14 @@ async function createPost(postData) {
   const now = new Date().toISOString();
   const slug = await generateUniqueSlug(postData.title, now);
 
-  const excerpt = postData.content
+  const plainText = postData.content
     .replace(/#{1,6}\s/g, '')
     .replace(/\*\*|__/g, '')
     .replace(/\*|_/g, '')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/\n+/g, ' ')
-    .trim()
-    .substring(0, 200) + '...';
+    .trim();
+  const excerpt = truncateAtWordBoundary(plainText, 200, '...');
 
   const id = crypto.randomUUID();
 

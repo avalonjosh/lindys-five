@@ -74,3 +74,28 @@ export function calculateJaccardSimilarity(arr1, arr2) {
 
   return intersection.size / union.size;
 }
+
+/**
+ * Truncate text at word boundary to avoid cutting words mid-way
+ * @param {string} text - The text to truncate
+ * @param {number} maxLength - Maximum length
+ * @param {string} suffix - Optional suffix to append (default: empty)
+ * @returns {string} - Truncated text at word boundary
+ */
+export function truncateAtWordBoundary(text, maxLength, suffix = '') {
+  if (!text || text.length <= maxLength) return text;
+
+  // Account for suffix length
+  const effectiveMax = maxLength - suffix.length;
+  if (effectiveMax <= 0) return suffix;
+
+  // Find the last space before the limit
+  const truncated = text.substring(0, effectiveMax);
+  const lastSpace = truncated.lastIndexOf(' ');
+
+  // If no space found (single long word), just cut at max length
+  if (lastSpace === -1) return truncated + suffix;
+
+  // Truncate at the last word boundary
+  return truncated.substring(0, lastSpace).trim() + suffix;
+}

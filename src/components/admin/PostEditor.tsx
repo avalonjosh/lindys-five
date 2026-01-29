@@ -156,6 +156,7 @@ export default function PostEditor() {
   const [showGallery, setShowGallery] = useState(false);
   const [galleryImages, setGalleryImages] = useState<{ url: string; filename: string; uploadedAt: string }[]>([]);
   const [loadingGallery, setLoadingGallery] = useState(false);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
 
   // Fact check state
   const [factChecking, setFactChecking] = useState(false);
@@ -580,11 +581,13 @@ export default function PostEditor() {
 
   async function loadGalleryImages() {
     setLoadingGallery(true);
+    setGalleryError(null);
     try {
       const result = await fetchImages();
       setGalleryImages(result.images);
     } catch (err) {
       console.error('Failed to load gallery images:', err);
+      setGalleryError(err instanceof Error ? err.message : 'Failed to load images');
     } finally {
       setLoadingGallery(false);
     }
@@ -1619,6 +1622,19 @@ export default function PostEditor() {
                 <div className="flex justify-center py-12">
                   <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-600 border-t-[#FCB514]" />
                 </div>
+              ) : galleryError ? (
+                <div className="text-center py-12">
+                  <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+                  <p className="text-red-400 font-semibold">Failed to load gallery</p>
+                  <p className="text-slate-400 text-sm mt-1">{galleryError}</p>
+                  <button
+                    type="button"
+                    onClick={loadGalleryImages}
+                    className="mt-4 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors"
+                  >
+                    Try Again
+                  </button>
+                </div>
               ) : galleryImages.length === 0 ? (
                 <div className="text-center py-12">
                   <Images className="w-16 h-16 text-slate-500 mx-auto mb-4" />
@@ -1666,7 +1682,9 @@ export default function PostEditor() {
             {/* Modal Footer */}
             <div className="p-4 border-t border-slate-600 text-center">
               <p className="text-slate-400 text-sm">
-                {galleryImages.length} image{galleryImages.length !== 1 ? 's' : ''} in gallery
+                {galleryError
+                  ? 'Unable to load gallery'
+                  : `${galleryImages.length} image${galleryImages.length !== 1 ? 's' : ''} in gallery`}
               </p>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '../blog/settings.js';
-import { fetchJsonWithRetry } from '../utils/fetchWithRetry.js';
+import { fetchJsonWithRetry, truncateAtWordBoundary } from '../utils/fetchWithRetry.js';
 
 const ESPN_API_BASE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 
@@ -152,14 +152,14 @@ async function createPost(postData) {
     .substring(0, 50);
   const slug = `${titleSlug}-${dateStr}`;
 
-  const excerpt = postData.content
+  const plainText = postData.content
     .replace(/#{1,6}\s/g, '')
     .replace(/\*\*|__/g, '')
     .replace(/\*|_/g, '')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/\n+/g, ' ')
-    .trim()
-    .substring(0, 200) + '...';
+    .trim();
+  const excerpt = truncateAtWordBoundary(plainText, 200, '...');
 
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
