@@ -375,6 +375,18 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
               Blog
             </button>
 
+            {/* Scores Link */}
+            <button
+              onClick={() => handleNavigation('/scores')}
+              className={`w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold transition-all ${
+                useClassicStyling
+                  ? 'hover:bg-zinc-800 text-white'
+                  : 'hover:bg-blue-50 text-gray-900'
+              }`}
+            >
+              Scores
+            </button>
+
             {/* Divider */}
             <div className={`my-4 border-t ${
               useClassicStyling ? 'border-zinc-800' : 'border-gray-200'

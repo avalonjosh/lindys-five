@@ -355,3 +355,50 @@ export async function fetchTeamStandings(teamAbbrev: string, teamId: number): Pr
     return null;
   }
 }
+
+// Fetch all NHL games for a specific date (league-wide scores)
+export async function fetchScoresByDate(date: string): Promise<NHLGame[]> {
+  try {
+    const url = `${API_BASE}/schedule/${date}`;
+    console.log('📅 Fetching scores for date:', date, 'URL:', url);
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+
+    console.log('📅 Schedule API response:', data);
+
+    // The API returns gameWeek array with dates and games
+    if (!data.gameWeek || !Array.isArray(data.gameWeek)) {
+      console.warn('⚠️ No gameWeek in response');
+      return [];
+    }
+
+    // Find games for the requested date
+    const dayData = data.gameWeek.find((day: { date: string; games: NHLGame[] }) => day.date === date);
+    if (!dayData || !dayData.games) {
+      console.warn('⚠️ No games found for date:', date);
+      return [];
+    }
+
+    // Filter for regular season games only (gameType === 2)
+    const regularSeasonGames = dayData.games.filter((game: NHLGame) => game.gameType === 2);
+
+    console.log(`✅ Found ${regularSeasonGames.length} regular season games for ${date}`);
+
+    // Sort games: live first, then by start time
+    return regularSeasonGames.sort((a: NHLGame, b: NHLGame) => {
+      const aIsLive = a.gameState === 'LIVE' || a.gameState === 'CRIT';
+      const bIsLive = b.gameState === 'LIVE' || b.gameState === 'CRIT';
+
+      if (aIsLive && !bIsLive) return -1;
+      if (!aIsLive && bIsLive) return 1;
+
+      // Then sort by start time
+      const aTime = a.startTimeUTC || '';
+      const bTime = b.startTimeUTC || '';
+      return aTime.localeCompare(bTime);
+    });
+  } catch (error) {
+    console.error('❌ Error fetching scores for date:', date, error);
+    throw error;
+  }
+}

@@ -9,12 +9,20 @@ export interface NHLGame {
     abbrev: string;
     score: number;
     logo: string;
+    // Team record (from schedule API)
+    wins?: number;
+    losses?: number;
+    otLosses?: number;
   };
   homeTeam: {
     id: number;
     abbrev: string;
     score: number;
     logo: string;
+    // Team record (from schedule API)
+    wins?: number;
+    losses?: number;
+    otLosses?: number;
   };
   gameOutcome?: {
     lastPeriodType: string; // "REG", "OT", "SO"
@@ -30,6 +38,13 @@ export interface NHLGame {
     inIntermission: boolean;
     running: boolean;
   };
+  // TV broadcast info
+  tvBroadcasts?: Array<{
+    id: number;
+    market: string; // 'N' = National, 'H' = Home, 'A' = Away
+    countryCode: string; // 'US', 'CA'
+    network: string; // 'NHLN', 'ESPN', 'TNT', etc.
+  }>;
 }
 
 export interface GameResult {
