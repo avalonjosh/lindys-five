@@ -10,6 +10,7 @@ type FilterTeam = 'all' | 'sabres' | 'bills';
 type FilterStatus = 'all' | 'published' | 'draft';
 type FilterType = 'all' | 'game-recap' | 'set-recap' | 'news-analysis' | 'weekly-roundup' | 'custom';
 type SortDirection = 'desc' | 'asc';
+type SortField = 'date' | 'views';
 
 interface SetOption {
   setNumber: number;
@@ -56,6 +57,7 @@ export default function AdminDashboard() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [sortField, setSortField] = useState<SortField>('date');
   const [showSchedule, setShowSchedule] = useState(false);
   const [setOptions, setSetOptions] = useState<SetOption[]>([]);
   const [selectedSetNumber, setSelectedSetNumber] = useState<number | null>(null);
@@ -79,13 +81,18 @@ export default function AdminDashboard() {
 
     // Apply sort
     result.sort((a, b) => {
+      if (sortField === 'views') {
+        const viewsA = a.views ?? 0;
+        const viewsB = b.views ?? 0;
+        return sortDirection === 'desc' ? viewsB - viewsA : viewsA - viewsB;
+      }
       const dateA = new Date(a.publishedAt || a.createdAt).getTime();
       const dateB = new Date(b.publishedAt || b.createdAt).getTime();
       return sortDirection === 'desc' ? dateB - dateA : dateA - dateB;
     });
 
     return result;
-  }, [posts, filterTeam, filterStatus, filterType, sortDirection]);
+  }, [posts, filterTeam, filterStatus, filterType, sortDirection, sortField]);
 
   useEffect(() => {
     loadPosts();
@@ -925,18 +932,46 @@ export default function AdminDashboard() {
                       Status
                     </th>
                     <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide hidden md:table-cell">
-                      Views
+                      <button
+                        onClick={() => {
+                          if (sortField === 'views') {
+                            setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
+                          } else {
+                            setSortField('views');
+                            setSortDirection('desc');
+                          }
+                        }}
+                        className="flex items-center gap-1 hover:text-white transition-colors"
+                      >
+                        Views
+                        {sortField === 'views' && (
+                          sortDirection === 'desc' ? (
+                            <ChevronDown className="w-4 h-4" />
+                          ) : (
+                            <ChevronUp className="w-4 h-4" />
+                          )
+                        )}
+                      </button>
                     </th>
                     <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide hidden lg:table-cell">
                       <button
-                        onClick={() => setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc')}
+                        onClick={() => {
+                          if (sortField === 'date') {
+                            setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
+                          } else {
+                            setSortField('date');
+                            setSortDirection('desc');
+                          }
+                        }}
                         className="flex items-center gap-1 hover:text-white transition-colors"
                       >
                         Date
-                        {sortDirection === 'desc' ? (
-                          <ChevronDown className="w-4 h-4" />
-                        ) : (
-                          <ChevronUp className="w-4 h-4" />
+                        {sortField === 'date' && (
+                          sortDirection === 'desc' ? (
+                            <ChevronDown className="w-4 h-4" />
+                          ) : (
+                            <ChevronUp className="w-4 h-4" />
+                          )
                         )}
                       </button>
                     </th>
