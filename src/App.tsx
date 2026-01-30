@@ -55,6 +55,7 @@ function App({ team }: AppProps) {
   const [yearOverYearLoading, setYearOverYearLoading] = useState(false);
   const [pollingInterval, setPollingInterval] = useState(60000); // Start with 60 seconds
   const pollingIntervalRef = useRef(60000); // Ref to avoid re-renders
+  const [recapSlugs, setRecapSlugs] = useState<Map<number, string>>(new Map()); // gameId → slug mapping
 
   const toggleTheme = () => {
     setIsGoatMode(prev => {
@@ -260,6 +261,32 @@ function App({ team }: AppProps) {
   useEffect(() => {
     pollingIntervalRef.current = pollingInterval;
   }, [pollingInterval]);
+
+  // Fetch game recap slug lookups (Sabres only, once on mount/team change)
+  useEffect(() => {
+    const fetchRecapLookups = async () => {
+      if (team.id !== 'sabres') {
+        setRecapSlugs(new Map());
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/blog/posts?lookup=game-recap&team=sabres');
+        if (response.ok) {
+          const data = await response.json();
+          const slugMap = new Map<number, string>();
+          for (const [gameId, slug] of Object.entries(data.recaps || {})) {
+            slugMap.set(Number(gameId), slug as string);
+          }
+          setRecapSlugs(slugMap);
+        }
+      } catch (err) {
+        console.error('Error fetching recap lookups:', err);
+      }
+    };
+
+    fetchRecapLookups();
+  }, [team.id]);
 
   // Fetch last season comparison data when Year-over-Year mode is enabled
   useEffect(() => {
@@ -791,6 +818,7 @@ function App({ team }: AppProps) {
                     teamAbbreviation={team.abbreviation}
                     teamColors={effectiveTeamColors}
                     darkModeColors={darkModeColors}
+                    recapSlugs={recapSlugs}
                   />
                 );
               })}

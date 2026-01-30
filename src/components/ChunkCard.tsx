@@ -30,9 +30,10 @@ interface ChunkCardProps {
   teamAbbreviation?: string;
   teamColors: TeamColors;
   darkModeColors: DarkModeColors;
+  recapSlugs?: Map<number, string>;
 }
 
-export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onStatsCalculated, whatIfMode, onGameClick, hypotheticalResults, teamId = 7, teamAbbreviation = 'BUF', teamColors, darkModeColors }: ChunkCardProps) {
+export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onStatsCalculated, whatIfMode, onGameClick, hypotheticalResults, teamId = 7, teamAbbreviation = 'BUF', teamColors, darkModeColors, recapSlugs }: ChunkCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [stats, setStats] = useState<ChunkStats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -289,6 +290,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
               teamAbbreviation={teamAbbreviation}
               teamColors={teamColors}
               darkModeColors={darkModeColors}
+              recapSlugs={recapSlugs}
             />
           );
         })}

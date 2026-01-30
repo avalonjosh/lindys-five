@@ -72,7 +72,22 @@ export default async function handler(req, res) {
   // GET - List posts
   if (req.method === 'GET') {
     try {
-      const { team, status, type, limit = 20, offset = 0 } = req.query;
+      const { team, status, type, limit = 20, offset = 0, lookup } = req.query;
+
+      // Lightweight lookup mode for game recap → slug mapping
+      if (lookup === 'game-recap' && team) {
+        const postIds = await kv.zrange(`blog:posts:${team}`, 0, -1) || [];
+        const recaps = {};
+
+        for (const id of postIds) {
+          const post = await kv.get(`blog:post:${id}`);
+          if (post && post.type === 'game-recap' && post.status === 'published' && post.gameId) {
+            recaps[post.gameId] = post.slug;
+          }
+        }
+
+        return res.status(200).json({ recaps });
+      }
 
       // Get all post IDs (sorted by publish date, newest first)
       let postIds = await kv.zrange('blog:posts', 0, -1, { rev: true }) || [];

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { GameResult } from '../types';
 import { generateGameTicketLink } from '../utils/affiliateLinks';
 import { TEAMS } from '../teamConfig';
@@ -29,9 +30,10 @@ interface GameBoxProps {
   teamColors: TeamColors;
   darkModeColors: DarkModeColors;
   venueTeamAbbreviation?: string; // Team whose venue is hosting the game
+  recapSlugs?: Map<number, string>; // gameId → slug mapping for clickable finished games
 }
 
-export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGameClick, hypotheticalOutcome, teamAbbreviation = 'BUF', teamColors, darkModeColors, venueTeamAbbreviation }: GameBoxProps) {
+export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGameClick, hypotheticalOutcome, teamAbbreviation = 'BUF', teamColors, darkModeColors, venueTeamAbbreviation, recapSlugs }: GameBoxProps) {
   const isPending = game.outcome === 'PENDING';
   const isClickable = whatIfMode && isPending && onGameClick;
 
@@ -105,6 +107,11 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
     return 'UPCOMING';
   };
 
+  // Determine if this finished game should link to a recap or blog
+  const isFinishedGame = !isPending;
+  const recapSlug = recapSlugs?.get(game.gameId || 0);
+  const gameLink = isFinishedGame ? (recapSlug ? `/blog/sabres/${recapSlug}` : '/blog/sabres') : null;
+
   const handleWinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onGameClick && game.gameId) {
@@ -126,7 +133,7 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
     }
   };
 
-  return (
+  const cardContent = (
     <div
       className={`${styles.bg} ${borderClass} ${shadowStyle} ${opacity} rounded-xl p-2.5 md:p-3 transition-all ${
         isClickable
@@ -364,4 +371,11 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
       )}
     </div>
   );
+
+  // Wrap finished games in a Link to their recap (or blog listing)
+  if (gameLink) {
+    return <Link to={gameLink} className="block">{cardContent}</Link>;
+  }
+
+  return cardContent;
 }
