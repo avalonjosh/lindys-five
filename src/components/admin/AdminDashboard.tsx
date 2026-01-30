@@ -981,7 +981,7 @@ export default function AdminDashboard() {
                             )}
                           </div>
                           <p className="text-slate-400 text-sm md:hidden">
-                            {post.team} • {post.status}
+                            {post.team} • {post.status} • {post.views?.toLocaleString() ?? '0'} views
                           </p>
                         </div>
                       </td>
