@@ -135,7 +135,7 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
 
   const cardContent = (
     <div
-      className={`${styles.bg} ${borderClass} ${shadowStyle} ${opacity} rounded-xl p-2.5 md:p-3 transition-all ${
+      className={`h-full ${styles.bg} ${borderClass} ${shadowStyle} ${opacity} rounded-xl p-2.5 md:p-3 transition-all ${
         isClickable
           ? isGoatMode
             ? 'hover:shadow-xl border-dashed !border-red-500/60 shadow-red-500/20'
@@ -374,7 +374,7 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
 
   // Wrap finished games in a Link to their recap (or blog listing)
   if (gameLink) {
-    return <Link to={gameLink} className="block">{cardContent}</Link>;
+    return <Link to={gameLink} className="block h-full">{cardContent}</Link>;
   }
 
   return cardContent;
