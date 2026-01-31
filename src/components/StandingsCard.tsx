@@ -311,7 +311,7 @@ export default function StandingsCard({
       {/* Expandable content */}
       <div
         className={`overflow-hidden transition-all duration-300 ease-out ${
-          expanded ? 'max-h-[900px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+          expanded ? 'max-h-[1200px] opacity-100 mt-4' : 'max-h-0 opacity-0'
         }`}
       >
         {loading && (
@@ -404,7 +404,7 @@ export default function StandingsCard({
                     <>
                       <ScoresHeader isGoatMode={isGoatMode} />
                       <div className="space-y-1">
-                        {divisionTeams.map((team) => (
+                        {divisionTeams.map((team, index) => (
                           <ScoresRow
                             key={team.teamAbbrev}
                             team={team}
@@ -414,6 +414,7 @@ export default function StandingsCard({
                             rank={team.divisionRank}
                             inPlayoffPosition={team.divisionRank <= 3}
                             game={gamesByTeam.get(team.teamAbbrev)}
+                            index={index}
                           />
                         ))}
                       </div>
@@ -422,7 +423,7 @@ export default function StandingsCard({
                     <>
                       <StandingsHeader isGoatMode={isGoatMode} sortBy={sortBy} onSortChange={setSortBy} accentColor={accentColor} />
                       <div className="space-y-1">
-                        {divisionTeams.map((team) => (
+                        {divisionTeams.map((team, index) => (
                           <TeamRow
                             key={team.teamAbbrev}
                             team={team}
@@ -430,6 +431,7 @@ export default function StandingsCard({
                             isGoatMode={isGoatMode}
                             accentColor={accentColor}
                             showDivisionRank
+                            index={index}
                           />
                         ))}
                       </div>
@@ -461,6 +463,7 @@ export default function StandingsCard({
                               rank={index + 1}
                               inPlayoffPosition={index < 2}
                               game={gamesByTeam.get(team.teamAbbrev)}
+                              index={index}
                             />
                           ))}
                         </div>
@@ -477,6 +480,7 @@ export default function StandingsCard({
                               isGoatMode={isGoatMode}
                               accentColor={accentColor}
                               wildcardPosition={index + 1}
+                              index={index}
                             />
                           ))}
                         </div>
@@ -513,7 +517,7 @@ export default function StandingsCard({
                       <>
                         <ScoresHeader isGoatMode={isGoatMode} />
                         <div className="space-y-1">
-                          {getDivisionTop3(divisionName).map((team) => (
+                          {getDivisionTop3(divisionName).map((team, index) => (
                             <ScoresRow
                               key={team.teamAbbrev}
                               team={team}
@@ -523,6 +527,7 @@ export default function StandingsCard({
                               rank={team.divisionRank}
                               inPlayoffPosition={team.divisionRank <= 3}
                               game={gamesByTeam.get(team.teamAbbrev)}
+                              index={index}
                             />
                           ))}
                         </div>
@@ -531,7 +536,7 @@ export default function StandingsCard({
                       <>
                         <StandingsHeader isGoatMode={isGoatMode} sortBy={sortBy} onSortChange={setSortBy} accentColor={accentColor} />
                         <div className="space-y-1">
-                          {getDivisionTop3(divisionName).map((team) => (
+                          {getDivisionTop3(divisionName).map((team, index) => (
                             <TeamRow
                               key={team.teamAbbrev}
                               team={team}
@@ -539,6 +544,7 @@ export default function StandingsCard({
                               isGoatMode={isGoatMode}
                               accentColor={accentColor}
                               showDivisionRank
+                              index={index}
                             />
                           ))}
                         </div>
@@ -571,6 +577,7 @@ export default function StandingsCard({
                                 rank={index + 1}
                                 inPlayoffPosition={index < 2}
                                 game={gamesByTeam.get(team.teamAbbrev)}
+                                index={index}
                               />
                               {/* Playoff cutoff line after position 2 */}
                               {index === 1 && (
@@ -596,6 +603,7 @@ export default function StandingsCard({
                                 isGoatMode={isGoatMode}
                                 accentColor={accentColor}
                                 wildcardPosition={index + 1}
+                                index={index}
                               />
                               {/* Playoff cutoff line after position 2 */}
                               {index === 1 && (
@@ -704,7 +712,8 @@ function TeamRow({
   accentColor,
   showDivisionRank,
   wildcardPosition,
-  conferenceRank
+  conferenceRank,
+  index = 0
 }: {
   team: StandingTeam;
   isUserTeam: boolean;
@@ -713,6 +722,7 @@ function TeamRow({
   showDivisionRank?: boolean;
   wildcardPosition?: number;
   conferenceRank?: number;
+  index?: number;
 }) {
   const rank = showDivisionRank ? team.divisionRank : (conferenceRank ?? wildcardPosition);
   const inPlayoffPosition = showDivisionRank
@@ -721,6 +731,11 @@ function TeamRow({
       ? conferenceRank <= 8
       : (wildcardPosition && wildcardPosition <= 2);
 
+  // Zebra striping background
+  const zebraClass = index % 2 === 1
+    ? isGoatMode ? 'bg-white/[0.02]' : 'bg-gray-100/50'
+    : '';
+
   return (
     <div
       className={`flex items-center gap-2 lg:gap-4 py-1.5 px-2 rounded-lg transition-colors ${
@@ -728,7 +743,7 @@ function TeamRow({
           ? isGoatMode
             ? 'bg-zinc-800'
             : 'bg-blue-50'
-          : ''
+          : zebraClass
       }`}
       style={{
         borderLeft: `3px solid ${isUserTeam ? accentColor : 'transparent'}`
@@ -918,9 +933,12 @@ function ScoresHeader({ isGoatMode }: { isGoatMode: boolean }) {
       <span className="w-5 text-center">#</span>
       <span className="w-6"></span>
       <span className="w-10 lg:w-12">Team</span>
-      <span className="w-6 lg:w-8 text-right">W</span>
-      <span className="w-6 lg:w-8 text-right">L</span>
-      <span className="w-6 lg:w-8 text-right">OT</span>
+      {/* Mobile: combined record column */}
+      <span className="w-16 text-right lg:hidden">REC</span>
+      {/* Desktop: separate W/L/OT columns */}
+      <span className="hidden lg:block w-8 text-right">W</span>
+      <span className="hidden lg:block w-8 text-right">L</span>
+      <span className="hidden lg:block w-8 text-right">OT</span>
       {/* Desktop-only columns */}
       <span className="hidden lg:block w-10 text-right">RW</span>
       <span className="hidden lg:block w-12 text-right">ROW</span>
@@ -934,8 +952,8 @@ function ScoresHeader({ isGoatMode }: { isGoatMode: boolean }) {
       <span className="flex-1"></span>
       <span className="w-6 lg:w-10 text-right">GP</span>
       <span className="w-8 lg:w-10 text-right">PTS</span>
-      <span className="hidden lg:block w-12 text-right">P%</span>
-      <span className="w-24 lg:w-28 text-center">Tonight</span>
+      <span className="w-10 lg:w-12 text-right">P%</span>
+      <span className="w-28 lg:w-28 text-center">Tonight</span>
     </div>
   );
 }
@@ -970,9 +988,9 @@ const getGameStatusDisplay = (game: NHLGame, teamAbbrev: string): { text: string
     }
     const timeText = game.clock?.inIntermission ? 'INT' : game.clock?.timeRemaining || '';
     return {
-      text: `${isHome ? 'vs' : '@'} ${opponent.abbrev}`,
+      text: `${teamAbbrev} ${teamScore}-${opponent.abbrev} ${opponentScore}`,
       isLive: true,
-      score: `${teamScore}-${opponentScore} ${periodText} ${timeText}`.trim()
+      score: `${periodText} ${timeText}`.trim()
     };
   }
 
@@ -980,9 +998,9 @@ const getGameStatusDisplay = (game: NHLGame, teamAbbrev: string): { text: string
     const periodType = game.gameOutcome?.lastPeriodType;
     const suffix = periodType === 'OT' ? '/OT' : periodType === 'SO' ? '/SO' : '';
     return {
-      text: `${isHome ? 'vs' : '@'} ${opponent.abbrev}`,
+      text: `${teamAbbrev} ${teamScore}-${opponent.abbrev} ${opponentScore}`,
       isLive: false,
-      score: `${teamScore}-${opponentScore} F${suffix}`
+      score: `F${suffix}`
     };
   }
 
@@ -1003,7 +1021,8 @@ function ScoresRow({
   accentColor,
   rank,
   inPlayoffPosition,
-  game
+  game,
+  index = 0
 }: {
   team: StandingTeam;
   isUserTeam: boolean;
@@ -1012,8 +1031,14 @@ function ScoresRow({
   rank: number;
   inPlayoffPosition: boolean;
   game: NHLGame | undefined;
+  index?: number;
 }) {
   const gameStatus = game ? getGameStatusDisplay(game, team.teamAbbrev) : null;
+
+  // Zebra striping background
+  const zebraClass = index % 2 === 1
+    ? isGoatMode ? 'bg-white/[0.02]' : 'bg-gray-100/50'
+    : '';
 
   return (
     <div
@@ -1022,7 +1047,7 @@ function ScoresRow({
           ? isGoatMode
             ? 'bg-zinc-800'
             : 'bg-blue-50'
-          : ''
+          : zebraClass
       }`}
       style={{
         borderLeft: `3px solid ${isUserTeam ? accentColor : 'transparent'}`
@@ -1058,27 +1083,36 @@ function ScoresRow({
         {team.teamAbbrev}
       </span>
 
-      {/* Wins */}
+      {/* Mobile: Combined Record */}
       <span
-        className={`w-6 lg:w-8 text-right text-xs tabular-nums ${
+        className={`w-16 text-right text-xs tabular-nums lg:hidden ${
+          isGoatMode ? 'text-zinc-400' : 'text-gray-500'
+        }`}
+      >
+        {team.wins}-{team.losses}-{team.otLosses}
+      </span>
+
+      {/* Desktop: Wins */}
+      <span
+        className={`hidden lg:block w-8 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}
       >
         {team.wins}
       </span>
 
-      {/* Losses */}
+      {/* Desktop: Losses */}
       <span
-        className={`w-6 lg:w-8 text-right text-xs tabular-nums ${
+        className={`hidden lg:block w-8 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}
       >
         {team.losses}
       </span>
 
-      {/* OT Losses */}
+      {/* Desktop: OT Losses */}
       <span
-        className={`w-6 lg:w-8 text-right text-xs tabular-nums ${
+        className={`hidden lg:block w-8 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}
       >
@@ -1191,9 +1225,9 @@ function ScoresRow({
         {team.points}
       </span>
 
-      {/* Points Percentage - desktop only */}
+      {/* Points Percentage */}
       <span
-        className={`hidden lg:block w-12 text-right text-xs tabular-nums ${
+        className={`w-10 lg:w-12 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
         }`}
       >
@@ -1201,7 +1235,7 @@ function ScoresRow({
       </span>
 
       {/* Tonight's game info */}
-      <div className="w-24 lg:w-28 text-center">
+      <div className="w-28 text-center">
         {gameStatus ? (
           <div className="flex flex-col items-center">
             <span className={`text-xs ${isGoatMode ? 'text-zinc-400' : 'text-gray-500'}`}>
