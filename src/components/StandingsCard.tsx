@@ -933,9 +933,7 @@ function ScoresHeader({ isGoatMode }: { isGoatMode: boolean }) {
       <span className="w-5 text-center">#</span>
       <span className="w-6"></span>
       <span className="w-10 lg:w-12">Team</span>
-      {/* Mobile: combined record column */}
-      <span className="w-16 text-right lg:hidden">REC</span>
-      {/* Desktop: separate W/L/OT columns */}
+      {/* Desktop: separate W/L/OT columns (hidden on mobile for scores view to fit Tonight column) */}
       <span className="hidden lg:block w-8 text-right">W</span>
       <span className="hidden lg:block w-8 text-right">L</span>
       <span className="hidden lg:block w-8 text-right">OT</span>
@@ -1083,16 +1081,7 @@ function ScoresRow({
         {team.teamAbbrev}
       </span>
 
-      {/* Mobile: Combined Record */}
-      <span
-        className={`w-16 text-right text-xs tabular-nums lg:hidden ${
-          isGoatMode ? 'text-zinc-400' : 'text-gray-500'
-        }`}
-      >
-        {team.wins}-{team.losses}-{team.otLosses}
-      </span>
-
-      {/* Desktop: Wins */}
+      {/* Desktop: Wins (record columns hidden on mobile for scores view to fit Tonight column) */}
       <span
         className={`hidden lg:block w-8 text-right text-xs tabular-nums ${
           isGoatMode ? 'text-zinc-400' : 'text-gray-500'
@@ -1238,19 +1227,27 @@ function ScoresRow({
       <div className="w-28 text-center">
         {gameStatus ? (
           <div className="flex flex-col items-center">
-            <span className={`text-xs ${isGoatMode ? 'text-zinc-400' : 'text-gray-500'}`}>
-              {gameStatus.text}
-            </span>
-            <span className={`text-xs font-semibold flex items-center gap-1 ${
-              gameStatus.isLive
-                ? 'text-red-500'
-                : isGoatMode ? 'text-zinc-300' : 'text-gray-700'
-            }`}>
-              {gameStatus.isLive && (
-                <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-              )}
-              {gameStatus.score}
-            </span>
+            {/* For live games: period/time on top, score below */}
+            {gameStatus.isLive ? (
+              <>
+                <span className="text-xs font-semibold flex items-center gap-1 text-red-500">
+                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                  {gameStatus.score}
+                </span>
+                <span className={`text-xs ${isGoatMode ? 'text-zinc-400' : 'text-gray-500'}`}>
+                  {gameStatus.text}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className={`text-xs ${isGoatMode ? 'text-zinc-400' : 'text-gray-500'}`}>
+                  {gameStatus.text}
+                </span>
+                <span className={`text-xs font-semibold ${isGoatMode ? 'text-zinc-300' : 'text-gray-700'}`}>
+                  {gameStatus.score}
+                </span>
+              </>
+            )}
           </div>
         ) : (
           <span className={`text-xs ${isGoatMode ? 'text-zinc-500' : 'text-gray-400'}`}>
