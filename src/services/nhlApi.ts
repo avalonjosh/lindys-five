@@ -356,13 +356,45 @@ export async function fetchTeamStandings(teamAbbrev: string, teamId: number): Pr
   }
 }
 
+// Fetch current standings for all teams (returns map of teamAbbrev -> record)
+async function fetchStandingsMap(): Promise<Map<string, { wins: number; losses: number; otLosses: number }>> {
+  const standingsMap = new Map<string, { wins: number; losses: number; otLosses: number }>();
+
+  try {
+    // Use today's date in Eastern Time (same format as StandingsCard)
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    const url = `${API_BASE}/standings/${today}`;
+    const response = await fetchWithRetry(url);
+    const data = await response.json();
+
+    if (data.standings && Array.isArray(data.standings)) {
+      data.standings.forEach((team: { teamAbbrev: { default: string }; wins: number; losses: number; otLosses: number }) => {
+        standingsMap.set(team.teamAbbrev.default, {
+          wins: team.wins,
+          losses: team.losses,
+          otLosses: team.otLosses
+        });
+      });
+    }
+
+    console.log(`📊 Loaded standings for ${standingsMap.size} teams`);
+  } catch (error) {
+    console.error('Failed to fetch standings:', error);
+  }
+
+  return standingsMap;
+}
+
 // Fetch all NHL games for a specific date (league-wide scores)
 export async function fetchScoresByDate(date: string): Promise<NHLGame[]> {
   try {
-    const url = `${API_BASE}/schedule/${date}`;
-    console.log('📅 Fetching scores for date:', date, 'URL:', url);
-    const response = await fetchWithRetry(url);
-    const data = await response.json();
+    // Fetch schedule and standings in parallel
+    const [scheduleResponse, standingsMap] = await Promise.all([
+      fetchWithRetry(`${API_BASE}/schedule/${date}`),
+      fetchStandingsMap()
+    ]);
+
+    const data = await scheduleResponse.json();
 
     console.log('📅 Schedule API response:', data);
 
@@ -383,6 +415,109 @@ export async function fetchScoresByDate(date: string): Promise<NHLGame[]> {
     const regularSeasonGames = dayData.games.filter((game: NHLGame) => game.gameType === 2);
 
     console.log(`✅ Found ${regularSeasonGames.length} regular season games for ${date}`);
+
+    // Enrich all games with team records from standings
+    regularSeasonGames.forEach((game: NHLGame) => {
+      const homeRecord = standingsMap.get(game.homeTeam.abbrev);
+      const awayRecord = standingsMap.get(game.awayTeam.abbrev);
+
+      if (homeRecord) {
+        game.homeTeam.wins = homeRecord.wins;
+        game.homeTeam.losses = homeRecord.losses;
+        game.homeTeam.otLosses = homeRecord.otLosses;
+      }
+      if (awayRecord) {
+        game.awayTeam.wins = awayRecord.wins;
+        game.awayTeam.losses = awayRecord.losses;
+        game.awayTeam.otLosses = awayRecord.otLosses;
+      }
+    });
+
+    // Identify games that need additional data
+    const liveGames = regularSeasonGames.filter(
+      (game: NHLGame) => (game.gameState === 'LIVE' || game.gameState === 'CRIT') && game.id
+    );
+    const finishedGames = regularSeasonGames.filter(
+      (game: NHLGame) => (game.gameState === 'FINAL' || game.gameState === 'OFF') && game.id
+    );
+
+    // Fetch boxscore for live and finished games (for SOG)
+    const gamesNeedingBoxscore = [...liveGames, ...finishedGames];
+
+    if (gamesNeedingBoxscore.length > 0) {
+      console.log(`📊 Fetching boxscore data for ${gamesNeedingBoxscore.length} game(s)...`);
+
+      const boxscorePromises = gamesNeedingBoxscore.map(async (game: NHLGame) => {
+        try {
+          const url = `${API_BASE}/gamecenter/${game.id}/boxscore`;
+          const response = await fetchWithRetry(url);
+          const boxscoreData = await response.json();
+
+          return {
+            gameId: game.id,
+            homeSog: boxscoreData.homeTeam?.sog || null,
+            awaySog: boxscoreData.awayTeam?.sog || null
+          };
+        } catch (error) {
+          console.error(`Failed to fetch boxscore for game ${game.id}:`, error);
+          return null;
+        }
+      });
+
+      const boxscoreResults = await Promise.all(boxscorePromises);
+
+      // Merge SOG data back into games
+      boxscoreResults.forEach((boxscore) => {
+        if (!boxscore) return;
+
+        const game = regularSeasonGames.find((g: NHLGame) => g.id === boxscore.gameId);
+        if (game) {
+          game.homeTeam.sog = boxscore.homeSog;
+          game.awayTeam.sog = boxscore.awaySog;
+        }
+      });
+
+      console.log('✅ Boxscore data enriched');
+    }
+
+    // Fetch landing page data for live games (for clock/period)
+    if (liveGames.length > 0) {
+      console.log(`🔴 Fetching live data for ${liveGames.length} LIVE game(s)...`);
+
+      const liveDataPromises = liveGames.map(async (game: NHLGame) => {
+        try {
+          const url = `${API_BASE}/gamecenter/${game.id}/landing`;
+          const response = await fetchWithRetry(url);
+          const liveData = await response.json();
+
+          return {
+            gameId: game.id,
+            period: liveData.periodDescriptor?.number || null,
+            periodDescriptor: liveData.periodDescriptor || null,
+            clock: liveData.clock || null
+          };
+        } catch (error) {
+          console.error(`Failed to fetch live data for game ${game.id}:`, error);
+          return null;
+        }
+      });
+
+      const liveDataResults = await Promise.all(liveDataPromises);
+
+      // Merge live data back into games
+      liveDataResults.forEach((liveData) => {
+        if (!liveData) return;
+
+        const game = regularSeasonGames.find((g: NHLGame) => g.id === liveData.gameId);
+        if (game) {
+          game.period = liveData.period;
+          game.periodDescriptor = liveData.periodDescriptor;
+          game.clock = liveData.clock;
+        }
+      });
+
+      console.log('✅ Live game data enriched');
+    }
 
     // Sort games: live first, then by start time
     return regularSeasonGames.sort((a: NHLGame, b: NHLGame) => {

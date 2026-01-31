@@ -30,70 +30,44 @@ const formatStartTime = (utcTime: string): string => {
   });
 };
 
-// Get status display text
-const getStatusText = (game: NHLGame): string => {
-  if (game.gameState === 'FINAL' || game.gameState === 'OFF') {
-    const periodType = game.gameOutcome?.lastPeriodType;
-    if (periodType === 'OT') return 'Final/OT';
-    if (periodType === 'SO') return 'Final/SO';
-    return 'Final';
-  }
-  if (game.gameState === 'LIVE' || game.gameState === 'CRIT') {
-    return 'LIVE';
-  }
-  if (game.gameState === 'PRE') {
-    return 'Pregame';
-  }
-  // FUT - upcoming game
-  if (game.startTimeUTC) {
-    return formatStartTime(game.startTimeUTC);
-  }
-  return 'TBD';
-};
-
-// Get period display text for live games
-const getPeriodText = (game: NHLGame): string | null => {
-  if (game.gameState !== 'LIVE' && game.gameState !== 'CRIT') return null;
-
+// Get period display text
+const getPeriodText = (game: NHLGame): string => {
   const period = game.periodDescriptor?.number || game.period;
-  if (!period) return null;
-
   const periodType = game.periodDescriptor?.periodType;
+
   if (periodType === 'OT') return 'OT';
   if (periodType === 'SO') return 'SO';
 
-  if (period === 1) return '1st';
-  if (period === 2) return '2nd';
-  if (period === 3) return '3rd';
-  return `${period}th`;
+  if (period === 1) return '1ST';
+  if (period === 2) return '2ND';
+  if (period === 3) return '3RD';
+  if (period && period > 3) return `${period}OT`;
+
+  return '';
 };
 
-// Format team record (W-L-OTL)
-const formatRecord = (team: { wins?: number; losses?: number; otLosses?: number }): string | null => {
-  if (team.wins === undefined || team.losses === undefined) return null;
-  const otl = team.otLosses ?? 0;
-  return `${team.wins}-${team.losses}-${otl}`;
-};
-
-// Get primary broadcast network (US National first, then Home team's network)
-const getPrimaryBroadcast = (game: NHLGame): string | null => {
+// Get TV networks string (US only, limit to 2)
+const getTvNetworks = (game: NHLGame): string | null => {
   if (!game.tvBroadcasts || game.tvBroadcasts.length === 0) return null;
 
-  // First look for US National broadcast
-  const usNational = game.tvBroadcasts.find(
-    b => b.countryCode === 'US' && b.market === 'N'
-  );
-  if (usNational) return usNational.network;
+  const usNetworks = game.tvBroadcasts
+    .filter(b => b.countryCode === 'US')
+    .map(b => b.network)
+    .slice(0, 2);
 
-  // Fall back to Home team's US regional network
-  const homeRegional = game.tvBroadcasts.find(
-    b => b.countryCode === 'US' && b.market === 'H'
-  );
-  if (homeRegional) return homeRegional.network;
+  return usNetworks.length > 0 ? usNetworks.join(', ') : null;
+};
 
-  // Last resort: any US network
-  const anyUS = game.tvBroadcasts.find(b => b.countryCode === 'US');
-  return anyUS?.network || null;
+// Determine winner for finished games
+const getWinner = (game: NHLGame): 'home' | 'away' | null => {
+  if (game.gameState !== 'FINAL' && game.gameState !== 'OFF') return null;
+
+  const homeScore = game.homeTeam.score ?? 0;
+  const awayScore = game.awayTeam.score ?? 0;
+
+  if (homeScore > awayScore) return 'home';
+  if (awayScore > homeScore) return 'away';
+  return null;
 };
 
 export default function ScoreCard({ game, favoriteTeamAbbrev }: ScoreCardProps) {
@@ -123,9 +97,100 @@ export default function ScoreCard({ game, favoriteTeamAbbrev }: ScoreCardProps) 
       )
     : null;
 
-  const statusText = getStatusText(game);
-  const periodText = getPeriodText(game);
-  const broadcastNetwork = getPrimaryBroadcast(game);
+  const tvNetworks = getTvNetworks(game);
+  const winner = getWinner(game);
+
+  // Status badge content
+  const renderStatusBadge = () => {
+    if (isLive) {
+      const periodText = getPeriodText(game);
+      const timeText = game.clock?.inIntermission
+        ? 'INT'
+        : game.clock?.timeRemaining || '';
+
+      return (
+        <div className="flex items-center gap-2">
+          <span className="px-2 py-0.5 rounded text-xs font-bold bg-green-500 text-white">
+            {periodText}
+          </span>
+          {timeText && (
+            <span className="text-xs font-semibold text-gray-600">
+              {timeText}
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    if (isFinished) {
+      const periodType = game.gameOutcome?.lastPeriodType;
+      const suffix = periodType === 'OT' ? '/OT' : periodType === 'SO' ? '/SO' : '';
+
+      return (
+        <span className="px-2 py-0.5 rounded text-xs font-bold bg-gray-200 text-gray-700">
+          Final{suffix}
+        </span>
+      );
+    }
+
+    // Upcoming
+    const timeStr = game.startTimeUTC ? formatStartTime(game.startTimeUTC) : 'TBD';
+    return (
+      <span className="px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-700">
+        {timeStr}
+      </span>
+    );
+  };
+
+  // Team row component
+  const TeamRow = ({
+    team,
+    linkPath,
+    isWinner
+  }: {
+    team: typeof game.homeTeam;
+    linkPath: string;
+    isWinner: boolean;
+  }) => (
+    <div className="flex items-center gap-3 py-2">
+      <Link
+        to={linkPath}
+        className="flex-shrink-0 hover:scale-110 transition-transform"
+      >
+        <img
+          src={team.logo}
+          alt={team.abbrev}
+          className="w-10 h-10 object-contain"
+        />
+      </Link>
+      <div className="flex-1">
+        <span className={`text-sm font-semibold ${
+          isWinner ? 'text-gray-900' : 'text-gray-600'
+        }`}>
+          {team.abbrev}
+        </span>
+        {team.wins !== undefined && (
+          <span className="ml-2 text-xs text-gray-400 tabular-nums">
+            {team.wins}-{team.losses}-{team.otLosses}
+          </span>
+        )}
+      </div>
+      {!isUpcoming && (
+        <div className="flex flex-col items-end">
+          <span className={`text-2xl tabular-nums ${
+            isWinner ? 'font-bold text-gray-900' : 'font-medium text-gray-500'
+          }`}>
+            {team.score}
+          </span>
+          {team.sog !== undefined && team.sog !== null && (
+            <span className="text-xs text-gray-400 tabular-nums">
+              {team.sog} SOG
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div
@@ -136,123 +201,47 @@ export default function ScoreCard({ game, favoriteTeamAbbrev }: ScoreCardProps) 
       }`}
       style={isFavoriteGame ? { borderColor: '#FFB81C' } : undefined}
     >
-      {/* Status Badge */}
-      <div className="flex justify-center mb-3">
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-bold ${
-            isLive
-              ? 'bg-red-500 text-white animate-pulse'
-              : isFinished
-                ? 'bg-gray-200 text-gray-700'
-                : 'bg-blue-100 text-blue-700'
-          }`}
-        >
-          {statusText}
-        </span>
-      </div>
-
-      {/* TV Broadcast for upcoming/live games */}
-      {!isFinished && broadcastNetwork && (
-        <div className="text-center mb-3 text-xs text-gray-500">
-          <span className="inline-flex items-center gap-1">
-            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" />
-            </svg>
-            {broadcastNetwork}
-          </span>
-        </div>
-      )}
-
-      {/* Teams and Scores */}
-      <div className="flex items-center justify-between gap-2">
-        {/* Away Team */}
-        <div className="flex-1 text-center">
-          <Link
-            to={awayLinkPath}
-            className="rounded-lg p-2 mb-2 inline-block bg-gray-50 shadow-sm border border-gray-200 cursor-pointer transition-all hover:shadow-md hover:scale-105"
-          >
-            <img
-              src={game.awayTeam.logo}
-              alt={game.awayTeam.abbrev}
-              className="w-12 h-12 object-contain"
-            />
-          </Link>
-          <div className="text-sm font-bold text-gray-900">
-            {game.awayTeam.abbrev}
-          </div>
-          {formatRecord(game.awayTeam) && (
-            <div className="text-xs text-gray-500">
-              {formatRecord(game.awayTeam)}
-            </div>
+      {/* Top bar: Status + TV Networks + Tickets */}
+      <div className="flex items-center justify-between mb-3">
+        {renderStatusBadge()}
+        <div className="flex items-center gap-3">
+          {!isFinished && tvNetworks && (
+            <span className="text-xs text-gray-400">
+              {tvNetworks}
+            </span>
           )}
-          {!isUpcoming && (
-            <div className="text-2xl font-bold mt-1 text-gray-900">
-              {game.awayTeam.score}
-            </div>
-          )}
-        </div>
-
-        {/* VS / @ divider */}
-        <div className="px-2 text-gray-400">
-          <span className="text-lg font-light">@</span>
-        </div>
-
-        {/* Home Team */}
-        <div className="flex-1 text-center">
-          <Link
-            to={homeLinkPath}
-            className="rounded-lg p-2 mb-2 inline-block bg-gray-50 shadow-sm border border-gray-200 cursor-pointer transition-all hover:shadow-md hover:scale-105"
-          >
-            <img
-              src={game.homeTeam.logo}
-              alt={game.homeTeam.abbrev}
-              className="w-12 h-12 object-contain"
-            />
-          </Link>
-          <div className="text-sm font-bold text-gray-900">
-            {game.homeTeam.abbrev}
-          </div>
-          {formatRecord(game.homeTeam) && (
-            <div className="text-xs text-gray-500">
-              {formatRecord(game.homeTeam)}
-            </div>
-          )}
-          {!isUpcoming && (
-            <div className="text-2xl font-bold mt-1 text-gray-900">
-              {game.homeTeam.score}
-            </div>
+          {isUpcoming && ticketLink && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.open(ticketLink, '_blank', 'noopener,noreferrer');
+              }}
+              className="px-2 py-0.5 text-xs font-bold rounded bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+            >
+              Tickets
+            </button>
           )}
         </div>
       </div>
 
-      {/* Get Tickets for upcoming games */}
-      {isUpcoming && ticketLink && (
-        <div className="mt-3 text-center">
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              window.open(ticketLink, '_blank', 'noopener,noreferrer');
-            }}
-            className="inline-block px-3 py-1.5 text-xs font-bold rounded transition-all shadow-sm hover:shadow-md bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white cursor-pointer"
-          >
-            Get Tickets
-          </button>
-        </div>
-      )}
+      {/* Away Team Row */}
+      <TeamRow
+        team={game.awayTeam}
+        linkPath={awayLinkPath}
+        isWinner={winner === 'away'}
+      />
 
-      {/* Period and Time for live games */}
-      {isLive && (
-        <div className="mt-3 text-center text-sm text-gray-500">
-          {periodText && <span className="font-semibold">{periodText}</span>}
-          {game.clock?.timeRemaining && (
-            <span className="ml-2">{game.clock.timeRemaining}</span>
-          )}
-          {game.clock?.inIntermission && (
-            <span className="ml-2 italic">Intermission</span>
-          )}
-        </div>
-      )}
+      {/* Divider */}
+      <div className="border-t border-gray-100 my-1" />
+
+      {/* Home Team Row */}
+      <TeamRow
+        team={game.homeTeam}
+        linkPath={homeLinkPath}
+        isWinner={winner === 'home'}
+      />
+
     </div>
   );
 }

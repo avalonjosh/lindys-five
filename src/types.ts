@@ -9,20 +9,24 @@ export interface NHLGame {
     abbrev: string;
     score: number;
     logo: string;
-    // Team record (from schedule API)
+    // Team record (from standings API)
     wins?: number;
     losses?: number;
     otLosses?: number;
+    // Shots on goal (from boxscore API for live/finished games)
+    sog?: number;
   };
   homeTeam: {
     id: number;
     abbrev: string;
     score: number;
     logo: string;
-    // Team record (from schedule API)
+    // Team record (from standings API)
     wins?: number;
     losses?: number;
     otLosses?: number;
+    // Shots on goal (from boxscore API for live/finished games)
+    sog?: number;
   };
   gameOutcome?: {
     lastPeriodType: string; // "REG", "OT", "SO"
