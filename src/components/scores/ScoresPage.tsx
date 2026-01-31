@@ -8,9 +8,9 @@ import ScoreCard from './ScoreCard';
 import DateNavigation from './DateNavigation';
 import { TEAMS } from '../../teamConfig';
 
-// Get today's date in YYYY-MM-DD format
+// Get today's date in YYYY-MM-DD format (Eastern Time)
 const getTodayString = (): string => {
-  return new Date().toISOString().split('T')[0];
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 };
 
 // Get favorite team slug from localStorage

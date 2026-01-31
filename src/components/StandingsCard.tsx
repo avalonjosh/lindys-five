@@ -100,7 +100,7 @@ export default function StandingsCard({
     setError(null);
 
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
       const response = await fetch(`/api/v1/standings/${today}`);
 
       if (!response.ok) {
@@ -166,7 +166,7 @@ export default function StandingsCard({
   // Fetch today's games for live scores view
   const fetchTodayGames = useCallback(async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
       const games = await fetchScoresByDate(today);
       setTodayGames(games);
     } catch (err) {

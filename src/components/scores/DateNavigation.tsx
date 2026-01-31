@@ -14,9 +14,9 @@ const formatDisplayDate = (dateStr: string): string => {
   });
 };
 
-// Get date string in YYYY-MM-DD format
+// Get date string in YYYY-MM-DD format (Eastern Time)
 const getDateString = (date: Date): string => {
-  return date.toISOString().split('T')[0];
+  return date.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 };
 
 // Add days to a date string
