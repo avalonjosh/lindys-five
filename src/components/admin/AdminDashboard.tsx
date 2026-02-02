@@ -716,7 +716,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">News Scan</span>
-                        <span className="text-slate-300">Every 12 hours (~7 PM & 7 AM)</span>
+                        <span className="text-slate-300">Mon/Wed/Fri ~5-6 AM</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Game Recap</span>
@@ -724,7 +724,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Set Recap</span>
-                        <span className="text-slate-300">Daily ~6 AM</span>
+                        <span className="text-slate-300">Sundays ~6-7 AM</span>
                       </div>
                     </div>
                   </div>
@@ -738,7 +738,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">News Scan</span>
-                        <span className="text-slate-300">Every 12 hours (~8 PM & 8 AM)</span>
+                        <span className="text-slate-300">Tue/Thu/Sat ~5-6 AM</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Game Recap</span>
