@@ -9,7 +9,7 @@
     },
     {
       "path": "/api/cron/news-scan",
-      "schedule": "0 10 * * 1,3,5"
+      "schedule": "0 10 * * 2,4,6"
     },
     {
       "path": "/api/cron/game-recap",
@@ -21,7 +21,7 @@
     },
     {
       "path": "/api/cron/bills-news-scan",
-      "schedule": "0 10 * * 2,4,6"
+      "schedule": "0 10 * * 1,3,5"
     },
     {
       "path": "/api/cron/bills-weekly-roundup",
