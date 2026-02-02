@@ -648,17 +648,30 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
         .filter(t => t.conferenceName === userConference && t.divisionRank > 3)
         .sort((a, b) => b.points - a.points);
 
-      const wc2Team = wildcardTeams[1]; // Second wild card (index 1)
+      const wc2Team = wildcardTeams[1]; // Second wild card (index 1) - last team IN
+      const wc3Team = wildcardTeams[2]; // Third wild card (index 2) - first team OUT
 
       if (!wc2Team) {
         throw new Error('Could not determine WC2 team');
       }
 
-      // Calculate projected cut line
+      // Calculate projected cut line using average of WC2 and WC3
+      // This better represents the "bubble" between making and missing playoffs
       const wc2Pace = wc2Team.gamesPlayed > 0
         ? wc2Team.points / wc2Team.gamesPlayed
         : 0;
-      const projectedCutLine = Math.ceil(wc2Pace * TOTAL_GAMES);
+      const wc2Projected = wc2Pace * TOTAL_GAMES;
+
+      let projectedCutLine: number;
+      if (wc3Team && wc3Team.gamesPlayed > 0) {
+        // Average WC2 and WC3 projections for a more accurate bubble line
+        const wc3Pace = wc3Team.points / wc3Team.gamesPlayed;
+        const wc3Projected = wc3Pace * TOTAL_GAMES;
+        projectedCutLine = Math.ceil((wc2Projected + wc3Projected) / 2);
+      } else {
+        // Fall back to WC2 only if WC3 not available (early season edge case)
+        projectedCutLine = Math.ceil(wc2Projected);
+      }
 
       // Use higher of: projection OR historical floor
       const cutLine = Math.max(projectedCutLine, HISTORICAL_FLOOR);
