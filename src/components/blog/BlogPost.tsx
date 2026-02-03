@@ -1,11 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { ArrowLeft, Calendar, Clock } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Ticket } from 'lucide-react';
 import PostContent from './PostContent';
 import AuthorByline from './AuthorByline';
 import { fetchPost } from '../../services/blogApi';
+import { generateStubHubLink } from '../../utils/affiliateLinks';
 import type { BlogPost as BlogPostType } from '../../types';
+
+interface NextGame {
+  id: number;
+  date: string;
+  time: string;
+  opponent: string;
+  opponentAbbrev: string;
+  isHome: boolean;
+  venue: string;
+}
 
 const teamConfig = {
   sabres: {
@@ -27,6 +38,7 @@ export default function BlogPost() {
   const [post, setPost] = useState<BlogPostType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [nextGame, setNextGame] = useState<NextGame | null>(null);
 
   const config = team && (team === 'sabres' || team === 'bills') ? teamConfig[team] : teamConfig.sabres;
 
@@ -45,6 +57,56 @@ export default function BlogPost() {
     }
     loadPost();
   }, [slug]);
+
+  // Fetch next Sabres game for ticket CTA
+  useEffect(() => {
+    async function fetchNextGame() {
+      if (team !== 'sabres') return;
+
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const response = await fetch(
+          `https://api-web.nhle.com/v1/club-schedule/BUF/week/${today}`
+        );
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const games = data.games || [];
+
+        // Find next upcoming game (not started yet)
+        const upcoming = games.find((g: { gameState: string }) =>
+          g.gameState === 'FUT' || g.gameState === 'PRE'
+        );
+
+        if (upcoming) {
+          const gameDate = new Date(upcoming.startTimeUTC);
+          const isHome = upcoming.homeTeam.abbrev === 'BUF';
+          const opponent = isHome ? upcoming.awayTeam : upcoming.homeTeam;
+
+          setNextGame({
+            id: upcoming.id,
+            date: gameDate.toLocaleDateString('en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric'
+            }),
+            time: gameDate.toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit'
+            }),
+            opponent: opponent.placeName?.default || opponent.abbrev,
+            opponentAbbrev: opponent.abbrev,
+            isHome,
+            venue: upcoming.venue?.default || (isHome ? 'KeyBank Center' : 'Away'),
+          });
+        }
+      } catch {
+        // Silently fail - next game section just won't show
+      }
+    }
+
+    fetchNextGame();
+  }, [team]);
 
   if (loading) {
     return (
@@ -211,9 +273,58 @@ export default function BlogPost() {
             </div>
           </div>
 
+          {/* Next Game CTA - For Sabres articles */}
+          {(post.type === 'game-recap' || post.type === 'set-recap' || post.type === 'news-analysis') && post.team === 'sabres' && nextGame && (
+            <div className="mt-8">
+              <a
+                href={generateStubHubLink({
+                  stubhubId: 2356,
+                  trackingRef: `article-${nextGame.isHome ? 'buf' : nextGame.opponentAbbrev.toLowerCase()}-vs-${nextGame.isHome ? nextGame.opponentAbbrev.toLowerCase() : 'buf'}`,
+                  teamSlug: 'sabres',
+                  teamCity: 'Buffalo',
+                })}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-2xl p-5 shadow-lg border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl bg-white"
+                style={{ borderColor: postConfig.accent }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: postConfig.primary }}
+                    >
+                      <Ticket className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                        Next Game
+                      </p>
+                      <h3
+                        className="text-xl font-bold mb-0.5"
+                        style={{ color: postConfig.primary, fontFamily: 'Bebas Neue, sans-serif' }}
+                      >
+                        {nextGame.isHome ? 'BUF' : nextGame.opponentAbbrev} vs {nextGame.isHome ? nextGame.opponentAbbrev : 'BUF'}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {nextGame.date} • {nextGame.time}
+                      </p>
+                    </div>
+                  </div>
+                  <div
+                    className="px-4 py-2 rounded-full text-sm font-semibold text-white"
+                    style={{ backgroundColor: postConfig.primary }}
+                  >
+                    Get Tickets
+                  </div>
+                </div>
+              </a>
+            </div>
+          )}
+
           {/* Tracker CTA - For Sabres articles */}
           {(post.type === 'game-recap' || post.type === 'set-recap' || post.type === 'news-analysis') && post.team === 'sabres' && (
-            <div className="mt-8">
+            <div className="mt-4">
               <Link
                 to="/sabres"
                 className="block rounded-2xl p-6 shadow-xl border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl"
