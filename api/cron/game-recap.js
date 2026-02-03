@@ -437,7 +437,8 @@ export default async function handler(req, res) {
         const isHome = game.homeTeam?.abbrev === 'BUF';
         const sabresScore = isHome ? game.homeTeam?.score : game.awayTeam?.score;
         const oppScore = isHome ? game.awayTeam?.score : game.homeTeam?.score;
-        const opponent = isHome ? game.awayTeam?.name?.default : game.homeTeam?.name?.default;
+        const oppTeam = isHome ? boxData.boxscore.awayTeam : boxData.boxscore.homeTeam;
+        const opponent = oppTeam?.name?.default || oppTeam?.abbrev || 'Opponent';
         const oppAbbrev = isHome ? game.awayTeam?.abbrev : game.homeTeam?.abbrev;
         const isWin = sabresScore > oppScore;
         const periodType = game.gameOutcome?.lastPeriodType || 'REG';
