@@ -29,7 +29,7 @@ Your task is to write an engaging tweet to promote a new article. The tweet shou
 - Be conversational but professional
 - Match the tone to the content (excited for wins, thoughtful for analysis, etc.)
 - Grab attention and encourage clicks
-- Leave room for the link and hashtags (keep main text under 200 characters)
+- BE CONCISE: Keep the main text under 180 characters (this is critical - a link and hashtags will be added after)
 
 Tweet styles to use:
 - For game recaps: Lead with the result, highlight a key moment or player
@@ -42,8 +42,9 @@ DO NOT:
 - Start with "New post:" or similar
 - Be overly promotional or clickbaity
 - Use excessive exclamation marks
+- Exceed 180 characters
 
-Output ONLY the tweet text, nothing else. No quotes around it.`;
+Output ONLY the tweet text, nothing else. No quotes around it. Maximum 180 characters.`;
 
 export default async function handler(req, res) {
   // Only allow POST
@@ -103,9 +104,10 @@ Title: ${title}
 ${excerpt ? `Summary: ${excerpt}` : ''}
 ${contentPreview ? `Article preview: ${contentPreview}...` : ''}
 
-The tweet will be followed by a link and these hashtags: ${HASHTAGS[team]}
+IMPORTANT: The tweet will be followed by a link (23 chars) and hashtags (${HASHTAGS[team].length} chars).
+To stay under Twitter's 280 character limit, your text MUST be under 180 characters.
 
-Write ONLY the tweet text (under 200 characters). Make it sound like a real fan/writer sharing this article.`;
+Write ONLY the tweet text (MAXIMUM 180 characters). Make it sound like a real fan/writer sharing this article.`;
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
