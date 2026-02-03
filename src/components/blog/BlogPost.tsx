@@ -6,6 +6,7 @@ import PostContent from './PostContent';
 import AuthorByline from './AuthorByline';
 import { fetchPost } from '../../services/blogApi';
 import { generateStubHubLink } from '../../utils/affiliateLinks';
+import { TEAMS } from '../../teamConfig';
 import type { BlogPost as BlogPostType } from '../../types';
 
 interface NextGame {
@@ -16,6 +17,7 @@ interface NextGame {
   opponentAbbrev: string;
   isHome: boolean;
   venue: string;
+  homeTeamAbbrev: string;
 }
 
 const teamConfig = {
@@ -98,6 +100,7 @@ export default function BlogPost() {
             opponentAbbrev: opponent.abbrev,
             isHome,
             venue: upcoming.venue?.default || (isHome ? 'KeyBank Center' : 'Away'),
+            homeTeamAbbrev: upcoming.homeTeam.abbrev,
           });
         }
       } catch {
@@ -274,14 +277,19 @@ export default function BlogPost() {
           </div>
 
           {/* Next Game CTA - For Sabres articles */}
-          {(post.type === 'game-recap' || post.type === 'set-recap' || post.type === 'news-analysis') && post.team === 'sabres' && nextGame && (
+          {(post.type === 'game-recap' || post.type === 'set-recap' || post.type === 'news-analysis') && post.team === 'sabres' && nextGame && (() => {
+            // Get the venue team (home team) for ticket link
+            const venueTeam = Object.values(TEAMS).find(t => t.abbreviation === nextGame.homeTeamAbbrev);
+            if (!venueTeam) return null;
+
+            return (
             <div className="mt-8">
               <a
                 href={generateStubHubLink({
-                  stubhubId: 2356,
-                  trackingRef: `article-${nextGame.isHome ? 'buf' : nextGame.opponentAbbrev.toLowerCase()}-vs-${nextGame.isHome ? nextGame.opponentAbbrev.toLowerCase() : 'buf'}`,
-                  teamSlug: 'sabres',
-                  teamCity: 'Buffalo',
+                  stubhubId: venueTeam.stubhubId,
+                  trackingRef: `article-${nextGame.homeTeamAbbrev.toLowerCase()}-vs-${nextGame.isHome ? nextGame.opponentAbbrev.toLowerCase() : 'buf'}`,
+                  teamSlug: venueTeam.slug,
+                  teamCity: venueTeam.city,
                 })}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -320,7 +328,8 @@ export default function BlogPost() {
                 </div>
               </a>
             </div>
-          )}
+            );
+          })()}
 
           {/* Tracker CTA - For Sabres articles */}
           {(post.type === 'game-recap' || post.type === 'set-recap' || post.type === 'news-analysis') && post.team === 'sabres' && (
