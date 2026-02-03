@@ -66,7 +66,7 @@ export default function BlogPost() {
       try {
         const today = new Date().toISOString().split('T')[0];
         const response = await fetch(
-          `https://api-web.nhle.com/v1/club-schedule/BUF/week/${today}`
+          `/api/nhl/schedule?team=BUF&date=${today}`
         );
         if (!response.ok) return;
 
