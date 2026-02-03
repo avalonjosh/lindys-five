@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Plus, Edit, Trash2, Eye, LogOut, FileText, RefreshCw, Newspaper, Calendar, Trophy, Layers, Pin, ChevronUp, ChevronDown, Filter, Clock, CheckSquare, Square, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, LogOut, FileText, RefreshCw, Newspaper, Calendar, Trophy, Layers, Pin, ChevronUp, ChevronDown, Filter, Clock, CheckSquare, Square, X, Share2 } from 'lucide-react';
 import { fetchPosts, deletePost, updatePost } from '../../services/blogApi';
 import { logout } from '../../utils/auth';
+import ShareToXModal from './ShareToXModal';
 import type { BlogPost } from '../../types';
 
 type FilterTeam = 'all' | 'sabres' | 'bills';
@@ -51,6 +52,7 @@ export default function AdminDashboard() {
   });
   const [togglingSettings, setTogglingSettings] = useState<string | null>(null);
   const [pinning, setPinning] = useState<string | null>(null);
+  const [sharingPost, setSharingPost] = useState<BlogPost | null>(null);
   const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set());
   const [bulkOperating, setBulkOperating] = useState(false);
   const [filterTeam, setFilterTeam] = useState<FilterTeam>('all');
@@ -1076,6 +1078,15 @@ export default function AdminDashboard() {
                               <Eye className="w-4 h-4" />
                             </a>
                           )}
+                          {post.status === 'published' && (
+                            <button
+                              onClick={() => setSharingPost(post)}
+                              className="p-2 text-slate-400 hover:text-white transition-colors"
+                              title="Share to X"
+                            >
+                              <Share2 className="w-4 h-4" />
+                            </button>
+                          )}
                           <Link
                             to={`/admin/posts/${post.slug}`}
                             className="p-2 text-slate-400 hover:text-white transition-colors"
@@ -1105,6 +1116,14 @@ export default function AdminDashboard() {
           )}
         </main>
       </div>
+
+      {/* Share to X Modal */}
+      {sharingPost && (
+        <ShareToXModal
+          post={sharingPost}
+          onClose={() => setSharingPost(null)}
+        />
+      )}
     </>
   );
 }
