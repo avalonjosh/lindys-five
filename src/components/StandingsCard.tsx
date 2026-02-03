@@ -391,7 +391,7 @@ export default function StandingsCard({
               <div className="flex gap-2">
                 <button
                   onClick={() => setViewMode('wildcard')}
-                  className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
+                  className={`px-2 sm:px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
                     viewMode === 'wildcard'
                       ? 'text-white'
                       : isGoatMode
@@ -404,7 +404,7 @@ export default function StandingsCard({
                 </button>
                 <button
                   onClick={() => setViewMode('division')}
-                  className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
+                  className={`px-2 sm:px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
                     viewMode === 'division'
                       ? 'text-white'
                       : isGoatMode
@@ -417,7 +417,7 @@ export default function StandingsCard({
                 </button>
                 <button
                   onClick={() => setViewMode('playoffs')}
-                  className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
+                  className={`px-2 sm:px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
                     viewMode === 'playoffs'
                       ? 'text-white'
                       : isGoatMode
