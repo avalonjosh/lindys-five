@@ -71,7 +71,7 @@ export default function StandingsCard({
   const [error, setError] = useState<string | null>(null);
   const [userTeamDivision, setUserTeamDivision] = useState<string | null>(null);
   const [userTeamConference, setUserTeamConference] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'division' | 'wildcard'>('wildcard');
+  const [viewMode, setViewMode] = useState<'division' | 'wildcard' | 'playoffs'>('wildcard');
   const [sortBy, setSortBy] = useState<'points' | 'pointPctg'>('points');
   const [showLiveScores, setShowLiveScores] = useState(false);
   const [todayGames, setTodayGames] = useState<NHLGame[]>([]);
@@ -240,6 +240,64 @@ export default function StandingsCard({
     .filter(t => t.conferenceName === userTeamConference && t.divisionRank > 3)
     .sort(sortTeams);
 
+  // Calculate playoff bracket for a conference
+  const getConferenceBracket = (conferenceName: string) => {
+    const conferenceTeams = standings.filter(t => t.conferenceName === conferenceName);
+    if (conferenceTeams.length === 0) return null;
+
+    const divisions = [...new Set(conferenceTeams.map(t => t.divisionName))];
+
+    // Get division leaders and top 3 from each division
+    const divisionData = divisions.map(divName => {
+      const divTeams = conferenceTeams
+        .filter(t => t.divisionName === divName)
+        .sort((a, b) => a.divisionRank - b.divisionRank);
+      return {
+        name: divName,
+        leader: divTeams[0],
+        second: divTeams[1],
+        third: divTeams[2],
+      };
+    });
+
+    // Sort divisions by leader's points (A = better record)
+    divisionData.sort((a, b) => b.leader.points - a.leader.points);
+    const [divA, divB] = divisionData;
+
+    if (!divA || !divB) return null;
+
+    // Get wild cards (teams ranked 4+ in their division, sorted by points)
+    const wildcards = conferenceTeams
+      .filter(t => t.divisionRank > 3)
+      .sort((a, b) => b.points - a.points)
+      .slice(0, 2);
+
+    const wc1 = wildcards[0]; // Better wild card
+    const wc2 = wildcards[1]; // Worse wild card
+
+    if (!wc1 || !wc2) return null;
+
+    // NHL Format: Wild cards play division leaders
+    // WC with better record plays division leader with worse record
+    return {
+      conferenceName,
+      divA: {
+        name: divA.name,
+        matchup1: { home: divA.leader, away: wc2, seed: { home: 1, away: 8 } },
+        matchup2: { home: divA.second, away: divA.third, seed: { home: 3, away: 6 } },
+      },
+      divB: {
+        name: divB.name,
+        matchup1: { home: divB.leader, away: wc1, seed: { home: 2, away: 7 } },
+        matchup2: { home: divB.second, away: divB.third, seed: { home: 4, away: 5 } },
+      },
+    };
+  };
+
+  // Get both conference brackets
+  const easternBracket = getConferenceBracket('Eastern');
+  const westernBracket = getConferenceBracket('Western');
+
   // Accent color for highlights
   const accentColor = isGoatMode ? darkModeColors.accent : teamColors.primary;
 
@@ -356,6 +414,19 @@ export default function StandingsCard({
                   style={viewMode === 'division' ? { backgroundColor: accentColor } : undefined}
                 >
                   Division
+                </button>
+                <button
+                  onClick={() => setViewMode('playoffs')}
+                  className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors ${
+                    viewMode === 'playoffs'
+                      ? 'text-white'
+                      : isGoatMode
+                        ? 'text-zinc-400 hover:text-zinc-300'
+                        : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                  style={viewMode === 'playoffs' ? { backgroundColor: accentColor } : undefined}
+                >
+                  Playoff Picture
                 </button>
               </div>
 
@@ -627,6 +698,69 @@ export default function StandingsCard({
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Playoffs View */}
+            {viewMode === 'playoffs' && (
+              <div className="space-y-6">
+                {/* Render each conference - user's conference first */}
+                {(userTeamConference === 'Western'
+                  ? [westernBracket, easternBracket]
+                  : [easternBracket, westernBracket]
+                ).map((bracket) => {
+                  if (!bracket) return null;
+
+                  return (
+                    <div key={bracket.conferenceName} className="space-y-3">
+                      {/* Conference header */}
+                      <h4
+                        className={`text-sm font-bold ${isGoatMode ? 'text-zinc-200' : 'text-gray-800'}`}
+                        style={{ color: bracket.conferenceName === userTeamConference ? accentColor : undefined }}
+                      >
+                        {bracket.conferenceName} Conference
+                      </h4>
+
+                      {/* Division A Matchups */}
+                      <div className="space-y-2">
+                        <div className={`text-xs font-semibold ${isGoatMode ? 'text-zinc-400' : 'text-gray-600'}`}>
+                          {bracket.divA.name}
+                        </div>
+                        <MatchupRow
+                          matchup={bracket.divA.matchup1}
+                          userTeamAbbrev={teamAbbrev}
+                          isGoatMode={isGoatMode}
+                          accentColor={accentColor}
+                        />
+                        <MatchupRow
+                          matchup={bracket.divA.matchup2}
+                          userTeamAbbrev={teamAbbrev}
+                          isGoatMode={isGoatMode}
+                          accentColor={accentColor}
+                        />
+                      </div>
+
+                      {/* Division B Matchups */}
+                      <div className="space-y-2">
+                        <div className={`text-xs font-semibold ${isGoatMode ? 'text-zinc-400' : 'text-gray-600'}`}>
+                          {bracket.divB.name}
+                        </div>
+                        <MatchupRow
+                          matchup={bracket.divB.matchup1}
+                          userTeamAbbrev={teamAbbrev}
+                          isGoatMode={isGoatMode}
+                          accentColor={accentColor}
+                        />
+                        <MatchupRow
+                          matchup={bracket.divB.matchup2}
+                          userTeamAbbrev={teamAbbrev}
+                          isGoatMode={isGoatMode}
+                          accentColor={accentColor}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1254,6 +1388,83 @@ function ScoresRow({
             —
           </span>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Playoff matchup row component
+function MatchupRow({
+  matchup,
+  userTeamAbbrev,
+  isGoatMode,
+  accentColor,
+}: {
+  matchup: { home: StandingTeam; away: StandingTeam; seed: { home: number; away: number } };
+  userTeamAbbrev: string;
+  isGoatMode: boolean;
+  accentColor: string;
+}) {
+  const isUserHome = matchup.home.teamAbbrev === userTeamAbbrev;
+  const isUserAway = matchup.away.teamAbbrev === userTeamAbbrev;
+  const hasUserTeam = isUserHome || isUserAway;
+
+  return (
+    <div
+      className={`flex items-center justify-between p-2 rounded-lg ${
+        hasUserTeam
+          ? isGoatMode
+            ? 'bg-zinc-800'
+            : 'bg-blue-50'
+          : isGoatMode
+            ? 'bg-zinc-800/50'
+            : 'bg-gray-50'
+      }`}
+      style={{
+        borderLeft: hasUserTeam ? `3px solid ${accentColor}` : '3px solid transparent'
+      }}
+    >
+      {/* Home team (higher seed) */}
+      <div className="flex items-center gap-2 flex-1">
+        <span className={`text-xs font-bold w-4 ${isGoatMode ? 'text-zinc-500' : 'text-gray-400'}`}>
+          {matchup.seed.home}
+        </span>
+        <img src={matchup.home.teamLogo} alt={matchup.home.teamAbbrev} className="w-6 h-6 object-contain" />
+        <span
+          className={`text-sm font-semibold ${
+            isUserHome ? '' : isGoatMode ? 'text-zinc-300' : 'text-gray-700'
+          }`}
+          style={isUserHome ? { color: accentColor } : undefined}
+        >
+          {matchup.home.teamAbbrev}
+        </span>
+        <span className={`text-xs ${isGoatMode ? 'text-zinc-500' : 'text-gray-500'}`}>
+          ({matchup.home.points})
+        </span>
+      </div>
+
+      {/* VS */}
+      <span className={`text-xs font-medium px-2 ${isGoatMode ? 'text-zinc-500' : 'text-gray-400'}`}>
+        vs
+      </span>
+
+      {/* Away team (lower seed) */}
+      <div className="flex items-center gap-2 flex-1 justify-end">
+        <span className={`text-xs ${isGoatMode ? 'text-zinc-500' : 'text-gray-500'}`}>
+          ({matchup.away.points})
+        </span>
+        <span
+          className={`text-sm font-semibold ${
+            isUserAway ? '' : isGoatMode ? 'text-zinc-300' : 'text-gray-700'
+          }`}
+          style={isUserAway ? { color: accentColor } : undefined}
+        >
+          {matchup.away.teamAbbrev}
+        </span>
+        <img src={matchup.away.teamLogo} alt={matchup.away.teamAbbrev} className="w-6 h-6 object-contain" />
+        <span className={`text-xs font-bold w-4 text-right ${isGoatMode ? 'text-zinc-500' : 'text-gray-400'}`}>
+          {matchup.seed.away}
+        </span>
       </div>
     </div>
   );
