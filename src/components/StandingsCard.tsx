@@ -426,7 +426,8 @@ export default function StandingsCard({
                   }`}
                   style={viewMode === 'playoffs' ? { backgroundColor: accentColor } : undefined}
                 >
-                  Playoff Picture
+                  <span className="sm:hidden">Playoffs</span>
+                  <span className="hidden sm:inline">Playoff Picture</span>
                 </button>
               </div>
 
