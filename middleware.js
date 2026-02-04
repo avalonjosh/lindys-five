@@ -1,5 +1,8 @@
-import { NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
+
+export const config = {
+  matcher: '/blog/:path*',
+};
 
 // Social media crawler user agents
 const SOCIAL_CRAWLERS = [
@@ -24,10 +27,11 @@ function isSocialCrawler(userAgent) {
 
 // Generate minimal HTML with meta tags for crawlers
 function generateCrawlerHTML(post, url) {
-  const title = post.title || 'Lindy\'s Five';
-  const description = post.metaDescription || post.excerpt || 'Buffalo Sabres and Bills coverage';
+  const title = post.title || "Lindy's Five";
+  const description =
+    post.metaDescription || post.excerpt || 'Buffalo Sabres and Bills coverage';
   const image = post.ogImage || 'https://lindysfive.com/og-default.png';
-  const siteName = 'Lindy\'s Five';
+  const siteName = "Lindy's Five";
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -70,19 +74,20 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
-export async function middleware(request) {
-  const { pathname } = request.nextUrl;
+export default async function middleware(request) {
+  const url = new URL(request.url);
+  const pathname = url.pathname;
   const userAgent = request.headers.get('user-agent') || '';
 
   // Only process /blog/:team/:slug paths
   const blogMatch = pathname.match(/^\/blog\/(sabres|bills)\/([^/]+)$/);
   if (!blogMatch) {
-    return NextResponse.next();
+    return;
   }
 
   // Only intercept social media crawlers
   if (!isSocialCrawler(userAgent)) {
-    return NextResponse.next();
+    return;
   }
 
   const [, team, slug] = blogMatch;
@@ -91,19 +96,19 @@ export async function middleware(request) {
     // Fetch post from KV
     const postId = await kv.get(`blog:slug:${slug}`);
     if (!postId) {
-      return NextResponse.next();
+      return;
     }
 
     const post = await kv.get(`blog:post:${postId}`);
     if (!post || post.status !== 'published') {
-      return NextResponse.next();
+      return;
     }
 
     // Generate HTML with meta tags
-    const url = `https://lindysfive.com/blog/${team}/${slug}`;
-    const html = generateCrawlerHTML(post, url);
+    const articleUrl = `https://lindysfive.com/blog/${team}/${slug}`;
+    const html = generateCrawlerHTML(post, articleUrl);
 
-    return new NextResponse(html, {
+    return new Response(html, {
       status: 200,
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
@@ -113,11 +118,6 @@ export async function middleware(request) {
   } catch (error) {
     console.error('Middleware error:', error);
     // On error, let the request pass through normally
-    return NextResponse.next();
+    return;
   }
 }
-
-// Only run middleware on blog post paths
-export const config = {
-  matcher: '/blog/:team/:slug*',
-};
