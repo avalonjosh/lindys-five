@@ -4,10 +4,6 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: '/sitemap.xml',
-        destination: '/api/sitemap',
-      },
-      {
         source: '/api/v1/:path*',
         destination: '/api/nhl-api/:path*',
       },

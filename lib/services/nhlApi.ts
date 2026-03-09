@@ -278,6 +278,32 @@ const gameStatsCache = new Map<string, DetailedGameStats>();
 const scheduleCache = new Map<string, { data: GameResult[]; timestamp: number }>();
 const SCHEDULE_CACHE_TTL = 60_000; // 1 minute for schedule data
 
+// Hydrate gameStatsCache from localStorage on module load
+const GAME_STATS_STORAGE_KEY = 'nhl-game-stats-cache';
+if (typeof window !== 'undefined') {
+  try {
+    const stored = localStorage.getItem(GAME_STATS_STORAGE_KEY);
+    if (stored) {
+      const entries: [string, DetailedGameStats][] = JSON.parse(stored);
+      entries.forEach(([key, value]) => gameStatsCache.set(key, value));
+      console.log(`📦 Loaded ${entries.length} cached game stats from localStorage`);
+    }
+  } catch {
+    // Corrupted data — clear it
+    localStorage.removeItem(GAME_STATS_STORAGE_KEY);
+  }
+}
+
+function persistGameStatsCache(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const entries = Array.from(gameStatsCache.entries());
+    localStorage.setItem(GAME_STATS_STORAGE_KEY, JSON.stringify(entries));
+  } catch {
+    // localStorage full or unavailable — non-critical
+  }
+}
+
 export async function fetchDetailedGameStats(gameId: number, isHome: boolean, teamId: number = 7): Promise<DetailedGameStats | null> {
   const cacheKey = `${gameId}-${isHome}-${teamId}`;
   const cached = gameStatsCache.get(cacheKey);
@@ -381,6 +407,7 @@ export async function fetchDetailedGameStats(gameId: number, isHome: boolean, te
 
     // Cache the result — completed game stats never change
     gameStatsCache.set(cacheKey, result);
+    persistGameStatsCache();
     return result;
   } catch (error) {
     console.error(`Error fetching detailed stats for game ${gameId}:`, error);

@@ -7,7 +7,7 @@ import { ArrowLeft, Save, Eye, EyeOff, Send, Sparkles, ImagePlus, X, Upload, Cal
 import { fetchPost, createPost, updatePost, generateArticle, uploadImage, fetchImages, factCheckArticle, type FactCheckResponse, type FactCheckFinding } from '@/lib/services/blogApi';
 import { fetchSabresSchedule } from '@/lib/services/nhlApi';
 import { calculateChunks } from '@/lib/utils/chunkCalculator';
-import PostContent from '../blog/PostContent';
+import PostContent from '@/components/blog/PostContent';
 import type { BlogPost, GameChunk } from '@/lib/types';
 
 // Game option for the selector dropdown
