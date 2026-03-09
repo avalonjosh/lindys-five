@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
 
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '0.0.0.0';
     const country = request.headers.get('x-vercel-ip-country') || 'unknown';
+    const city = request.headers.get('x-vercel-ip-city') || 'unknown';
     const salt = process.env.ANALYTICS_SALT || 'default-salt';
     const dateKey = getDateKey();
     const hourKey = getHourKey();
@@ -49,6 +50,9 @@ export async function POST(request: NextRequest) {
       pipeline.zincrby(`analytics:top:devices:${dateKey}`, 1, device);
       pipeline.zincrby(`analytics:top:browsers:${dateKey}`, 1, browser);
       pipeline.zincrby(`analytics:top:countries:${dateKey}`, 1, country);
+      if (city !== 'unknown') {
+        pipeline.zincrby(`analytics:top:cities:${dateKey}`, 1, city);
+      }
 
       if (referrerDomain !== 'direct') {
         pipeline.zincrby(`analytics:top:referrers:${dateKey}`, 1, referrerDomain);

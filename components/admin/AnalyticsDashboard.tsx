@@ -32,13 +32,14 @@ export default function AnalyticsDashboard() {
   const [topReferrers, setTopReferrers] = useState<TopItem[]>([]);
   const [topDevices, setTopDevices] = useState<TopItem[]>([]);
   const [topCountries, setTopCountries] = useState<TopItem[]>([]);
+  const [topCities, setTopCities] = useState<TopItem[]>([]);
   const [topTeams, setTopTeams] = useState<TopItem[]>([]);
   const [clicks, setClicks] = useState<TopItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     try {
-      const [ovRes, tsRes, pagesRes, refRes, devRes, countryRes, teamsRes, clicksRes] =
+      const [ovRes, tsRes, pagesRes, refRes, devRes, countryRes, citiesRes, teamsRes, clicksRes] =
         await Promise.all([
           fetch(`/api/analytics/overview?range=${range}`),
           range !== 'alltime' ? fetch(`/api/analytics/timeseries?range=${range}`) : null,
@@ -46,6 +47,7 @@ export default function AnalyticsDashboard() {
           fetch(`/api/analytics/top?type=referrers&range=${range}&limit=10`),
           fetch(`/api/analytics/top?type=devices&range=${range}&limit=5`),
           fetch(`/api/analytics/top?type=countries&range=${range}&limit=10`),
+          fetch(`/api/analytics/top?type=cities&range=${range}&limit=15`),
           fetch(`/api/analytics/top?type=teams&range=${range}&limit=15`),
           fetch(`/api/analytics/clicks?range=${range}&limit=15`),
         ]);
@@ -64,6 +66,7 @@ export default function AnalyticsDashboard() {
       setTopReferrers((await refRes.json()).items || []);
       setTopDevices((await devRes.json()).items || []);
       setTopCountries((await countryRes.json()).items || []);
+      setTopCities((await citiesRes.json()).items || []);
       setTopTeams((await teamsRes.json()).items || []);
       setClicks((await clicksRes.json()).items || []);
     } catch (e) {
@@ -156,7 +159,7 @@ export default function AnalyticsDashboard() {
             </div>
 
             {/* Time-Series Chart */}
-            {timeseries && <TimeseriesChart data={timeseries} />}
+            {timeseries && <TimeseriesChart data={timeseries} range={range} />}
 
             {/* Two-column: Pages & Referrers */}
             <div className="grid md:grid-cols-2 gap-6 mb-6">
@@ -169,6 +172,11 @@ export default function AnalyticsDashboard() {
               <BarList title="Devices" items={topDevices} />
               <TopTable title="Countries" items={topCountries} />
             </div>
+
+            {/* Cities */}
+            {topCities.length > 0 && (
+              <TopTable title="Cities" items={topCities} className="mb-6" />
+            )}
 
             {/* Team Popularity */}
             {topTeams.length > 0 && (
@@ -220,10 +228,50 @@ function OverviewCard({
   );
 }
 
-function TimeseriesChart({ data }: { data: TimeseriesData }) {
-  const max = Math.max(...data.views, 1);
-  const barCount = data.labels.length;
-  const barWidth = Math.max(4, Math.floor(800 / barCount) - 2);
+function TimeseriesChart({ data, range }: { data: TimeseriesData; range: Range }) {
+  const isToday = range === 'today';
+  const max = Math.max(...data.views, ...(data.visitors || []), 1);
+  const count = data.labels.length;
+
+  // Chart dimensions
+  const W = 800;
+  const H = 180;
+  const PAD_TOP = 10;
+  const PAD_BOTTOM = 30;
+  const PAD_LEFT = 10;
+  const PAD_RIGHT = 10;
+  const chartW = W - PAD_LEFT - PAD_RIGHT;
+  const chartH = H - PAD_TOP - PAD_BOTTOM;
+
+  function toPoints(values: number[]): string {
+    return values
+      .map((v, i) => {
+        const x = PAD_LEFT + (i / (count - 1)) * chartW;
+        const y = PAD_TOP + chartH - (v / max) * chartH;
+        return `${x},${y}`;
+      })
+      .join(' ');
+  }
+
+  function toAreaPath(values: number[]): string {
+    const baseline = PAD_TOP + chartH;
+    const pts = values.map((v, i) => {
+      const x = PAD_LEFT + (i / (count - 1)) * chartW;
+      const y = PAD_TOP + chartH - (v / max) * chartH;
+      return { x, y };
+    });
+    let d = `M${pts[0].x},${baseline}`;
+    d += ` L${pts[0].x},${pts[0].y}`;
+    for (let i = 1; i < pts.length; i++) {
+      d += ` L${pts[i].x},${pts[i].y}`;
+    }
+    d += ` L${pts[pts.length - 1].x},${baseline} Z`;
+    return d;
+  }
+
+  // Bar chart config
+  const barGap = 2;
+  const barWidth = Math.max(4, Math.floor(chartW / count) - barGap);
 
   return (
     <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 mb-6">
@@ -235,49 +283,103 @@ function TimeseriesChart({ data }: { data: TimeseriesData }) {
       </h3>
       <div className="overflow-x-auto">
         <svg
-          width={Math.max(barCount * (barWidth + 2), 400)}
-          height={180}
+          width={W}
+          height={H}
           className="w-full"
-          viewBox={`0 0 ${Math.max(barCount * (barWidth + 2), 400)} 180`}
-          preserveAspectRatio="none"
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="xMidYMid meet"
         >
-          {data.views.map((v, i) => {
-            const h = (v / max) * 140;
-            const x = i * (barWidth + 2);
-            return (
-              <g key={i}>
-                <rect
-                  x={x}
-                  y={150 - h}
-                  width={barWidth}
-                  height={h}
-                  fill="#FCB514"
-                  opacity={0.85}
-                  rx={2}
-                />
-                {data.visitors && (
+          {/* Grid lines */}
+          {[0.25, 0.5, 0.75, 1].map((frac) => (
+            <line
+              key={frac}
+              x1={PAD_LEFT}
+              x2={W - PAD_RIGHT}
+              y1={PAD_TOP + chartH - frac * chartH}
+              y2={PAD_TOP + chartH - frac * chartH}
+              stroke="#334155"
+              strokeWidth={0.5}
+            />
+          ))}
+
+          {isToday ? (
+            /* Bar chart for today (hourly) */
+            <>
+              {data.views.map((v, i) => {
+                const h = (v / max) * chartH;
+                const x = PAD_LEFT + i * (barWidth + barGap);
+                return (
                   <rect
+                    key={i}
                     x={x}
-                    y={150 - (data.visitors[i] / max) * 140}
+                    y={PAD_TOP + chartH - h}
                     width={barWidth}
-                    height={(data.visitors[i] / max) * 140}
-                    fill="#3b82f6"
-                    opacity={0.5}
+                    height={h}
+                    fill="#FCB514"
+                    opacity={0.85}
                     rx={2}
                   />
-                )}
-              </g>
-            );
-          })}
-          {/* X-axis labels - show every nth */}
+                );
+              })}
+            </>
+          ) : (
+            /* Line chart for 7d/30d */
+            <>
+              {/* Views area fill */}
+              <path d={toAreaPath(data.views)} fill="#FCB514" opacity={0.15} />
+              {/* Views line */}
+              <polyline
+                points={toPoints(data.views)}
+                fill="none"
+                stroke="#FCB514"
+                strokeWidth={2.5}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+              {/* Views dots */}
+              {data.views.map((v, i) => {
+                const x = PAD_LEFT + (i / (count - 1)) * chartW;
+                const y = PAD_TOP + chartH - (v / max) * chartH;
+                return <circle key={`vd-${i}`} cx={x} cy={y} r={3} fill="#FCB514" />;
+              })}
+
+              {data.visitors && (
+                <>
+                  {/* Visitors area fill */}
+                  <path d={toAreaPath(data.visitors)} fill="#3b82f6" opacity={0.1} />
+                  {/* Visitors line */}
+                  <polyline
+                    points={toPoints(data.visitors)}
+                    fill="none"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                    strokeDasharray="6,3"
+                  />
+                  {/* Visitors dots */}
+                  {data.visitors.map((v, i) => {
+                    const x = PAD_LEFT + (i / (count - 1)) * chartW;
+                    const y = PAD_TOP + chartH - (v / max) * chartH;
+                    return <circle key={`ud-${i}`} cx={x} cy={y} r={2.5} fill="#3b82f6" />;
+                  })}
+                </>
+              )}
+            </>
+          )}
+
+          {/* X-axis labels */}
           {data.labels.map((label, i) => {
-            const step = barCount > 14 ? Math.ceil(barCount / 10) : 1;
+            const step = count > 14 ? Math.ceil(count / 10) : 1;
             if (i % step !== 0) return null;
+            const x = isToday
+              ? PAD_LEFT + i * (barWidth + barGap) + barWidth / 2
+              : PAD_LEFT + (i / (count - 1)) * chartW;
             return (
               <text
                 key={`label-${i}`}
-                x={i * (barWidth + 2) + barWidth / 2}
-                y={170}
+                x={x}
+                y={H - 5}
                 textAnchor="middle"
                 fill="#94a3b8"
                 fontSize={10}
@@ -304,11 +406,11 @@ function TimeseriesChart({ data }: { data: TimeseriesData }) {
   );
 }
 
-function TopTable({ title, items }: { title: string; items: TopItem[] }) {
+function TopTable({ title, items, className = '' }: { title: string; items: TopItem[]; className?: string }) {
   const max = items.length > 0 ? items[0].count : 1;
 
   return (
-    <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+    <div className={`bg-slate-800 rounded-xl p-5 border border-slate-700 ${className}`}>
       <h3
         className="text-lg font-bold text-white mb-3"
         style={{ fontFamily: 'Bebas Neue, sans-serif' }}

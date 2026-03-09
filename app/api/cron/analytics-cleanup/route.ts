@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
       `analytics:top:pages:${dateKey}`,
       `analytics:top:referrers:${dateKey}`,
       `analytics:top:countries:${dateKey}`,
+      `analytics:top:cities:${dateKey}`,
       `analytics:top:devices:${dateKey}`,
       `analytics:top:browsers:${dateKey}`,
       `analytics:top:teams:${dateKey}`,
