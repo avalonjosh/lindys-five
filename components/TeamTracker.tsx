@@ -561,7 +561,7 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
               />
             )}
           </button>
-          <h1
+          <p
             className={`text-4xl md:text-6xl font-bold mb-2 tracking-wider ${
               (team.id === 'lightning' || team.id === 'penguins' || team.id === 'jets') && isGoatMode ? '' : 'text-white'
             }`}
@@ -591,13 +591,13 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
             ) : (
               "Lindy's Five"
             )}
-          </h1>
-          <h2
+          </p>
+          <h1
             className={`text-xs md:text-2xl font-semibold mb-1 px-2 leading-tight whitespace-nowrap`}
             style={isGoatMode ? { color: (team.id === 'lightning' || team.id === 'penguins') ? team.colors.primary : isVintageJetsMode ? '#041E42' : darkModeColors.accent } : { color: team.id === 'sabres' ? team.colors.accent : team.colors.secondary }}
           >
-            {team.city} {team.name} Road to the Playoffs 2025-2026
-          </h2>
+            {team.city} {team.name} Playoff Tracker 2025-2026
+          </h1>
           <p
             className={`text-xs md:text-base opacity-90 px-2 leading-tight ${
               (team.id === 'lightning' || team.id === 'penguins' || team.id === 'jets') && isGoatMode ? '' : 'text-white'

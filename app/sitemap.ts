@@ -22,6 +22,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily',
       priority: 1.0,
     },
+    {
+      url: `${BASE_URL}/nhl-playoff-odds`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.95,
+    },
+    {
+      url: `${BASE_URL}/scores`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.7,
+    },
   ];
 
   // All 32 team tracker routes

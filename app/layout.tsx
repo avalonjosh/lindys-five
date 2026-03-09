@@ -19,24 +19,24 @@ const permanentMarker = Permanent_Marker({
 
 export const metadata: Metadata = {
   title: {
-    default: "Lindy's Five - Track Your Team's Road to the Playoffs",
+    default: "NHL Playoff Odds & Tracker 2026 | Lindy's Five",
     template: "%s | Lindy's Five",
   },
   description:
-    "Track your NHL team's playoff race with 5-game set analysis. Live standings, projections, and insights for all 32 teams. Target: 6+ points per set.",
+    "Track NHL playoff odds, projections, and standings for all 32 teams. 5-game set analysis, points pace, and playoff probability updated daily.",
   openGraph: {
     type: 'website',
     url: 'https://lindysfive.com/',
-    title: "Lindy's Five - Track Your Team's Road to the Playoffs",
+    title: "NHL Playoff Odds & Tracker 2026 | Lindy's Five",
     description:
-      "Track your NHL team's playoff race with 5-game set analysis. Live standings, projections, and insights for all 32 teams.",
+      "Track NHL playoff odds, projections, and standings for all 32 teams. 5-game set analysis, points pace, and playoff probability updated daily.",
     siteName: "Lindy's Five",
   },
   twitter: {
     card: 'summary_large_image',
-    title: "Lindy's Five - Track Your Team's Road to the Playoffs",
+    title: "NHL Playoff Odds & Tracker 2026 | Lindy's Five",
     description:
-      "Track your NHL team's playoff race with 5-game set analysis. Live standings, projections, and insights for all 32 teams.",
+      "Track NHL playoff odds, projections, and standings for all 32 teams. 5-game set analysis and playoff probability updated daily.",
   },
   icons: {
     icon: '/favicon.svg',

@@ -120,11 +120,40 @@ export default async function TeamBlogPage({
     },
   };
 
+  const breadcrumbLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://lindysfive.com',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Blog',
+        item: `https://lindysfive.com/blog/${team}`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: config.displayName,
+        item: `https://lindysfive.com/blog/${team}`,
+      },
+    ],
+  };
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
 
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">

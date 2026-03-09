@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import type { BlogPost } from '@/lib/types';
 
 interface HeroCardProps {
@@ -47,9 +48,11 @@ export default function HeroCard({ post }: HeroCardProps) {
         {/* Featured Image */}
         {hasImage && (
           <div className="relative md:w-2/5 flex-shrink-0">
-            <img
-              src={post.ogImage}
+            <Image
+              src={post.ogImage!}
               alt={post.title}
+              width={600}
+              height={400}
               className="w-full h-48 md:h-full md:min-h-[280px] object-cover"
             />
             {/* Gradient overlay for mobile */}

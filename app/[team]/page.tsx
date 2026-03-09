@@ -7,6 +7,11 @@ interface TeamPageProps {
   params: Promise<{ team: string }>;
 }
 
+// Helper: possessive form that handles names ending in 's'
+function possessive(name: string): string {
+  return name.endsWith('s') ? `${name}'` : `${name}'s`;
+}
+
 export async function generateStaticParams() {
   return Object.keys(TEAMS).map((slug) => ({
     team: slug,
@@ -21,15 +26,16 @@ export async function generateMetadata({ params }: TeamPageProps): Promise<Metad
     return { title: 'Team Not Found' };
   }
 
-  const title = `${team.city} ${team.name} Playoff Tracker`;
-  const description = `Track the ${team.city} ${team.name}'s road to the playoffs with 5-game set analysis. Live standings, schedule, point projections, and playoff scenarios updated daily.`;
+  const fullName = `${team.city} ${team.name}`;
+  const title = `${fullName} Playoff Odds & Tracker 2026`;
+  const description = `${fullName} playoff odds, chances, and projections for 2025-26. Track points pace, playoff probability, and 5-game set analysis updated daily.`;
 
   return {
     title,
     description,
     openGraph: {
       title,
-      description: `Track the ${team.city} ${team.name}'s road to the playoffs with 5-game set analysis, live standings, and playoff projections.`,
+      description: `${fullName} playoff odds, projections, and 5-game set analysis for the 2025-26 NHL season.`,
       type: 'website',
       url: `https://lindysfive.com/${team.id}`,
       images: [{ url: team.logo }],
@@ -38,33 +44,11 @@ export async function generateMetadata({ params }: TeamPageProps): Promise<Metad
     twitter: {
       card: 'summary',
       title,
-      description: `Track the ${team.city} ${team.name}'s road to the playoffs with 5-game set analysis and playoff projections.`,
+      description: `${fullName} playoff odds, projections, and 5-game set analysis for 2025-26.`,
       images: [team.logo],
     },
     alternates: {
       canonical: `https://lindysfive.com/${team.id}`,
-    },
-    other: {
-      'script:ld+json': JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'WebPage',
-        name: `${team.city} ${team.name} Playoff Tracker`,
-        description: `Track the ${team.city} ${team.name}'s road to the playoffs with 5-game set analysis`,
-        url: `https://lindysfive.com/${team.id}`,
-        publisher: {
-          '@type': 'Organization',
-          name: "Lindy's Five",
-        },
-        about: {
-          '@type': 'SportsTeam',
-          name: `${team.city} ${team.name}`,
-          sport: 'Ice Hockey',
-          memberOf: {
-            '@type': 'SportsOrganization',
-            name: 'National Hockey League',
-          },
-        },
-      }),
     },
   };
 }
@@ -77,33 +61,67 @@ export default async function TeamPage({ params }: TeamPageProps) {
     notFound();
   }
 
+  const fullName = `${team.city} ${team.name}`;
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: `${fullName} Playoff Odds & Tracker 2026`,
+    description: `${fullName} playoff odds, chances, and projections for 2025-26. Track points pace, playoff probability, and 5-game set analysis updated daily.`,
+    url: `https://lindysfive.com/${team.id}`,
+    publisher: {
+      '@type': 'Organization',
+      name: "Lindy's Five",
+    },
+    about: {
+      '@type': 'SportsTeam',
+      name: fullName,
+      sport: 'Ice Hockey',
+      memberOf: {
+        '@type': 'SportsOrganization',
+        name: 'National Hockey League',
+      },
+    },
+  };
+
+  const breadcrumbLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://lindysfive.com',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: fullName,
+        item: `https://lindysfive.com/${team.id}`,
+      },
+    ],
+  };
+
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'WebPage',
-            name: `${team.city} ${team.name} Playoff Tracker`,
-            description: `Track the ${team.city} ${team.name}'s road to the playoffs with 5-game set analysis`,
-            url: `https://lindysfive.com/${team.id}`,
-            publisher: {
-              '@type': 'Organization',
-              name: "Lindy's Five",
-            },
-            about: {
-              '@type': 'SportsTeam',
-              name: `${team.city} ${team.name}`,
-              sport: 'Ice Hockey',
-              memberOf: {
-                '@type': 'SportsOrganization',
-                name: 'National Hockey League',
-              },
-            },
-          }),
-        }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
+      {/* Server-rendered SEO summary for crawlers */}
+      <div className="sr-only" aria-hidden="false">
+        <h1>{fullName} Playoff Odds &amp; Tracker 2026</h1>
+        <p>
+          Track the {possessive(fullName)} playoff odds, chances, and projections
+          for the 2025-26 NHL season. Follow {possessive(fullName)} points pace,
+          playoff probability, and 5-game set analysis — updated daily.
+        </p>
+      </div>
       <TeamTracker team={team} />
     </>
   );

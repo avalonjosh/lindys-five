@@ -1,24 +1,25 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Image from 'next/image';
 import { TEAMS } from '@/lib/teamConfig';
 
 export const metadata: Metadata = {
-  title: "Lindy's Five - Track Your Team's Road to the Playoffs",
+  title: "NHL Playoff Odds & Standings Tracker 2026 — All 32 Teams",
   description:
-    "Track your NHL team's playoff race with 5-game set analysis. Live standings, projections, and insights for all 32 teams. Target: 6+ points per set.",
+    "Track NHL playoff odds, projections, and standings for all 32 teams. 5-game set analysis, points pace, and playoff probability updated daily.",
   openGraph: {
-    title: "Lindy's Five - Track Your Team's Road to the Playoffs",
+    title: "NHL Playoff Odds & Standings Tracker 2026 — All 32 Teams",
     description:
-      "Track your NHL team's playoff race with 5-game set analysis. Live standings, projections, and insights for all 32 teams.",
+      "Track NHL playoff odds, projections, and standings for all 32 teams. 5-game set analysis, points pace, and playoff probability updated daily.",
     type: 'website',
     url: 'https://lindysfive.com/',
     siteName: "Lindy's Five",
   },
   twitter: {
     card: 'summary_large_image',
-    title: "Lindy's Five - Track Your Team's Road to the Playoffs",
+    title: "NHL Playoff Odds & Standings Tracker 2026 — All 32 Teams",
     description:
-      "Track your NHL team's playoff race with 5-game set analysis. Live standings, projections, and insights for all 32 teams.",
+      "Track NHL playoff odds, projections, and standings for all 32 teams. 5-game set analysis and playoff probability updated daily.",
   },
   alternates: {
     canonical: 'https://lindysfive.com/',
@@ -64,11 +65,17 @@ export default function LandingPage() {
         <div className="max-w-4xl w-full">
           {/* Header */}
           <div className="text-center mb-12">
-            <h1
-              className="text-5xl md:text-7xl font-bold text-white mb-4"
+            <p
+              className="text-2xl md:text-3xl font-bold text-gray-400 mb-2"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
               Lindy&apos;s Five
+            </p>
+            <h1
+              className="text-4xl md:text-6xl font-bold text-white mb-4"
+              style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+            >
+              NHL Playoff Tracker — All 32 Teams
             </h1>
             <p className="text-xl md:text-2xl text-gray-300 mb-2">
               Track Your Team&apos;s Road to the Playoffs
@@ -85,9 +92,11 @@ export default function LandingPage() {
               className="group relative bg-gradient-to-br from-[#002654] to-[#001a3d] rounded-2xl p-12 shadow-2xl border-4 border-[#FCB514] hover:border-[#FFD700] transition-all duration-300 hover:scale-105 hover:shadow-[#FCB514]/50 w-full max-w-md"
             >
               <div className="flex flex-col items-center text-center">
-                <img
+                <Image
                   src={TEAMS.sabres.logo}
                   alt="Buffalo Sabres"
+                  width={160}
+                  height={160}
                   className="w-40 h-40 mb-8 group-hover:scale-110 transition-transform duration-300"
                 />
                 <h2
@@ -143,6 +152,43 @@ export default function LandingPage() {
               <TeamCard teamId="goldenknights" />
               <TeamCard teamId="capitals" />
               <TeamCard teamId="jets" />
+            </div>
+          </div>
+
+          {/* NHL Playoff Odds CTA */}
+          <div className="mb-12 mt-4">
+            <Link
+              href="/nhl-playoff-odds"
+              className="block rounded-2xl p-8 shadow-2xl border-2 border-gray-600 bg-gradient-to-br from-slate-800 to-slate-700 hover:border-white/50 transition-all duration-300 hover:scale-[1.02]"
+            >
+              <div className="text-center">
+                <h2
+                  className="text-3xl md:text-4xl font-bold text-white mb-2"
+                  style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+                >
+                  NHL Playoff Odds & Projections 2026
+                </h2>
+                <p className="text-gray-300 text-sm md:text-base">
+                  Full standings, points pace, and playoff projections for all 32 teams →
+                </p>
+              </div>
+            </Link>
+          </div>
+
+          {/* Quick Links */}
+          <div className="text-center mb-12">
+            <div className="flex flex-wrap justify-center gap-4 text-sm">
+              <Link href="/scores" className="text-gray-400 hover:text-white transition-colors">
+                NHL Scores Today
+              </Link>
+              <span className="text-gray-600">|</span>
+              <Link href="/blog/sabres" className="text-gray-400 hover:text-white transition-colors">
+                Sabres Blog
+              </Link>
+              <span className="text-gray-600">|</span>
+              <Link href="/feed.xml" className="text-gray-400 hover:text-white transition-colors">
+                RSS Feed
+              </Link>
             </div>
           </div>
 
@@ -206,9 +252,11 @@ function TeamCard({ teamId }: { teamId: string }) {
       }}
     >
       <div className="flex flex-col items-center text-center">
-        <img
+        <Image
           src={team.logo}
           alt={`${team.city} ${team.name}`}
+          width={128}
+          height={128}
           className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300"
         />
         <h2
@@ -241,9 +289,11 @@ function TeamCardWithBg({ teamId }: { teamId: string }) {
     >
       <div className="flex flex-col items-center text-center">
         <div className="mb-6 p-4 rounded-full bg-white">
-          <img
+          <Image
             src={team.logo}
             alt={`${team.city} ${team.name}`}
+            width={96}
+            height={96}
             className="w-24 h-24 group-hover:scale-110 transition-transform duration-300"
           />
         </div>

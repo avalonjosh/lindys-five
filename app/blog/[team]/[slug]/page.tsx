@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import Image from 'next/image';
 import { ArrowLeft, Calendar, Clock } from 'lucide-react';
 import { getPostBySlug } from '@/lib/kv';
 import PostContent from '@/components/blog/PostContent';
@@ -128,6 +129,17 @@ export default async function BlogPostPage({
     (post.type === 'game-recap' || post.type === 'set-recap' || post.type === 'news-analysis') &&
     post.team === 'sabres';
 
+  // Show tracker CTA for any team that has a tracker page
+  const TEAMS_WITH_TRACKERS = new Set([
+    'sabres', 'canadiens', 'redwings', 'senators', 'panthers', 'mapleleafs',
+    'lightning', 'bruins', 'devils', 'penguins', 'hurricanes', 'capitals',
+    'islanders', 'flyers', 'bluejackets', 'rangers', 'utah', 'avalanche',
+    'jets', 'stars', 'blackhawks', 'predators', 'wild', 'blues',
+    'goldenknights', 'oilers', 'canucks', 'flames', 'kings', 'ducks',
+    'sharks', 'kraken',
+  ]);
+  const showTrackerCTA = TEAMS_WITH_TRACKERS.has(post.team);
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -146,11 +158,46 @@ export default async function BlogPostPage({
     ...(post.ogImage && { image: post.ogImage }),
   };
 
+  const breadcrumbLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://lindysfive.com',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Blog',
+        item: `https://lindysfive.com/blog/${team}`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: config.displayName,
+        item: `https://lindysfive.com/blog/${team}`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 4,
+        name: post.title,
+        item: `https://lindysfive.com/blog/${team}/${slug}`,
+      },
+    ],
+  };
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
       <ViewTracker slug={slug} />
 
@@ -213,10 +260,13 @@ export default async function BlogPostPage({
           <div className="bg-white rounded-2xl shadow-xl border-2 border-gray-200 overflow-hidden">
             {/* Featured Image */}
             {post.ogImage && (
-              <img
+              <Image
                 src={post.ogImage}
                 alt={post.title}
+                width={800}
+                height={450}
                 className="w-full h-auto"
+                priority
               />
             )}
             <div className="p-6 md:p-8">
@@ -234,11 +284,11 @@ export default async function BlogPostPage({
             />
           )}
 
-          {/* Tracker CTA - For Sabres articles */}
-          {showTicketCTA && (
+          {/* Tracker CTA - For all teams with tracker pages */}
+          {showTrackerCTA && (
             <div className="mt-4">
               <Link
-                href="/sabres"
+                href={`/${post.team}`}
                 className="block rounded-2xl p-6 shadow-xl border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl"
                 style={{
                   background: `linear-gradient(135deg, ${postConfig.primary} 0%, ${postConfig.secondary} 100%)`,
@@ -251,7 +301,7 @@ export default async function BlogPostPage({
                       className="text-2xl font-bold text-white mb-1"
                       style={{ fontFamily: 'Bebas Neue, sans-serif' }}
                     >
-                      Track the Sabres Season
+                      Track the {postConfig.displayName} Season
                     </h3>
                     <p className="text-white/80 text-sm">
                       Live standings, schedule, and playoff projections
