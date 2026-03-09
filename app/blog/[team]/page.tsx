@@ -49,7 +49,7 @@ export async function generateMetadata({
   if (!config) return {};
 
   return {
-    title: `${config.displayName} | Lindy's Five Blog`,
+    title: `${config.displayName} Blog`,
     description: `${config.displayName} coverage - game recaps, analysis, and more from Lindy's Five.`,
     openGraph: {
       title: `${config.displayName} | Lindy's Five Blog`,

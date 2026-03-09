@@ -11,7 +11,7 @@ import BlogSection from '@/components/blog/BlogSection';
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: 'Blog | Lindy\'s Five',
+  title: 'Blog',
   description: 'Buffalo sports coverage - Sabres game recaps, Bills analysis, and more from Lindy\'s Five.',
   openGraph: {
     title: 'Blog | Lindy\'s Five',
