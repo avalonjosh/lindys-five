@@ -36,6 +36,21 @@ interface RealtimeData {
   liveFeed: { path: string; country: string; city: string; device: string; time: string }[];
 }
 
+interface GSCData {
+  overview: {
+    clicks: number;
+    impressions: number;
+    ctr: number;
+    position: number;
+    clicksChange: number | null;
+    impressionsChange: number | null;
+  };
+  queries: { query: string; clicks: number; impressions: number; ctr: number; position: number }[];
+  pages: { page: string; clicks: number; impressions: number; ctr: number; position: number }[];
+  daily: { date: string; clicks: number; impressions: number }[];
+  dateRange: { start: string; end: string };
+}
+
 // --- Path prettifier using team config ---
 const TEAM_SLUG_MAP: Record<string, string> = {};
 Object.values(TEAMS).forEach((t) => {
@@ -87,6 +102,8 @@ export default function AnalyticsDashboard() {
   const [utmCampaigns, setUtmCampaigns] = useState<TopItem[]>([]);
   const [clicks, setClicks] = useState<TopItem[]>([]);
   const [realtime, setRealtime] = useState<RealtimeData | null>(null);
+  const [gsc, setGsc] = useState<GSCData | null>(null);
+  const [gscError, setGscError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -139,11 +156,31 @@ export default function AnalyticsDashboard() {
     } catch { /* silent */ }
   }, []);
 
+  const fetchGSC = useCallback(async () => {
+    // GSC only has data for 7d/30d (not today or alltime)
+    const gscRange = range === 'today' || range === '7d' ? '7d' : '30d';
+    try {
+      const res = await fetch(`/api/analytics/search?range=${gscRange}`);
+      if (res.ok) {
+        setGsc(await res.json());
+        setGscError(null);
+      } else {
+        const data = await res.json();
+        setGscError(data.details || 'Failed to load');
+        setGsc(null);
+      }
+    } catch {
+      setGscError('Failed to connect');
+      setGsc(null);
+    }
+  }, [range]);
+
   useEffect(() => {
     setLoading(true);
     fetchData();
+    fetchGSC();
     if (range === 'today') fetchRealtime();
-  }, [fetchData, fetchRealtime, range]);
+  }, [fetchData, fetchRealtime, fetchGSC, range]);
 
   useEffect(() => {
     if (range !== 'today') return;
@@ -281,6 +318,61 @@ export default function AnalyticsDashboard() {
 
             {/* Chart */}
             {timeseries && <TimeseriesChart data={timeseries} range={range} />}
+
+            {/* ===== SEARCH (GSC) SECTION ===== */}
+            <SectionHeader
+              title="Google Search"
+              subtitle={gsc?.dateRange ? `${gsc.dateRange.start} to ${gsc.dateRange.end}` : 'Search Console data'}
+              collapsed={collapsed['search']}
+              onToggle={() => toggleSection('search')}
+            />
+            {!collapsed['search'] && (
+              gscError ? (
+                <EmptyCard message={`Search Console: ${gscError}`} className="mb-6" />
+              ) : gsc ? (
+                <>
+                  {/* GSC Overview Cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                    <OverviewCard
+                      label="Search Clicks"
+                      value={gsc.overview.clicks}
+                      change={gsc.overview.clicksChange}
+                    />
+                    <OverviewCard
+                      label="Impressions"
+                      value={gsc.overview.impressions}
+                      change={gsc.overview.impressionsChange}
+                    />
+                    <OverviewCard
+                      label="Avg CTR"
+                      value={`${gsc.overview.ctr}%`}
+                    />
+                    <OverviewCard
+                      label="Avg Position"
+                      value={gsc.overview.position}
+                      sentiment={gsc.overview.position <= 10 ? 'good' : gsc.overview.position <= 30 ? 'neutral' : 'bad'}
+                    />
+                  </div>
+
+                  {/* GSC Chart */}
+                  {gsc.daily.length > 0 && <GSCChart daily={gsc.daily} />}
+
+                  {/* Queries & Pages */}
+                  <div className="grid md:grid-cols-2 gap-4 mb-6">
+                    <GSCTable
+                      title="Top Search Queries"
+                      rows={gsc.queries.map(q => ({ name: q.query, clicks: q.clicks, impressions: q.impressions, ctr: q.ctr, position: q.position }))}
+                    />
+                    <GSCTable
+                      title="Top Pages in Search"
+                      rows={gsc.pages.map(p => ({ name: prettifyPath(p.page), clicks: p.clicks, impressions: p.impressions, ctr: p.ctr, position: p.position }))}
+                    />
+                  </div>
+                </>
+              ) : (
+                <EmptyCard message="Loading Search Console data..." className="mb-6" />
+              )
+            )}
 
             {/* ===== CONTENT SECTION ===== */}
             <SectionHeader
@@ -894,5 +986,166 @@ function ExportButton({
     >
       Export CSV
     </button>
+  );
+}
+
+// --- GSC Components ---
+
+function GSCChart({ daily }: { daily: GSCData['daily'] }) {
+  const [tooltip, setTooltip] = useState<{ x: number; label: string; clicks: number; impressions: number } | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const count = daily.length;
+  const maxClicks = Math.max(...daily.map(d => d.clicks), 1);
+  const maxImpressions = Math.max(...daily.map(d => d.impressions), 1);
+
+  const W = 800;
+  const H = 180;
+  const PAD = { top: 15, bottom: 30, left: 45, right: 45 };
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top - PAD.bottom;
+
+  function toPoints(values: number[], maxVal: number): string {
+    return values
+      .map((v, i) => {
+        const x = PAD.left + (i / (count - 1)) * chartW;
+        const y = PAD.top + chartH - (v / maxVal) * chartH;
+        return `${x},${y}`;
+      })
+      .join(' ');
+  }
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const mouseX = ((e.clientX - rect.left) / rect.width) * W;
+    let idx = Math.round(((mouseX - PAD.left) / chartW) * (count - 1));
+    idx = Math.max(0, Math.min(count - 1, idx));
+    const x = PAD.left + (idx / (count - 1)) * chartW;
+    setTooltip({ x, label: daily[idx].date, clicks: daily[idx].clicks, impressions: daily[idx].impressions });
+  };
+
+  return (
+    <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 mb-6">
+      <h3 className="text-lg font-bold text-white mb-4" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+        Search Performance
+      </h3>
+      <div className="overflow-x-auto">
+        <svg
+          ref={svgRef}
+          width={W} height={H} className="w-full cursor-crosshair"
+          viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet"
+          onMouseMove={handleMouseMove} onMouseLeave={() => setTooltip(null)}
+        >
+          {/* Grid */}
+          {[0.25, 0.5, 0.75, 1].map(f => (
+            <line key={f} x1={PAD.left} x2={W - PAD.right} y1={PAD.top + chartH - f * chartH} y2={PAD.top + chartH - f * chartH} stroke="#334155" strokeWidth={0.5} />
+          ))}
+
+          {/* Impressions line (right axis) */}
+          <polyline
+            points={toPoints(daily.map(d => d.impressions), maxImpressions)}
+            fill="none" stroke="#8b5cf6" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray="6,3"
+          />
+
+          {/* Clicks line (left axis) */}
+          <polyline
+            points={toPoints(daily.map(d => d.clicks), maxClicks)}
+            fill="none" stroke="#22c55e" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"
+          />
+          {daily.map((d, i) => {
+            const x = PAD.left + (i / (count - 1)) * chartW;
+            const y = PAD.top + chartH - (d.clicks / maxClicks) * chartH;
+            return <circle key={i} cx={x} cy={y} r={2.5} fill="#22c55e" />;
+          })}
+
+          {/* Y-axis labels */}
+          {[0, 0.5, 1].map(f => (
+            <g key={`y-${f}`}>
+              <text x={PAD.left - 5} y={PAD.top + chartH - f * chartH + 4} textAnchor="end" fill="#22c55e" fontSize={9}>
+                {Math.round(maxClicks * f)}
+              </text>
+              <text x={W - PAD.right + 5} y={PAD.top + chartH - f * chartH + 4} textAnchor="start" fill="#8b5cf6" fontSize={9}>
+                {Math.round(maxImpressions * f)}
+              </text>
+            </g>
+          ))}
+
+          {/* X-axis labels */}
+          {daily.map((d, i) => {
+            const step = count > 14 ? Math.ceil(count / 8) : 1;
+            if (i % step !== 0) return null;
+            const x = PAD.left + (i / (count - 1)) * chartW;
+            return <text key={i} x={x} y={H - 5} textAnchor="middle" fill="#94a3b8" fontSize={10}>{d.date}</text>;
+          })}
+
+          {/* Tooltip crosshair */}
+          {tooltip && (
+            <line x1={tooltip.x} x2={tooltip.x} y1={PAD.top} y2={PAD.top + chartH} stroke="#22c55e" strokeWidth={1} opacity={0.4} strokeDasharray="3,3" />
+          )}
+        </svg>
+      </div>
+      {tooltip && (
+        <div className="mt-1 text-xs text-slate-300">
+          <span className="text-white font-medium">{tooltip.label}</span>
+          {' — '}
+          <span className="text-green-400">{tooltip.clicks} clicks</span>
+          <span className="text-purple-400 ml-2">{tooltip.impressions.toLocaleString()} impressions</span>
+        </div>
+      )}
+      <div className="flex gap-4 mt-2 text-xs text-slate-400">
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-3 rounded-sm inline-block bg-green-500" />
+          Clicks
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-3 rounded-sm inline-block bg-purple-500" />
+          Impressions
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function GSCTable({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: { name: string; clicks: number; impressions: number; ctr: number; position: number }[];
+}) {
+  return (
+    <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+      <h3 className="text-lg font-bold text-white mb-3" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+        {title}
+      </h3>
+      {rows.length === 0 ? (
+        <p className="text-slate-500 text-sm py-4">No data yet — GSC needs a few days to populate</p>
+      ) : (
+        <>
+          {/* Header */}
+          <div className="flex items-center gap-2 text-[10px] text-slate-500 uppercase tracking-wider mb-2 px-1">
+            <span className="flex-1">Query</span>
+            <span className="w-12 text-right">Clicks</span>
+            <span className="w-14 text-right hidden sm:block">Impr</span>
+            <span className="w-12 text-right hidden md:block">CTR</span>
+            <span className="w-10 text-right">Pos</span>
+          </div>
+          <div className="space-y-1">
+            {rows.map((row, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm py-1.5 px-1 rounded hover:bg-slate-700/50 group">
+                <span className="text-slate-600 text-xs w-4 text-right shrink-0 font-mono">{i + 1}</span>
+                <span className="flex-1 text-slate-200 truncate group-hover:text-white" title={row.name}>{row.name}</span>
+                <span className="w-12 text-right text-green-400 font-medium tabular-nums">{row.clicks}</span>
+                <span className="w-14 text-right text-purple-400 tabular-nums hidden sm:block">{row.impressions.toLocaleString()}</span>
+                <span className="w-12 text-right text-slate-400 tabular-nums hidden md:block">{row.ctr}%</span>
+                <span className={`w-10 text-right tabular-nums font-medium ${row.position <= 10 ? 'text-green-400' : row.position <= 30 ? 'text-yellow-400' : 'text-red-400'}`}>
+                  {row.position}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
