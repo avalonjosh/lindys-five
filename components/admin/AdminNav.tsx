@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LogOut } from 'lucide-react';
+import { LogOut, ExternalLink } from 'lucide-react';
 import { logout } from '@/lib/utils/auth';
 
 interface AdminNavProps {
@@ -22,11 +22,11 @@ export default function AdminNav({ activeTab }: AdminNavProps) {
       className="shadow-xl border-b-4"
       style={{ background: '#003087', borderBottomColor: '#0A1128' }}
     >
-      <div className="max-w-7xl mx-auto px-4 py-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4 sm:gap-8">
             <h1
-              className="text-3xl md:text-4xl font-bold text-white"
+              className="text-2xl sm:text-3xl md:text-4xl font-bold text-white shrink-0"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
               Admin
@@ -34,7 +34,7 @@ export default function AdminNav({ activeTab }: AdminNavProps) {
             <nav className="flex gap-1">
               <Link
                 href="/admin/analytics"
-                className={`px-4 py-2 rounded-t text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 rounded-t text-xs sm:text-sm font-medium transition-colors ${
                   activeTab === 'analytics'
                     ? 'text-white border-b-2'
                     : 'text-white/60 hover:text-white/90'
@@ -45,7 +45,7 @@ export default function AdminNav({ activeTab }: AdminNavProps) {
               </Link>
               <Link
                 href="/admin/posts"
-                className={`px-4 py-2 rounded-t text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 rounded-t text-xs sm:text-sm font-medium transition-colors ${
                   activeTab === 'posts'
                     ? 'text-white border-b-2'
                     : 'text-white/60 hover:text-white/90'
@@ -56,19 +56,21 @@ export default function AdminNav({ activeTab }: AdminNavProps) {
               </Link>
             </nav>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link
               href="/"
               className="text-white/70 hover:text-white text-sm transition-colors"
+              title="View Site"
             >
-              View Site
+              <span className="hidden sm:inline">View Site</span>
+              <ExternalLink className="w-4 h-4 sm:hidden" />
             </Link>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 text-white/70 hover:text-white text-sm transition-colors"
+              className="flex items-center gap-1.5 text-white/70 hover:text-white text-sm transition-colors"
             >
               <LogOut className="w-4 h-4" />
-              Logout
+              <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>

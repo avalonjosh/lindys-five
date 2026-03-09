@@ -154,54 +154,76 @@ export default function AnalyticsDashboard() {
     return () => clearInterval(interval);
   }, [range, fetchData, fetchRealtime]);
 
-  const rangeOptions: { value: Range; label: string }[] = [
-    { value: 'today', label: 'Today' },
-    { value: '7d', label: '7 Days' },
-    { value: '30d', label: '30 Days' },
-    { value: 'alltime', label: 'All Time' },
+  const rangeOptions: { value: Range; label: string; shortLabel: string }[] = [
+    { value: 'today', label: 'Today', shortLabel: 'Today' },
+    { value: '7d', label: '7 Days', shortLabel: '7d' },
+    { value: '30d', label: '30 Days', shortLabel: '30d' },
+    { value: 'alltime', label: 'All Time', shortLabel: 'All' },
   ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-700 to-slate-800">
       <AdminNav activeTab="analytics" />
 
-      {/* Sticky header */}
+      {/* Sticky header — stacks on mobile */}
       <div className="sticky top-0 z-30 bg-slate-800/95 backdrop-blur-sm border-b border-slate-700">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h2
-              className="text-2xl font-bold text-white"
-              style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-            >
-              Analytics
-            </h2>
-            {range === 'today' && realtime && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-green-900/40 border border-green-700/50 rounded-full">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-green-400 text-xs font-medium">
-                  {realtime.liveVisitors} live
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3">
+          {/* Row 1: title + timestamp (mobile), title + live + timestamp + picker (desktop) */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <h2
+                className="text-xl sm:text-2xl font-bold text-white"
+                style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+              >
+                Analytics
+              </h2>
+              {/* Live badge — hidden on mobile, shown in realtime banner instead */}
+              {range === 'today' && realtime && (
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-green-900/40 border border-green-700/50 rounded-full">
+                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  <span className="text-green-400 text-xs font-medium">
+                    {realtime.liveVisitors} live
+                  </span>
+                </div>
+              )}
+              {lastUpdated && (
+                <span className="text-slate-500 text-[10px] sm:text-xs hidden md:inline">
+                  Updated {lastUpdated.toLocaleTimeString()}
                 </span>
-              </div>
-            )}
-            {lastUpdated && (
-              <span className="text-slate-500 text-xs hidden md:inline">
-                Updated {lastUpdated.toLocaleTimeString()}
-              </span>
-            )}
+              )}
+            </div>
+            {/* Range picker — desktop: inline. Mobile: shown below */}
+            <div className="hidden sm:flex gap-1 bg-slate-700 rounded-lg p-1">
+              {rangeOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setRange(opt.value)}
+                  className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                    range === opt.value
+                      ? 'text-slate-900'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  style={range === opt.value ? { backgroundColor: '#FCB514' } : {}}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex gap-1 bg-slate-700 rounded-lg p-1">
+          {/* Row 2: range picker on mobile only */}
+          <div className="flex sm:hidden gap-1 bg-slate-700 rounded-lg p-1 mt-2">
             {rangeOptions.map((opt) => (
               <button
                 key={opt.value}
                 onClick={() => setRange(opt.value)}
-                className={`px-3 py-1.5 rounded text-xs sm:text-sm font-medium transition-colors ${
+                className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${
                   range === opt.value
                     ? 'text-slate-900'
                     : 'text-slate-400 hover:text-white'
                 }`}
                 style={range === opt.value ? { backgroundColor: '#FCB514' } : {}}
               >
-                {opt.label}
+                {opt.shortLabel}
               </button>
             ))}
           </div>
@@ -501,8 +523,8 @@ function RealtimeBanner({ data }: { data: RealtimeData }) {
           </div>
         </div>
         {data.activePages.length > 0 && (
-          <>
-            <div className="hidden sm:block h-8 w-px bg-slate-700 shrink-0" />
+          <div className="hidden md:contents">
+            <div className="h-8 w-px bg-slate-700 shrink-0" />
             <div className="flex flex-wrap gap-2">
               {data.activePages.slice(0, 5).map((p, i) => (
                 <div key={i} className="px-2 py-1 bg-slate-700/50 rounded text-xs">
@@ -511,7 +533,7 @@ function RealtimeBanner({ data }: { data: RealtimeData }) {
                 </div>
               ))}
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
