@@ -7,7 +7,7 @@ export default function AdminPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/admin/posts');
+    router.replace('/admin/analytics');
   }, [router]);
 
   return (

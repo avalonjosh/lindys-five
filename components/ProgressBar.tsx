@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { MoreHorizontal, X as XIcon, Link as LinkIcon, Check, ChevronDown } from 'lucide-react';
 import type { SeasonStats } from '@/lib/types';
 import { getProbabilityColor, probabilityForFinalPoints } from '@/lib/utils/playoffProbability';
+import { trackClick } from '@/lib/analytics';
 
 const TOTAL_GAMES = 82;
 const HISTORICAL_FLOOR = 94;
@@ -737,6 +738,7 @@ ${teamUrl}
 
   const handleTwitterShare = () => {
     const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+    trackClick('share-x', 'progress-bar');
     window.open(twitterUrl, '_blank', 'noopener,noreferrer');
     setShareMenuOpen(false);
   };

@@ -29,6 +29,10 @@
     {
       "path": "/api/cron/bills-game-recap",
       "schedule": "0 5,10 * * 1"
+    },
+    {
+      "path": "/api/cron/analytics-cleanup",
+      "schedule": "0 3 * * *"
     }
   ]
 }

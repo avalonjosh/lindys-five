@@ -3,9 +3,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, Edit, Trash2, Eye, LogOut, FileText, RefreshCw, Newspaper, Calendar, Trophy, Layers, Pin, ChevronUp, ChevronDown, Filter, Clock, CheckSquare, Square, X, Share2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, FileText, RefreshCw, Newspaper, Calendar, Trophy, Layers, Pin, ChevronUp, ChevronDown, Filter, Clock, CheckSquare, Square, X, Share2 } from 'lucide-react';
+import AdminNav from './AdminNav';
 import { fetchPosts, deletePost, updatePost } from '@/lib/services/blogApi';
-import { logout } from '@/lib/utils/auth';
 import ShareToXModal from './ShareToXModal';
 import type { BlogPost } from '@/lib/types';
 
@@ -264,11 +264,6 @@ export default function AdminDashboard() {
     }
   }
 
-  async function handleLogout() {
-    await logout();
-    router.push('/admin/login');
-  }
-
   async function triggerCron(
     type: 'weekly' | 'news' | 'game-recap' | 'set-recap' | 'bills-news' | 'bills-weekly' | 'bills-game-recap',
     options?: { setNumber?: number; force?: boolean }
@@ -339,40 +334,7 @@ export default function AdminDashboard() {
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-slate-700 to-slate-800">
-        {/* Header - Blog Style */}
-        <header
-          className="shadow-xl border-b-4"
-          style={{
-            background: '#003087',
-            borderBottomColor: '#0A1128',
-          }}
-        >
-          <div className="max-w-7xl mx-auto px-4 py-6">
-            <div className="flex items-center justify-between">
-              <h1
-                className="text-4xl md:text-5xl font-bold text-white"
-                style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-              >
-                Admin Dashboard
-              </h1>
-              <div className="flex items-center gap-4">
-                <Link
-                  href="/blog"
-                  className="text-white/70 hover:text-white text-sm transition-colors"
-                >
-                  View Blog
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 text-white/70 hover:text-white text-sm transition-colors"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Logout
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
+        <AdminNav activeTab="posts" />
 
         <main className="max-w-7xl mx-auto px-4 py-8">
           {/* Actions */}

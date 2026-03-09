@@ -4,6 +4,7 @@ import Link from 'next/link';
 import type { NHLGame } from '@/lib/types';
 import { TEAMS } from '@/lib/teamConfig';
 import { generateGameTicketLink } from '@/lib/utils/affiliateLinks';
+import { trackClick } from '@/lib/analytics';
 
 interface ScoreCardProps {
   game: NHLGame;
@@ -217,6 +218,7 @@ export default function ScoreCard({ game, favoriteTeamAbbrev }: ScoreCardProps) 
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                trackClick('ticket', `${game.homeTeam.abbrev}-vs-${game.awayTeam.abbrev}`);
                 window.open(ticketLink, '_blank', 'noopener,noreferrer');
               }}
               className="px-2 py-0.5 text-xs font-bold rounded bg-blue-600 hover:bg-blue-500 text-white transition-colors"

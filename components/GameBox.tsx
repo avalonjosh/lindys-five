@@ -6,6 +6,7 @@ import type { GameResult } from '@/lib/types';
 import { generateGameTicketLink } from '@/lib/utils/affiliateLinks';
 import { TEAMS } from '@/lib/teamConfig';
 import { LiveGameOverlay } from './LiveGameOverlay';
+import { trackClick } from '@/lib/analytics';
 
 interface TeamColors {
   primary: string;
@@ -192,6 +193,7 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
+                trackClick('opponent-logo', opponentSlug || game.opponent);
                 router.push(`/${opponentSlug}`);
               }}
               className={`rounded-lg p-1.5 md:p-2 shadow-sm border transition-transform hover:scale-110 cursor-pointer ${
@@ -388,6 +390,7 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
                     href={ticketLink}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => trackClick('ticket', game.opponent)}
                     className={`inline-block px-3 py-1.5 text-xs font-bold rounded transition-all shadow-sm hover:shadow-md ${
                       isGoatMode
                         ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white'

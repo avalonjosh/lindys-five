@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
 import { Bebas_Neue, Permanent_Marker } from 'next/font/google';
+import PageTracker from '@/components/analytics/PageTracker';
 import './globals.css';
 
 const bebasNeue = Bebas_Neue({
@@ -51,6 +52,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${bebasNeue.variable} ${permanentMarker.variable}`}>
       <body>
+        <PageTracker />
         {children}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-ZQRG7XK9D6"
