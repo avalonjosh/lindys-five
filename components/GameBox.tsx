@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { GameResult } from '@/lib/types';
 import { generateGameTicketLink } from '@/lib/utils/affiliateLinks';
 import { TEAMS } from '@/lib/teamConfig';
@@ -36,6 +37,7 @@ interface GameBoxProps {
 }
 
 export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGameClick, hypotheticalOutcome, teamAbbreviation = 'BUF', teamColors, darkModeColors, venueTeamAbbreviation, recapSlugs }: GameBoxProps) {
+  const router = useRouter();
   const isPending = game.outcome === 'PENDING';
   const isClickable = whatIfMode && isPending && onGameClick;
 
@@ -55,6 +57,10 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
       />
     );
   }
+
+  // Find opponent's tracker slug
+  const opponentTeam = Object.values(TEAMS).find(t => t.abbreviation === game.opponentAbbreviation);
+  const opponentSlug = opponentTeam?.id || null;
 
   // Get the venue team (home team) for ticket link
   const homeTeamAbbrev = game.isHome ? teamAbbreviation : game.opponentAbbreviation;
@@ -180,21 +186,46 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
           {game.isHome ? 'vs' : '@'}
         </div>
         <div className="flex flex-col items-center gap-1.5">
-          <div
-            className={`rounded-lg p-1.5 md:p-2 shadow-sm border ${
-              isGoatMode ? '' : 'bg-white border-gray-200'
-            }`}
-            style={isGoatMode ? {
-              backgroundColor: darkModeColors.cardBackground || darkModeColors.background,
-              borderColor: darkModeColors.border
-            } : undefined}
-          >
-            <img
-              src={game.opponentLogo}
-              alt={game.opponent}
-              className="w-14 h-14 md:w-12 md:h-12 object-contain"
-            />
-          </div>
+          {opponentSlug ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                router.push(`/${opponentSlug}`);
+              }}
+              className={`rounded-lg p-1.5 md:p-2 shadow-sm border transition-transform hover:scale-110 cursor-pointer ${
+                isGoatMode ? '' : 'bg-white border-gray-200'
+              }`}
+              style={isGoatMode ? {
+                backgroundColor: darkModeColors.cardBackground || darkModeColors.background,
+                borderColor: darkModeColors.border
+              } : undefined}
+              title={`View ${game.opponent} tracker`}
+            >
+              <img
+                src={game.opponentLogo}
+                alt={game.opponent}
+                className="w-14 h-14 md:w-12 md:h-12 object-contain"
+              />
+            </button>
+          ) : (
+            <div
+              className={`rounded-lg p-1.5 md:p-2 shadow-sm border ${
+                isGoatMode ? '' : 'bg-white border-gray-200'
+              }`}
+              style={isGoatMode ? {
+                backgroundColor: darkModeColors.cardBackground || darkModeColors.background,
+                borderColor: darkModeColors.border
+              } : undefined}
+            >
+              <img
+                src={game.opponentLogo}
+                alt={game.opponent}
+                className="w-14 h-14 md:w-12 md:h-12 object-contain"
+              />
+            </div>
+          )}
           <div
             className={`text-sm md:text-sm font-bold ${
               isGoatMode ? (darkModeColors.cardBackground ? '' : 'text-white') : 'text-gray-800'
