@@ -24,22 +24,36 @@ export async function GET(request: NextRequest) {
   const today = getDateKey();
 
   if (range === 'today') {
-    // Hourly data for today
+    // Calculate UTC offset for Eastern Time (ET is UTC-5 or UTC-4 during DST)
+    const utcNow = new Date();
+    const etNow = new Date(utcNow.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const offsetHours = Math.round((utcNow.getTime() - etNow.getTime()) / 3600000);
+    // offsetHours = UTC - ET, so ET + offset = UTC; to go from ET hour to UTC hour: utcH = etH + offset
+
+    // For each ET hour 0-23, figure out which UTC date:hour key to read
     const pipeline = kv.pipeline();
-    for (let h = 0; h < 24; h++) {
-      const hh = String(h).padStart(2, '0');
-      pipeline.get(`analytics:pv:hourly:${today}:${hh}`);
+    const todayUTC = getDateKey();
+    const yesterdayUTC = getDateKey(new Date(Date.now() - 86400000));
+
+    for (let etH = 0; etH < 24; etH++) {
+      const utcH = (etH + offsetHours + 24) % 24;
+      // If the UTC hour wraps to a higher number than ET hour, it's yesterday in UTC
+      const dateKey = (etH + offsetHours < 0) ? yesterdayUTC :
+                      (etH + offsetHours >= 24) ? getDateKey(new Date(Date.now() + 86400000)) : todayUTC;
+      const hh = String(utcH).padStart(2, '0');
+      pipeline.get(`analytics:pv:hourly:${dateKey}:${hh}`);
     }
     const results = await pipeline.exec();
 
     const labels: string[] = [];
     const views: number[] = [];
     for (let h = 0; h < 24; h++) {
-      labels.push(`${h}:00`);
+      const period = h === 0 ? '12am' : h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h - 12}pm`;
+      labels.push(period);
       views.push((results[h] as number) || 0);
     }
 
-    return NextResponse.json({ labels, views, visitors: null });
+    return NextResponse.json({ labels, views, visitors: null, timezone: 'ET' });
   }
 
   // 7d or 30d — daily data
@@ -64,10 +78,12 @@ export async function GET(request: NextRequest) {
 
   for (let i = 0; i < days; i++) {
     const date = dateKeys[i];
-    labels.push(date.slice(5)); // MM-DD
+    // Format as M/D for cleaner labels
+    const [, m, d] = date.split('-');
+    labels.push(`${parseInt(m)}/${parseInt(d)}`);
     views.push((results[i * 2] as number) || 0);
     visitors.push((results[i * 2 + 1] as number) || 0);
   }
 
-  return NextResponse.json({ labels, views, visitors });
+  return NextResponse.json({ labels, views, visitors, timezone: 'ET' });
 }

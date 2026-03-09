@@ -698,7 +698,7 @@ function TimeseriesChart({ data, range }: { data: TimeseriesData; range: Range }
     <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 mb-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-          Views Over Time
+          Views Over Time <span className="text-xs font-normal text-slate-400 ml-1">(ET)</span>
         </h3>
         {data.visitors && (
           <button
