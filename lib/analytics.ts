@@ -1,11 +1,14 @@
 // Analytics types and utilities
 
 export interface AnalyticsEvent {
-  type: 'pageview' | 'click';
+  type: 'pageview' | 'click' | 'ping' | 'exit';
   path: string;
   referrer: string;
   target?: string;
   label?: string;
+  duration?: number; // seconds on page
+  sessionPages?: number; // pages viewed this session
+  utm?: { source?: string; medium?: string; campaign?: string };
 }
 
 export interface ParsedUA {
@@ -20,7 +23,6 @@ export function isBot(ua: string): boolean {
 }
 
 export function parseUserAgent(ua: string): ParsedUA {
-  // Device detection
   let device: ParsedUA['device'] = 'desktop';
   if (/tablet|ipad|playbook|silk/i.test(ua)) {
     device = 'tablet';
@@ -28,7 +30,6 @@ export function parseUserAgent(ua: string): ParsedUA {
     device = 'mobile';
   }
 
-  // Browser detection
   let browser = 'other';
   if (/edg\//i.test(ua)) browser = 'Edge';
   else if (/opr\/|opera/i.test(ua)) browser = 'Opera';
@@ -46,12 +47,19 @@ export async function hashVisitorId(ip: string, ua: string, date: string, salt: 
   return Array.from(arr.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Persistent visitor ID (not date-scoped) for new vs returning
+export async function hashPersistentId(ip: string, ua: string, salt: string): Promise<string> {
+  const data = new TextEncoder().encode(`${ip}${ua}${salt}`);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  const arr = new Uint8Array(hash);
+  return Array.from(arr.slice(0, 10)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export function parseReferrerDomain(referrer: string): string {
   if (!referrer) return 'direct';
   try {
     const url = new URL(referrer);
     const host = url.hostname.replace(/^www\./, '');
-    // Skip self-referrals
     if (host === 'lindysfive.com') return 'direct';
     return host;
   } catch {
@@ -66,13 +74,10 @@ export function derivePageType(path: string): string {
   if (path.startsWith('/blog/') && path.split('/').length > 3) return 'blog-post';
   if (path.startsWith('/blog')) return 'blog-index';
   if (path.startsWith('/admin')) return 'admin';
-  // Team pages are /{team-slug}
   return 'team';
 }
 
 export function extractTeamFromPath(path: string): string | null {
-  // Team pages: /buffalo-sabres, /toronto-maple-leafs, etc.
-  // Blog team pages: /blog/sabres, /blog/bills
   if (path.startsWith('/blog/')) {
     const parts = path.split('/');
     if (parts.length === 3 && !parts[2].includes('-')) return parts[2];
@@ -93,6 +98,19 @@ export function getDateKey(date?: Date): string {
 export function getHourKey(date?: Date): string {
   const d = date || new Date();
   return String(d.getUTCHours()).padStart(2, '0');
+}
+
+// Country code to flag emoji
+const COUNTRY_FLAGS: Record<string, string> = {
+  US: '🇺🇸', CA: '🇨🇦', GB: '🇬🇧', DE: '🇩🇪', FR: '🇫🇷', AU: '🇦🇺', JP: '🇯🇵',
+  BR: '🇧🇷', IN: '🇮🇳', MX: '🇲🇽', SE: '🇸🇪', FI: '🇫🇮', NO: '🇳🇴', DK: '🇩🇰',
+  CZ: '🇨🇿', SK: '🇸🇰', CH: '🇨🇭', RU: '🇷🇺', IE: '🇮🇪', NL: '🇳🇱', IT: '🇮🇹',
+  ES: '🇪🇸', PL: '🇵🇱', AT: '🇦🇹', BE: '🇧🇪', PT: '🇵🇹', NZ: '🇳🇿', KR: '🇰🇷',
+  CN: '🇨🇳', TW: '🇹🇼', HK: '🇭🇰', SG: '🇸🇬', PH: '🇵🇭', TH: '🇹🇭', ZA: '🇿🇦',
+};
+
+export function countryFlag(code: string): string {
+  return COUNTRY_FLAGS[code.toUpperCase()] || '🌍';
 }
 
 // Client-side click tracking utility

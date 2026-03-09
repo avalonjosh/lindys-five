@@ -50,6 +50,8 @@ export async function GET(request: NextRequest) {
       totalViews: totalViews || 0,
       uniqueVisitors: null,
       viewsChange: null,
+      bounceRate: null,
+      avgDuration: null,
       topPage: topPages.length >= 2 ? { name: topPages[0], count: topPages[1] } : null,
       topReferrer: topReferrers.length >= 2 ? { name: topReferrers[0], count: topReferrers[1] } : null,
     });
@@ -57,17 +59,21 @@ export async function GET(request: NextRequest) {
 
   const { current, previous } = getDateRange(range);
 
-  // Fetch current period
   const pipeline = kv.pipeline();
+  // Current period: views, unique visitors, sessions, bounces, duration
   for (const day of current) {
     pipeline.get(`analytics:pv:${day}`);
     pipeline.pfcount(`analytics:uv:${day}`);
+    pipeline.get(`analytics:sessions:${day}`);
+    pipeline.get(`analytics:bounces:${day}`);
+    pipeline.get(`analytics:duration:sum:${day}`);
+    pipeline.get(`analytics:duration:count:${day}`);
   }
-  // Fetch previous period for comparison
+  // Previous period: views only for comparison
   for (const day of previous) {
     pipeline.get(`analytics:pv:${day}`);
   }
-  // Top page and referrer for current period (just use today/first day for simplicity)
+  // Top page and referrer
   pipeline.zrange(`analytics:top:pages:${current[0]}`, 0, 0, { rev: true, withScores: true });
   pipeline.zrange(`analytics:top:referrers:${current[0]}`, 0, 0, { rev: true, withScores: true });
 
@@ -75,21 +81,39 @@ export async function GET(request: NextRequest) {
 
   let totalViews = 0;
   let uniqueVisitors = 0;
+  let totalSessions = 0;
+  let totalBounces = 0;
+  let durationSum = 0;
+  let durationCount = 0;
   const currentLen = current.length;
+  const fieldsPerDay = 6;
 
   for (let i = 0; i < currentLen; i++) {
-    totalViews += (results[i * 2] as number) || 0;
-    uniqueVisitors += (results[i * 2 + 1] as number) || 0;
+    const base = i * fieldsPerDay;
+    totalViews += (results[base] as number) || 0;
+    uniqueVisitors += (results[base + 1] as number) || 0;
+    totalSessions += (results[base + 2] as number) || 0;
+    totalBounces += (results[base + 3] as number) || 0;
+    durationSum += (results[base + 4] as number) || 0;
+    durationCount += (results[base + 5] as number) || 0;
   }
 
   let previousViews = 0;
-  const prevOffset = currentLen * 2;
+  const prevOffset = currentLen * fieldsPerDay;
   for (let i = 0; i < previous.length; i++) {
     previousViews += (results[prevOffset + i] as number) || 0;
   }
 
   const viewsChange = previousViews > 0
     ? Math.round(((totalViews - previousViews) / previousViews) * 100)
+    : null;
+
+  const bounceRate = totalSessions > 0
+    ? Math.round((totalBounces / totalSessions) * 100)
+    : null;
+
+  const avgDuration = durationCount > 0
+    ? Math.round(durationSum / durationCount)
     : null;
 
   const topPagesResult = results[prevOffset + previous.length] as string[];
@@ -99,6 +123,8 @@ export async function GET(request: NextRequest) {
     totalViews,
     uniqueVisitors,
     viewsChange,
+    bounceRate,
+    avgDuration,
     topPage: topPagesResult?.length >= 2 ? { name: topPagesResult[0], count: topPagesResult[1] } : null,
     topReferrer: topReferrersResult?.length >= 2 ? { name: topReferrersResult[0], count: topReferrersResult[1] } : null,
   });

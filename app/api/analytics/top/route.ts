@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   const range = params.get('range') || 'today';
   const limit = Math.min(parseInt(params.get('limit') || '20'), 100);
 
-  const validTypes = ['pages', 'referrers', 'countries', 'cities', 'devices', 'browsers', 'teams'];
+  const validTypes = ['pages', 'referrers', 'countries', 'cities', 'devices', 'browsers', 'teams', 'utm_source', 'utm_medium', 'utm_campaign'];
   if (!validTypes.includes(type)) {
     return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
   }

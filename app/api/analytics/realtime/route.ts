@@ -24,10 +24,14 @@ export async function GET(request: NextRequest) {
   const currentHour = getHourKey();
   const prevHour = String((parseInt(currentHour) - 1 + 24) % 24).padStart(2, '0');
 
-  const [viewsThisHour, viewsLastHour, activePages] = await Promise.all([
+  const [viewsThisHour, viewsLastHour, activePages, liveKeys, recentEvents] = await Promise.all([
     kv.get<number>(`analytics:pv:hourly:${today}:${currentHour}`),
     kv.get<number>(`analytics:pv:hourly:${today}:${prevHour}`),
     kv.zrange(`analytics:top:pages:${today}`, 0, 9, { rev: true, withScores: true }) as Promise<(string | number)[]>,
+    // Count live visitors by scanning live keys
+    kv.keys('analytics:live:*'),
+    // Recent events from the live feed list
+    kv.lrange('analytics:livefeed', 0, 19) as Promise<string[]>,
   ]);
 
   const pages: { name: string; count: number }[] = [];
@@ -37,9 +41,21 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Parse live feed entries
+  const liveFeed: { path: string; country: string; city: string; device: string; time: string }[] = [];
+  if (recentEvents) {
+    for (const entry of recentEvents) {
+      try {
+        liveFeed.push(JSON.parse(entry));
+      } catch { /* skip malformed */ }
+    }
+  }
+
   return NextResponse.json({
     viewsThisHour: viewsThisHour || 0,
     viewsLastHour: viewsLastHour || 0,
     activePages: pages,
+    liveVisitors: liveKeys?.length || 0,
+    liveFeed,
   });
 }

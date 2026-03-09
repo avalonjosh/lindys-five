@@ -38,7 +38,15 @@ export async function GET(request: NextRequest) {
       `analytics:top:devices:${dateKey}`,
       `analytics:top:browsers:${dateKey}`,
       `analytics:top:teams:${dateKey}`,
+      `analytics:top:utm_source:${dateKey}`,
+      `analytics:top:utm_medium:${dateKey}`,
+      `analytics:top:utm_campaign:${dateKey}`,
       `analytics:clicks:${dateKey}`,
+      `analytics:sessions:${dateKey}`,
+      `analytics:bounces:${dateKey}`,
+      `analytics:duration:sum:${dateKey}`,
+      `analytics:duration:count:${dateKey}`,
+      `analytics:new_visitors:${dateKey}`,
     ];
     for (const key of keysToDelete) {
       pipeline.del(key);
