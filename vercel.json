@@ -1,7 +1,4 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "framework": "vite",
   "crons": [
     {
       "path": "/api/cron/weekly-roundup",
@@ -30,20 +27,6 @@
     {
       "path": "/api/cron/bills-game-recap",
       "schedule": "0 5,10 * * 1"
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/sitemap.xml",
-      "destination": "/api/sitemap"
-    },
-    {
-      "source": "/api/v1/:path*",
-      "destination": "/api/nhl-api?path=:path*"
-    },
-    {
-      "source": "/((?!api).*)",
-      "destination": "/index.html"
     }
   ]
 }
