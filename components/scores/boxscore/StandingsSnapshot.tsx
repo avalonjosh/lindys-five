@@ -175,11 +175,8 @@ export default function StandingsSnapshot({
       </button>
 
       {/* Expandable content */}
-      <div
-        className={`overflow-hidden transition-all duration-300 ease-out ${
-          expanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
-        }`}
-      >
+      {expanded && (
+      <div className="overflow-hidden">
         <div className="border-t border-gray-100 py-3 overflow-x-auto">
           <div className="min-w-[360px] sm:min-w-[700px] space-y-4 px-2">
           {/* Division top-3 sections */}
@@ -271,6 +268,7 @@ export default function StandingsSnapshot({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
