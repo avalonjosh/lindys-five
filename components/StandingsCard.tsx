@@ -1364,7 +1364,7 @@ function ScoresRow({
       {/* Tonight's game info */}
       <div className="w-28 text-center">
         {gameStatus ? (() => {
-          const isClickable = game && (game.gameState === 'LIVE' || game.gameState === 'CRIT' || game.gameState === 'FINAL' || game.gameState === 'OFF');
+          const isClickable = !!game;
           const content = (
             <div className="flex flex-col items-center">
               {gameStatus.isLive ? (
