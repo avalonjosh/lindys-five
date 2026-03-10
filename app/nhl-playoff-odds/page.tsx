@@ -87,25 +87,49 @@ function getProjectedPoints(points: number, gamesPlayed: number): number {
   return (points / gamesPlayed) * 82;
 }
 
+const HISTORICAL_FLOOR = 94;
+
 function getDivCutLine(team: StandingsTeam, standings: StandingsTeam[]): number {
-  const divTeams = standings.filter(t => t.divisionName === team.divisionName);
-  const thirdPlace = divTeams.find(t => t.divisionSequence === 3);
-  if (thirdPlace && thirdPlace.gamesPlayed > 0) {
-    return getProjectedPoints(thirdPlace.points, thirdPlace.gamesPlayed);
+  const divTeams = standings
+    .filter(t => t.divisionName === team.divisionName)
+    .sort((a, b) => b.points - a.points);
+
+  const div3Team = divTeams[2]; // 3rd place - last division playoff spot
+  const div4Team = divTeams[3]; // 4th place - first team out
+
+  let cutLine: number;
+  if (div3Team && div4Team && div3Team.gamesPlayed > 0 && div4Team.gamesPlayed > 0) {
+    const div3Projected = getProjectedPoints(div3Team.points, div3Team.gamesPlayed);
+    const div4Projected = getProjectedPoints(div4Team.points, div4Team.gamesPlayed);
+    cutLine = Math.ceil((div3Projected + div4Projected) / 2);
+  } else if (div3Team && div3Team.gamesPlayed > 0) {
+    cutLine = Math.ceil(getProjectedPoints(div3Team.points, div3Team.gamesPlayed));
+  } else {
+    cutLine = 90;
   }
-  return 100;
+  return Math.max(cutLine, 90);
 }
 
 function getWcCutLine(team: StandingsTeam, standings: StandingsTeam[]): number {
-  const confTeams = standings.filter(
-    t => t.conferenceName === team.conferenceName && t.divisionSequence > 3
-  );
-  const sorted = [...confTeams].sort((a, b) => b.points - a.points);
-  const wcTeam = sorted[1];
-  if (wcTeam && wcTeam.gamesPlayed > 0) {
-    return getProjectedPoints(wcTeam.points, wcTeam.gamesPlayed);
+  const wcTeams = standings
+    .filter(t => t.conferenceName === team.conferenceName && t.divisionSequence > 3)
+    .sort((a, b) => b.points - a.points);
+
+  const wc2Team = wcTeams[1]; // Second wild card - last team IN
+  const wc3Team = wcTeams[2]; // First team OUT
+
+  if (!wc2Team || wc2Team.gamesPlayed === 0) return HISTORICAL_FLOOR;
+
+  const wc2Projected = getProjectedPoints(wc2Team.points, wc2Team.gamesPlayed);
+
+  let cutLine: number;
+  if (wc3Team && wc3Team.gamesPlayed > 0) {
+    const wc3Projected = getProjectedPoints(wc3Team.points, wc3Team.gamesPlayed);
+    cutLine = Math.ceil((wc2Projected + wc3Projected) / 2);
+  } else {
+    cutLine = Math.ceil(wc2Projected);
   }
-  return 96;
+  return Math.max(cutLine, HISTORICAL_FLOOR);
 }
 
 function getPlayoffProbability(team: StandingsTeam, standings: StandingsTeam[]): number {
@@ -113,8 +137,16 @@ function getPlayoffProbability(team: StandingsTeam, standings: StandingsTeam[]):
   const projected = getProjectedPoints(team.points, team.gamesPlayed);
   const divCutLine = getDivCutLine(team, standings);
   const wcCutLine = getWcCutLine(team, standings);
+
+  // Determine playoff position same way as team tracker
+  const wcTeams = standings
+    .filter(t => t.conferenceName === team.conferenceName && t.divisionSequence > 3)
+    .sort((a, b) => b.points - a.points);
+  const isInPlayoffPosition = team.divisionSequence <= 3 ||
+    (wcTeams.length >= 2 && team.points >= wcTeams[1].points && team.divisionSequence > 3);
+
   const { probability } = computePositionAwareProbability(
-    projected, team.gamesPlayed, divCutLine, wcCutLine, team.conferenceSequence <= 8
+    projected, team.gamesPlayed, divCutLine, wcCutLine, isInPlayoffPosition
   );
   return probability;
 }
