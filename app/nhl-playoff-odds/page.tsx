@@ -284,7 +284,7 @@ export default async function NHLPlayoffOddsPage() {
                   </div>
 
                   {/* Table */}
-                  <div className="overflow-x-auto">
+                  <div>
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="text-gray-400 text-xs uppercase border-b border-slate-700/50">
@@ -307,9 +307,6 @@ export default async function NHLPlayoffOddsPage() {
                           <th className="text-center py-2 px-2 font-bold text-gray-300">
                             Odds
                           </th>
-                          <th className="text-center py-2 px-2 hidden sm:table-cell">
-                            DIFF
-                          </th>
                           <th className="text-center py-2 px-2 hidden lg:table-cell">
                             Strk
                           </th>
@@ -322,7 +319,6 @@ export default async function NHLPlayoffOddsPage() {
                           const inPlayoffs = isPlayoffTeam(team);
                           const pace = getPointsPace(team);
                           const odds = getPlayoffProbability(team, standings);
-                          const diff = team.goalDifferential;
                           const rank = idx + 1;
                           const isDivisionClinch = team.divisionSequence <= 3;
                           const isWildcard =
@@ -407,17 +403,6 @@ export default async function NHLPlayoffOddsPage() {
                               >
                                 {odds}%
                               </td>
-                              <td
-                                className={`py-2.5 px-2 text-center hidden sm:table-cell ${
-                                  diff > 0
-                                    ? 'text-emerald-400'
-                                    : diff < 0
-                                      ? 'text-red-400'
-                                      : 'text-gray-400'
-                                }`}
-                              >
-                                {diff > 0 ? `+${diff}` : diff}
-                              </td>
                               <td className="py-2.5 px-2 text-center text-gray-400 hidden lg:table-cell whitespace-nowrap">
                                 {team.streakCode}
                                 {team.streakCount}
@@ -452,10 +437,6 @@ export default async function NHLPlayoffOddsPage() {
             <span>
               <strong className="text-gray-300">PTS%</strong> = points
               percentage
-            </span>
-            <span>
-              <strong className="text-gray-300">DIFF</strong> = goal
-              differential
             </span>
             <span>
               <strong className="text-gray-300">WC</strong> = wildcard spot
