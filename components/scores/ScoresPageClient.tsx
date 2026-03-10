@@ -188,12 +188,14 @@ export default function ScoresPageClient() {
 
           {/* Header Content */}
           <div className="text-center">
-            <h1
-              className="text-5xl md:text-7xl font-bold text-white mb-2"
-              style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-            >
-              Lindy&apos;s Five
-            </h1>
+            <Link href="/">
+              <h1
+                className="text-5xl md:text-7xl font-bold text-white mb-2 hover:text-white/90 transition-colors"
+                style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+              >
+                Lindy&apos;s Five
+              </h1>
+            </Link>
             <p className="text-xl text-white/80 mb-8">
               Scores
             </p>
