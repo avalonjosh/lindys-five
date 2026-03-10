@@ -79,7 +79,8 @@ function GoalTooltip({
   return createPortal(
     <div
       ref={tooltipRef}
-      className="fixed z-50 w-48 sm:w-52 rounded-lg bg-gray-900 p-3 text-xs text-white shadow-lg pointer-events-none"
+      data-goal-tooltip
+      className="fixed z-50 w-48 sm:w-52 rounded-lg bg-gray-900 p-3 text-xs text-white shadow-lg"
       style={{ top: `${position.top}px`, left: `${position.left}px`, position: 'absolute' }}
     >
       <div className="flex items-center gap-2 mb-1">
@@ -111,9 +112,14 @@ function GoalTooltip({
         {awayTeamAbbrev} {goal.awayScore} - {homeTeamAbbrev} {goal.homeScore}
       </div>
       {goal.highlightClipSharingUrl && (
-        <div className="mt-1.5 text-blue-400">
+        <a
+          href={goal.highlightClipSharingUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1.5 block text-blue-400 hover:text-blue-300 transition-colors"
+        >
           ▶ Watch highlight
-        </div>
+        </a>
       )}
     </div>,
     document.body
@@ -127,7 +133,22 @@ export default function ScoringTimeline({
 }: ScoringTimelineProps) {
   const [activeGoalId, setActiveGoalId] = useState<string | null>(null);
   const [activeMarkerRect, setActiveMarkerRect] = useState<DOMRect | null>(null);
+  const [isClickLocked, setIsClickLocked] = useState(false);
   const markerRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    if (!isClickLocked) return;
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      // Don't close if clicking inside tooltip or on a marker
+      if (target.closest('[data-goal-tooltip]') || target.closest('[data-goal-marker]')) return;
+      setActiveGoalId(null);
+      setIsClickLocked(false);
+    }
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [isClickLocked]);
 
   const allGoals: GoalWithMeta[] = scoring.flatMap((period) =>
     period.goals.map((goal) => ({
@@ -161,6 +182,7 @@ export default function ScoringTimeline({
   }
 
   function showGoal(id: string) {
+    if (isClickLocked) return; // Don't override click-locked tooltip with hover
     const el = markerRefs.current.get(id);
     if (el) {
       setActiveMarkerRect(el.getBoundingClientRect());
@@ -169,6 +191,7 @@ export default function ScoringTimeline({
   }
 
   function hideGoal(id: string) {
+    if (isClickLocked) return; // Don't close click-locked tooltip on mouse leave
     setActiveGoalId((prev) => (prev === id ? null : prev));
   }
 
@@ -200,14 +223,19 @@ export default function ScoringTimeline({
         }}
         onMouseEnter={() => showGoal(goalId)}
         onMouseLeave={() => hideGoal(goalId)}
-        onClick={() => {
-          setActiveGoalId((prev) => {
-            if (prev === goalId) return null;
+        onClick={(e) => {
+          e.stopPropagation();
+          if (isClickLocked && activeGoalId === goalId) {
+            setActiveGoalId(null);
+            setIsClickLocked(false);
+          } else {
             const el = markerRefs.current.get(goalId);
             if (el) setActiveMarkerRect(el.getBoundingClientRect());
-            return goalId;
-          });
+            setActiveGoalId(goalId);
+            setIsClickLocked(true);
+          }
         }}
+        data-goal-marker
         className="absolute z-10 h-3 w-3 rounded-full border-2 border-white shadow-md transition-transform hover:scale-125 focus:outline-none"
         style={{
           backgroundColor: color,
