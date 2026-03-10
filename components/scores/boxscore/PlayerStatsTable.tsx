@@ -71,21 +71,21 @@ function SortIndicator({ column, sortColumn, sortDirection }: { column: SortColu
 function PlayerRow({ player }: { player: BoxscorePlayer }) {
   return (
     <tr className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors">
-      <td className="sticky left-0 bg-white z-10 py-1.5 px-2 text-sm whitespace-nowrap font-medium text-gray-900">
+      <td className="sticky left-0 bg-white z-10 py-1.5 px-1.5 sm:px-2 text-xs sm:text-sm whitespace-nowrap font-medium text-gray-900">
         <span className="text-gray-400 mr-1 tabular-nums text-xs">{player.sweaterNumber}</span>
         {player.name.default}
       </td>
-      <td className="py-1.5 px-2 text-sm text-center tabular-nums">{player.goals}</td>
-      <td className="py-1.5 px-2 text-sm text-center tabular-nums">{player.assists}</td>
-      <td className="py-1.5 px-2 text-sm text-center tabular-nums font-semibold">{player.points}</td>
-      <td className="py-1.5 px-2 text-sm text-center tabular-nums">
+      <td className="py-1.5 px-1 sm:px-2 text-xs sm:text-sm text-center tabular-nums">{player.goals}</td>
+      <td className="py-1.5 px-1 sm:px-2 text-xs sm:text-sm text-center tabular-nums">{player.assists}</td>
+      <td className="py-1.5 px-1 sm:px-2 text-xs sm:text-sm text-center tabular-nums font-semibold">{player.points}</td>
+      <td className="py-1.5 px-1 sm:px-2 text-xs sm:text-sm text-center tabular-nums">
         {player.plusMinus > 0 ? `+${player.plusMinus}` : player.plusMinus}
       </td>
-      <td className="py-1.5 px-2 text-sm text-center tabular-nums">{player.pim}</td>
-      <td className="py-1.5 px-2 text-sm text-center tabular-nums">{player.sog}</td>
-      <td className="py-1.5 px-2 text-sm text-center tabular-nums">{player.hits}</td>
-      <td className="py-1.5 px-2 text-sm text-center tabular-nums">{player.blockedShots}</td>
-      <td className="py-1.5 px-2 text-sm text-center tabular-nums text-gray-600">{player.toi}</td>
+      <td className="py-1.5 px-1 sm:px-2 text-xs sm:text-sm text-center tabular-nums">{player.pim}</td>
+      <td className="py-1.5 px-1 sm:px-2 text-xs sm:text-sm text-center tabular-nums">{player.sog}</td>
+      <td className="py-1.5 px-1 sm:px-2 text-xs sm:text-sm text-center tabular-nums">{player.hits}</td>
+      <td className="py-1.5 px-1 sm:px-2 text-xs sm:text-sm text-center tabular-nums">{player.blockedShots}</td>
+      <td className="py-1.5 px-1 sm:px-2 text-xs sm:text-sm text-center tabular-nums text-gray-600">{player.toi}</td>
     </tr>
   );
 }
@@ -125,14 +125,14 @@ export default function PlayerStatsTable({ forwards, defense, teamAbbrev, teamNa
 
       {/* Scrollable table */}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[600px]">
+        <table className="w-full min-w-[500px] sm:min-w-[600px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               {columns.map(col => (
                 <th
                   key={col.key}
                   onClick={() => handleSort(col.key)}
-                  className={`py-2 px-2 text-xs font-semibold uppercase tracking-wide cursor-pointer select-none transition-colors hover:bg-gray-100 ${
+                  className={`py-2 px-1 sm:px-2 text-[10px] sm:text-xs font-semibold uppercase tracking-wide cursor-pointer select-none transition-colors hover:bg-gray-100 ${
                     col.key === 'name'
                       ? 'sticky left-0 bg-gray-50 z-10 text-left'
                       : 'text-center'

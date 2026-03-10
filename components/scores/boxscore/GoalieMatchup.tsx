@@ -11,11 +11,11 @@ interface GoalieMatchupProps {
 function StatRow({ label, away, home, better }: { label: string; away: string; home: string; better?: 'away' | 'home' | null }) {
   return (
     <div className="flex items-center justify-between py-1.5">
-      <span className={`text-xs tabular-nums w-16 text-left ${better === 'away' ? 'font-bold text-gray-900' : 'text-gray-500'}`}>
+      <span className={`text-xs tabular-nums w-12 sm:w-16 text-left ${better === 'away' ? 'font-bold text-gray-900' : 'text-gray-500'}`}>
         {away}
       </span>
       <span className="text-xs text-gray-400 flex-1 text-center">{label}</span>
-      <span className={`text-xs tabular-nums w-16 text-right ${better === 'home' ? 'font-bold text-gray-900' : 'text-gray-500'}`}>
+      <span className={`text-xs tabular-nums w-12 sm:w-16 text-right ${better === 'home' ? 'font-bold text-gray-900' : 'text-gray-500'}`}>
         {home}
       </span>
     </div>
@@ -60,7 +60,7 @@ export default function GoalieMatchup({
           <img
             src={awayStarter.headshot}
             alt={awayStarter.name.default}
-            className="w-12 h-12 rounded-full bg-gray-100"
+            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-100"
           />
           <div>
             <p className="text-xs font-semibold text-gray-800">{awayStarter.lastName.default}</p>
@@ -79,7 +79,7 @@ export default function GoalieMatchup({
           <img
             src={homeStarter.headshot}
             alt={homeStarter.name.default}
-            className="w-12 h-12 rounded-full bg-gray-100"
+            className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-100"
           />
         </div>
       </div>

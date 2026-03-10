@@ -212,7 +212,7 @@ export default function GameHeader({ boxscore, landing }: GameHeaderProps) {
               <img
                 src={awayTeam.logo}
                 alt={awayTeam.abbrev}
-                className="w-16 h-16 object-contain"
+                className="w-12 h-12 sm:w-16 sm:h-16 object-contain"
               />
             </Link>
             <div className="text-center">
@@ -220,7 +220,7 @@ export default function GameHeader({ boxscore, landing }: GameHeaderProps) {
                 {awayTeam.abbrev}
               </div>
               {!isFuture && (
-                <div className="text-white text-5xl font-bold tabular-nums">
+                <div className="text-white text-3xl sm:text-5xl font-bold tabular-nums">
                   {awayTeam.score}
                 </div>
               )}
@@ -228,7 +228,7 @@ export default function GameHeader({ boxscore, landing }: GameHeaderProps) {
           </div>
 
           {/* Center: status badge + ticket CTA for future games */}
-          <div className="flex flex-col items-center gap-3">
+          <div className="flex flex-col items-center gap-2 sm:gap-3">
             {renderStatusBadge()}
             {ticketLink && (
               <a
@@ -236,7 +236,7 @@ export default function GameHeader({ boxscore, landing }: GameHeaderProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackClick('ticket-boxscore', `${homeTeam.abbrev}-vs-${awayTeam.abbrev}`)}
-                className="px-5 py-2 text-sm font-bold rounded-lg transition-all shadow-md hover:shadow-lg bg-white text-[#003087] hover:bg-white/90"
+                className="px-3 py-1.5 sm:px-5 sm:py-2 text-xs sm:text-sm font-bold rounded-lg transition-all shadow-md hover:shadow-lg bg-white text-[#003087] hover:bg-white/90"
               >
                 Get Tickets
               </a>
@@ -250,7 +250,7 @@ export default function GameHeader({ boxscore, landing }: GameHeaderProps) {
                 {homeTeam.abbrev}
               </div>
               {!isFuture && (
-                <div className="text-white text-5xl font-bold tabular-nums">
+                <div className="text-white text-3xl sm:text-5xl font-bold tabular-nums">
                   {homeTeam.score}
                 </div>
               )}
@@ -262,7 +262,7 @@ export default function GameHeader({ boxscore, landing }: GameHeaderProps) {
               <img
                 src={homeTeam.logo}
                 alt={homeTeam.abbrev}
-                className="w-16 h-16 object-contain"
+                className="w-12 h-12 sm:w-16 sm:h-16 object-contain"
               />
             </Link>
           </div>
@@ -270,54 +270,54 @@ export default function GameHeader({ boxscore, landing }: GameHeaderProps) {
 
         {/* Period linescore table */}
         {!isFuture && linescore.byPeriod.length > 0 && (
-          <div className="flex justify-center mt-2 mb-3">
+          <div className="flex justify-center mt-2 mb-3 overflow-x-auto">
             <table className="text-xs text-white/80">
               <thead>
                 <tr className="text-white/50">
-                  <th className="px-3 py-1 text-left font-medium w-12" />
+                  <th className="px-1.5 sm:px-3 py-1 text-left font-medium w-10 sm:w-12" />
                   {linescore.byPeriod.map((period) => (
                     <th
                       key={period.periodDescriptor.number}
-                      className="px-2 py-1 text-center font-medium min-w-[28px]"
+                      className="px-1 sm:px-2 py-1 text-center font-medium min-w-[24px] sm:min-w-[28px]"
                     >
                       {getPeriodLabel(period.periodDescriptor.number, period.periodDescriptor.periodType)}
                     </th>
                   ))}
-                  <th className="px-2 py-1 text-center font-bold min-w-[28px]">T</th>
+                  <th className="px-1 sm:px-2 py-1 text-center font-bold min-w-[24px] sm:min-w-[28px]">T</th>
                 </tr>
               </thead>
               <tbody>
                 {/* Away row */}
                 <tr>
-                  <td className="px-3 py-1 text-left font-semibold text-white">
+                  <td className="px-1.5 sm:px-3 py-1 text-left font-semibold text-white">
                     {awayTeam.abbrev}
                   </td>
                   {linescore.byPeriod.map((period) => (
                     <td
                       key={period.periodDescriptor.number}
-                      className="px-2 py-1 text-center tabular-nums"
+                      className="px-1 sm:px-2 py-1 text-center tabular-nums"
                     >
                       {period.away}
                     </td>
                   ))}
-                  <td className="px-2 py-1 text-center font-bold text-white tabular-nums">
+                  <td className="px-1 sm:px-2 py-1 text-center font-bold text-white tabular-nums">
                     {linescore.totals.away}
                   </td>
                 </tr>
                 {/* Home row */}
                 <tr>
-                  <td className="px-3 py-1 text-left font-semibold text-white">
+                  <td className="px-1.5 sm:px-3 py-1 text-left font-semibold text-white">
                     {homeTeam.abbrev}
                   </td>
                   {linescore.byPeriod.map((period) => (
                     <td
                       key={period.periodDescriptor.number}
-                      className="px-2 py-1 text-center tabular-nums"
+                      className="px-1 sm:px-2 py-1 text-center tabular-nums"
                     >
                       {period.home}
                     </td>
                   ))}
-                  <td className="px-2 py-1 text-center font-bold text-white tabular-nums">
+                  <td className="px-1 sm:px-2 py-1 text-center font-bold text-white tabular-nums">
                     {linescore.totals.home}
                   </td>
                 </tr>

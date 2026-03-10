@@ -65,13 +65,13 @@ function StatBar({ label, awayValue, homeValue, awayRank, homeRank, awayNum, hom
   return (
     <div>
       <p className="text-xs text-gray-500 text-center mb-1.5">{label}</p>
-      <div className="flex items-center gap-3">
-        <div className="w-20 text-right shrink-0">
-          <span className={`text-sm tabular-nums ${awayBetter ? 'font-bold text-gray-900' : 'font-medium text-gray-500'}`}>
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className="w-16 sm:w-20 text-right shrink-0">
+          <span className={`text-xs sm:text-sm tabular-nums ${awayBetter ? 'font-bold text-gray-900' : 'font-medium text-gray-500'}`}>
             {awayValue}
           </span>
           {awayRank !== undefined && (
-            <span className="text-[10px] text-gray-400 ml-1">#{awayRank}</span>
+            <span className="text-[10px] text-gray-400 ml-0.5 sm:ml-1">#{awayRank}</span>
           )}
         </div>
         <div className="flex-1 flex h-2.5 rounded-full overflow-hidden bg-gray-100">
@@ -84,12 +84,12 @@ function StatBar({ label, awayValue, homeValue, awayRank, homeRank, awayNum, hom
             style={{ width: `${homePct}%`, backgroundColor: homeColor, opacity: homeBetter ? 1 : 0.5 }}
           />
         </div>
-        <div className="w-20 shrink-0">
-          <span className={`text-sm tabular-nums ${homeBetter ? 'font-bold text-gray-900' : 'font-medium text-gray-500'}`}>
+        <div className="w-16 sm:w-20 shrink-0">
+          <span className={`text-xs sm:text-sm tabular-nums ${homeBetter ? 'font-bold text-gray-900' : 'font-medium text-gray-500'}`}>
             {homeValue}
           </span>
           {homeRank !== undefined && (
-            <span className="text-[10px] text-gray-400 ml-1">#{homeRank}</span>
+            <span className="text-[10px] text-gray-400 ml-0.5 sm:ml-1">#{homeRank}</span>
           )}
         </div>
       </div>

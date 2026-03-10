@@ -101,17 +101,17 @@ export default function GoalieStatsTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[520px]">
+        <table className="w-full min-w-[400px] sm:min-w-[520px]">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="py-2 px-2 text-xs font-semibold uppercase tracking-wide text-left text-gray-500">Goalie</th>
-              <th className="py-2 px-2 text-xs font-semibold uppercase tracking-wide text-center text-gray-500">Team</th>
-              <th className="py-2 px-2 text-xs font-semibold uppercase tracking-wide text-center text-gray-500">Dec</th>
-              <th className="py-2 px-2 text-xs font-semibold uppercase tracking-wide text-center text-gray-500">SA</th>
-              <th className="py-2 px-2 text-xs font-semibold uppercase tracking-wide text-center text-gray-500">SV</th>
-              <th className="py-2 px-2 text-xs font-semibold uppercase tracking-wide text-center text-gray-500">SV%</th>
-              <th className="py-2 px-2 text-xs font-semibold uppercase tracking-wide text-center text-gray-500">TOI</th>
-              <th className="py-2 px-1 text-xs font-semibold uppercase tracking-wide text-center text-gray-500 w-8"></th>
+              <th className="py-2 px-1.5 sm:px-2 text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-left text-gray-500">Goalie</th>
+              <th className="py-2 px-1 sm:px-2 text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-center text-gray-500">Team</th>
+              <th className="py-2 px-1 sm:px-2 text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-center text-gray-500">Dec</th>
+              <th className="py-2 px-1 sm:px-2 text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-center text-gray-500">SA</th>
+              <th className="py-2 px-1 sm:px-2 text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-center text-gray-500">SV</th>
+              <th className="py-2 px-1 sm:px-2 text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-center text-gray-500">SV%</th>
+              <th className="py-2 px-1 sm:px-2 text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-center text-gray-500">TOI</th>
+              <th className="py-2 px-1 text-[10px] sm:text-xs font-semibold uppercase tracking-wide text-center text-gray-500 w-8"></th>
             </tr>
           </thead>
           <tbody>
@@ -120,11 +120,11 @@ export default function GoalieStatsTable({
                 <tr
                   className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
                 >
-                  <td className="py-1.5 px-2 text-sm font-medium text-gray-900 whitespace-nowrap">
+                  <td className="py-1.5 px-1.5 sm:px-2 text-xs sm:text-sm font-medium text-gray-900 whitespace-nowrap">
                     <span className="text-gray-400 mr-1 tabular-nums text-xs">{goalie.sweaterNumber}</span>
                     {goalie.name.default}
                   </td>
-                  <td className="py-1.5 px-2 text-center">
+                  <td className="py-1.5 px-1 sm:px-2 text-center">
                     <Image
                       src={goalie.teamLogo}
                       alt={goalie.teamAbbrev}
@@ -133,13 +133,13 @@ export default function GoalieStatsTable({
                       className="w-5 h-5 inline-block"
                     />
                   </td>
-                  <td className="py-1.5 px-2 text-center">
+                  <td className="py-1.5 px-1 sm:px-2 text-center">
                     <DecisionBadge decision={goalie.decision} />
                   </td>
-                  <td className="py-1.5 px-2 text-sm text-center tabular-nums">{goalie.shotsAgainst}</td>
-                  <td className="py-1.5 px-2 text-sm text-center tabular-nums">{goalie.saves}</td>
-                  <td className="py-1.5 px-2 text-sm text-center tabular-nums font-semibold">{goalie.svPctDisplay}</td>
-                  <td className="py-1.5 px-2 text-sm text-center tabular-nums text-gray-600">{goalie.toi}</td>
+                  <td className="py-1.5 px-1 sm:px-2 text-xs sm:text-sm text-center tabular-nums">{goalie.shotsAgainst}</td>
+                  <td className="py-1.5 px-1 sm:px-2 text-xs sm:text-sm text-center tabular-nums">{goalie.saves}</td>
+                  <td className="py-1.5 px-1 sm:px-2 text-xs sm:text-sm text-center tabular-nums font-semibold">{goalie.svPctDisplay}</td>
+                  <td className="py-1.5 px-1 sm:px-2 text-xs sm:text-sm text-center tabular-nums text-gray-600">{goalie.toi}</td>
                   <td className="py-1.5 px-1 text-center">
                     <button
                       onClick={() => setExpandedId(expandedId === goalie.playerId ? null : goalie.playerId)}

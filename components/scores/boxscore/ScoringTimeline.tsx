@@ -122,7 +122,7 @@ export default function ScoringTimeline({
         {/* Tooltip */}
         {isActive && (
           <div
-            className="absolute z-20 left-1/2 -translate-x-1/2 top-4 w-52 rounded-lg bg-gray-900 p-3 text-xs text-white shadow-lg"
+            className="absolute z-20 left-1/2 -translate-x-1/2 top-4 w-48 sm:w-52 max-w-[calc(100vw-2rem)] rounded-lg bg-gray-900 p-3 text-xs text-white shadow-lg"
           >
             <div className="font-semibold">
               {g.goal.firstName.default} {g.goal.lastName.default}

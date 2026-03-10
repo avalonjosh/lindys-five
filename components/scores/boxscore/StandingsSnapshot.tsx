@@ -181,7 +181,7 @@ export default function StandingsSnapshot({
         }`}
       >
         <div className="border-t border-gray-100 py-3 overflow-x-auto">
-          <div className="min-w-[700px] space-y-4 px-2">
+          <div className="min-w-[360px] sm:min-w-[700px] space-y-4 px-2">
           {/* Division top-3 sections */}
           {divisions.map(divName => {
             const top3 = getDivisionTop3(divName);
