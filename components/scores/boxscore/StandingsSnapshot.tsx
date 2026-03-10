@@ -455,7 +455,7 @@ function TeamRow({
         <div className="w-28 lg:w-28 flex flex-col items-center">
           {gameStatus && game ? (() => {
             const isCurrentGame = String(game.id) === currentGameId;
-            const isClickable = !isCurrentGame && (game.gameState === 'LIVE' || game.gameState === 'CRIT' || game.gameState === 'FINAL' || game.gameState === 'OFF');
+            const isClickable = !isCurrentGame;
             const content = (
               <>
                 <span className={`text-[10px] tabular-nums leading-tight ${
