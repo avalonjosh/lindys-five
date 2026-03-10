@@ -225,15 +225,6 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
               </>
             )}
 
-            {/* Scoring timeline - only for started/finished games */}
-            {!isFuture && (
-              <ScoringTimeline
-                scoring={landing.summary?.scoring || []}
-                homeTeamAbbrev={boxscore.homeTeam.abbrev}
-                awayTeamAbbrev={boxscore.awayTeam.abbrev}
-              />
-            )}
-
             {/* Playoff impact + standings for live/final games (future games show these above) */}
             {!isFuture && (
               <>
@@ -255,6 +246,15 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
                   />
                 )}
               </>
+            )}
+
+            {/* Scoring timeline - only for started/finished games */}
+            {!isFuture && (
+              <ScoringTimeline
+                scoring={landing.summary?.scoring || []}
+                homeTeamAbbrev={boxscore.homeTeam.abbrev}
+                awayTeamAbbrev={boxscore.awayTeam.abbrev}
+              />
             )}
 
             {/* Season series for started/finished games */}
