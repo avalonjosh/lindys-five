@@ -4,8 +4,8 @@ const API_BASE = '/api/v1';
 
 // Rate limiter to avoid overwhelming the NHL API
 // Serializes requests with minimum delay between them
-const MAX_CONCURRENT = 1;
-const MIN_REQUEST_GAP_MS = 350; // minimum 350ms between requests (~3 req/sec)
+const MAX_CONCURRENT = 4;
+const MIN_REQUEST_GAP_MS = 100; // minimum 100ms between requests (~10 req/sec)
 let activeRequests = 0;
 let lastRequestTime = 0;
 const requestQueue: Array<{ resolve: () => void }> = [];
@@ -621,4 +621,110 @@ export async function fetchScoresByDate(date: string): Promise<NHLGame[]> {
     console.error('❌ Error fetching scores for date:', date, error);
     throw error;
   }
+}
+
+// Lightweight poll: only refresh live/in-progress game data without re-fetching schedule/standings
+export async function pollLiveGames(existingGames: NHLGame[]): Promise<NHLGame[]> {
+  const liveGames = existingGames.filter(
+    g => g.gameState === 'LIVE' || g.gameState === 'CRIT'
+  );
+
+  // Also check games that were FUT/PRE — they may have started
+  const pendingGames = existingGames.filter(
+    g => g.gameState === 'FUT' || g.gameState === 'PRE'
+  );
+
+  if (liveGames.length === 0 && pendingGames.length === 0) {
+    return existingGames;
+  }
+
+  const updatedGames = [...existingGames];
+
+  // For pending games, do a quick schedule check to see if any started
+  if (pendingGames.length > 0) {
+    try {
+      const date = pendingGames[0].gameDate || new Date().toISOString().split('T')[0];
+      const scheduleResponse = await fetchWithRetry(`${API_BASE}/schedule/${date}`);
+      const data = await scheduleResponse.json();
+      const dayData = data.gameWeek?.find((day: { date: string; games: NHLGame[] }) => day.date === date);
+      if (dayData?.games) {
+        for (const freshGame of dayData.games) {
+          const idx = updatedGames.findIndex((g: NHLGame) => g.id === freshGame.id);
+          if (idx !== -1) {
+            // Update game state and scores from schedule
+            updatedGames[idx] = { ...updatedGames[idx], ...freshGame, homeTeam: { ...updatedGames[idx].homeTeam, ...freshGame.homeTeam }, awayTeam: { ...updatedGames[idx].awayTeam, ...freshGame.awayTeam } };
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check pending games:', error);
+    }
+  }
+
+  // Re-identify live games after schedule update
+  const currentLiveGames = updatedGames.filter(
+    (g: NHLGame) => (g.gameState === 'LIVE' || g.gameState === 'CRIT') && g.id
+  );
+
+  if (currentLiveGames.length === 0) {
+    return updatedGames;
+  }
+
+  // Fetch boxscore + landing for live games only
+  const liveDataPromises = currentLiveGames.map(async (game: NHLGame) => {
+    try {
+      const [boxscoreRes, landingRes] = await Promise.all([
+        fetchWithRetry(`${API_BASE}/gamecenter/${game.id}/boxscore`),
+        fetchWithRetry(`${API_BASE}/gamecenter/${game.id}/landing`)
+      ]);
+      const [boxscore, landing] = await Promise.all([
+        boxscoreRes.json(),
+        landingRes.json()
+      ]);
+
+      return {
+        gameId: game.id,
+        homeScore: boxscore.homeTeam?.score ?? game.homeTeam.score,
+        awayScore: boxscore.awayTeam?.score ?? game.awayTeam.score,
+        homeSog: boxscore.homeTeam?.sog || null,
+        awaySog: boxscore.awayTeam?.sog || null,
+        period: landing.periodDescriptor?.number || null,
+        periodDescriptor: landing.periodDescriptor || null,
+        clock: landing.clock || null,
+        gameState: boxscore.gameState || game.gameState,
+      };
+    } catch (error) {
+      console.error(`Failed to poll live data for game ${game.id}:`, error);
+      return null;
+    }
+  });
+
+  const results = await Promise.all(liveDataPromises);
+
+  results.forEach((result) => {
+    if (!result) return;
+    const idx = updatedGames.findIndex((g: NHLGame) => g.id === result.gameId);
+    if (idx !== -1) {
+      updatedGames[idx] = {
+        ...updatedGames[idx],
+        gameState: result.gameState,
+        homeTeam: { ...updatedGames[idx].homeTeam, score: result.homeScore, sog: result.homeSog },
+        awayTeam: { ...updatedGames[idx].awayTeam, score: result.awayScore, sog: result.awaySog },
+        period: result.period,
+        periodDescriptor: result.periodDescriptor,
+        clock: result.clock,
+      };
+    }
+  });
+
+  // Re-sort: live first, then by start time
+  return updatedGames.sort((a: NHLGame, b: NHLGame) => {
+    const aIsLive = a.gameState === 'LIVE' || a.gameState === 'CRIT';
+    const bIsLive = b.gameState === 'LIVE' || b.gameState === 'CRIT';
+    if (aIsLive && !bIsLive) return -1;
+    if (!aIsLive && bIsLive) return 1;
+    const aTime = a.startTimeUTC || '';
+    const bTime = b.startTimeUTC || '';
+    return aTime.localeCompare(bTime);
+  });
 }

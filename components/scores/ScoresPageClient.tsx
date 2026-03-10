@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import type { NHLGame } from '@/lib/types';
-import { fetchScoresByDate } from '@/lib/services/nhlApi';
+import { fetchScoresByDate, pollLiveGames } from '@/lib/services/nhlApi';
 import ScoreCard from '@/components/scores/ScoreCard';
 import DateNavigation from '@/components/scores/DateNavigation';
 import { TEAMS } from '@/lib/teamConfig';
@@ -97,23 +97,51 @@ export default function ScoresPageClient() {
     }
   }, [selectedDate]);
 
-  // Initial fetch and polling
+  // Lightweight poll for live game updates only
+  const pollGames = useCallback(async () => {
+    try {
+      const updated = await pollLiveGames(games);
+      setGames(updated);
+    } catch (err) {
+      console.error('Failed to poll live games:', err);
+    }
+  }, [games]);
+
+  // Initial fetch on date change
   useEffect(() => {
     setLoading(true);
     fetchGames();
+  }, [selectedDate, fetchGames]);
 
-    // Check if any games are live
+  // Polling: lightweight for live games, full refresh less often
+  useEffect(() => {
+    const hasLiveOrPending = games.some(
+      g => g.gameState === 'LIVE' || g.gameState === 'CRIT' || g.gameState === 'FUT' || g.gameState === 'PRE'
+    );
+
+    if (!hasLiveOrPending || games.length === 0) return;
+
     const hasLiveGames = games.some(
       g => g.gameState === 'LIVE' || g.gameState === 'CRIT'
     );
 
-    // Poll more frequently if there are live games
+    // Live games: lightweight poll every 15s, full refresh every 5 min
+    // Pending games only: check every 60s for game starts
     const pollInterval = hasLiveGames ? 15000 : 60000;
+    let pollCount = 0;
 
-    const interval = setInterval(fetchGames, pollInterval);
+    const interval = setInterval(() => {
+      pollCount++;
+      // Full refresh every 20 polls (5 min for live, 20 min for pending)
+      if (pollCount % 20 === 0) {
+        fetchGames();
+      } else {
+        pollGames();
+      }
+    }, pollInterval);
 
     return () => clearInterval(interval);
-  }, [selectedDate, fetchGames, games.length]);
+  }, [games.length, fetchGames, pollGames]);
 
   const handleDateChange = (date: string) => {
     setSelectedDate(date);
