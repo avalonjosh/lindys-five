@@ -475,7 +475,7 @@ function SeasonSection({
                       className="text-base md:text-lg font-bold"
                       style={{ color: probabilityColor }}
                     >
-                      {probabilityForFinalPoints(projectedPoints, gamesPlayed, cutLineData.effectiveCutLine)}%
+                      {probability}%
                     </span>
                   </div>
                 )}
