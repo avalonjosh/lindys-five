@@ -45,17 +45,19 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
   // Check if this is a live game (LIVE or CRIT state)
   const isLiveGame = game.gameState === 'LIVE' || game.gameState === 'CRIT';
 
-  // If this is a live game, render the LiveGameOverlay instead
+  // If this is a live game, render the LiveGameOverlay wrapped in a link to boxscore
   if (isLiveGame) {
     return (
-      <LiveGameOverlay
-        game={game}
-        gameNumber={gameNumber}
-        teamAbbreviation={teamAbbreviation}
-        teamColors={teamColors}
-        darkModeColors={darkModeColors}
-        isGoatMode={isGoatMode}
-      />
+      <Link href={`/scores/${game.gameId}`} className="block h-full">
+        <LiveGameOverlay
+          game={game}
+          gameNumber={gameNumber}
+          teamAbbreviation={teamAbbreviation}
+          teamColors={teamColors}
+          darkModeColors={darkModeColors}
+          isGoatMode={isGoatMode}
+        />
+      </Link>
     );
   }
 
@@ -116,10 +118,8 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
     return 'UPCOMING';
   };
 
-  // Determine if this finished game should link to a recap or blog
-  const isFinishedGame = !isPending;
-  const recapSlug = recapSlugs?.get(game.gameId || 0);
-  const gameLink = isFinishedGame ? (recapSlug ? `/blog/sabres/${recapSlug}` : '/blog/sabres') : null;
+  // Link all games with a gameId to the boxscore/preview page
+  const gameLink = game.gameId ? `/scores/${game.gameId}` : null;
 
   const handleWinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -390,7 +390,10 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
                     href={ticketLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={() => trackClick('ticket', game.opponent)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      trackClick('ticket', game.opponent);
+                    }}
                     className={`inline-block px-3 py-1.5 text-xs font-bold rounded transition-all shadow-sm hover:shadow-md ${
                       isGoatMode
                         ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white'
@@ -408,8 +411,22 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
     </div>
   );
 
-  // Wrap finished games in a Link to their recap (or blog listing)
-  if (gameLink) {
+  // Wrap games in a link to boxscore/preview page
+  if (gameLink && !isClickable) {
+    // Pending games have a ticket <a> inside, so use onClick to avoid nested <a> tags
+    if (isPending) {
+      return (
+        <div
+          className="block h-full cursor-pointer"
+          onClick={() => router.push(gameLink)}
+          role="link"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter') router.push(gameLink); }}
+        >
+          {cardContent}
+        </div>
+      );
+    }
     return <Link href={gameLink} className="block h-full">{cardContent}</Link>;
   }
 

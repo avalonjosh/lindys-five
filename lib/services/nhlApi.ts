@@ -43,7 +43,7 @@ function releaseSlot(): void {
 }
 
 // Helper function to retry failed requests with exponential backoff
-async function fetchWithRetry(url: string, maxRetries: number = 3): Promise<Response> {
+export async function fetchWithRetry(url: string, maxRetries: number = 3): Promise<Response> {
   await acquireSlot();
   let lastError: Error | null = null;
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { ChevronDown } from 'lucide-react';
+import Link from 'next/link';
 import type { NHLGame } from '@/lib/types';
 import { fetchScoresByDate } from '@/lib/services/nhlApi';
 
@@ -1362,31 +1363,41 @@ function ScoresRow({
 
       {/* Tonight's game info */}
       <div className="w-28 text-center">
-        {gameStatus ? (
-          <div className="flex flex-col items-center">
-            {/* For live games: period/time on top, score below */}
-            {gameStatus.isLive ? (
-              <>
-                <span className="text-xs font-semibold flex items-center gap-1 text-red-500">
-                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                  {gameStatus.score}
-                </span>
-                <span className={`text-xs ${isGoatMode ? 'text-zinc-400' : 'text-gray-500'}`}>
-                  {gameStatus.text}
-                </span>
-              </>
-            ) : (
-              <>
-                <span className={`text-xs ${isGoatMode ? 'text-zinc-400' : 'text-gray-500'}`}>
-                  {gameStatus.text}
-                </span>
-                <span className={`text-xs font-semibold ${isGoatMode ? 'text-zinc-300' : 'text-gray-700'}`}>
-                  {gameStatus.score}
-                </span>
-              </>
-            )}
-          </div>
-        ) : (
+        {gameStatus ? (() => {
+          const isClickable = game && (game.gameState === 'LIVE' || game.gameState === 'CRIT' || game.gameState === 'FINAL' || game.gameState === 'OFF');
+          const content = (
+            <div className="flex flex-col items-center">
+              {gameStatus.isLive ? (
+                <>
+                  <span className="text-xs font-semibold flex items-center gap-1 text-red-500">
+                    <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                    {gameStatus.score}
+                  </span>
+                  <span className={`text-xs ${isGoatMode ? 'text-zinc-400' : 'text-gray-500'}`}>
+                    {gameStatus.text}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className={`text-xs ${isGoatMode ? 'text-zinc-400' : 'text-gray-500'}`}>
+                    {gameStatus.text}
+                  </span>
+                  <span className={`text-xs font-semibold ${isGoatMode ? 'text-zinc-300' : 'text-gray-700'}`}>
+                    {gameStatus.score}
+                  </span>
+                </>
+              )}
+            </div>
+          );
+          if (isClickable && game) {
+            return (
+              <Link href={`/scores/${game.id}`} className="hover:underline">
+                {content}
+              </Link>
+            );
+          }
+          return content;
+        })() : (
           <span className={`text-xs ${isGoatMode ? 'text-zinc-500' : 'text-gray-400'}`}>
             —
           </span>

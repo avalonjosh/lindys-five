@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { NHLGame } from '@/lib/types';
 import { TEAMS } from '@/lib/teamConfig';
@@ -74,6 +75,7 @@ const getWinner = (game: NHLGame): 'home' | 'away' | null => {
 };
 
 export default function ScoreCard({ game, favoriteTeamAbbrev }: ScoreCardProps) {
+  const router = useRouter();
   const isFavoriteGame = favoriteTeamAbbrev && (
     game.homeTeam.abbrev === favoriteTeamAbbrev || game.awayTeam.abbrev === favoriteTeamAbbrev
   );
@@ -159,6 +161,7 @@ export default function ScoreCard({ game, favoriteTeamAbbrev }: ScoreCardProps) 
       <Link
         href={linkPath}
         className="flex-shrink-0 hover:scale-110 transition-transform"
+        onClick={(e) => e.stopPropagation()}
       >
         <img
           src={team.logo}
@@ -195,14 +198,19 @@ export default function ScoreCard({ game, favoriteTeamAbbrev }: ScoreCardProps) 
     </div>
   );
 
+  const handleCardClick = () => {
+    router.push(`/scores/${game.id}`);
+  };
+
   return (
     <div
       className={`rounded-xl p-4 bg-white border-gray-200 ${
         isFavoriteGame
           ? 'border-2 shadow-lg'
           : 'border shadow-md'
-      }`}
+      } cursor-pointer hover:shadow-lg hover:border-blue-300 transition-shadow`}
       style={isFavoriteGame ? { borderColor: '#FFB81C' } : undefined}
+      onClick={handleCardClick}
     >
       {/* Top bar: Status + TV Networks + Tickets */}
       <div className="flex items-center justify-between mb-3">

@@ -52,10 +52,17 @@ export default function ScoresPageClient() {
   const [games, setGames] = useState<NHLGame[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [backLink, setBackLink] = useState<{ path: string; label: string }>({ path: '/', label: 'Back to Home' });
+  const [favoriteTeamAbbrev, setFavoriteTeamAbbrev] = useState<string | null>(null);
 
-  const backLink = getFavoriteTeamPath();
-  const favoriteSlug = getFavoriteTeamSlug();
-  const favoriteTeamAbbrev = getFavoriteTeamAbbrev(favoriteSlug);
+  // Read localStorage on mount to avoid hydration mismatch
+  useEffect(() => {
+    const slug = getFavoriteTeamSlug();
+    if (slug) {
+      setBackLink({ path: `/${slug}`, label: 'Back to Tracker' });
+      setFavoriteTeamAbbrev(getFavoriteTeamAbbrev(slug));
+    }
+  }, []);
 
   // Sort games: favorite team first, then live games, then by start time
   const sortedGames = useMemo(() => {
