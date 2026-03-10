@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { TEAMS } from '@/lib/teamConfig';
+import { computePositionAwareProbability } from '@/lib/utils/playoffProbability';
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
 
@@ -79,6 +80,43 @@ function isPlayoffTeam(team: StandingsTeam): boolean {
     team.divisionSequence <= 3 ||
     (team.wildcardSequence >= 1 && team.wildcardSequence <= 2 && team.divisionSequence > 3)
   );
+}
+
+function getProjectedPoints(points: number, gamesPlayed: number): number {
+  if (gamesPlayed === 0) return 0;
+  return (points / gamesPlayed) * 82;
+}
+
+function getDivCutLine(team: StandingsTeam, standings: StandingsTeam[]): number {
+  const divTeams = standings.filter(t => t.divisionName === team.divisionName);
+  const thirdPlace = divTeams.find(t => t.divisionSequence === 3);
+  if (thirdPlace && thirdPlace.gamesPlayed > 0) {
+    return getProjectedPoints(thirdPlace.points, thirdPlace.gamesPlayed);
+  }
+  return 100;
+}
+
+function getWcCutLine(team: StandingsTeam, standings: StandingsTeam[]): number {
+  const confTeams = standings.filter(
+    t => t.conferenceName === team.conferenceName && t.divisionSequence > 3
+  );
+  const sorted = [...confTeams].sort((a, b) => b.points - a.points);
+  const wcTeam = sorted[1];
+  if (wcTeam && wcTeam.gamesPlayed > 0) {
+    return getProjectedPoints(wcTeam.points, wcTeam.gamesPlayed);
+  }
+  return 96;
+}
+
+function getPlayoffProbability(team: StandingsTeam, standings: StandingsTeam[]): number {
+  if (team.gamesPlayed < 5) return 50;
+  const projected = getProjectedPoints(team.points, team.gamesPlayed);
+  const divCutLine = getDivCutLine(team, standings);
+  const wcCutLine = getWcCutLine(team, standings);
+  const { probability } = computePositionAwareProbability(
+    projected, team.gamesPlayed, divCutLine, wcCutLine, team.conferenceSequence <= 8
+  );
+  return probability;
 }
 
 const DIVISION_ORDER = ['Atlantic', 'Metropolitan', 'Central', 'Pacific'];
@@ -266,6 +304,9 @@ export default async function NHLPlayoffOddsPage() {
                             PTS%
                           </th>
                           <th className="text-center py-2 px-2">Pace</th>
+                          <th className="text-center py-2 px-2 font-bold text-gray-300">
+                            Odds
+                          </th>
                           <th className="text-center py-2 px-2 hidden sm:table-cell">
                             DIFF
                           </th>
@@ -280,6 +321,7 @@ export default async function NHLPlayoffOddsPage() {
                             abbrevToSlug[team.teamAbbrev.default] || '';
                           const inPlayoffs = isPlayoffTeam(team);
                           const pace = getPointsPace(team);
+                          const odds = getPlayoffProbability(team, standings);
                           const diff = team.goalDifferential;
                           const rank = idx + 1;
                           const isDivisionClinch = team.divisionSequence <= 3;
@@ -355,6 +397,17 @@ export default async function NHLPlayoffOddsPage() {
                                 {pace}
                               </td>
                               <td
+                                className={`py-2.5 px-2 text-center font-bold ${
+                                  odds >= 75
+                                    ? 'text-emerald-400'
+                                    : odds >= 40
+                                      ? 'text-yellow-400'
+                                      : 'text-red-400'
+                                }`}
+                              >
+                                {odds}%
+                              </td>
+                              <td
                                 className={`py-2.5 px-2 text-center hidden sm:table-cell ${
                                   diff > 0
                                     ? 'text-emerald-400'
@@ -391,6 +444,10 @@ export default async function NHLPlayoffOddsPage() {
             <span>
               <strong className="text-gray-300">Pace</strong> = projected
               82-game point total
+            </span>
+            <span>
+              <strong className="text-gray-300">Odds</strong> = playoff
+              probability
             </span>
             <span>
               <strong className="text-gray-300">PTS%</strong> = points
