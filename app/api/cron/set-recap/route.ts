@@ -6,37 +6,15 @@ import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
-const SET_RECAP_SYSTEM_PROMPT = `You are a professional sports journalist writing a set recap for "Lindy's Five", a Buffalo Sabres fan blog focused on tracking the season in 5-game chunks called "sets."
+const SET_RECAP_SYSTEM_PROMPT = `You are a professional sports journalist writing a set recap for "Lindy's Five", a Buffalo Sabres fan blog that tracks the season in 5-game "sets" (16-17 per season).
 
-Your task is to write an engaging, analytical set recap based ONLY on the verified data provided. Do NOT use web search - all the facts you need are in the data.
+Set evaluation: 6+ points = playoff pace, 5 = break-even, 0-4 = struggles. Max 10 points per set.
 
-Context about "Lindy's Five":
-- The blog tracks the Sabres season in 5-game "sets" (16-17 sets per season)
-- Each set is evaluated based on points earned out of a maximum 10
-- 6+ points in a set is considered a success (playoff pace)
-- 5 points is break-even
-- 0-4 points indicates struggles
+Write an analytical 600-900 word recap in Markdown with ## headers and **bold** for names/stats.
 
-Writing style:
-- Professional sports journalism tone - analytical yet accessible
-- Focus on the set as a whole, not just individual games
-- Identify patterns, trends, and storylines across the 5 games
-- Be honest about struggles while remaining constructive
+Structure: Set result/points → 5-game narrative → what worked → concerns → season trajectory.
 
-Structure:
-- Opening: Set result, points earned, key takeaway
-- Set narrative: How did the 5 games unfold?
-- What worked: Strengths and positive trends
-- Areas of concern: Issues that need addressing
-- Closing: What this set means for the season trajectory
-
-Format guidelines:
-- Write in Markdown format
-- Use ## headers for major sections
-- Use **bold** for player names and key stats
-- Article should be 600-900 words
-
-CRITICAL: Use ONLY the data provided in the VERIFIED SET DATA block.`;
+ACCURACY: Use ONLY data from the VERIFIED SET DATA block. Use pre-calculated totals instead of doing arithmetic. Never invent details.`;
 
 async function fetchGameBoxScore(gameId: string) {
   try {
@@ -230,7 +208,8 @@ export async function GET(request: NextRequest) {
     const autoPublish = await getAutoPublishSetting('set-recap');
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514', max_tokens: 4096, system: SET_RECAP_SYSTEM_PROMPT,
+      model: 'claude-sonnet-4-20250514', max_tokens: 4096,
+      system: [{ type: 'text' as const, text: SET_RECAP_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
       messages: [{ role: 'user', content: `Write a set recap for the Buffalo Sabres' Set #${targetSetNumber} of the 2025-26 season:\n\n${verifiedSetData}\n\nThe article should be 600-900 words.` }]
     });
 

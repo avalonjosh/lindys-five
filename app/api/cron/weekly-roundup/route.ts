@@ -6,32 +6,13 @@ import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
-// System prompt for weekly roundup generation
 const WEEKLY_ROUNDUP_SYSTEM_PROMPT = `You are a professional sports journalist writing the weekly roundup for "Lindy's Five", a Buffalo Sabres fan blog.
 
-Your task is to summarize the Sabres' week in review based on the verified data provided.
+Write a 600-900 word week-in-review in Markdown with ## headers and **bold** for names/stats. Do NOT include "TITLE:" or "META:" prefixes.
 
-Structure your article with these sections:
-1. **Opening** (2-3 sentences): Week overview - record, key narrative (hot streak? struggles? bounce back?)
-2. **Game-by-Game** (2-3 sentences per game): Highlights from each game
-3. **Star Performers**: Players who stood out across the week with specific stats
-4. **Standings Update**: Where the team sits now, movement from last week
-5. **Looking Ahead**: Next week's schedule and key matchups
+Sections: Week overview → game-by-game highlights → star performers → standings update → looking ahead.
 
-Writing style:
-- Professional sports journalism tone - analytical yet accessible
-- Focus on the week as a whole, not just individual games
-- Identify patterns, trends, and storylines across the week's games
-- Be honest about struggles while remaining constructive
-- Reference specific games and stats to support your analysis
-- 600-900 words total
-
-Format:
-- Use Markdown with ## headers for each section
-- Use **bold** for player names and key stats
-- Do NOT include the word "TITLE:" or "META:" in your response
-
-CRITICAL: Use ONLY the data provided in the VERIFIED WEEKLY DATA block. Do not make up stats or use external information.`;
+ACCURACY: Use ONLY the VERIFIED WEEKLY DATA provided. Never invent stats or use external information. Use pre-calculated totals instead of doing arithmetic.`;
 
 // Fetch game box score data with retry logic
 async function fetchGameBoxScore(gameId: string) {
@@ -321,7 +302,7 @@ export async function GET(request: NextRequest) {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4096,
-      system: WEEKLY_ROUNDUP_SYSTEM_PROMPT,
+      system: [{ type: 'text' as const, text: WEEKLY_ROUNDUP_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
       messages: [{ role: 'user', content: `Write the weekly roundup article based on this data:\n\n${context}` }]
     });
 

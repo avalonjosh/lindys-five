@@ -465,9 +465,9 @@ INSTRUCTIONS FOR FACT CHECKER:
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      system: FACT_CHECK_SYSTEM_PROMPT,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 2048,
+      system: [{ type: 'text' as const, text: FACT_CHECK_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
       messages: [{
         role: 'user',
         content: `Please fact-check the following article against the verified data provided.

@@ -106,9 +106,9 @@ To stay under Twitter's 280 character limit, your text MUST be under 180 charact
 Write ONLY the tweet text (MAXIMUM 180 characters). Make it sound like a real fan/writer sharing this article.`;
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 256,
-      system: TWEET_SYSTEM_PROMPT,
+      system: [{ type: 'text' as const, text: TWEET_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
       messages: [{ role: 'user', content: userPrompt }],
     });
 

@@ -3,38 +3,21 @@ import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '@/app/api/blog/settings/route';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
+import { quickFactCheck } from '@/lib/factCheck';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 const GAME_END_BUFFER_MS = 30 * 60 * 1000; // 30 minutes
 
 const GAME_RECAP_SYSTEM_PROMPT = `You are a professional sports journalist writing a game recap for "Lindy's Five", a Buffalo Sabres fan blog.
 
-Your task is to write an engaging, narrative game recap based ONLY on the verified box score data provided. Do NOT use web search - all the facts you need are in the data.
+Write an engaging narrative recap based ONLY on the verified box score data provided. 400-600 words in Markdown with ## headers and **bold** for names/stats.
 
-Writing style:
-- Professional sports journalism tone - authoritative yet accessible
-- Lead with the outcome and final score
-- Highlight key moments: big goals, saves, momentum swings
-- Feature standout individual performances using the stats provided
-- Build a narrative arc: how did the game unfold period by period?
-- End with forward-looking perspective or context
+Structure: Result/score lead → period-by-period narrative → standout performers → special teams → goaltending → forward look.
 
-Structure:
-- Opening paragraph: Result, score, key takeaway
-- Game flow: Period-by-period narrative with specific plays
-- Standout performances: Players who made a difference
-- Special teams: Power play and penalty kill impact
-- Goaltending: How the netminders performed
-- Closing: What this means going forward
-
-Format guidelines:
-- Write in Markdown format
-- Use ## headers for major sections
-- Use **bold** for player names and key stats
-- Keep paragraphs concise (3-4 sentences max)
-- Article should be 400-600 words
-
-CRITICAL: Use ONLY the data provided in the VERIFIED GAME DATA block. Do not invent any statistics, player names, or game details not explicitly listed.`;
+ACCURACY RULES:
+- Use ONLY data from the VERIFIED GAME DATA block. Every goal, assist, stat, and player name must appear in the data.
+- Use the pre-calculated totals (TOTAL GOALS, Combined shots) instead of doing arithmetic yourself.
+- Never invent quotes, atmosphere, or details not in the data.`;
 
 async function fetchGameBoxScore(gameId: string) {
   try {
@@ -139,6 +122,7 @@ Source: Official NHL API Box Score
 ═══════════════════════════════════════════════════════
 
 FINAL SCORE: Sabres ${sabresScore} - ${opponentTeam?.abbrev} ${opponentScore}
+TOTAL GOALS IN GAME: ${sabresScore + opponentScore} (Sabres ${sabresScore} + ${opponentTeam?.abbrev} ${opponentScore})
 Result: ${result}${resultSuffix}
 Location: ${isHomeTeamSabres ? 'Home' : 'Away'}
 
@@ -148,6 +132,7 @@ ${periodScores || 'Not available'}
 SHOTS ON GOAL:
 - Sabres: ${sabresTeam?.sog || 0}
 - ${opponentTeam?.abbrev}: ${opponentTeam?.sog || 0}
+- Combined: ${(sabresTeam?.sog || 0) + (opponentTeam?.sog || 0)}
 
 SCORING SUMMARY:
 ${scoringSummary || 'No goals scored'}
@@ -274,18 +259,27 @@ export async function GET(request: NextRequest) {
         const periodType = game.gameOutcome?.lastPeriodType || 'REG';
 
         const message = await anthropic.messages.create({
-          model: 'claude-sonnet-4-20250514', max_tokens: 4096, system: GAME_RECAP_SYSTEM_PROMPT,
+          model: 'claude-sonnet-4-20250514', max_tokens: 4096,
+          system: [{ type: 'text' as const, text: GAME_RECAP_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
           messages: [{ role: 'user', content: `Write a game recap for the Buffalo Sabres based on the following verified box score data:\n\n${verifiedGameData}\n\nThe article should be 400-600 words.` }]
         });
 
         const content = message.content.filter((block: any) => block.type === 'text').map((block: any) => block.text).join('\n');
+
+        // Auto fact-check before publishing
+        const factCheck = await quickFactCheck(anthropic, content, verifiedGameData);
+        const shouldPublish = autoPublish && factCheck.passed;
+        if (!factCheck.passed) {
+          console.warn(`Fact-check failed for game ${game.id}:`, factCheck.issues);
+        }
+
         const title = generateTitle(isWin, sabresScore, oppScore, opponent, periodType);
         const otSuffix = periodType === 'OT' ? ' in overtime' : periodType === 'SO' ? ' in a shootout' : '';
         const metaDescription = `Game recap: Buffalo Sabres ${isWin ? 'defeat' : 'fall to'} ${opponent} ${sabresScore}-${oppScore}${otSuffix}. Full breakdown and analysis.`;
 
         const post = await createPost({
           title, content, team: 'sabres', type: 'game-recap',
-          status: autoPublish ? 'published' : 'draft',
+          status: shouldPublish ? 'published' : 'draft',
           gameId: game.id, opponent: oppAbbrev, gameDate: game.gameDate, metaDescription, aiModel: 'claude-sonnet-4-20250514'
         });
 

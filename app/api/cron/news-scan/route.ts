@@ -218,7 +218,7 @@ export async function GET(request: NextRequest) {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const searchMessage = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514', max_tokens: 2048, system: NEWS_DETECTION_PROMPT,
+      model: 'claude-haiku-4-5-20251001', max_tokens: 2048, system: NEWS_DETECTION_PROMPT,
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{ role: 'user', content: `Search for recent Buffalo Sabres news from NHL.com, ESPN.com, and other major sports outlets. Focus on news from the last 24-48 hours. Today's date is ${new Date().toISOString().split('T')[0]}.\n\nAfter searching, respond with a JSON array of newsworthy stories found (or empty array if none).` }]
     });
@@ -256,7 +256,8 @@ export async function GET(request: NextRequest) {
       }
 
       const articleMessage = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514', max_tokens: 2048, system: ARTICLE_GENERATION_PROMPT,
+        model: 'claude-sonnet-4-20250514', max_tokens: 2048,
+        system: [{ type: 'text' as const, text: ARTICLE_GENERATION_PROMPT, cache_control: { type: 'ephemeral' as const } }],
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{ role: 'user', content: `Write a factual news report about this topic:\n\nNEWS TOPIC: ${story.topic}\n\nUse this verified team data for context:\n${contextText}\n\nIMPORTANT: Use web search to verify specific details.` }]
       });

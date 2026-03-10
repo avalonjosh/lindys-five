@@ -3,6 +3,7 @@ import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '@/app/api/blog/settings/route';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
+import { quickFactCheck } from '@/lib/factCheck';
 
 const ESPN_API_BASE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 const BILLS_TEAM_ID = 2; // Buffalo Bills ESPN team ID
@@ -13,31 +14,14 @@ const _GAME_END_BUFFER_MS = 30 * 60 * 1000; // 30 minutes
 
 const GAME_RECAP_SYSTEM_PROMPT = `You are a professional sports journalist writing a game recap for "Lindy's Five", a Buffalo Bills fan blog.
 
-Your task is to write an engaging, narrative game recap based ONLY on the verified box score data provided. Do NOT use web search - all the facts you need are in the data.
+Write an engaging narrative recap based ONLY on the verified box score data provided. 400-600 words in Markdown with ## headers and **bold** for names/stats.
 
-Writing style:
-- Professional sports journalism tone - authoritative yet accessible
-- Lead with the outcome and final score
-- Highlight key moments: touchdowns, turnovers, momentum swings
-- Feature standout individual performances using the stats provided
-- Build a narrative arc: how did the game unfold quarter by quarter?
-- End with forward-looking perspective or context
+Structure: Result/score lead → quarter-by-quarter narrative → standout performers (Allen, key skill players, defense) → special teams → playoff/season outlook.
 
-Structure:
-- Opening paragraph: Result, score, key takeaway
-- Game flow: Quarter-by-quarter narrative with specific plays
-- Standout performances: Players who made a difference (Josh Allen, key receivers, defensive standouts)
-- Special teams: Field goals, punt returns, kickoff returns
-- Closing: What this means for playoff picture or season outlook
-
-Format guidelines:
-- Write in Markdown format
-- Use ## headers for major sections
-- Use **bold** for player names and key stats
-- Keep paragraphs concise (3-4 sentences max)
-- Article should be 400-600 words
-
-CRITICAL: Use ONLY the data provided in the VERIFIED GAME DATA block. Do not invent any statistics, player names, or game details not explicitly listed.`;
+ACCURACY RULES:
+- Use ONLY data from the VERIFIED GAME DATA block. Every stat, player, and score must appear in the data.
+- Use the pre-calculated totals instead of doing arithmetic yourself.
+- Never invent quotes, atmosphere, or details not in the data.`;
 
 async function fetchBillsSchedule() {
   try {
@@ -192,6 +176,7 @@ Source: ESPN API Box Score
 ═══════════════════════════════════════════════════════
 
 FINAL SCORE: Bills ${billsScore} - ${oppAbbrev} ${oppScore}
+TOTAL POINTS SCORED: ${billsScore + oppScore} (Bills ${billsScore} + ${oppAbbrev} ${oppScore})
 Result: ${isWin ? 'WIN' : 'LOSS'}
 Location: ${isHome ? 'Home (Highmark Stadium)' : 'Away'}
 
@@ -387,7 +372,7 @@ export async function GET(request: NextRequest) {
         const message = await anthropic.messages.create({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 4096,
-          system: GAME_RECAP_SYSTEM_PROMPT,
+          system: [{ type: 'text' as const, text: GAME_RECAP_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
           messages: [{
             role: 'user',
             content: `Write a game recap for the Buffalo Bills based on the following verified box score data:\n\n${verifiedGameData}\n\nThe article should be 400-600 words.`
@@ -399,13 +384,20 @@ export async function GET(request: NextRequest) {
           .map((block: any) => block.text)
           .join('\n');
 
+        // Auto fact-check before publishing
+        const factCheck = await quickFactCheck(anthropic, content, verifiedGameData);
+        const shouldPublish = autoPublish && factCheck.passed;
+        if (!factCheck.passed) {
+          console.warn(`Fact-check failed for Bills game ${game.id}:`, factCheck.issues);
+        }
+
         const title = generateTitle(isWin, billsScore, oppScore, opponent);
         const metaDescription = `Game recap: Buffalo Bills ${isWin ? 'defeat' : 'fall to'} ${opponent} ${billsScore}-${oppScore}. Full breakdown and analysis.`;
 
         const post = await createPost({
           title,
           content,
-          status: autoPublish ? 'published' : 'draft',
+          status: shouldPublish ? 'published' : 'draft',
           gameId: game.id,
           opponent: oppAbbrev,
           gameDate,

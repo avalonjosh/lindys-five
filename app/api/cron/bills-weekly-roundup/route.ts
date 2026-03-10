@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const searchMessage = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514', max_tokens: 2048,
+      model: 'claude-haiku-4-5-20251001', max_tokens: 2048,
       system: `You are a sports news researcher. Search for Buffalo Bills news from the past week and return a JSON array of the top 5-7 news topics.\n\nFormat: ["Topic 1 description", "Topic 2 description", ...]`,
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{ role: 'user', content: `Search for Buffalo Bills news from ${formatDate(weekStart)} to ${formatDate(weekEnd)} (${weekStartStr}). Today is ${new Date().toISOString().split('T')[0]}.\n\nAfter searching, respond with a JSON array of the top news topics from this week.` }]
@@ -142,7 +142,8 @@ export async function GET(request: NextRequest) {
     const context = formatWeeklyContext(weekStart, weekEnd, newsTopics, billsContext);
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514', max_tokens: 4096, system: WEEKLY_ROUNDUP_SYSTEM_PROMPT,
+      model: 'claude-sonnet-4-20250514', max_tokens: 4096,
+      system: [{ type: 'text' as const, text: WEEKLY_ROUNDUP_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{ role: 'user', content: `Write the weekly roundup article for the Buffalo Bills based on this data. You may search for additional details if needed:\n\n${context}` }]
     });
