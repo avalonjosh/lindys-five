@@ -92,12 +92,17 @@ export function extractTeamFromPath(path: string): string | null {
 
 export function getDateKey(date?: Date): string {
   const d = date || new Date();
-  return d.toISOString().split('T')[0];
+  const et = new Date(d.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  const yyyy = et.getFullYear();
+  const mm = String(et.getMonth() + 1).padStart(2, '0');
+  const dd = String(et.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 export function getHourKey(date?: Date): string {
   const d = date || new Date();
-  return String(d.getUTCHours()).padStart(2, '0');
+  const et = new Date(d.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+  return String(et.getHours()).padStart(2, '0');
 }
 
 // Country code to flag emoji

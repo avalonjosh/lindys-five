@@ -24,24 +24,11 @@ export async function GET(request: NextRequest) {
   const today = getDateKey();
 
   if (range === 'today') {
-    // Calculate UTC offset for Eastern Time (ET is UTC-5 or UTC-4 during DST)
-    const utcNow = new Date();
-    const etNow = new Date(utcNow.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-    const offsetHours = Math.round((utcNow.getTime() - etNow.getTime()) / 3600000);
-    // offsetHours = UTC - ET, so ET + offset = UTC; to go from ET hour to UTC hour: utcH = etH + offset
-
-    // For each ET hour 0-23, figure out which UTC date:hour key to read
     const pipeline = kv.pipeline();
-    const todayUTC = getDateKey();
-    const yesterdayUTC = getDateKey(new Date(Date.now() - 86400000));
 
-    for (let etH = 0; etH < 24; etH++) {
-      const utcH = (etH + offsetHours + 24) % 24;
-      // If the UTC hour wraps to a higher number than ET hour, it's yesterday in UTC
-      const dateKey = (etH + offsetHours < 0) ? yesterdayUTC :
-                      (etH + offsetHours >= 24) ? getDateKey(new Date(Date.now() + 86400000)) : todayUTC;
-      const hh = String(utcH).padStart(2, '0');
-      pipeline.get(`analytics:pv:hourly:${dateKey}:${hh}`);
+    for (let h = 0; h < 24; h++) {
+      const hh = String(h).padStart(2, '0');
+      pipeline.get(`analytics:pv:hourly:${today}:${hh}`);
     }
     const results = await pipeline.exec();
 
