@@ -164,7 +164,7 @@ export default function ScoringTimeline({
   }
 
   return (
-    <div className="rounded-xl bg-white p-3 sm:p-5 shadow-sm overflow-hidden">
+    <div className="rounded-xl bg-white p-3 sm:p-5 shadow-sm overflow-hidden min-w-0">
       <h3 className="mb-4 text-lg font-bold text-gray-900">Game Flow</h3>
 
       {/* Team legend */}
