@@ -142,8 +142,14 @@ export default function ScoringTimeline({
   );
 
   const hasOT = allGoals.some((g) => g.periodNumber > 3);
-  const regulationGoals = allGoals.filter((g) => g.periodNumber <= 3);
-  const otGoals = allGoals.filter((g) => g.periodNumber > 3);
+
+  // Keep original allGoals index for each goal so IDs match across lookups
+  const regulationGoals = allGoals
+    .map((g, i) => ({ ...g, allGoalsIndex: i }))
+    .filter((g) => g.periodNumber <= 3);
+  const otGoals = allGoals
+    .map((g, i) => ({ ...g, allGoalsIndex: i }))
+    .filter((g) => g.periodNumber > 3);
 
   if (allGoals.length === 0) {
     return (
@@ -258,7 +264,7 @@ export default function ScoringTimeline({
             </span>
           ))}
 
-          {regulationGoals.map((g, i) => renderGoalMarker(g, i))}
+          {regulationGoals.map((g) => renderGoalMarker(g, g.allGoalsIndex))}
         </div>
 
         {/* OT section */}
@@ -267,10 +273,13 @@ export default function ScoringTimeline({
             className="relative h-10 rounded-r-lg bg-gray-300 overflow-hidden"
             style={{ width: '20%' }}
           >
-            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-medium text-gray-500 select-none">
+            <span
+              className="absolute text-[10px] font-medium text-gray-500 select-none"
+              style={{ left: '50%', top: '3px', transform: 'translateX(-50%)' }}
+            >
               OT
             </span>
-            {otGoals.map((g, i) => renderGoalMarker(g, i))}
+            {otGoals.map((g) => renderGoalMarker(g, g.allGoalsIndex))}
           </div>
         )}
       </div>
