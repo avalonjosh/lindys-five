@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import type { NHLGame } from '@/lib/types';
+import type { StandingsTeam } from '@/lib/types/boxscore';
 import { fetchScoresByDate, pollLiveGames } from '@/lib/services/nhlApi';
 import ScoreCard from '@/components/scores/ScoreCard';
 import DateNavigation from '@/components/scores/DateNavigation';
@@ -54,6 +55,7 @@ export default function ScoresPageClient() {
   const [error, setError] = useState<string | null>(null);
   const [backLink, setBackLink] = useState<{ path: string; label: string }>({ path: '/', label: 'Back to Home' });
   const [favoriteTeamAbbrev, setFavoriteTeamAbbrev] = useState<string | null>(null);
+  const [standings, setStandings] = useState<StandingsTeam[]>([]);
 
   // Read localStorage on mount to avoid hydration mismatch
   useEffect(() => {
@@ -62,6 +64,17 @@ export default function ScoresPageClient() {
       setBackLink({ path: `/${slug}`, label: 'Back to Tracker' });
       setFavoriteTeamAbbrev(getFavoriteTeamAbbrev(slug));
     }
+  }, []);
+
+  // Fetch standings once on mount for playoff stakes display
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    fetch(`https://api-web.nhle.com/v1/standings/${today}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.standings) setStandings(data.standings);
+      })
+      .catch(err => console.error('Failed to fetch standings:', err));
   }, []);
 
   // Sort games: favorite team first, then live games, then by start time
@@ -233,6 +246,7 @@ export default function ScoresPageClient() {
                 key={game.id}
                 game={game}
                 favoriteTeamAbbrev={favoriteTeamAbbrev || undefined}
+                standings={standings}
               />
             ))}
           </div>
