@@ -139,7 +139,7 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
     boxscore?.gameState === 'FUT' || boxscore?.gameState === 'PRE';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 overflow-x-hidden">
       {/* Loading State */}
       {loading && (
         <div className="flex justify-center items-center py-12">
