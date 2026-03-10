@@ -8,6 +8,11 @@ import type { NHLGame } from '@/lib/types';
 import { TEAMS } from '@/lib/teamConfig';
 import { fetchScoresByDate } from '@/lib/services/nhlApi';
 
+const getTeamSlug = (abbrev: string): string | null => {
+  const team = Object.values(TEAMS).find(t => t.abbreviation === abbrev);
+  return team?.slug || null;
+};
+
 interface StandingsSnapshotProps {
   standings: StandingsTeam[];
   homeAbbrev: string;
@@ -350,11 +355,15 @@ function TeamRow({
       </span>
 
       {/* Logo */}
-      <img
-        src={team.teamLogo}
-        alt={team.teamAbbrev.default}
-        className="w-6 h-6 object-contain"
-      />
+      {(() => {
+        const slug = getTeamSlug(team.teamAbbrev.default);
+        const img = <img src={team.teamLogo} alt={team.teamAbbrev.default} className="w-6 h-6 object-contain" />;
+        return slug ? (
+          <Link href={`/${slug}`} className="flex-shrink-0 hover:scale-110 transition-transform" onClick={(e) => e.stopPropagation()}>
+            {img}
+          </Link>
+        ) : img;
+      })()}
 
       {/* Abbrev */}
       <span

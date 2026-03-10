@@ -5,6 +5,12 @@ import { ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import type { NHLGame } from '@/lib/types';
 import { fetchScoresByDate } from '@/lib/services/nhlApi';
+import { TEAMS } from '@/lib/teamConfig';
+
+const getTeamSlug = (abbrev: string): string | null => {
+  const team = Object.values(TEAMS).find(t => t.abbreviation === abbrev);
+  return team?.slug || null;
+};
 
 interface TeamColors {
   primary: string;
@@ -899,11 +905,15 @@ function TeamRow({
       </span>
 
       {/* Team logo */}
-      <img
-        src={team.teamLogo}
-        alt={team.teamAbbrev}
-        className="w-6 h-6 object-contain"
-      />
+      {(() => {
+        const slug = getTeamSlug(team.teamAbbrev);
+        const img = <img src={team.teamLogo} alt={team.teamAbbrev} className="w-6 h-6 object-contain" />;
+        return slug ? (
+          <Link href={`/${slug}`} className="flex-shrink-0 hover:scale-110 transition-transform" onClick={(e) => e.stopPropagation()}>
+            {img}
+          </Link>
+        ) : img;
+      })()}
 
       {/* Team abbrev */}
       <span
@@ -1201,11 +1211,15 @@ function ScoresRow({
       </span>
 
       {/* Team logo */}
-      <img
-        src={team.teamLogo}
-        alt={team.teamAbbrev}
-        className="w-6 h-6 object-contain"
-      />
+      {(() => {
+        const slug = getTeamSlug(team.teamAbbrev);
+        const img = <img src={team.teamLogo} alt={team.teamAbbrev} className="w-6 h-6 object-contain" />;
+        return slug ? (
+          <Link href={`/${slug}`} className="flex-shrink-0 hover:scale-110 transition-transform" onClick={(e) => e.stopPropagation()}>
+            {img}
+          </Link>
+        ) : img;
+      })()}
 
       {/* Team abbrev */}
       <span
