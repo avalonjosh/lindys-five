@@ -3,15 +3,20 @@
 import { useState, useEffect } from 'react';
 import { MoreHorizontal, X as XIcon, Link as LinkIcon, Check, ChevronDown } from 'lucide-react';
 import type { SeasonStats } from '@/lib/types';
-import { getProbabilityColor, probabilityForFinalPoints } from '@/lib/utils/playoffProbability';
+import { getProbabilityColor, probabilityForFinalPoints, computePositionAwareProbability } from '@/lib/utils/playoffProbability';
 import { trackClick } from '@/lib/analytics';
 
 const TOTAL_GAMES = 82;
 const HISTORICAL_FLOOR = 94;
 
 interface CutLineState {
-  cutLine: number;
+  effectiveCutLine: number;
+  divisionCutLine: number;
+  wildcardCutLine: number;
+  activePath: 'division' | 'wildcard';
   wc2TeamAbbrev: string;
+  divBubbleTeamAbbrev: string;
+  isInPlayoffPosition: boolean;
 }
 
 interface TeamColors {
@@ -413,7 +418,7 @@ function SeasonSection({
                       isGoatMode ? 'text-zinc-400' : 'text-gray-500'
                     }`}
                   >
-                    Current Projected Cut Line
+                    {cutLineData ? (cutLineData.activePath === 'division' ? 'Division Cut Line' : 'Wildcard Cut Line') : 'Current Projected Cut Line'}
                   </p>
                   {cutLineLoading ? (
                     <p
@@ -432,8 +437,9 @@ function SeasonSection({
                       {gamesPlayed < 10 ? 'Available after 10 games' : 'Unable to load'}
                     </p>
                   ) : (() => {
-                    const cutLinePointsNeeded = Math.max(0, cutLineData.cutLine - totalPoints);
+                    const cutLinePointsNeeded = Math.max(0, cutLineData.effectiveCutLine - totalPoints);
                     const cutLinePaceNeeded = gamesRemaining > 0 ? cutLinePointsNeeded / gamesRemaining : 0;
+                    const bubbleTeam = cutLineData.activePath === 'division' ? cutLineData.divBubbleTeamAbbrev : cutLineData.wc2TeamAbbrev;
                     return (
                       <>
                         <p
@@ -448,7 +454,7 @@ function SeasonSection({
                             isGoatMode ? 'text-zinc-500' : 'text-gray-500'
                           }`}
                         >
-                          → {cutLineData.cutLine} pts • {cutLinePaceNeeded.toFixed(2)} pts/game
+                          → {cutLineData.effectiveCutLine} pts • {cutLinePaceNeeded.toFixed(2)} pts/game{bubbleTeam ? ` • ${bubbleTeam}` : ''}
                         </p>
                       </>
                     );
@@ -469,7 +475,7 @@ function SeasonSection({
                       className="text-base md:text-lg font-bold"
                       style={{ color: probabilityColor }}
                     >
-                      {probabilityForFinalPoints(projectedPoints, gamesPlayed, cutLineData.cutLine)}%
+                      {probabilityForFinalPoints(projectedPoints, gamesPlayed, cutLineData.effectiveCutLine)}%
                     </span>
                   </div>
                 )}
@@ -539,7 +545,7 @@ function SeasonSection({
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
               {(() => {
                 // Dynamic range: span both cut line and projected points
-                const cutLine = cutLineData?.cutLine ?? 96;
+                const cutLine = cutLineData?.effectiveCutLine ?? 96;
                 const gap = Math.abs(projectedPoints - cutLine);
                 let start: number;
                 if (gap <= 5) {
@@ -627,6 +633,7 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
         gamesPlayed: number;
         divisionRank: number;
         conferenceName: string;
+        divisionName: string;
       }
 
       const parsedStandings: StandingTeam[] = data.standings.map((team: any) => ({
@@ -635,6 +642,7 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
         gamesPlayed: team.gamesPlayed || 0,
         divisionRank: team.divisionSequence || 0,
         conferenceName: team.conferenceName || '',
+        divisionName: team.divisionName || '',
       }));
 
       // Find user's team
@@ -643,45 +651,81 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
         throw new Error('Team not found in standings');
       }
 
-      // Get user's conference
       const userConference = userTeam.conferenceName;
+      const userDivision = userTeam.divisionName;
 
-      // Find WC2 team in user's conference
+      // --- Division cut line ---
+      // Sort division teams by points descending
+      const divisionTeams = parsedStandings
+        .filter(t => t.divisionName === userDivision)
+        .sort((a, b) => b.points - a.points);
+
+      const div3Team = divisionTeams[2]; // 3rd place - last division playoff spot
+      const div4Team = divisionTeams[3]; // 4th place - first team out of division
+
+      let divisionCutLine: number;
+      let divBubbleTeamAbbrev = '';
+      if (div3Team && div4Team && div3Team.gamesPlayed > 0 && div4Team.gamesPlayed > 0) {
+        const div3Projected = (div3Team.points / div3Team.gamesPlayed) * TOTAL_GAMES;
+        const div4Projected = (div4Team.points / div4Team.gamesPlayed) * TOTAL_GAMES;
+        divisionCutLine = Math.ceil((div3Projected + div4Projected) / 2);
+        divBubbleTeamAbbrev = div4Team.teamAbbrev;
+      } else if (div3Team && div3Team.gamesPlayed > 0) {
+        divisionCutLine = Math.ceil((div3Team.points / div3Team.gamesPlayed) * TOTAL_GAMES);
+        divBubbleTeamAbbrev = div3Team.teamAbbrev;
+      } else {
+        divisionCutLine = 90; // fallback
+      }
+      // Floor of 90 for division cut line
+      divisionCutLine = Math.max(divisionCutLine, 90);
+
+      // --- Wildcard cut line ---
       const wildcardTeams = parsedStandings
         .filter(t => t.conferenceName === userConference && t.divisionRank > 3)
         .sort((a, b) => b.points - a.points);
 
-      const wc2Team = wildcardTeams[1]; // Second wild card (index 1) - last team IN
-      const wc3Team = wildcardTeams[2]; // Third wild card (index 2) - first team OUT
+      const wc2Team = wildcardTeams[1]; // Second wild card - last team IN
+      const wc3Team = wildcardTeams[2]; // Third wild card - first team OUT
 
       if (!wc2Team) {
         throw new Error('Could not determine WC2 team');
       }
 
-      // Calculate projected cut line using average of WC2 and WC3
-      // This better represents the "bubble" between making and missing playoffs
-      const wc2Pace = wc2Team.gamesPlayed > 0
-        ? wc2Team.points / wc2Team.gamesPlayed
-        : 0;
+      const wc2Pace = wc2Team.gamesPlayed > 0 ? wc2Team.points / wc2Team.gamesPlayed : 0;
       const wc2Projected = wc2Pace * TOTAL_GAMES;
 
-      let projectedCutLine: number;
+      let wildcardCutLine: number;
       if (wc3Team && wc3Team.gamesPlayed > 0) {
-        // Average WC2 and WC3 projections for a more accurate bubble line
         const wc3Pace = wc3Team.points / wc3Team.gamesPlayed;
         const wc3Projected = wc3Pace * TOTAL_GAMES;
-        projectedCutLine = Math.ceil((wc2Projected + wc3Projected) / 2);
+        wildcardCutLine = Math.ceil((wc2Projected + wc3Projected) / 2);
       } else {
-        // Fall back to WC2 only if WC3 not available (early season edge case)
-        projectedCutLine = Math.ceil(wc2Projected);
+        wildcardCutLine = Math.ceil(wc2Projected);
       }
+      // Floor of 94 for wildcard cut line
+      wildcardCutLine = Math.max(wildcardCutLine, HISTORICAL_FLOOR);
 
-      // Use higher of: projection OR historical floor
-      const cutLine = Math.max(projectedCutLine, HISTORICAL_FLOOR);
+      // --- Determine playoff position ---
+      const isInPlayoffPosition = userTeam.divisionRank <= 3 ||
+        (wildcardTeams.length >= 2 && userTeam.points >= wildcardTeams[1].points && userTeam.divisionRank > 3);
+
+      // --- Compute position-aware probability ---
+      const result = computePositionAwareProbability(
+        stats.projectedPoints,
+        stats.gamesPlayed,
+        divisionCutLine,
+        wildcardCutLine,
+        isInPlayoffPosition
+      );
 
       setCutLineData({
-        cutLine,
+        effectiveCutLine: result.effectiveCutLine,
+        divisionCutLine,
+        wildcardCutLine,
+        activePath: result.activePath,
         wc2TeamAbbrev: wc2Team.teamAbbrev,
+        divBubbleTeamAbbrev,
+        isInPlayoffPosition,
       });
     } catch (err) {
       console.error('Error calculating cut line:', err);
@@ -692,12 +736,16 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
   };
 
   // Calculate playoff probabilities
-  // Main probability uses cut line when available, fallback to Lindy's Five target (96)
-  const probability = probabilityForFinalPoints(
-    stats.projectedPoints,
-    stats.gamesPlayed,
-    cutLineData?.cutLine ?? stats.playoffTarget
-  );
+  // Main probability uses position-aware model when cut line data available
+  const probability = cutLineData
+    ? computePositionAwareProbability(
+        stats.projectedPoints,
+        stats.gamesPlayed,
+        cutLineData.divisionCutLine,
+        cutLineData.wildcardCutLine,
+        cutLineData.isInPlayoffPosition
+      ).probability
+    : probabilityForFinalPoints(stats.projectedPoints, stats.gamesPlayed, stats.playoffTarget);
   // Lindy's Five probability always uses the fixed 96-point target
   const lindysFiveProbability = probabilityForFinalPoints(
     stats.projectedPoints,
