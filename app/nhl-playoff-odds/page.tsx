@@ -82,14 +82,16 @@ function isPlayoffTeam(team: StandingsTeam): boolean {
   );
 }
 
-function getProjectedPoints(points: number, gamesPlayed: number): number {
-  if (gamesPlayed === 0) return 0;
-  return (points / gamesPlayed) * 82;
-}
-
+const TOTAL_GAMES = 82;
 const HISTORICAL_FLOOR = 94;
 
+function getProjectedPoints(points: number, gamesPlayed: number): number {
+  if (gamesPlayed === 0) return 0;
+  return Math.round((points / gamesPlayed) * TOTAL_GAMES);
+}
+
 function getDivCutLine(team: StandingsTeam, standings: StandingsTeam[]): number {
+  // Sort by points descending (same as team tracker ProgressBar.tsx)
   const divTeams = standings
     .filter(t => t.divisionName === team.divisionName)
     .sort((a, b) => b.points - a.points);
@@ -99,11 +101,11 @@ function getDivCutLine(team: StandingsTeam, standings: StandingsTeam[]): number 
 
   let cutLine: number;
   if (div3Team && div4Team && div3Team.gamesPlayed > 0 && div4Team.gamesPlayed > 0) {
-    const div3Projected = getProjectedPoints(div3Team.points, div3Team.gamesPlayed);
-    const div4Projected = getProjectedPoints(div4Team.points, div4Team.gamesPlayed);
+    const div3Projected = (div3Team.points / div3Team.gamesPlayed) * TOTAL_GAMES;
+    const div4Projected = (div4Team.points / div4Team.gamesPlayed) * TOTAL_GAMES;
     cutLine = Math.ceil((div3Projected + div4Projected) / 2);
   } else if (div3Team && div3Team.gamesPlayed > 0) {
-    cutLine = Math.ceil(getProjectedPoints(div3Team.points, div3Team.gamesPlayed));
+    cutLine = Math.ceil((div3Team.points / div3Team.gamesPlayed) * TOTAL_GAMES);
   } else {
     cutLine = 90;
   }
@@ -111,6 +113,7 @@ function getDivCutLine(team: StandingsTeam, standings: StandingsTeam[]): number 
 }
 
 function getWcCutLine(team: StandingsTeam, standings: StandingsTeam[]): number {
+  // Sort by points descending, filter to non-top-3 division teams (same as team tracker)
   const wcTeams = standings
     .filter(t => t.conferenceName === team.conferenceName && t.divisionSequence > 3)
     .sort((a, b) => b.points - a.points);
@@ -120,11 +123,11 @@ function getWcCutLine(team: StandingsTeam, standings: StandingsTeam[]): number {
 
   if (!wc2Team || wc2Team.gamesPlayed === 0) return HISTORICAL_FLOOR;
 
-  const wc2Projected = getProjectedPoints(wc2Team.points, wc2Team.gamesPlayed);
+  const wc2Projected = (wc2Team.points / wc2Team.gamesPlayed) * TOTAL_GAMES;
 
   let cutLine: number;
   if (wc3Team && wc3Team.gamesPlayed > 0) {
-    const wc3Projected = getProjectedPoints(wc3Team.points, wc3Team.gamesPlayed);
+    const wc3Projected = (wc3Team.points / wc3Team.gamesPlayed) * TOTAL_GAMES;
     cutLine = Math.ceil((wc2Projected + wc3Projected) / 2);
   } else {
     cutLine = Math.ceil(wc2Projected);
@@ -134,11 +137,12 @@ function getWcCutLine(team: StandingsTeam, standings: StandingsTeam[]): number {
 
 function getPlayoffProbability(team: StandingsTeam, standings: StandingsTeam[]): number {
   if (team.gamesPlayed < 5) return 50;
+  // Use Math.round to match team tracker's projectedPoints calculation
   const projected = getProjectedPoints(team.points, team.gamesPlayed);
   const divCutLine = getDivCutLine(team, standings);
   const wcCutLine = getWcCutLine(team, standings);
 
-  // Determine playoff position same way as team tracker
+  // Determine playoff position same way as team tracker (ProgressBar.tsx line 709)
   const wcTeams = standings
     .filter(t => t.conferenceName === team.conferenceName && t.divisionSequence > 3)
     .sort((a, b) => b.points - a.points);
