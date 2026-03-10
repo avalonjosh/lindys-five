@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import type { NHLGame } from '@/lib/types';
 import type { StandingsTeam } from '@/lib/types/boxscore';
 import { fetchScoresByDate, pollLiveGames } from '@/lib/services/nhlApi';
+import { fetchStandingsForDate } from '@/lib/services/boxscoreApi';
 import ScoreCard from '@/components/scores/ScoreCard';
 import DateNavigation from '@/components/scores/DateNavigation';
 import { TEAMS } from '@/lib/teamConfig';
@@ -68,13 +69,10 @@ export default function ScoresPageClient() {
 
   // Fetch standings once on mount for playoff stakes display
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    fetch(`https://api-web.nhle.com/v1/standings/${today}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.standings) setStandings(data.standings);
-      })
-      .catch(err => console.error('Failed to fetch standings:', err));
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    fetchStandingsForDate(today).then(data => {
+      setStandings(data);
+    });
   }, []);
 
   // Sort games: favorite team first, then live games, then by start time
