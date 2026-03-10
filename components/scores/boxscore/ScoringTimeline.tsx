@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { ScoringPeriod, ScoringGoal } from '@/lib/types/boxscore';
 import { TEAMS, TeamConfig } from '@/lib/teamConfig';
 
@@ -10,21 +11,17 @@ interface ScoringTimelineProps {
   awayTeamAbbrev: string;
 }
 
-/** Convert "MM:SS" time string to total seconds */
 function timeToSeconds(time: string): number {
   const [minutes, seconds] = time.split(':').map(Number);
   return minutes * 60 + seconds;
 }
 
-/** Find a team config by its abbreviation */
 function findTeamByAbbrev(abbrev: string): TeamConfig | undefined {
   return Object.values(TEAMS).find(
     (team) => team.abbreviation === abbrev
   );
 }
 
-/** Calculate the position of a goal as a percentage of the regulation timeline (0-60 min).
- *  For OT goals, returns a value > 100 which is handled separately. */
 function goalPositionMinutes(periodNumber: number, timeInPeriod: string): number {
   const elapsedSeconds = timeToSeconds(timeInPeriod);
   const elapsedMinutes = elapsedSeconds / 60;
@@ -39,14 +36,99 @@ interface GoalWithMeta {
   positionMinutes: number;
 }
 
+/** Portal tooltip that positions itself relative to a marker element */
+function GoalTooltip({
+  goal,
+  periodNumber,
+  periodType,
+  markerRect,
+  homeTeamAbbrev,
+  awayTeamAbbrev,
+}: {
+  goal: ScoringGoal;
+  periodNumber: number;
+  periodType: string;
+  markerRect: DOMRect;
+  homeTeamAbbrev: string;
+  awayTeamAbbrev: string;
+}) {
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    const tooltip = tooltipRef.current;
+    if (!tooltip) return;
+
+    const tooltipWidth = tooltip.offsetWidth;
+    const viewportWidth = window.innerWidth;
+
+    // Center below the marker
+    let left = markerRect.left + markerRect.width / 2 - tooltipWidth / 2;
+    const top = markerRect.bottom + window.scrollY + 8;
+
+    // Clamp to viewport with 12px padding
+    left = Math.max(12, Math.min(left, viewportWidth - tooltipWidth - 12));
+
+    setPosition({ top, left });
+  }, [markerRect]);
+
+  const teamAbbrev = goal.teamAbbrev.default;
+  const teamConfig = findTeamByAbbrev(teamAbbrev);
+  const color = teamConfig?.colors.primary ?? '#6b7280';
+
+  return createPortal(
+    <div
+      ref={tooltipRef}
+      className="fixed z-50 w-48 sm:w-52 rounded-lg bg-gray-900 p-3 text-xs text-white shadow-lg pointer-events-none"
+      style={{ top: `${position.top}px`, left: `${position.left}px`, position: 'absolute' }}
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <span
+          className="inline-block h-2 w-2 rounded-full shrink-0"
+          style={{ backgroundColor: color }}
+        />
+        <span className="font-semibold">
+          {goal.firstName.default} {goal.lastName.default}
+        </span>
+      </div>
+      {goal.assists.length > 0 && (
+        <div className="mt-0.5 text-gray-300">
+          Assists:{' '}
+          {goal.assists
+            .map((a) => `${a.firstName.default} ${a.lastName.default}`)
+            .join(', ')}
+        </div>
+      )}
+      <div className="mt-1 text-gray-400">
+        {goal.timeInPeriod} &middot;{' '}
+        {periodNumber <= 3
+          ? `${['1st', '2nd', '3rd'][periodNumber - 1]} Period`
+          : periodType === 'SO'
+          ? 'Shootout'
+          : 'OT'}
+      </div>
+      <div className="mt-0.5 font-medium">
+        {awayTeamAbbrev} {goal.awayScore} - {homeTeamAbbrev} {goal.homeScore}
+      </div>
+      {goal.highlightClipSharingUrl && (
+        <div className="mt-1.5 text-blue-400">
+          ▶ Watch highlight
+        </div>
+      )}
+    </div>,
+    document.body
+  );
+}
+
 export default function ScoringTimeline({
   scoring,
   homeTeamAbbrev,
   awayTeamAbbrev,
 }: ScoringTimelineProps) {
   const [activeGoalId, setActiveGoalId] = useState<string | null>(null);
+  const [activeMarkerRect, setActiveMarkerRect] = useState<DOMRect | null>(null);
+  const markerRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
-  // Flatten all goals with metadata
   const allGoals: GoalWithMeta[] = scoring.flatMap((period) =>
     period.goals.map((goal) => ({
       goal,
@@ -63,13 +145,7 @@ export default function ScoringTimeline({
   const regulationGoals = allGoals.filter((g) => g.periodNumber <= 3);
   const otGoals = allGoals.filter((g) => g.periodNumber > 3);
 
-  // Regulation is 60 minutes. OT section gets a fixed visual width ratio.
-  const regulationWidthPct = hasOT ? 80 : 100;
-  const otWidthPct = hasOT ? 20 : 0;
-
-  const noGoals = allGoals.length === 0;
-
-  if (noGoals) {
+  if (allGoals.length === 0) {
     return (
       <div className="rounded-xl bg-white p-5 shadow-sm">
         <h3 className="mb-3 text-lg font-bold text-gray-900">Game Flow</h3>
@@ -78,93 +154,68 @@ export default function ScoringTimeline({
     );
   }
 
-  function toggleGoal(id: string) {
-    setActiveGoalId((prev) => (prev === id ? null : id));
+  function showGoal(id: string) {
+    const el = markerRefs.current.get(id);
+    if (el) {
+      setActiveMarkerRect(el.getBoundingClientRect());
+    }
+    setActiveGoalId(id);
   }
+
+  function hideGoal(id: string) {
+    setActiveGoalId((prev) => (prev === id ? null : prev));
+  }
+
+  const activeGoal = activeGoalId
+    ? allGoals.find((g, i) => `${g.periodNumber}-${g.goal.timeInPeriod}-${g.goal.playerId}-${i}` === activeGoalId)
+    : null;
 
   function renderGoalMarker(g: GoalWithMeta, index: number) {
     const teamAbbrev = g.goal.teamAbbrev.default;
     const teamConfig = findTeamByAbbrev(teamAbbrev);
     const color = teamConfig?.colors.primary ?? '#6b7280';
-    const isHome = teamAbbrev === homeTeamAbbrev;
 
-    // Unique id for tooltip toggling
     const goalId = `${g.periodNumber}-${g.goal.timeInPeriod}-${g.goal.playerId}-${index}`;
-    const isActive = activeGoalId === goalId;
 
-    // Position within the regulation bar (0-100% of regulation section)
     let leftPct: number;
     if (g.periodNumber <= 3) {
       leftPct = (g.positionMinutes / 60) * 100;
     } else {
-      // OT goals: position within the OT section (5 min OT)
       const otElapsed = g.positionMinutes - 60;
       leftPct = (otElapsed / 5) * 100;
     }
-
-    // Clamp
     leftPct = Math.max(1, Math.min(99, leftPct));
 
     return (
-      <div
+      <button
         key={goalId}
-        className="absolute z-10"
-        style={{ left: `${leftPct}%`, top: '50%', transform: 'translate(-50%, -50%)' }}
-      >
-        {/* Marker */}
-        <button
-          onClick={() => toggleGoal(goalId)}
-          className="block h-3 w-3 rounded-full border-2 border-white shadow-md transition-transform hover:scale-125 focus:outline-none"
-          style={{ backgroundColor: color }}
-          aria-label={`Goal by ${g.goal.firstName.default} ${g.goal.lastName.default}`}
-        />
-
-        {/* Tooltip */}
-        {isActive && (
-          <div
-            className="absolute z-20 left-1/2 -translate-x-1/2 top-4 w-48 sm:w-52 max-w-[calc(100vw-2rem)] rounded-lg bg-gray-900 p-3 text-xs text-white shadow-lg"
-          >
-            <div className="font-semibold">
-              {g.goal.firstName.default} {g.goal.lastName.default}
-            </div>
-            {g.goal.assists.length > 0 && (
-              <div className="mt-0.5 text-gray-300">
-                Assists:{' '}
-                {g.goal.assists
-                  .map((a) => `${a.firstName.default} ${a.lastName.default}`)
-                  .join(', ')}
-              </div>
-            )}
-            <div className="mt-1 text-gray-400">
-              {g.goal.timeInPeriod} &middot;{' '}
-              {g.periodNumber <= 3
-                ? `${['1st', '2nd', '3rd'][g.periodNumber - 1]} Period`
-                : g.periodType === 'SO'
-                ? 'Shootout'
-                : 'OT'}
-            </div>
-            <div className="mt-0.5 font-medium">
-              {awayTeamAbbrev} {g.goal.awayScore} - {homeTeamAbbrev} {g.goal.homeScore}
-            </div>
-            {g.goal.highlightClipSharingUrl && (
-              <a
-                href={g.goal.highlightClipSharingUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-1.5 inline-block text-blue-400 underline hover:text-blue-300"
-                onClick={(e) => e.stopPropagation()}
-              >
-                Watch highlight
-              </a>
-            )}
-          </div>
-        )}
-      </div>
+        ref={(el) => {
+          if (el) markerRefs.current.set(goalId, el);
+        }}
+        onMouseEnter={() => showGoal(goalId)}
+        onMouseLeave={() => hideGoal(goalId)}
+        onClick={() => {
+          setActiveGoalId((prev) => {
+            if (prev === goalId) return null;
+            const el = markerRefs.current.get(goalId);
+            if (el) setActiveMarkerRect(el.getBoundingClientRect());
+            return goalId;
+          });
+        }}
+        className="absolute z-10 h-3 w-3 rounded-full border-2 border-white shadow-md transition-transform hover:scale-125 focus:outline-none"
+        style={{
+          backgroundColor: color,
+          left: `${leftPct}%`,
+          top: '50%',
+          transform: 'translate(-50%, -50%)',
+        }}
+        aria-label={`Goal by ${g.goal.firstName.default} ${g.goal.lastName.default}`}
+      />
     );
   }
 
   return (
-    <div className="rounded-xl bg-white p-3 sm:p-5 shadow-sm overflow-hidden min-w-0">
+    <div className="rounded-xl bg-white p-3 sm:p-5 shadow-sm overflow-hidden">
       <h3 className="mb-4 text-lg font-bold text-gray-900">Game Flow</h3>
 
       {/* Team legend */}
@@ -183,58 +234,48 @@ export default function ScoringTimeline({
         })}
       </div>
 
-      {/* Timeline container */}
+      {/* Timeline bar */}
       <div className="flex w-full items-stretch">
         {/* Regulation bar */}
         <div
-          className="relative h-10 rounded-l-lg bg-gray-200"
-          style={{ width: `${regulationWidthPct}%` }}
+          className={`relative h-10 bg-gray-200 overflow-hidden ${hasOT ? 'rounded-l-lg' : 'rounded-lg'}`}
+          style={{ width: `${hasOT ? 80 : 100}%` }}
         >
-          {/* Period dividers */}
           <div className="absolute left-1/3 top-0 h-full w-px bg-white" />
           <div className="absolute left-2/3 top-0 h-full w-px bg-white" />
 
-          {/* Period labels */}
           {['1st', '2nd', '3rd'].map((label, i) => (
             <span
               key={label}
-              className="absolute top-1/2 -translate-y-1/2 text-[10px] font-medium text-gray-400 select-none z-0"
+              className="absolute text-[10px] font-medium text-gray-400 select-none z-0"
               style={{
                 left: `${(i * 100) / 3 + 100 / 6}%`,
-                transform: 'translate(-50%, -50%)',
+                top: '3px',
+                transform: 'translateX(-50%)',
               }}
             >
               {label}
             </span>
           ))}
 
-          {/* Regulation goal markers */}
           {regulationGoals.map((g, i) => renderGoalMarker(g, i))}
         </div>
 
         {/* OT section */}
         {hasOT && (
           <div
-            className="relative h-10 rounded-r-lg bg-gray-300"
-            style={{ width: `${otWidthPct}%` }}
+            className="relative h-10 rounded-r-lg bg-gray-300 overflow-hidden"
+            style={{ width: '20%' }}
           >
-            {/* OT label */}
             <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] font-medium text-gray-500 select-none">
               OT
             </span>
-
-            {/* OT goal markers */}
             {otGoals.map((g, i) => renderGoalMarker(g, i))}
           </div>
         )}
-
-        {/* Round right side if no OT */}
-        {!hasOT && (
-          <div className="h-10 w-0 rounded-r-lg bg-gray-200" />
-        )}
       </div>
 
-      {/* Row labels */}
+      {/* Time labels */}
       <div className="mt-1 flex items-center justify-between text-[10px] text-gray-400">
         <span>0:00</span>
         <span>20:00</span>
@@ -242,6 +283,18 @@ export default function ScoringTimeline({
         <span>60:00</span>
         {hasOT && <span>OT</span>}
       </div>
+
+      {/* Portal tooltip - renders into document.body, outside all overflow containers */}
+      {activeGoal && activeMarkerRect && (
+        <GoalTooltip
+          goal={activeGoal.goal}
+          periodNumber={activeGoal.periodNumber}
+          periodType={activeGoal.periodType}
+          markerRect={activeMarkerRect}
+          homeTeamAbbrev={homeTeamAbbrev}
+          awayTeamAbbrev={awayTeamAbbrev}
+        />
+      )}
     </div>
   );
 }

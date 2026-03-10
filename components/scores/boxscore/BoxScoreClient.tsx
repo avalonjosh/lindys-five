@@ -165,7 +165,7 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
         <>
           <GameHeader boxscore={boxscore} landing={landing} />
 
-          <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 overflow-hidden">
+          <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
             {/* Future game: preview with ticket CTA */}
             {isFuture && (
               <>
