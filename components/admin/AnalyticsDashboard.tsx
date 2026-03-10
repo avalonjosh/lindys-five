@@ -676,8 +676,11 @@ function TimeseriesChart({ data, range }: { data: TimeseriesData; range: Range }
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     if (!svgRef.current) return;
-    const rect = svgRef.current.getBoundingClientRect();
-    const mouseX = ((e.clientX - rect.left) / rect.width) * W;
+    const pt = svgRef.current.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgPt = pt.matrixTransform(svgRef.current.getScreenCTM()!.inverse());
+    const mouseX = svgPt.x;
     let idx = isToday
       ? Math.round((mouseX - PAD_LEFT) / (barWidth + barGap))
       : Math.round(((mouseX - PAD_LEFT) / chartW) * (count - 1));
@@ -1016,8 +1019,11 @@ function GSCChart({ daily }: { daily: GSCData['daily'] }) {
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     if (!svgRef.current) return;
-    const rect = svgRef.current.getBoundingClientRect();
-    const mouseX = ((e.clientX - rect.left) / rect.width) * W;
+    const pt = svgRef.current.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgPt = pt.matrixTransform(svgRef.current.getScreenCTM()!.inverse());
+    const mouseX = svgPt.x;
     let idx = Math.round(((mouseX - PAD.left) / chartW) * (count - 1));
     idx = Math.max(0, Math.min(count - 1, idx));
     const x = PAD.left + (idx / (count - 1)) * chartW;
