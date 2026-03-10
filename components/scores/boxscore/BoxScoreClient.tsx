@@ -166,9 +166,27 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
           <GameHeader boxscore={boxscore} landing={landing} />
 
           <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
-            {/* Future game: preview with ticket CTA */}
+            {/* Future game: playoff stakes + standings first, then preview */}
             {isFuture && (
               <>
+                <PlayoffImpact
+                  homeTeam={boxscore.homeTeam}
+                  awayTeam={boxscore.awayTeam}
+                  standings={standings}
+                  gameState={boxscore.gameState}
+                  gameOutcome={boxscore.gameOutcome}
+                />
+
+                {standings.length > 0 && (
+                  <StandingsSnapshot
+                    standings={standings}
+                    homeAbbrev={boxscore.homeTeam.abbrev}
+                    awayAbbrev={boxscore.awayTeam.abbrev}
+                    gameDate={boxscore.gameDate}
+                    currentGameId={gameId}
+                  />
+                )}
+
                 {/* Pre-game matchup sections */}
                 {landing.matchup?.skaterComparison && (
                   <SkaterMatchup
@@ -216,22 +234,27 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
               />
             )}
 
-            <PlayoffImpact
-              homeTeam={boxscore.homeTeam}
-              awayTeam={boxscore.awayTeam}
-              standings={standings}
-              gameState={boxscore.gameState}
-              gameOutcome={boxscore.gameOutcome}
-            />
+            {/* Playoff impact + standings for live/final games (future games show these above) */}
+            {!isFuture && (
+              <>
+                <PlayoffImpact
+                  homeTeam={boxscore.homeTeam}
+                  awayTeam={boxscore.awayTeam}
+                  standings={standings}
+                  gameState={boxscore.gameState}
+                  gameOutcome={boxscore.gameOutcome}
+                />
 
-            {standings.length > 0 && (
-              <StandingsSnapshot
-                standings={standings}
-                homeAbbrev={boxscore.homeTeam.abbrev}
-                awayAbbrev={boxscore.awayTeam.abbrev}
-                gameDate={boxscore.gameDate}
-                currentGameId={gameId}
-              />
+                {standings.length > 0 && (
+                  <StandingsSnapshot
+                    standings={standings}
+                    homeAbbrev={boxscore.homeTeam.abbrev}
+                    awayAbbrev={boxscore.awayTeam.abbrev}
+                    gameDate={boxscore.gameDate}
+                    currentGameId={gameId}
+                  />
+                )}
+              </>
             )}
 
             {/* Season series for started/finished games */}
