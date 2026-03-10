@@ -310,11 +310,15 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
             useClassicStyling ? 'border-zinc-800' : 'border-gray-200'
           }`}>
             <div className="flex items-center justify-between">
-              <h2 className={`text-xl font-bold ${
-                useClassicStyling ? 'text-white' : 'text-gray-900'
-              }`}>
-                Teams
-              </h2>
+              <button
+                onClick={() => handleNavigation('/')}
+                className={`text-2xl font-bold transition-colors ${
+                  useClassicStyling ? 'text-white hover:text-zinc-300' : 'text-gray-900 hover:text-blue-600'
+                }`}
+                style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+              >
+                Lindy&apos;s Five
+              </button>
               <button
                 onClick={() => setIsOpen(false)}
                 className={`p-2 rounded-lg transition-colors ${
@@ -343,28 +347,28 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
 
           {/* Navigation List */}
           <div className="flex-1 overflow-y-auto p-4">
-            {/* Home Link */}
+            {/* Scores Link */}
             <button
-              onClick={() => handleNavigation('/')}
+              onClick={() => handleNavigation('/scores')}
               className={`w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold transition-all ${
                 useClassicStyling
                   ? 'hover:bg-zinc-800 text-white'
                   : 'hover:bg-blue-50 text-gray-900'
               }`}
             >
-              Home
+              Scores
             </button>
 
-            {/* About Link */}
+            {/* Playoff Odds Link */}
             <button
-              onClick={() => setIsAboutOpen(true)}
+              onClick={() => handleNavigation('/nhl-playoff-odds')}
               className={`w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold transition-all ${
                 useClassicStyling
                   ? 'hover:bg-zinc-800 text-white'
                   : 'hover:bg-blue-50 text-gray-900'
               }`}
             >
-              About
+              Playoff Odds
             </button>
 
             {/* Blog Link */}
@@ -377,18 +381,6 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
               }`}
             >
               Blog
-            </button>
-
-            {/* Scores Link */}
-            <button
-              onClick={() => handleNavigation('/scores')}
-              className={`w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold transition-all ${
-                useClassicStyling
-                  ? 'hover:bg-zinc-800 text-white'
-                  : 'hover:bg-blue-50 text-gray-900'
-              }`}
-            >
-              Scores
             </button>
 
             {/* Divider */}
@@ -629,11 +621,20 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
           <div className={`p-4 border-t ${
             useClassicStyling ? 'border-zinc-800' : 'border-gray-200'
           }`}>
-            <p className={`text-xs text-center ${
-              useClassicStyling ? 'text-zinc-500' : 'text-gray-500'
-            }`}>
-              Lindy's Five • {new Date().getFullYear()}
-            </p>
+            <div className="flex items-center justify-center gap-2 text-xs">
+              <button
+                onClick={() => setIsAboutOpen(true)}
+                className={`transition-colors ${
+                  useClassicStyling ? 'text-zinc-500 hover:text-zinc-300' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                About
+              </button>
+              <span className={useClassicStyling ? 'text-zinc-700' : 'text-gray-300'}>•</span>
+              <span className={useClassicStyling ? 'text-zinc-500' : 'text-gray-500'}>
+                {new Date().getFullYear()}
+              </span>
+            </div>
           </div>
         </div>
       </div>
