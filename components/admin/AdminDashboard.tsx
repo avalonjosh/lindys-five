@@ -867,7 +867,131 @@ export default function AdminDashboard() {
             </div>
           ) : (
             <div className="bg-slate-600/50 rounded-2xl border-2 border-slate-500 shadow-xl overflow-hidden">
-              <table className="w-full">
+              {/* Mobile card layout */}
+              <div className="md:hidden">
+                <div className="bg-slate-700/50 border-b border-slate-500 px-4 py-3 flex items-center justify-between">
+                  <button
+                    onClick={toggleSelectAll}
+                    className="text-slate-400 hover:text-white transition-colors flex items-center gap-2 text-sm"
+                  >
+                    {selectedSlugs.size === filteredPosts.length && filteredPosts.length > 0 ? (
+                      <CheckSquare className="w-4 h-4" />
+                    ) : (
+                      <Square className="w-4 h-4" />
+                    )}
+                    {selectedSlugs.size > 0 ? `${selectedSlugs.size} selected` : 'Select all'}
+                  </button>
+                  <span className="text-slate-400 text-xs">{filteredPosts.length} posts</span>
+                </div>
+                {filteredPosts.map((post) => (
+                  <div
+                    key={post.id}
+                    className={`border-b border-slate-600 last:border-b-0 px-4 py-3 ${
+                      selectedSlugs.has(post.slug) ? 'bg-slate-500/20' : ''
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <button
+                        onClick={() => toggleSelection(post.slug)}
+                        className="text-slate-400 hover:text-white transition-colors mt-0.5 shrink-0"
+                      >
+                        {selectedSlugs.has(post.slug) ? (
+                          <CheckSquare className="w-4 h-4 text-[#FCB514]" />
+                        ) : (
+                          <Square className="w-4 h-4" />
+                        )}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <Link
+                          href={`/admin/posts/${post.slug}`}
+                          className="text-white font-medium hover:text-[#FCB514] transition-colors text-sm leading-snug block"
+                        >
+                          {post.title}
+                        </Link>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <span
+                            className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase text-white"
+                            style={{ backgroundColor: post.team === 'sabres' ? '#003087' : '#C60C30' }}
+                          >
+                            {post.team}
+                          </span>
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                              post.status === 'published' ? 'bg-green-600 text-white' : 'bg-amber-500 text-black'
+                            }`}
+                          >
+                            {post.status}
+                          </span>
+                          {post.pinned && (
+                            <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-[10px] rounded font-semibold">
+                              Pinned
+                            </span>
+                          )}
+                          <span className="text-slate-500 text-xs">{post.views?.toLocaleString() ?? '0'} views</span>
+                        </div>
+                        <div className="flex items-center gap-1 mt-2">
+                          <button
+                            onClick={() => handlePin(post)}
+                            disabled={pinning === post.id}
+                            className={`p-1.5 rounded transition-colors disabled:opacity-50 ${
+                              post.pinned ? 'text-amber-400' : 'text-slate-400 hover:text-amber-400'
+                            }`}
+                            title={post.pinned ? 'Unpin' : 'Pin'}
+                          >
+                            {pinning === post.id ? (
+                              <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-500 border-t-amber-400"></div>
+                            ) : (
+                              <Pin className={`w-3.5 h-3.5 ${post.pinned ? 'fill-current' : ''}`} />
+                            )}
+                          </button>
+                          {post.status === 'published' && (
+                            <a
+                              href={`/blog/${post.team}/${post.slug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1.5 rounded text-slate-400 hover:text-white transition-colors"
+                              title="View"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                          {post.status === 'published' && (
+                            <button
+                              onClick={() => setSharingPost(post)}
+                              className="p-1.5 rounded text-slate-400 hover:text-white transition-colors"
+                              title="Share"
+                            >
+                              <Share2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <Link
+                            href={`/admin/posts/${post.slug}`}
+                            className="p-1.5 rounded text-slate-400 hover:text-white transition-colors"
+                            title="Edit"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(post)}
+                            disabled={deleting === post.id}
+                            className="p-1.5 rounded text-slate-400 hover:text-red-400 transition-colors disabled:opacity-50"
+                            title="Delete"
+                          >
+                            {deleting === post.id ? (
+                              <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-500 border-t-red-400"></div>
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop table layout */}
+              <table className="w-full hidden md:table">
                 <thead>
                   <tr className="bg-slate-700/50 border-b border-slate-500">
                     <th className="w-12 px-4 py-4">
@@ -886,13 +1010,13 @@ export default function AdminDashboard() {
                     <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide">
                       Title
                     </th>
-                    <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide hidden md:table-cell">
+                    <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide">
                       Team
                     </th>
-                    <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide hidden md:table-cell">
+                    <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide">
                       Status
                     </th>
-                    <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide hidden md:table-cell">
+                    <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide">
                       <button
                         onClick={() => {
                           if (sortField === 'views') {
@@ -962,26 +1086,21 @@ export default function AdminDashboard() {
                         </button>
                       </td>
                       <td className="px-6 py-4">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <Link
-                              href={`/admin/posts/${post.slug}`}
-                              className="text-white font-medium hover:text-[#FCB514] transition-colors"
-                            >
-                              {post.title}
-                            </Link>
-                            {post.pinned && (
-                              <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded font-semibold">
-                                Pinned
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-slate-400 text-sm md:hidden">
-                            {post.team} • {post.status} • {post.views?.toLocaleString() ?? '0'} views
-                          </p>
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/admin/posts/${post.slug}`}
+                            className="text-white font-medium hover:text-[#FCB514] transition-colors"
+                          >
+                            {post.title}
+                          </Link>
+                          {post.pinned && (
+                            <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded font-semibold shrink-0">
+                              Pinned
+                            </span>
+                          )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 hidden md:table-cell">
+                      <td className="px-6 py-4">
                         <span
                           className="px-2 py-1 rounded text-xs font-semibold uppercase text-white"
                           style={{
@@ -991,7 +1110,7 @@ export default function AdminDashboard() {
                           {post.team}
                         </span>
                       </td>
-                      <td className="px-6 py-4 hidden md:table-cell">
+                      <td className="px-6 py-4">
                         <span
                           className={`px-2 py-1 rounded text-xs font-semibold ${
                             post.status === 'published'
@@ -1002,7 +1121,7 @@ export default function AdminDashboard() {
                           {post.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-slate-400 text-sm hidden md:table-cell">
+                      <td className="px-6 py-4 text-slate-400 text-sm">
                         {post.views?.toLocaleString() ?? '0'}
                       </td>
                       <td className="px-6 py-4 text-slate-400 text-sm hidden lg:table-cell">
