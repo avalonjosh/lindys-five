@@ -57,12 +57,9 @@ export function getWcCutLine(team: StandingsTeam, standings: StandingsTeam[]): n
 }
 
 /** Whether a team currently holds a playoff spot (top 3 in division or WC1/WC2). */
-export function isInPlayoffPosition(team: StandingsTeam, standings: StandingsTeam[]): boolean {
+export function isInPlayoffPosition(team: StandingsTeam): boolean {
   if (team.divisionSequence <= 3) return true;
-  const wcTeams = standings
-    .filter(t => t.conferenceName === team.conferenceName && t.divisionSequence > 3)
-    .sort((a, b) => b.points - a.points);
-  return wcTeams.length >= 2 && team.points >= wcTeams[1].points;
+  return team.wildcardSequence >= 1 && team.wildcardSequence <= 2;
 }
 
 /** Full playoff probability for a team given current standings. */
@@ -71,7 +68,7 @@ export function getPlayoffProbability(team: StandingsTeam, standings: StandingsT
   const projected = getProjectedPoints(team.points, team.gamesPlayed);
   const divCutLine = getDivCutLine(team, standings);
   const wcCutLine = getWcCutLine(team, standings);
-  const inPlayoffs = isInPlayoffPosition(team, standings);
+  const inPlayoffs = isInPlayoffPosition(team);
 
   const { probability } = computePositionAwareProbability(
     projected, team.gamesPlayed, divCutLine, wcCutLine, inPlayoffs
@@ -93,7 +90,7 @@ export function computeProb(
 ): number {
   if (gamesPlayed <= 0) return 50;
   const projected = getProjectedPoints(points, gamesPlayed);
-  const inPlayoffs = isInPlayoffPosition(team, standings);
+  const inPlayoffs = isInPlayoffPosition(team);
   const { probability } = computePositionAwareProbability(
     projected, gamesPlayed, divCutLine, wcCutLine, inPlayoffs
   );

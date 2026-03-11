@@ -83,7 +83,7 @@ function computeStakes(standing: StandingsTeam, standings: StandingsTeam[]): { w
 
   const divCutLine = getDivCutLine(standing, standings);
   const wcCutLine = getWcCutLine(standing, standings);
-  const inPlayoffs = isInPlayoffPosition(standing, standings);
+  const inPlayoffs = isInPlayoffPosition(standing);
   const projected = getProjectedPoints(standing.points, standing.gamesPlayed);
 
   const current = computePositionAwareProbability(

@@ -68,7 +68,7 @@ function buildTeamData(standings: StandingsTeam[]): TeamData[] {
     conferenceName: team.conferenceName,
     divisionSequence: team.divisionSequence,
     conferenceSequence: team.conferenceSequence,
-    isInPlayoffs: isInPlayoffPosition(team, standings),
+    isInPlayoffs: isInPlayoffPosition(team),
   }));
 }
 
