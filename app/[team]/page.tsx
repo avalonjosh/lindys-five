@@ -27,15 +27,15 @@ export async function generateMetadata({ params }: TeamPageProps): Promise<Metad
   }
 
   const fullName = `${team.city} ${team.name}`;
-  const title = `${fullName} Playoff Odds & Tracker 2026`;
-  const description = `${fullName} playoff odds, chances, and projections for 2025-26. Track points pace, playoff probability, and 5-game set analysis updated daily.`;
+  const title = `${fullName} Playoff Odds & Standings 2025-26 — Chances & Projections`;
+  const description = `${fullName} playoff odds, playoff chances, and Stanley Cup projections for 2025-26. Track ${possessive(fullName)} points pace, playoff picture, and playoff probability updated daily.`;
 
   return {
     title,
     description,
     openGraph: {
-      title,
-      description: `${fullName} playoff odds, projections, and 5-game set analysis for the 2025-26 NHL season.`,
+      title: `${fullName} Playoff Odds 2025-26 — Chances, Standings & Projections`,
+      description: `${fullName} playoff odds, chances, and Stanley Cup projections for the 2025-26 NHL season. Points pace and playoff picture updated daily.`,
       type: 'website',
       url: `https://lindysfive.com/${team.id}`,
       images: [{ url: team.logo }],
@@ -43,8 +43,8 @@ export async function generateMetadata({ params }: TeamPageProps): Promise<Metad
     },
     twitter: {
       card: 'summary',
-      title,
-      description: `${fullName} playoff odds, projections, and 5-game set analysis for 2025-26.`,
+      title: `${fullName} Playoff Odds 2025-26`,
+      description: `${fullName} playoff odds, chances, and Stanley Cup projections. Points pace and playoff picture updated daily.`,
       images: [team.logo],
     },
     alternates: {
@@ -66,8 +66,8 @@ export default async function TeamPage({ params }: TeamPageProps) {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
-    name: `${fullName} Playoff Odds & Tracker 2026`,
-    description: `${fullName} playoff odds, chances, and projections for 2025-26. Track points pace, playoff probability, and 5-game set analysis updated daily.`,
+    name: `${fullName} Playoff Odds & Standings 2025-26`,
+    description: `${fullName} playoff odds, chances, and Stanley Cup projections for 2025-26. Track playoff probability, points pace, and playoff picture updated daily.`,
     url: `https://lindysfive.com/${team.id}`,
     publisher: {
       '@type': 'Organization',
@@ -82,6 +82,37 @@ export default async function TeamPage({ params }: TeamPageProps) {
         name: 'National Hockey League',
       },
     },
+  };
+
+  const faqLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: `Will the ${fullName} make the playoffs in 2026?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `Track the ${possessive(fullName)} live playoff odds, points pace, and probability on this page. Updated daily with the latest standings data.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `What are the ${possessive(fullName)} playoff odds?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `See the ${possessive(fullName)} current playoff probability percentage at the top of this page, based on points pace, division standings, and wild card positioning.`,
+        },
+      },
+      {
+        '@type': 'Question',
+        name: `What are the ${possessive(fullName)} Stanley Cup odds?`,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: `The ${possessive(fullName)} Stanley Cup chances start with making the playoffs. Track their current playoff probability and points pace projections here.`,
+        },
+      },
+    ],
   };
 
   const breadcrumbLd = {
@@ -113,13 +144,17 @@ export default async function TeamPage({ params }: TeamPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
+      />
       {/* Server-rendered SEO summary for crawlers */}
       <div className="sr-only" aria-hidden="false">
-        <h1>{fullName} Playoff Odds &amp; Tracker 2026</h1>
+        <h1>{fullName} Playoff Odds &amp; Standings 2025-26</h1>
         <p>
-          Track the {possessive(fullName)} playoff odds, chances, and projections
-          for the 2025-26 NHL season. Follow {possessive(fullName)} points pace,
-          playoff probability, and 5-game set analysis — updated daily.
+          {fullName} playoff odds, chances, and Stanley Cup projections for the
+          2025-26 NHL season. Track {possessive(fullName)} points pace, playoff
+          picture, playoff probability, and wild card standings — updated daily.
         </p>
       </div>
       <TeamTracker team={team} />

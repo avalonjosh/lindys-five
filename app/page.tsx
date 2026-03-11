@@ -3,22 +3,22 @@ import Link from 'next/link';
 import FavoriteTeamsGrid from '@/components/landing/FavoriteTeamsGrid';
 
 export const metadata: Metadata = {
-  title: "NHL Playoff Odds & Standings Tracker 2026 — All 32 Teams",
+  title: "NHL Playoff Odds & Standings 2025-26 — Projections for All 32 Teams",
   description:
-    "Track NHL playoff odds, projections, and standings for all 32 teams. 5-game set analysis, points pace, and playoff probability updated daily.",
+    "NHL playoff odds, standings, and playoff picture for all 32 teams in 2025-26. Track playoff probability, Stanley Cup odds, points pace, and wild card race updated daily.",
   openGraph: {
-    title: "NHL Playoff Odds & Standings Tracker 2026 — All 32 Teams",
+    title: "NHL Playoff Odds & Standings 2025-26 — Projections for All 32 Teams",
     description:
-      "Track NHL playoff odds, projections, and standings for all 32 teams. 5-game set analysis, points pace, and playoff probability updated daily.",
+      "NHL playoff odds, standings, and playoff picture for all 32 teams in 2025-26. Track playoff probability, Stanley Cup odds, and wild card race updated daily.",
     type: 'website',
     url: 'https://lindysfive.com/',
     siteName: "Lindy's Five",
   },
   twitter: {
     card: 'summary_large_image',
-    title: "NHL Playoff Odds & Standings Tracker 2026 — All 32 Teams",
+    title: "NHL Playoff Odds & Standings 2025-26 — All 32 Teams",
     description:
-      "Track NHL playoff odds, projections, and standings for all 32 teams. 5-game set analysis and playoff probability updated daily.",
+      "NHL playoff odds, standings, and projections for all 32 teams. Playoff picture, Stanley Cup odds, and wild card race updated daily.",
   },
   alternates: {
     canonical: 'https://lindysfive.com/',
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
       '@type': 'WebSite',
       name: "Lindy's Five",
       description:
-        "Track your NHL team's playoff race with 5-game set analysis",
+        "NHL playoff odds, standings, and projections for all 32 teams",
       url: 'https://lindysfive.com',
       publisher: {
         '@type': 'Organization',
@@ -74,13 +74,13 @@ export default function LandingPage() {
               className="text-4xl md:text-6xl font-bold text-white mb-4"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
-              NHL Playoff Tracker — All 32 Teams
+              NHL Playoff Odds &amp; Standings 2025-26
             </h1>
             <p className="text-xl md:text-2xl text-gray-300 mb-2">
-              Track Your Team&apos;s Road to the Playoffs
+              Playoff Picture, Projections &amp; Stanley Cup Odds for All 32 Teams
             </p>
             <p className="text-sm md:text-base text-gray-400">
-              5-Game Set Analysis &bull; Target: 6+ points per set
+              Points Pace &bull; Wild Card Race &bull; Updated Daily
             </p>
           </div>
 

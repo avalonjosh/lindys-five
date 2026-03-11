@@ -8,22 +8,22 @@ import PlayoffOddsClient, { type TeamData } from '@/components/PlayoffOddsClient
 export const revalidate = 300; // ISR: revalidate every 5 minutes
 
 export const metadata: Metadata = {
-  title: 'NHL Playoff Odds 2026 — Projections & Standings for All 32 Teams',
+  title: 'NHL Playoff Odds 2025-26 — Standings, Projections & Playoff Picture',
   description:
-    'NHL playoff odds, projections, and standings for all 32 teams in 2025-26. Track playoff probability, points pace, and race to the postseason.',
+    'NHL playoff odds, standings, and projections for all 32 teams in 2025-26. Track playoff picture, Stanley Cup odds, wild card race, and playoff probability updated daily.',
   openGraph: {
-    title: 'NHL Playoff Odds 2026 — Projections & Standings for All 32 Teams',
+    title: 'NHL Playoff Odds 2025-26 — Standings, Projections & Playoff Picture',
     description:
-      'NHL playoff odds, projections, and standings for all 32 teams in 2025-26.',
+      'NHL playoff odds, standings, and playoff picture for all 32 teams. Stanley Cup projections and wild card race updated daily.',
     type: 'website',
     url: 'https://lindysfive.com/nhl-playoff-odds',
     siteName: "Lindy's Five",
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'NHL Playoff Odds 2026 — All 32 Teams',
+    title: 'NHL Playoff Odds 2025-26 — Standings & Playoff Picture',
     description:
-      'NHL playoff odds, projections, and standings for the 2025-26 season.',
+      'NHL playoff odds, standings, and projections for all 32 teams. Playoff picture and Stanley Cup odds updated daily.',
   },
   alternates: {
     canonical: 'https://lindysfive.com/nhl-playoff-odds',
@@ -108,9 +108,9 @@ export default async function NHLPlayoffOddsPage() {
             {
               '@context': 'https://schema.org',
               '@type': 'WebPage',
-              name: 'NHL Playoff Odds 2026',
+              name: 'NHL Playoff Odds 2025-26',
               description:
-                'NHL playoff odds, projections, and standings for all 32 teams in 2025-26.',
+                'NHL playoff odds, standings, and playoff picture for all 32 teams in 2025-26. Stanley Cup projections and wild card race updated daily.',
               url: 'https://lindysfive.com/nhl-playoff-odds',
               publisher: {
                 '@type': 'Organization',
@@ -161,11 +161,11 @@ export default async function NHLPlayoffOddsPage() {
               className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-3"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
-              NHL Playoff Odds &amp; Projections 2026
+              NHL Playoff Odds &amp; Standings 2025-26
             </h1>
             <p className="text-base md:text-lg text-white/80 max-w-2xl mx-auto">
-              Current standings, points pace, and playoff positioning for all 32
-              NHL teams in the 2025-26 season.
+              NHL playoff picture, Stanley Cup projections, and wild card race for
+              all 32 teams. Updated daily.
             </p>
           </div>
         </header>

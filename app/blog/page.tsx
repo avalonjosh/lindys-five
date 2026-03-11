@@ -11,19 +11,19 @@ import BlogSection from '@/components/blog/BlogSection';
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: 'Blog',
-  description: 'Buffalo sports coverage - Sabres game recaps, Bills analysis, and more from Lindy\'s Five.',
+  title: 'NHL Blog — Sabres Playoff Coverage, Game Recaps & Analysis',
+  description: 'Buffalo Sabres playoff coverage, game recaps, and NHL analysis from Lindy\'s Five. Bills coverage and more.',
   openGraph: {
-    title: 'Blog | Lindy\'s Five',
-    description: 'Buffalo sports coverage - Sabres game recaps, Bills analysis, and more.',
+    title: 'NHL Blog — Sabres Playoff Coverage & Game Recaps | Lindy\'s Five',
+    description: 'Buffalo Sabres playoff coverage, game recaps, and NHL analysis.',
     type: 'website',
     url: 'https://lindysfive.com/blog',
     siteName: 'Lindy\'s Five',
   },
   twitter: {
     card: 'summary',
-    title: 'Blog | Lindy\'s Five',
-    description: 'Buffalo sports coverage - Sabres game recaps, Bills analysis, and more.',
+    title: 'NHL Blog — Sabres Playoff Coverage & Game Recaps',
+    description: 'Buffalo Sabres playoff coverage, game recaps, and NHL analysis.',
   },
   alternates: {
     canonical: 'https://lindysfive.com/blog',

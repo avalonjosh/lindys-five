@@ -20,24 +20,24 @@ const permanentMarker = Permanent_Marker({
 
 export const metadata: Metadata = {
   title: {
-    default: "NHL Playoff Odds & Tracker 2026 | Lindy's Five",
+    default: "NHL Playoff Odds, Standings & Projections 2025-26 | Lindy's Five",
     template: "%s | Lindy's Five",
   },
   description:
-    "Track NHL playoff odds, projections, and standings for all 32 teams. 5-game set analysis, points pace, and playoff probability updated daily.",
+    "NHL playoff odds, standings, and projections for all 32 teams. Track playoff probability, Stanley Cup odds, points pace, and playoff picture updated daily.",
   openGraph: {
     type: 'website',
     url: 'https://lindysfive.com/',
-    title: "NHL Playoff Odds & Tracker 2026 | Lindy's Five",
+    title: "NHL Playoff Odds, Standings & Projections 2025-26 | Lindy's Five",
     description:
-      "Track NHL playoff odds, projections, and standings for all 32 teams. 5-game set analysis, points pace, and playoff probability updated daily.",
+      "NHL playoff odds, standings, and projections for all 32 teams. Track playoff probability, Stanley Cup odds, points pace, and playoff picture updated daily.",
     siteName: "Lindy's Five",
   },
   twitter: {
     card: 'summary_large_image',
-    title: "NHL Playoff Odds & Tracker 2026 | Lindy's Five",
+    title: "NHL Playoff Odds, Standings & Projections 2025-26 | Lindy's Five",
     description:
-      "Track NHL playoff odds, projections, and standings for all 32 teams. 5-game set analysis and playoff probability updated daily.",
+      "NHL playoff odds, standings, and projections for all 32 teams. Playoff probability, Stanley Cup odds, and playoff picture updated daily.",
   },
   icons: {
     icon: '/favicon.svg',
