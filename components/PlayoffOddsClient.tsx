@@ -108,7 +108,7 @@ function Section({ title, subtitle, children }: { title: string; subtitle?: stri
         {subtitle && <p className="text-xs text-white/70 uppercase tracking-wider">{subtitle}</p>}
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[500px]">
+        <table className="w-full text-sm min-w-[640px]">
           <TableHeader />
           <tbody>{children}</tbody>
         </table>
@@ -149,7 +149,7 @@ function WildcardView({ teams }: { teams: TeamData[] }) {
               </h2>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[500px]">
+              <table className="w-full text-sm min-w-[640px]">
                 <TableHeader />
                 <tbody>
                   {divSections.flatMap(({ divName, teams: divTeams }) => [
