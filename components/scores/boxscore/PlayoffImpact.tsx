@@ -2,7 +2,7 @@
 
 import type { StandingsTeam } from '@/lib/types/boxscore';
 import { TEAMS } from '@/lib/teamConfig';
-import { computePositionAwareProbability } from '@/lib/utils/playoffProbability';
+import { getDivCutLine, getWcCutLine, computeProb } from '@/lib/utils/standingsCalc';
 
 interface PlayoffImpactProps {
   homeTeam: { id: number; abbrev: string; score: number; logo: string; commonName: { default: string } };
@@ -32,50 +32,6 @@ interface TeamScenario {
   lossDelta: number;
 }
 
-function getProjectedPoints(points: number, gamesPlayed: number): number {
-  if (gamesPlayed === 0) return 0;
-  return (points / gamesPlayed) * 82;
-}
-
-function getDivCutLine(team: StandingsTeam, standings: StandingsTeam[]): number {
-  const divTeams = standings.filter(t => t.divisionName === team.divisionName);
-  const thirdPlace = divTeams.find(t => t.divisionSequence === 3);
-  if (thirdPlace && thirdPlace.gamesPlayed > 0) {
-    return getProjectedPoints(thirdPlace.points, thirdPlace.gamesPlayed);
-  }
-  return 100;
-}
-
-function getWcCutLine(team: StandingsTeam, standings: StandingsTeam[]): number {
-  const confTeams = standings.filter(
-    t => t.conferenceName === team.conferenceName && t.divisionSequence > 3
-  );
-  const sorted = [...confTeams].sort((a, b) => b.points - a.points);
-  const wcTeam = sorted[1];
-  if (wcTeam && wcTeam.gamesPlayed > 0) {
-    return getProjectedPoints(wcTeam.points, wcTeam.gamesPlayed);
-  }
-  return 96;
-}
-
-function computeProb(
-  points: number,
-  gamesPlayed: number,
-  divCutLine: number,
-  wcCutLine: number,
-  conferenceSequence: number
-): number {
-  if (gamesPlayed === 0) return 50;
-  const projectedPoints = getProjectedPoints(points, gamesPlayed);
-  const { probability } = computePositionAwareProbability(
-    projectedPoints,
-    gamesPlayed,
-    divCutLine,
-    wcCutLine,
-    conferenceSequence <= 8
-  );
-  return probability;
-}
 
 function DeltaBadge({ delta }: { delta: number }) {
   if (delta > 0) {
@@ -172,7 +128,8 @@ function FinalImpact({
       standing.gamesPlayed,
       divCutLine,
       wcCutLine,
-      standing.conferenceSequence
+      standing,
+      standings
     );
 
     const pointsToSubtract = getPointsToSubtract(side);
@@ -186,7 +143,8 @@ function FinalImpact({
       beforeGP,
       divCutLine,
       wcCutLine,
-      standing.conferenceSequence
+      standing,
+      standings
     );
 
     const teamConfig = Object.values(TEAMS).find(t => t.abbreviation === teamInfo.abbrev);
@@ -264,7 +222,8 @@ function LiveImpact({
       standing.gamesPlayed,
       divCutLine,
       wcCutLine,
-      standing.conferenceSequence
+      standing,
+      standings
     );
 
     // If this team wins (+2 pts, +1 GP)
@@ -273,7 +232,8 @@ function LiveImpact({
       standing.gamesPlayed + 1,
       divCutLine,
       wcCutLine,
-      standing.conferenceSequence
+      standing,
+      standings
     );
 
     // If this team loses (+0 pts, +1 GP)
@@ -282,7 +242,8 @@ function LiveImpact({
       standing.gamesPlayed + 1,
       divCutLine,
       wcCutLine,
-      standing.conferenceSequence
+      standing,
+      standings
     );
 
     const teamConfig = Object.values(TEAMS).find(t => t.abbreviation === teamInfo.abbrev);

@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { TEAMS } from '@/lib/teamConfig';
-import { computePositionAwareProbability } from '@/lib/utils/playoffProbability';
+import type { StandingsTeam } from '@/lib/types/boxscore';
+import { getProjectedPoints, getPlayoffProbability, isInPlayoffPosition } from '@/lib/utils/standingsCalc';
 import PlayoffOddsClient, { type TeamData } from '@/components/PlayoffOddsClient';
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
@@ -34,30 +35,6 @@ const abbrevToSlug = Object.fromEntries(
   Object.entries(TEAMS).map(([slug, team]) => [team.abbreviation, slug])
 );
 
-interface StandingsTeam {
-  teamAbbrev: { default: string };
-  teamName: { default: string };
-  teamCommonName: { default: string };
-  teamLogo: string;
-  points: number;
-  gamesPlayed: number;
-  wins: number;
-  losses: number;
-  otLosses: number;
-  divisionName: string;
-  conferenceName: string;
-  divisionSequence: number;
-  conferenceSequence: number;
-  wildcardSequence: number;
-  pointPctg: number;
-  regulationWins: number;
-  goalsFor: number;
-  goalsAgainst: number;
-  goalDifferential: number;
-  streakCode: string;
-  streakCount: number;
-}
-
 async function fetchStandings(): Promise<StandingsTeam[] | null> {
   const today = new Date().toLocaleDateString('en-CA', {
     timeZone: 'America/New_York',
@@ -69,83 +46,6 @@ async function fetchStandings(): Promise<StandingsTeam[] | null> {
   if (!res.ok) return null;
   const data = await res.json();
   return data.standings || [];
-}
-
-const TOTAL_GAMES = 82;
-const HISTORICAL_FLOOR = 94;
-
-function getProjectedPoints(points: number, gamesPlayed: number): number {
-  if (gamesPlayed === 0) return 0;
-  return Math.round((points / gamesPlayed) * TOTAL_GAMES);
-}
-
-function getDivCutLine(team: StandingsTeam, standings: StandingsTeam[]): number {
-  const divTeams = standings
-    .filter(t => t.divisionName === team.divisionName)
-    .sort((a, b) => b.points - a.points);
-
-  const div3Team = divTeams[2];
-  const div4Team = divTeams[3];
-
-  let cutLine: number;
-  if (div3Team && div4Team && div3Team.gamesPlayed > 0 && div4Team.gamesPlayed > 0) {
-    const div3Projected = (div3Team.points / div3Team.gamesPlayed) * TOTAL_GAMES;
-    const div4Projected = (div4Team.points / div4Team.gamesPlayed) * TOTAL_GAMES;
-    cutLine = Math.ceil((div3Projected + div4Projected) / 2);
-  } else if (div3Team && div3Team.gamesPlayed > 0) {
-    cutLine = Math.ceil((div3Team.points / div3Team.gamesPlayed) * TOTAL_GAMES);
-  } else {
-    cutLine = 90;
-  }
-  return Math.max(cutLine, 90);
-}
-
-function getWcCutLine(team: StandingsTeam, standings: StandingsTeam[]): number {
-  const wcTeams = standings
-    .filter(t => t.conferenceName === team.conferenceName && t.divisionSequence > 3)
-    .sort((a, b) => b.points - a.points);
-
-  const wc2Team = wcTeams[1];
-  const wc3Team = wcTeams[2];
-
-  if (!wc2Team || wc2Team.gamesPlayed === 0) return HISTORICAL_FLOOR;
-
-  const wc2Projected = (wc2Team.points / wc2Team.gamesPlayed) * TOTAL_GAMES;
-
-  let cutLine: number;
-  if (wc3Team && wc3Team.gamesPlayed > 0) {
-    const wc3Projected = (wc3Team.points / wc3Team.gamesPlayed) * TOTAL_GAMES;
-    cutLine = Math.ceil((wc2Projected + wc3Projected) / 2);
-  } else {
-    cutLine = Math.ceil(wc2Projected);
-  }
-  return Math.max(cutLine, HISTORICAL_FLOOR);
-}
-
-function getPlayoffProbability(team: StandingsTeam, standings: StandingsTeam[]): number {
-  if (team.gamesPlayed < 5) return 50;
-  const projected = getProjectedPoints(team.points, team.gamesPlayed);
-  const divCutLine = getDivCutLine(team, standings);
-  const wcCutLine = getWcCutLine(team, standings);
-
-  const wcTeams = standings
-    .filter(t => t.conferenceName === team.conferenceName && t.divisionSequence > 3)
-    .sort((a, b) => b.points - a.points);
-  const isInPlayoffPosition = team.divisionSequence <= 3 ||
-    (wcTeams.length >= 2 && team.points >= wcTeams[1].points && team.divisionSequence > 3);
-
-  const { probability } = computePositionAwareProbability(
-    projected, team.gamesPlayed, divCutLine, wcCutLine, isInPlayoffPosition
-  );
-  return probability;
-}
-
-function isPlayoffTeam(team: StandingsTeam, standings: StandingsTeam[]): boolean {
-  if (team.divisionSequence <= 3) return true;
-  const wcTeams = standings
-    .filter(t => t.conferenceName === team.conferenceName && t.divisionSequence > 3)
-    .sort((a, b) => b.points - a.points);
-  return wcTeams.length >= 2 && team.points >= wcTeams[1].points;
 }
 
 function buildTeamData(standings: StandingsTeam[]): TeamData[] {
@@ -160,7 +60,7 @@ function buildTeamData(standings: StandingsTeam[]): TeamData[] {
     otLosses: team.otLosses,
     points: team.points,
     pointPctg: team.pointPctg,
-    pace: team.gamesPlayed > 0 ? Math.round((team.points / team.gamesPlayed) * 82) : 0,
+    pace: getProjectedPoints(team.points, team.gamesPlayed),
     odds: getPlayoffProbability(team, standings),
     streakCode: team.streakCode,
     streakCount: team.streakCount,
@@ -168,7 +68,7 @@ function buildTeamData(standings: StandingsTeam[]): TeamData[] {
     conferenceName: team.conferenceName,
     divisionSequence: team.divisionSequence,
     conferenceSequence: team.conferenceSequence,
-    isInPlayoffs: isPlayoffTeam(team, standings),
+    isInPlayoffs: isInPlayoffPosition(team, standings),
   }));
 }
 

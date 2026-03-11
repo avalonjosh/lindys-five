@@ -7,6 +7,7 @@ import type { StandingsTeam } from '@/lib/types/boxscore';
 import { TEAMS } from '@/lib/teamConfig';
 import { generateGameTicketLink } from '@/lib/utils/affiliateLinks';
 import { trackClick } from '@/lib/analytics';
+import { getProjectedPoints, getDivCutLine, getWcCutLine, isInPlayoffPosition } from '@/lib/utils/standingsCalc';
 import { computePositionAwareProbability } from '@/lib/utils/playoffProbability';
 
 interface ScoreCardProps {
@@ -77,52 +78,26 @@ const getWinner = (game: NHLGame): 'home' | 'away' | null => {
   return null;
 };
 
-// Playoff stakes calculation helpers
-function getProjectedPoints(points: number, gamesPlayed: number): number {
-  if (gamesPlayed === 0) return 0;
-  return (points / gamesPlayed) * 82;
-}
-
-function getDivCutLine(team: StandingsTeam, standings: StandingsTeam[]): number {
-  const divTeams = standings.filter(t => t.divisionName === team.divisionName);
-  const thirdPlace = divTeams.find(t => t.divisionSequence === 3);
-  if (thirdPlace && thirdPlace.gamesPlayed > 0) {
-    return getProjectedPoints(thirdPlace.points, thirdPlace.gamesPlayed);
-  }
-  return 100;
-}
-
-function getWcCutLine(team: StandingsTeam, standings: StandingsTeam[]): number {
-  const confTeams = standings.filter(
-    t => t.conferenceName === team.conferenceName && t.divisionSequence > 3
-  );
-  const sorted = [...confTeams].sort((a, b) => b.points - a.points);
-  const wcTeam = sorted[1];
-  if (wcTeam && wcTeam.gamesPlayed > 0) {
-    return getProjectedPoints(wcTeam.points, wcTeam.gamesPlayed);
-  }
-  return 96;
-}
-
 function computeStakes(standing: StandingsTeam, standings: StandingsTeam[]): { winDelta: number; lossDelta: number } | null {
   if (standing.gamesPlayed < 5) return null;
 
   const divCutLine = getDivCutLine(standing, standings);
   const wcCutLine = getWcCutLine(standing, standings);
+  const inPlayoffs = isInPlayoffPosition(standing, standings);
   const projected = getProjectedPoints(standing.points, standing.gamesPlayed);
 
   const current = computePositionAwareProbability(
-    projected, standing.gamesPlayed, divCutLine, wcCutLine, standing.conferenceSequence <= 8
+    projected, standing.gamesPlayed, divCutLine, wcCutLine, inPlayoffs
   ).probability;
 
   const winProjected = getProjectedPoints(standing.points + 2, standing.gamesPlayed + 1);
   const winProb = computePositionAwareProbability(
-    winProjected, standing.gamesPlayed + 1, divCutLine, wcCutLine, standing.conferenceSequence <= 8
+    winProjected, standing.gamesPlayed + 1, divCutLine, wcCutLine, inPlayoffs
   ).probability;
 
   const lossProjected = getProjectedPoints(standing.points, standing.gamesPlayed + 1);
   const lossProb = computePositionAwareProbability(
-    lossProjected, standing.gamesPlayed + 1, divCutLine, wcCutLine, standing.conferenceSequence <= 8
+    lossProjected, standing.gamesPlayed + 1, divCutLine, wcCutLine, inPlayoffs
   ).probability;
 
   return { winDelta: winProb - current, lossDelta: lossProb - current };
