@@ -47,10 +47,10 @@ function TableHeader() {
           <span className="sm:hidden">W-L</span>
         </th>
         <th className="text-center py-2 px-2 font-bold text-gray-700">PTS</th>
-        <th className="text-center py-2 px-2 hidden md:table-cell">PTS%</th>
+        <th className="text-center py-2 px-2 hidden xl:table-cell">PTS%</th>
         <th className="text-center py-2 px-2">Pace</th>
         <th className="text-center py-2 px-2 font-bold text-gray-700">Odds</th>
-        <th className="text-center py-2 px-2 hidden lg:table-cell">Strk</th>
+        <th className="text-center py-2 px-2 hidden 2xl:table-cell">Strk</th>
       </tr>
     </thead>
   );
@@ -78,7 +78,7 @@ function TeamRow({ team, rank }: { team: TeamData; rank: number }) {
         {team.wins}-{team.losses}-{team.otLosses}
       </td>
       <td className="py-2.5 px-2 text-center text-gray-900 font-bold">{team.points}</td>
-      <td className="py-2.5 px-2 text-center text-gray-500 hidden md:table-cell">
+      <td className="py-2.5 px-2 text-center text-gray-500 hidden xl:table-cell">
         {(team.pointPctg * 100).toFixed(1)}
       </td>
       <td className={`py-2.5 px-2 text-center font-semibold ${
@@ -91,7 +91,7 @@ function TeamRow({ team, rank }: { team: TeamData; rank: number }) {
       }`}>
         {team.odds}%
       </td>
-      <td className="py-2.5 px-2 text-center text-gray-500 hidden lg:table-cell whitespace-nowrap">
+      <td className="py-2.5 px-2 text-center text-gray-500 hidden 2xl:table-cell whitespace-nowrap">
         {team.streakCode}{team.streakCount}
       </td>
     </tr>
@@ -108,7 +108,7 @@ function Section({ title, subtitle, children }: { title: string; subtitle?: stri
         {subtitle && <p className="text-xs text-white/70 uppercase tracking-wider">{subtitle}</p>}
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[640px]">
+        <table className="w-full text-sm min-w-0">
           <TableHeader />
           <tbody>{children}</tbody>
         </table>
@@ -149,7 +149,7 @@ function WildcardView({ teams }: { teams: TeamData[] }) {
               </h2>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[640px]">
+              <table className="w-full text-sm min-w-0">
                 <TableHeader />
                 <tbody>
                   {divSections.flatMap(({ divName, teams: divTeams }) => [
