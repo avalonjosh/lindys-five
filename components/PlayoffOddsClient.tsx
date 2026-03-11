@@ -41,7 +41,7 @@ function TableHeader() {
       <tr className="text-gray-500 text-xs uppercase border-b border-gray-200">
         <th className="text-left py-2 px-3 w-8">#</th>
         <th className="text-left py-2 px-2">Team</th>
-        <th className="text-center py-2 px-2 hidden sm:table-cell">GP</th>
+        <th className="text-center py-2 px-2">GP</th>
         <th className="text-center py-2 px-2">
           <span className="hidden sm:inline">Record</span>
           <span className="sm:hidden">W-L</span>
@@ -73,7 +73,7 @@ function TeamRow({ team, rank }: { team: TeamData; rank: number }) {
           </span>
         </Link>
       </td>
-      <td className="py-2.5 px-2 text-center text-gray-500 hidden sm:table-cell">{team.gamesPlayed}</td>
+      <td className="py-2.5 px-2 text-center text-gray-500">{team.gamesPlayed}</td>
       <td className="py-2.5 px-2 text-center text-gray-700 whitespace-nowrap">
         {team.wins}-{team.losses}-{team.otLosses}
       </td>
