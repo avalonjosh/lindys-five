@@ -94,15 +94,16 @@ export default function StandingsSnapshot({
   const [expanded, setExpanded] = useState(false);
   const [todayGames, setTodayGames] = useState<NHLGame[]>([]);
 
-  // Fetch games for the game date when expanded
+  // Fetch today's games (Eastern time) when expanded
   const fetchGames = useCallback(async () => {
     try {
-      const games = await fetchScoresByDate(gameDate);
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+      const games = await fetchScoresByDate(today);
       setTodayGames(games);
     } catch (err) {
       console.error('Error fetching games for standings:', err);
     }
-  }, [gameDate]);
+  }, []);
 
   useEffect(() => {
     if (expanded && todayGames.length === 0) {
