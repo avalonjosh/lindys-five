@@ -42,9 +42,9 @@ const teamGradients: Record<string, { from: string; to: string; border: string; 
 
 const bgTeamIds = ['lightning'];
 
-// All non-sabres teams in alphabetical order by city
-const allOtherTeamIds = [
-  'ducks', 'bruins', 'flames', 'hurricanes', 'blackhawks', 'bluejackets',
+// All 32 teams in alphabetical order by city
+const allTeamIds = [
+  'ducks', 'bruins', 'sabres', 'flames', 'hurricanes', 'blackhawks', 'bluejackets',
   'avalanche', 'stars', 'redwings', 'oilers', 'panthers', 'kings',
   'wild', 'canadiens', 'predators', 'devils', 'islanders', 'rangers',
   'senators', 'flyers', 'penguins', 'sharks', 'kraken', 'blues',
@@ -149,6 +149,32 @@ function TeamCard({ teamId }: { teamId: string }) {
   );
 }
 
+function PlayoffOddsCTA() {
+  return (
+    <Link
+      href="/nhl-playoff-odds"
+      className="group relative rounded-2xl p-12 shadow-2xl border-4 transition-all duration-300 hover:scale-105 w-full max-w-md"
+      style={{
+        background: 'linear-gradient(to bottom right, #003087, #0A1128)',
+        borderColor: '#ffffff',
+      }}
+    >
+      <div className="flex flex-col items-center text-center">
+        <svg className="w-24 h-24 mb-8 text-white/90 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+        </svg>
+        <h2
+          className="text-4xl md:text-5xl font-bold text-white mb-3"
+          style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+        >
+          NHL Playoff Odds 2026
+        </h2>
+        <p className="font-bold text-lg text-white/70">Full standings & projections for all 32 teams →</p>
+      </div>
+    </Link>
+  );
+}
+
 export default function FavoriteTeamsGrid() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -172,19 +198,18 @@ export default function FavoriteTeamsGrid() {
   if (!loaded) {
     return (
       <>
-        {/* Sabres featured */}
         <div className="flex justify-center mb-16">
-          <FeaturedCard teamId="sabres" />
+          <PlayoffOddsCTA />
         </div>
 
         <h2
           className="text-3xl md:text-4xl font-bold text-gray-400 text-center mb-12"
           style={{ fontFamily: 'Bebas Neue, sans-serif' }}
         >
-          Everyone Else
+          All Teams
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {allOtherTeamIds.map(id => <TeamCard key={id} teamId={id} />)}
+          {allTeamIds.map(id => <TeamCard key={id} teamId={id} />)}
         </div>
       </>
     );
@@ -192,29 +217,29 @@ export default function FavoriteTeamsGrid() {
 
   const validFavorites = favorites.filter(id => TEAMS[id]);
 
-  // No favorites: default layout with Sabres featured
+  // No favorites: playoff odds CTA featured, all 32 teams in grid
   if (validFavorites.length === 0) {
     return (
       <>
         <div className="flex justify-center mb-16">
-          <FeaturedCard teamId="sabres" />
+          <PlayoffOddsCTA />
         </div>
 
         <h2
           className="text-3xl md:text-4xl font-bold text-gray-400 text-center mb-12"
           style={{ fontFamily: 'Bebas Neue, sans-serif' }}
         >
-          Everyone Else
+          All Teams
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {allOtherTeamIds.map(id => <TeamCard key={id} teamId={id} />)}
+          {allTeamIds.map(id => <TeamCard key={id} teamId={id} />)}
         </div>
       </>
     );
   }
 
   // Has favorites: show them featured at top, everyone else below
-  const everyoneElse = ['sabres', ...allOtherTeamIds].filter(id => !validFavorites.includes(id));
+  const everyoneElse = allTeamIds.filter(id => !validFavorites.includes(id));
 
   return (
     <>

@@ -86,26 +86,6 @@ export default function LandingPage() {
 
           <FavoriteTeamsGrid />
 
-          {/* NHL Playoff Odds CTA */}
-          <div className="mb-12 mt-4">
-            <Link
-              href="/nhl-playoff-odds"
-              className="block rounded-2xl p-8 shadow-2xl border-2 border-gray-600 bg-gradient-to-br from-slate-800 to-slate-700 hover:border-white/50 transition-all duration-300 hover:scale-[1.02]"
-            >
-              <div className="text-center">
-                <h2
-                  className="text-3xl md:text-4xl font-bold text-white mb-2"
-                  style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-                >
-                  NHL Playoff Odds & Projections 2026
-                </h2>
-                <p className="text-gray-300 text-sm md:text-base">
-                  Full standings, points pace, and playoff projections for all 32 teams →
-                </p>
-              </div>
-            </Link>
-          </div>
-
           {/* Quick Links */}
           <div className="text-center mb-12">
             <div className="flex flex-wrap justify-center gap-4 text-sm">
