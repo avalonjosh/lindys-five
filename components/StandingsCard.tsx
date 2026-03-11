@@ -231,11 +231,12 @@ export default function StandingsCard({
     .slice(0, 4); // Top 4 wild card contenders
 
   // Get all divisions in the user's conference (for wild card view)
+  const DIVISION_ORDER = ['Atlantic', 'Metropolitan', 'Central', 'Pacific'];
   const conferenceDivisions = [...new Set(
     standings
       .filter(t => t.conferenceName === userTeamConference)
       .map(t => t.divisionName)
-  )];
+  )].sort((a, b) => DIVISION_ORDER.indexOf(a) - DIVISION_ORDER.indexOf(b));
 
   // Get top 3 teams from each division in the conference
   const getDivisionTop3 = (divisionName: string) =>
@@ -254,7 +255,9 @@ export default function StandingsCard({
     const conferenceTeams = standings.filter(t => t.conferenceName === conferenceName);
     if (conferenceTeams.length === 0) return null;
 
-    const divisions = [...new Set(conferenceTeams.map(t => t.divisionName))];
+    const divOrder = ['Atlantic', 'Metropolitan', 'Central', 'Pacific'];
+    const divisions = [...new Set(conferenceTeams.map(t => t.divisionName))]
+      .sort((a, b) => divOrder.indexOf(a) - divOrder.indexOf(b));
 
     // Get division leaders and top 3 from each division
     const divisionData = divisions.map(divName => {

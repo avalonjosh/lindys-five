@@ -129,8 +129,10 @@ export default function StandingsSnapshot({
     const conference = homeTeam.conferenceName;
     const confTeams = standings.filter(t => t.conferenceName === conference);
 
-    // Get unique divisions in this conference
-    const divisions = [...new Set(confTeams.map(t => t.divisionName))];
+    // Get unique divisions in this conference, in fixed order
+    const DIVISION_ORDER = ['Atlantic', 'Metropolitan', 'Central', 'Pacific'];
+    const divisions = [...new Set(confTeams.map(t => t.divisionName))]
+      .sort((a, b) => DIVISION_ORDER.indexOf(a) - DIVISION_ORDER.indexOf(b));
 
     // Top 3 from each division
     const getDivisionTop3 = (divName: string) =>
