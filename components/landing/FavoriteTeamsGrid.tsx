@@ -153,28 +153,28 @@ function PlayoffOddsCTA() {
   return (
     <Link
       href="/nhl-playoff-odds"
-      className="group relative rounded-2xl px-12 py-8 shadow-2xl border-4 transition-all duration-300 hover:scale-105 w-full max-w-2xl"
+      className="group relative rounded-2xl px-8 py-8 md:px-12 shadow-2xl border-4 transition-all duration-300 hover:scale-105 w-full max-w-md md:max-w-2xl"
       style={{
         background: 'linear-gradient(to bottom right, #003087, #0A1128)',
         borderColor: '#ffffff',
       }}
     >
-      <div className="flex items-center gap-8">
+      <div className="flex flex-col items-center text-center md:flex-row md:text-left md:items-center gap-6 md:gap-8">
         <Image
           src="https://assets.nhle.com/logos/nhl/svg/NHL_light.svg"
           alt="NHL"
           width={120}
           height={120}
-          className="w-28 h-28 flex-shrink-0 group-hover:scale-110 transition-transform duration-300"
+          className="w-24 h-24 md:w-28 md:h-28 flex-shrink-0 group-hover:scale-110 transition-transform duration-300"
         />
         <div>
           <h2
-            className="text-4xl md:text-5xl font-bold text-white mb-2"
+            className="text-3xl md:text-5xl font-bold text-white mb-2"
             style={{ fontFamily: 'Bebas Neue, sans-serif' }}
           >
             NHL Playoff Odds 2025-26
           </h2>
-          <p className="font-bold text-lg text-white/70">Full standings & projections for all 32 teams →</p>
+          <p className="font-bold text-base md:text-lg text-white/70">Full standings & projections for all 32 teams →</p>
         </div>
       </div>
     </Link>
