@@ -82,7 +82,7 @@ export default function StandingsCard({
   const [userTeamConference, setUserTeamConference] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'division' | 'wildcard' | 'playoffs'>('wildcard');
   const [sortBy, setSortBy] = useState<'points' | 'pointPctg'>('points');
-  const [showLiveScores, setShowLiveScores] = useState(false);
+  const [showLiveScores, setShowLiveScores] = useState(true);
   const [todayGames, setTodayGames] = useState<NHLGame[]>([]);
   const [isDesktop, setIsDesktop] = useState(false);
 
