@@ -797,8 +797,8 @@
     "outlet": "The Hockey Writers",
     "type": "blog",
     "team": "goldenknights",
-    "email": "",
-    "twitter": "",
+    "email": "eddie1991razo@gmail.com",
+    "twitter": "@eddierazo_",
     "website": "https://thehockeywriters.com/author/erazo/",
     "notes": "ASU Mass Communications student. LA-based.",
     "status": "not_contacted"
@@ -1445,7 +1445,7 @@
     "outlet": "The Athletic",
     "type": "beat_writer",
     "team": "goldenknights",
-    "email": "",
+    "email": "jgranger@theathletic.com",
     "twitter": "@JesseGranger_",
     "website": "https://theathletic.com",
     "notes": "Also NHL Network TV correspondent. PHWA Vegas Chapter Chair.",
@@ -1929,6 +1929,78 @@
     "twitter": "",
     "website": "https://starsandsticks.com",
     "notes": "Writer for the FanSided Capitals site.",
+    "status": "not_contacted"
+  },
+  {
+    "id": "beat-goldenknights-gotz",
+    "name": "Ben Gotz",
+    "outlet": "Las Vegas Review-Journal",
+    "type": "beat_writer",
+    "team": "goldenknights",
+    "email": "bgotz@reviewjournal.com",
+    "twitter": "@BenSGotz",
+    "website": "https://reviewjournal.com",
+    "notes": "Covered VGK for 5+ seasons. Now assistant sports editor managing NHL coverage. Co-hosts Golden Edge podcast.",
+    "status": "not_contacted"
+  },
+  {
+    "id": "beat-goldenknights-schoen",
+    "name": "David Schoen",
+    "outlet": "Las Vegas Review-Journal",
+    "type": "beat_writer",
+    "team": "goldenknights",
+    "email": "dschoen@reviewjournal.com",
+    "twitter": "@DavidSchoenLVRJ",
+    "website": "https://reviewjournal.com",
+    "notes": "2019 Nevada Sportswriter of the Year. Co-hosts Golden Edge podcast. Long-time VGK beat writer.",
+    "status": "not_contacted"
+  },
+  {
+    "id": "beat-goldenknights-keefer",
+    "name": "Case Keefer",
+    "outlet": "Las Vegas Sun",
+    "type": "beat_writer",
+    "team": "goldenknights",
+    "email": "case.keefer@lasvegassun.com",
+    "twitter": "@casekeefer",
+    "website": "https://lasvegassun.com",
+    "notes": "Assistant Sports Editor & Writer. Covers VGK and broader Las Vegas sports.",
+    "status": "not_contacted"
+  },
+  {
+    "id": "podcast-goldenknights-warner",
+    "name": "Mark Warner",
+    "outlet": "The Vegas Hockey Podcast",
+    "type": "podcast",
+    "team": "goldenknights",
+    "email": "MarkWarner@VegasHockeyPodcast.com",
+    "twitter": "",
+    "website": "https://vegashockeypodcast.com",
+    "notes": "Founder, Producer and Co-Host. Co-hosts with Chris Lizza. Long-running VGK podcast.",
+    "status": "not_contacted"
+  },
+  {
+    "id": "podcast-goldenknights-girls",
+    "name": "Colleen & Mandy",
+    "outlet": "Vegas Hockey Girls Podcast",
+    "type": "podcast",
+    "team": "goldenknights",
+    "email": "vegashockeygirls@gmail.com",
+    "twitter": "@HockeyGirlsPod",
+    "website": "https://vegashockeygirls.com",
+    "notes": "Hockey-loving sisters covering VGK. Active social media presence.",
+    "status": "not_contacted"
+  },
+  {
+    "id": "blog-goldenknights-walters",
+    "name": "Jacob Walters",
+    "outlet": "Vegas Hockey Knight (FanSided)",
+    "type": "blog",
+    "team": "goldenknights",
+    "email": "jacobw912@yahoo.com",
+    "twitter": "",
+    "website": "https://vegashockeyknight.com",
+    "notes": "Site expert since 2023, 500+ articles. FanSided's primary VGK site.",
     "status": "not_contacted"
   }
 ]
