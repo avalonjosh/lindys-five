@@ -198,7 +198,7 @@ export default function NewsletterDashboard() {
                 Set Recap
               </button>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <select
                 value={sendTeam}
                 onChange={(e) => { setSendTeam(e.target.value); setSendMessage(''); }}
@@ -273,7 +273,44 @@ export default function NewsletterDashboard() {
         {sends.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 p-5 mt-6">
             <h2 className="text-lg font-bold text-gray-900 mb-3">Recent Sends</h2>
-            <div className="overflow-x-auto">
+            {/* Mobile: Card layout */}
+            <div className="sm:hidden space-y-3">
+              {sends.slice(0, 20).map((send) => {
+                const openRate = (send.delivered || 0) > 0 ? ((send.opened || 0) / send.delivered! * 100).toFixed(0) + '%' : '—';
+                const clickRate = (send.delivered || 0) > 0 ? ((send.clicked || 0) / send.delivered! * 100).toFixed(0) + '%' : '—';
+                return (
+                  <div key={send.id} className="border border-gray-100 rounded-lg p-3">
+                    <div className="text-sm font-medium text-gray-900 truncate mb-1">{send.subject}</div>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
+                      <span>{send.team}</span>
+                      <span>&middot;</span>
+                      <span>{new Date(send.sentAt).toLocaleDateString()}</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                      <div>
+                        <div className="font-semibold text-gray-700">{send.recipientCount}</div>
+                        <div className="text-gray-400">Sent</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-700">{openRate}</div>
+                        <div className="text-gray-400">Opens</div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-gray-700">{clickRate}</div>
+                        <div className="text-gray-400">Clicks</div>
+                      </div>
+                      <div>
+                        <div className={`font-semibold ${(send.bounced || 0) > 0 ? 'text-red-600' : 'text-gray-400'}`}>{send.bounced || 0}</div>
+                        <div className="text-gray-400">Bounced</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop: Table layout */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left border-b border-gray-200">
@@ -324,13 +361,13 @@ export default function NewsletterDashboard() {
 
         {/* Subscribers Table */}
         <div className="bg-white rounded-xl border border-gray-200 p-5 mt-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <h2 className="text-lg font-bold text-gray-900">Subscribers</h2>
             <div className="flex items-center gap-2">
               <select
                 value={filterTeam}
                 onChange={(e) => setFilterTeam(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm"
+                className="flex-1 sm:flex-none px-3 py-1.5 rounded-lg border border-gray-300 text-sm"
               >
                 <option value="all">All teams</option>
                 {allTeams.map((t) => (
@@ -341,7 +378,7 @@ export default function NewsletterDashboard() {
                 onClick={exportCSV}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50"
               >
-                <Download className="w-4 h-4" /> CSV
+                <Download className="w-4 h-4" /> <span className="hidden sm:inline">CSV</span>
               </button>
               <button
                 onClick={loadData}
@@ -355,48 +392,81 @@ export default function NewsletterDashboard() {
           {filteredSubscribers.length === 0 ? (
             <p className="text-gray-400 text-sm text-center py-8">No subscribers yet</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left border-b border-gray-200">
-                    <th className="pb-2 font-medium text-gray-500">Email</th>
-                    <th className="pb-2 font-medium text-gray-500">Teams</th>
-                    <th className="pb-2 font-medium text-gray-500">Status</th>
-                    <th className="pb-2 font-medium text-gray-500">Source</th>
-                    <th className="pb-2 font-medium text-gray-500">Subscribed</th>
-                    <th className="pb-2 font-medium text-gray-500"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredSubscribers.map((sub) => (
-                    <tr key={sub.id} className="border-b border-gray-50">
-                      <td className="py-2 text-gray-900">{sub.email}</td>
-                      <td className="py-2 text-gray-600">{sub.teams.join(', ')}</td>
-                      <td className="py-2">
-                        {sub.unsubscribedAt ? (
-                          <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-xs">Unsubscribed</span>
-                        ) : sub.verified ? (
-                          <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-600 text-xs">Verified</span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-600 text-xs">Pending</span>
-                        )}
-                      </td>
-                      <td className="py-2 text-gray-500">{sub.source || '-'}</td>
-                      <td className="py-2 text-gray-500">{new Date(sub.createdAt).toLocaleDateString()}</td>
-                      <td className="py-2">
-                        <button
-                          onClick={() => handleDelete(sub.id, sub.email)}
-                          className="text-gray-400 hover:text-red-500 transition-colors"
-                          title="Delete subscriber"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
+            <>
+              {/* Mobile: Card layout */}
+              <div className="sm:hidden space-y-3">
+                {filteredSubscribers.map((sub) => (
+                  <div key={sub.id} className="border border-gray-100 rounded-lg p-3">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="text-sm font-medium text-gray-900 break-all">{sub.email}</div>
+                      <button
+                        onClick={() => handleDelete(sub.id, sub.email)}
+                        className="text-gray-400 hover:text-red-500 transition-colors ml-2 shrink-0"
+                        title="Delete subscriber"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      {sub.unsubscribedAt ? (
+                        <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-600">Unsubscribed</span>
+                      ) : sub.verified ? (
+                        <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-600">Verified</span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-600">Pending</span>
+                      )}
+                      <span className="text-gray-400">{sub.source || '-'}</span>
+                      <span className="text-gray-400">{new Date(sub.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">{sub.teams.join(', ')}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: Table layout */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left border-b border-gray-200">
+                      <th className="pb-2 font-medium text-gray-500">Email</th>
+                      <th className="pb-2 font-medium text-gray-500">Teams</th>
+                      <th className="pb-2 font-medium text-gray-500">Status</th>
+                      <th className="pb-2 font-medium text-gray-500">Source</th>
+                      <th className="pb-2 font-medium text-gray-500">Subscribed</th>
+                      <th className="pb-2 font-medium text-gray-500"></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredSubscribers.map((sub) => (
+                      <tr key={sub.id} className="border-b border-gray-50">
+                        <td className="py-2 text-gray-900">{sub.email}</td>
+                        <td className="py-2 text-gray-600">{sub.teams.join(', ')}</td>
+                        <td className="py-2">
+                          {sub.unsubscribedAt ? (
+                            <span className="px-2 py-0.5 rounded-full bg-red-50 text-red-600 text-xs">Unsubscribed</span>
+                          ) : sub.verified ? (
+                            <span className="px-2 py-0.5 rounded-full bg-green-50 text-green-600 text-xs">Verified</span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-600 text-xs">Pending</span>
+                          )}
+                        </td>
+                        <td className="py-2 text-gray-500">{sub.source || '-'}</td>
+                        <td className="py-2 text-gray-500">{new Date(sub.createdAt).toLocaleDateString()}</td>
+                        <td className="py-2">
+                          <button
+                            onClick={() => handleDelete(sub.id, sub.email)}
+                            className="text-gray-400 hover:text-red-500 transition-colors"
+                            title="Delete subscriber"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>
