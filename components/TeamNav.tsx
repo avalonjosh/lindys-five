@@ -164,11 +164,22 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
   };
 
   const toggleFavorite = (teamId: string) => {
-    setFavorites(prev =>
-      prev.includes(teamId)
+    setFavorites(prev => {
+      const wasAlreadyFavorite = prev.includes(teamId);
+      const next = wasAlreadyFavorite
         ? prev.filter(id => id !== teamId)
-        : [...prev, teamId]
-    );
+        : [...prev, teamId];
+
+      // Dispatch event when a team is starred (not un-starred)
+      // Deferred to avoid setState-during-render warning
+      if (!wasAlreadyFavorite) {
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('team-starred', { detail: { teamId } }));
+        }, 0);
+      }
+
+      return next;
+    });
   };
 
   const toggleDivision = (division: string) => {

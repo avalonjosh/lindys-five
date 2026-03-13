@@ -4,6 +4,7 @@ import { TEAMS } from '@/lib/teamConfig';
 import type { StandingsTeam } from '@/lib/types/boxscore';
 import { getProjectedPoints, getPlayoffProbability, isInPlayoffPosition } from '@/lib/utils/standingsCalc';
 import PlayoffOddsClient, { type TeamData } from '@/components/PlayoffOddsClient';
+import NewsletterModal from '@/components/newsletter/NewsletterModal';
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
 
@@ -100,6 +101,8 @@ export default async function NHLPlayoffOddsPage() {
 
   return (
     <>
+      <NewsletterModal />
+
       {/* JSON-LD Structured Data */}
       <script
         type="application/ld+json"

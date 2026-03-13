@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '@/app/api/blog/settings/route';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { quickFactCheck } from '@/lib/factCheck';
+import { sendGameRecapNewsletter } from '@/lib/email';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 const GAME_END_BUFFER_MS = 30 * 60 * 1000; // 30 minutes
@@ -284,6 +285,16 @@ export async function GET(request: NextRequest) {
         });
 
         await markGameProcessed(game.id, post.id, { opponent: oppAbbrev, gameDate: game.gameDate, result: `${sabresScore}-${oppScore}` });
+
+        // Send newsletter to subscribers if published
+        if (post.status === 'published') {
+          try {
+            await sendGameRecapNewsletter(post);
+          } catch (emailError) {
+            console.error(`Failed to send newsletter for game ${game.id}:`, emailError);
+          }
+        }
+
         results.push({ gameId: game.id, postId: post.id, postSlug: post.slug, status: post.status, title: post.title, opponent: oppAbbrev, result: `${isWin ? 'W' : 'L'} ${sabresScore}-${oppScore}` });
       } catch (error: any) {
         console.error(`Error processing game ${game.id}:`, error);

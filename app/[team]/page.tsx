@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { TEAMS } from '@/lib/teamConfig';
 import TeamTracker from '@/components/TeamTracker';
+import NewsletterModal from '@/components/newsletter/NewsletterModal';
 
 interface TeamPageProps {
   params: Promise<{ team: string }>;
@@ -158,6 +159,12 @@ export default async function TeamPage({ params }: TeamPageProps) {
         </p>
       </div>
       <TeamTracker team={team} />
+      <NewsletterModal
+        team={teamSlug}
+        teamDisplayName={team.name}
+        primaryColor={team.colors.primary}
+        accentColor={team.colors.accent}
+      />
     </>
   );
 }

@@ -6,7 +6,7 @@ import { LogOut, ExternalLink } from 'lucide-react';
 import { logout } from '@/lib/utils/auth';
 
 interface AdminNavProps {
-  activeTab: 'analytics' | 'posts' | 'outreach';
+  activeTab: 'analytics' | 'posts' | 'outreach' | 'newsletter';
 }
 
 export default function AdminNav({ activeTab }: AdminNavProps) {
@@ -64,6 +64,17 @@ export default function AdminNav({ activeTab }: AdminNavProps) {
                 style={activeTab === 'outreach' ? { borderBottomColor: '#FCB514' } : {}}
               >
                 Outreach
+              </Link>
+              <Link
+                href="/admin/newsletter"
+                className={`px-3 sm:px-4 py-2 rounded-t text-xs sm:text-sm font-medium transition-colors ${
+                  activeTab === 'newsletter'
+                    ? 'text-white border-b-2'
+                    : 'text-white/60 hover:text-white/90'
+                }`}
+                style={activeTab === 'newsletter' ? { borderBottomColor: '#FCB514' } : {}}
+              >
+                Newsletter
               </Link>
             </nav>
           </div>

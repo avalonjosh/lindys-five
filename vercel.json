@@ -33,6 +33,14 @@
     {
       "path": "/api/cron/analytics-cleanup",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/email-game-recap",
+      "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/email-set-recap",
+      "schedule": "0 14 * * *"
     }
   ]
 }

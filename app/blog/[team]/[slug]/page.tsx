@@ -8,6 +8,7 @@ import PostContent from '@/components/blog/PostContent';
 import AuthorByline from '@/components/blog/AuthorByline';
 import NextGameCTA from '@/components/blog/NextGameCTA';
 import ViewTracker from '@/components/blog/ViewTracker';
+import NewsletterSignup from '@/components/newsletter/NewsletterSignup';
 
 export const dynamic = 'force-dynamic';
 
@@ -274,6 +275,16 @@ export default async function BlogPostPage({
               <AuthorByline accentColor={postConfig.primary} />
             </div>
           </div>
+
+          {/* Newsletter Signup */}
+          <NewsletterSignup
+            teams={[post.team]}
+            variant="inline"
+            source="blog-post"
+            teamDisplayName={postConfig.displayName}
+            primaryColor={postConfig.primary}
+            accentColor={postConfig.accent}
+          />
 
           {/* Next Game CTA - For Sabres articles */}
           {showTicketCTA && (

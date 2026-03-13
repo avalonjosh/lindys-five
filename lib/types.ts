@@ -186,3 +186,35 @@ export interface BlogPost {
   // Analytics (admin only)
   views?: number;
 }
+
+// Newsletter System Types
+export interface NewsletterSubscriber {
+  id: string;
+  email: string;
+  teams: string[];           // Team slugs (e.g., ['sabres', 'bruins'])
+  createdAt: string;         // ISO date
+  verified: boolean;
+  verifiedAt?: string;       // ISO date
+  unsubscribedAt?: string;   // ISO date (soft delete)
+  source?: string;           // Where they signed up (blog-post, landing, team-page)
+}
+
+export interface EmailVerificationToken {
+  subscriberId: string;
+  expiresAt: string;         // ISO date
+}
+
+export interface EmailSendRecord {
+  id: string;
+  postId: string;
+  postSlug: string;
+  team: string;
+  sentAt: string;            // ISO date
+  recipientCount: number;
+  subject: string;
+  delivered?: number;
+  opened?: number;
+  clicked?: number;
+  bounced?: number;
+  complained?: number;
+}

@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
+import { Suspense } from 'react';
 import { Bebas_Neue, Permanent_Marker } from 'next/font/google';
 import PageTracker from '@/components/analytics/PageTracker';
+import NewsletterVerified from '@/components/newsletter/NewsletterVerified';
 import './globals.css';
 
 const bebasNeue = Bebas_Neue({
@@ -53,6 +55,7 @@ export default function RootLayout({
     <html lang="en" className={`${bebasNeue.variable} ${permanentMarker.variable}`}>
       <body>
         <PageTracker />
+        <Suspense><NewsletterVerified /></Suspense>
         {children}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-ZQRG7XK9D6"

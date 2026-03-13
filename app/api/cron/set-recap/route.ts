@@ -3,6 +3,7 @@ import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '@/app/api/blog/settings/route';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
+import { sendSetRecapNewsletter } from '@/lib/email';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
@@ -225,6 +226,15 @@ export async function GET(request: NextRequest) {
     });
 
     await markSetProcessed(targetSetNumber, post.id, { record: `${stats.wins}-${stats.losses}-${stats.otLosses}`, points: stats.points, startDate: stats.startDate, endDate: stats.endDate });
+
+    // Send newsletter to subscribers if published
+    if (post.status === 'published') {
+      try {
+        await sendSetRecapNewsletter(post);
+      } catch (emailError) {
+        console.error(`Failed to send set recap newsletter:`, emailError);
+      }
+    }
 
     return NextResponse.json({
       success: true, setNumber: targetSetNumber, postId: post.id, postSlug: post.slug,
