@@ -174,9 +174,57 @@ function buildTeamData(standings: StandingsTeam[]): TeamData[] {
   }));
 }
 
+function buildCupOddsFromStandings(standings: StandingsTeam[]): CupOddsTeam[] | null {
+  const teams: CupOddsTeam[] = [];
+
+  for (const confName of ['Eastern', 'Western']) {
+    const confTeams = standings.filter(t => t.conferenceName === confName);
+    const divOrder = confName === 'Eastern' ? ['Atlantic', 'Metropolitan'] : ['Central', 'Pacific'];
+    const divisionData = divOrder.map(divName => ({
+      teams: confTeams.filter(t => t.divisionName === divName).sort((a, b) => a.divisionSequence - b.divisionSequence),
+    }));
+    divisionData.sort((a, b) => b.teams[0]?.points - a.teams[0]?.points);
+    const [divA, divB] = divisionData;
+
+    const wildcards = confTeams
+      .filter(t => t.divisionSequence > 3)
+      .sort((a, b) => b.points - a.points)
+      .slice(0, 2);
+
+    const playoffTeams = [
+      ...(divA?.teams.slice(0, 3) || []),
+      ...(divB?.teams.slice(0, 3) || []),
+      ...wildcards,
+    ];
+
+    for (const st of playoffTeams) {
+      const slug = abbrevToSlug[st.teamAbbrev.default] || '';
+      // Simple cup odds: chain series win probabilities vs average
+      let cupProb = 1;
+      for (let r = 0; r < 4; r++) {
+        const p = computeSeriesWinProbability(st.pointPctg, 0.5, 0, 0, true);
+        cupProb *= p / 100;
+      }
+      teams.push({
+        abbrev: st.teamAbbrev.default,
+        name: st.teamCommonName?.default || st.teamName.default,
+        logo: st.teamLogo,
+        slug,
+        cupOdds: Math.round(cupProb * 1000) / 10,
+        currentRound: 'First Round',
+        seriesStatus: 'Starts soon',
+        isEliminated: false,
+      });
+    }
+  }
+  return teams.length > 0 ? teams : null;
+}
+
 export default async function NHLPlayoffOddsPage() {
   const [standings, bracket] = await Promise.all([fetchStandings(), fetchBracket()]);
   const playoffsActive = isPlayoffActive(bracket);
+  const regularSeasonOver = standings && standings.length > 0 &&
+    standings.filter(t => t.gamesPlayed >= 82).length >= 28;
 
   if (!standings || standings.length === 0) {
     return (
@@ -291,18 +339,23 @@ export default async function NHLPlayoffOddsPage() {
               href="/playoffs"
               className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-500 text-sm font-medium"
             >
-              View {playoffsActive ? 'Full' : 'Projected'} Playoff Bracket &rarr;
+              View {playoffsActive ? 'Full' : regularSeasonOver ? 'Confirmed' : 'Projected'} Playoff Bracket &rarr;
             </Link>
           </div>
 
           {playoffsActive && bracket ? (
+            <StanleyCupOddsTable
+              teams={buildCupOddsTeams(
+                bracket,
+                new Map(standings.map(t => [t.teamAbbrev.default, t]))
+              )}
+            />
+          ) : regularSeasonOver ? (
             <>
-              <StanleyCupOddsTable
-                teams={buildCupOddsTeams(
-                  bracket,
-                  new Map(standings.map(t => [t.teamAbbrev.default, t]))
-                )}
-              />
+              {(() => {
+                const gapOdds = buildCupOddsFromStandings(standings);
+                return gapOdds ? <StanleyCupOddsTable teams={gapOdds} /> : <PlayoffOddsClient teams={teams} />;
+              })()}
             </>
           ) : (
             <PlayoffOddsClient teams={teams} />

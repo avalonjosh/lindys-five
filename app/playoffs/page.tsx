@@ -415,6 +415,10 @@ export default async function PlayoffsPage() {
 
   const playoffsActive = isPlayoffsActive(bracket);
 
+  // Detect if regular season is over (postseason gap)
+  const regularSeasonOver = standings.length > 0 &&
+    standings.filter(t => t.gamesPlayed >= 82).length >= 28;
+
   // Use real bracket if playoffs active, otherwise project from standings
   let eastern: ConferenceBracket;
   let western: ConferenceBracket;
@@ -501,12 +505,18 @@ export default async function PlayoffsPage() {
               className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-3"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
-              {isProjected ? 'Projected Playoff Bracket 2026' : 'Stanley Cup Playoffs 2026'}
+              {playoffsActive
+                ? 'Stanley Cup Playoffs 2026'
+                : regularSeasonOver
+                  ? 'Stanley Cup Playoffs 2026'
+                  : 'Projected Playoff Bracket 2026'}
             </h1>
             <p className="text-base md:text-lg text-white/80 max-w-2xl mx-auto">
-              {isProjected
-                ? 'If the season ended today — series win probabilities and Stanley Cup odds'
-                : 'Live bracket, series win probabilities, and Stanley Cup odds'}
+              {playoffsActive
+                ? 'Live bracket, series win probabilities, and Stanley Cup odds'
+                : regularSeasonOver
+                  ? 'Confirmed first-round matchups — series win probabilities and Stanley Cup odds'
+                  : 'If the season ended today — series win probabilities and Stanley Cup odds'}
             </p>
           </div>
         </header>
@@ -533,9 +543,11 @@ export default async function PlayoffsPage() {
         <footer className="mt-auto py-6 text-center text-sm text-gray-500">
           <p>Lindy&apos;s Five &bull; {new Date().getFullYear()}</p>
           <p className="mt-1">
-            {isProjected
-              ? 'Projected from current standings. Updated every 5 minutes.'
-              : 'Data sourced from the NHL. Updated every 60 seconds.'}
+            {playoffsActive
+              ? 'Data sourced from the NHL. Updated every 60 seconds.'
+              : regularSeasonOver
+                ? 'Matchups confirmed from final standings.'
+                : 'Projected from current standings. Updated every 5 minutes.'}
           </p>
         </footer>
       </div>
