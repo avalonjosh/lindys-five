@@ -29,6 +29,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.95,
     },
     {
+      url: `${BASE_URL}/playoffs`,
+      lastModified: now,
+      changeFrequency: 'hourly',
+      priority: 0.95,
+    },
+    {
       url: `${BASE_URL}/scores`,
       lastModified: now,
       changeFrequency: 'daily',

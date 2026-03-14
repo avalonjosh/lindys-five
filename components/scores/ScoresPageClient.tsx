@@ -235,6 +235,12 @@ export default function ScoresPageClient() {
         {!loading && !error && sortedGames.length === 0 && (
           <div className="text-center py-12 rounded-xl bg-gray-100 text-gray-600">
             <p className="text-lg font-semibold">No games scheduled for this date</p>
+            <Link
+              href="/playoffs"
+              className="inline-block mt-4 text-blue-600 hover:text-blue-500 underline text-sm"
+            >
+              View Playoff Bracket
+            </Link>
           </div>
         )}
 

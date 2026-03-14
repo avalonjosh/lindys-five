@@ -42,6 +42,8 @@ export interface NHLGame {
     inIntermission: boolean;
     running: boolean;
   };
+  // Playoff series context (enriched for gameType 3)
+  seriesStatus?: string; // e.g., "TOR leads 3-2"
   // TV broadcast info
   tvBroadcasts?: Array<{
     id: number;

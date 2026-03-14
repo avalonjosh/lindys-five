@@ -294,6 +294,18 @@ export default function ScoreCard({ game, favoriteTeamAbbrev, standings }: Score
         isWinner={winner === 'home'}
       />
 
+      {/* Playoff Series Badge (gameType 3) */}
+      {game.gameType === 3 && game.seriesStatus && (
+        <div className="border-t border-gray-100 mt-1 pt-2">
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">
+            Playoff Series
+          </p>
+          <p className="text-xs font-medium text-gray-600">
+            {game.seriesStatus}
+          </p>
+        </div>
+      )}
+
       {/* Playoff Stakes */}
       {(homeStakes || awayStakes) && (
         <>

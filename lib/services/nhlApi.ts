@@ -1,4 +1,5 @@
 import type { NHLGame, GameResult, DetailedGameStats } from '../types';
+import type { PlayoffBracketResponse } from '../types/playoffs';
 
 const API_BASE = '/api/v1';
 
@@ -119,10 +120,10 @@ export async function fetchSabresSchedule(season: string = '20252026', teamAbbre
       throw new Error('Invalid API response: missing games array');
     }
 
-    // Filter for regular season games only (gameType === 2)
-    const regularSeasonGames: NHLGame[] = data.games.filter((game: NHLGame) => game.gameType === 2);
+    // Include regular season (2) and playoff (3) games
+    const regularSeasonGames: NHLGame[] = data.games.filter((game: NHLGame) => game.gameType === 2 || game.gameType === 3);
 
-    console.log(`🏒 ${teamAbbrev} ${season}: ${regularSeasonGames.length} regular season games`);
+    console.log(`🏒 ${teamAbbrev} ${season}: ${regularSeasonGames.length} games (regular + playoffs)`);
 
     if (regularSeasonGames.length === 0) {
       console.error('⚠️ No regular season games found in API response');
@@ -496,10 +497,10 @@ export async function fetchScoresByDate(date: string): Promise<NHLGame[]> {
       return [];
     }
 
-    // Filter for regular season games only (gameType === 2)
-    const regularSeasonGames = dayData.games.filter((game: NHLGame) => game.gameType === 2);
+    // Include regular season (2) and playoff (3) games
+    const regularSeasonGames = dayData.games.filter((game: NHLGame) => game.gameType === 2 || game.gameType === 3);
 
-    console.log(`✅ Found ${regularSeasonGames.length} regular season games for ${date}`);
+    console.log(`✅ Found ${regularSeasonGames.length} games for ${date}`);
 
     // Enrich all games with team records from standings
     regularSeasonGames.forEach((game: NHLGame) => {
@@ -620,6 +621,18 @@ export async function fetchScoresByDate(date: string): Promise<NHLGame[]> {
   } catch (error) {
     console.error('❌ Error fetching scores for date:', date, error);
     throw error;
+  }
+}
+
+// Fetch the NHL playoff bracket
+export async function fetchPlayoffBracket(season: string = '20252026'): Promise<PlayoffBracketResponse | null> {
+  try {
+    const response = await fetchWithRetry(`${API_BASE}/playoff-bracket/${season}`);
+    const data = await response.json();
+    return data as PlayoffBracketResponse;
+  } catch (error) {
+    console.error('Failed to fetch playoff bracket:', error);
+    return null;
   }
 }
 

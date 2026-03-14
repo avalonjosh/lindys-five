@@ -158,6 +158,98 @@ export function probabilityForFinalPoints(
  * @param wcCutLine - Projected wildcard cut line
  * @param isInPlayoffPosition - Whether team currently holds a playoff spot
  */
+/**
+ * Compute the probability that a team wins a best-of-7 series.
+ *
+ * Uses team point-percentages as a strength proxy.  A logistic function converts
+ * the strength gap into a single-game win probability, and a binomial
+ * (negative-binomial) distribution converts that into a series-win probability.
+ *
+ * Home-ice advantage: the higher seed hosts games 1, 2, 5, 7.
+ *
+ * @param teamPtPctg - Team's regular-season point percentage (0-1)
+ * @param oppPtPctg  - Opponent's regular-season point percentage (0-1)
+ * @param teamWins   - Games won so far in the series (0-4)
+ * @param oppWins    - Games lost so far in the series (0-4)
+ * @param hasHomeIce - Whether this team has home-ice advantage
+ */
+export function computeSeriesWinProbability(
+  teamPtPctg: number,
+  oppPtPctg: number,
+  teamWins: number = 0,
+  oppWins: number = 0,
+  hasHomeIce: boolean = true
+): number {
+  // If series already decided
+  if (teamWins >= 4) return 100;
+  if (oppWins >= 4) return 0;
+
+  // Logistic model for single-game win probability
+  // k controls sensitivity; 6 is tuned so a 0.600 vs 0.500 team ≈ 58% per game
+  const k = 6;
+  const diff = teamPtPctg - oppPtPctg;
+  const baseP = 1 / (1 + Math.exp(-k * diff));
+
+  // Home-ice boost (~4% advantage in NHL historically)
+  const homeBoost = 0.04;
+  const pHome = Math.min(0.95, Math.max(0.05, baseP + homeBoost));
+  const pAway = Math.min(0.95, Math.max(0.05, baseP - homeBoost));
+
+  // Best-of-7, 2-2-1-1-1 format: home team hosts games 1,2,5,7
+  // Enumerate remaining games using dynamic programming
+  const winsNeeded = 4 - teamWins;
+  const lossesAllowed = 4 - oppWins;
+  const gamesPlayed = teamWins + oppWins;
+
+  // Build home-ice schedule for remaining games
+  // Games are numbered 1-7 overall; higher seed is home for 1,2,5,7
+  const homeGames = new Set(hasHomeIce ? [1, 2, 5, 7] : [3, 4, 6]);
+  const remainingSchedule: boolean[] = [];
+  for (let g = gamesPlayed + 1; g <= 7; g++) {
+    remainingSchedule.push(homeGames.has(g));
+  }
+
+  // DP: probability of winning from state (w, l) with remaining schedule
+  // w = additional wins needed, l = additional losses allowed
+  const memo = new Map<string, number>();
+
+  function dp(w: number, l: number, gameIdx: number): number {
+    if (w <= 0) return 1;
+    if (l <= 0) return 0;
+    if (gameIdx >= remainingSchedule.length) return 0;
+
+    const key = `${w},${l},${gameIdx}`;
+    const cached = memo.get(key);
+    if (cached !== undefined) return cached;
+
+    const isHome = remainingSchedule[gameIdx];
+    const p = isHome ? pHome : pAway;
+
+    const result = p * dp(w - 1, l, gameIdx + 1) + (1 - p) * dp(w, l - 1, gameIdx + 1);
+    memo.set(key, result);
+    return result;
+  }
+
+  const prob = dp(winsNeeded, lossesAllowed, 0) * 100;
+  return Math.max(1, Math.min(99, Math.round(prob)));
+}
+
+/**
+ * Simplified Stanley Cup odds computation from bracket data.
+ * For each remaining team, chains the probability of winning each remaining round.
+ */
+export function computeStanleyCupOddsSimple(
+  teamPtPctg: number,
+  remainingRounds: { oppPtPctg: number; hasHomeIce: boolean }[]
+): number {
+  let prob = 1;
+  for (const round of remainingRounds) {
+    const seriesP = computeSeriesWinProbability(teamPtPctg, round.oppPtPctg, 0, 0, round.hasHomeIce);
+    prob *= seriesP / 100;
+  }
+  return Math.max(0.1, Math.round(prob * 1000) / 10); // One decimal place
+}
+
 export function computePositionAwareProbability(
   projectedPoints: number,
   gamesPlayed: number,

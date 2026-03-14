@@ -382,6 +382,18 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
               Playoff Odds
             </button>
 
+            {/* Playoff Bracket Link */}
+            <button
+              onClick={() => handleNavigation('/playoffs')}
+              className={`w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold transition-all ${
+                useClassicStyling
+                  ? 'hover:bg-zinc-800 text-white'
+                  : 'hover:bg-blue-50 text-gray-900'
+              }`}
+            >
+              Playoff Bracket
+            </button>
+
             {/* Blog Link */}
             <button
               onClick={() => handleNavigation('/blog')}

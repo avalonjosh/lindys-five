@@ -2,8 +2,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { TEAMS } from '@/lib/teamConfig';
 import type { StandingsTeam } from '@/lib/types/boxscore';
+import type { PlayoffBracketResponse } from '@/lib/types/playoffs';
 import { getProjectedPoints, getPlayoffProbability, isInPlayoffPosition } from '@/lib/utils/standingsCalc';
+import { computeSeriesWinProbability } from '@/lib/utils/playoffProbability';
 import PlayoffOddsClient, { type TeamData } from '@/components/PlayoffOddsClient';
+import StanleyCupOddsTable, { type CupOddsTeam } from '@/components/playoffs/StanleyCupOddsTable';
 import NewsletterModal from '@/components/newsletter/NewsletterModal';
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
@@ -36,17 +39,115 @@ const abbrevToSlug = Object.fromEntries(
   Object.entries(TEAMS).map(([slug, team]) => [team.abbreviation, slug])
 );
 
+const NHL_API = 'https://api-web.nhle.com/v1';
+
 async function fetchStandings(): Promise<StandingsTeam[] | null> {
   const today = new Date().toLocaleDateString('en-CA', {
     timeZone: 'America/New_York',
   });
   const res = await fetch(
-    `https://api-web.nhle.com/v1/standings/${today}`,
+    `${NHL_API}/standings/${today}`,
     { next: { revalidate: 300 } }
   );
   if (!res.ok) return null;
   const data = await res.json();
   return data.standings || [];
+}
+
+async function fetchBracket(): Promise<PlayoffBracketResponse | null> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(`${NHL_API}/playoff-bracket/20252026`, {
+      next: { revalidate: 60 },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+function isPlayoffActive(bracket: PlayoffBracketResponse | null): boolean {
+  if (!bracket?.rounds) return false;
+  return bracket.rounds.some(r => r.series && r.series.length > 0);
+}
+
+const ROUND_LABELS: Record<number, string> = {
+  1: 'First Round',
+  2: 'Second Round',
+  3: 'Conf. Finals',
+  4: 'Cup Final',
+};
+
+function buildCupOddsTeams(
+  bracket: PlayoffBracketResponse,
+  standingsMap: Map<string, StandingsTeam>
+): CupOddsTeam[] {
+  const teams: CupOddsTeam[] = [];
+
+  for (const round of bracket.rounds || []) {
+    for (const series of round.series || []) {
+      for (const mt of series.matchupTeams || []) {
+        const abbrev = mt.team.abbrev;
+        if (teams.some(t => t.abbrev === abbrev)) continue;
+
+        const standing = standingsMap.get(abbrev);
+        const isTop = mt.seed?.isTop;
+        const wins = isTop ? series.topSeedWins : series.bottomSeedWins;
+        const losses = isTop ? series.bottomSeedWins : series.topSeedWins;
+        const isEliminated = losses >= 4;
+
+        // Compute current series win probability
+        const oppMt = series.matchupTeams?.find(t => t.team.abbrev !== abbrev);
+        const oppStanding = oppMt ? standingsMap.get(oppMt.team.abbrev) : null;
+        let currentSeriesOdds = 50;
+        if (standing && oppStanding && !isEliminated && wins < 4) {
+          currentSeriesOdds = computeSeriesWinProbability(
+            standing.pointPctg, oppStanding.pointPctg, wins, losses, !!isTop
+          );
+        } else if (wins >= 4) {
+          currentSeriesOdds = 100;
+        } else if (isEliminated) {
+          currentSeriesOdds = 0;
+        }
+
+        // Simple chain for cup odds
+        const roundsRemaining = 5 - round.roundNumber;
+        let cupOdds = currentSeriesOdds / 100;
+        for (let r = 1; r < roundsRemaining; r++) {
+          const p = computeSeriesWinProbability(
+            standing?.pointPctg || 0.5, 0.5, 0, 0, (mt.seed?.rank || 8) <= 4
+          );
+          cupOdds *= p / 100;
+        }
+
+        const seriesStatusParts = [];
+        if (wins >= 4) seriesStatusParts.push('Won');
+        else if (isEliminated) seriesStatusParts.push('Lost');
+        else if (wins === losses) seriesStatusParts.push(`Tied ${wins}-${losses}`);
+        else if (wins > losses) seriesStatusParts.push(`Leads ${wins}-${losses}`);
+        else seriesStatusParts.push(`Trails ${wins}-${losses}`);
+
+        const slug = abbrevToSlug[abbrev] || '';
+
+        teams.push({
+          abbrev,
+          name: mt.team.commonName?.default || mt.team.name?.default || abbrev,
+          logo: mt.team.logo,
+          slug,
+          cupOdds: isEliminated ? 0 : Math.round(cupOdds * 1000) / 10,
+          currentRound: ROUND_LABELS[round.roundNumber] || `R${round.roundNumber}`,
+          seriesStatus: seriesStatusParts.join(''),
+          isEliminated,
+        });
+      }
+    }
+  }
+
+  return teams;
 }
 
 function buildTeamData(standings: StandingsTeam[]): TeamData[] {
@@ -74,7 +175,8 @@ function buildTeamData(standings: StandingsTeam[]): TeamData[] {
 }
 
 export default async function NHLPlayoffOddsPage() {
-  const standings = await fetchStandings();
+  const [standings, bracket] = await Promise.all([fetchStandings(), fetchBracket()]);
+  const playoffsActive = isPlayoffActive(bracket);
 
   if (!standings || standings.length === 0) {
     return (
@@ -184,7 +286,27 @@ export default async function NHLPlayoffOddsPage() {
 
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 pb-16">
-          <PlayoffOddsClient teams={teams} />
+          <div className="mt-6 mb-4 text-center">
+            <Link
+              href="/playoffs"
+              className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-500 text-sm font-medium"
+            >
+              View {playoffsActive ? 'Full' : 'Projected'} Playoff Bracket &rarr;
+            </Link>
+          </div>
+
+          {playoffsActive && bracket ? (
+            <>
+              <StanleyCupOddsTable
+                teams={buildCupOddsTeams(
+                  bracket,
+                  new Map(standings.map(t => [t.teamAbbrev.default, t]))
+                )}
+              />
+            </>
+          ) : (
+            <PlayoffOddsClient teams={teams} />
+          )}
 
           {/* Narrative Section */}
           <section className="mt-12 max-w-3xl mx-auto">

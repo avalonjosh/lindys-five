@@ -1,0 +1,116 @@
+'use client';
+
+import type { BracketMatchup } from '@/lib/types/playoffs';
+
+interface BracketCellProps {
+  matchup: BracketMatchup;
+}
+
+export default function BracketCell({ matchup }: BracketCellProps) {
+  const { topSeed, bottomSeed, topSeedWins, bottomSeedWins, isComplete, topSeedSeriesWinPct, bottomSeedSeriesWinPct } = matchup;
+
+  if (!topSeed || !bottomSeed) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm h-full flex items-center justify-center min-h-[72px]">
+        <span className="text-xs text-gray-400">TBD</span>
+      </div>
+    );
+  }
+
+  const topPct = Math.round(topSeedSeriesWinPct);
+  const bottomPct = Math.round(bottomSeedSeriesWinPct);
+  const liveGame = matchup.games.find(g => g.gameState === 'LIVE' || g.gameState === 'CRIT');
+
+  return (
+    <div className={`bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden ${
+      liveGame ? 'ring-2 ring-green-400' : ''
+    }`}>
+      {/* Top team */}
+      <TeamRow
+        logo={topSeed.logo}
+        abbrev={topSeed.abbrev}
+        seed={topSeed.seed}
+        wins={topSeedWins}
+        pct={topPct}
+        isWinner={isComplete && topSeedWins >= 4}
+        isLoser={isComplete && topSeedWins < 4}
+        showPct={!isComplete}
+      />
+      {/* Divider with probability bar */}
+      <div className="relative h-[3px] bg-gray-100">
+        {!isComplete && (
+          <>
+            <div
+              className="absolute top-0 left-0 h-full bg-blue-400 transition-all duration-500"
+              style={{ width: `${topPct}%` }}
+            />
+            <div
+              className="absolute top-0 right-0 h-full bg-orange-300 transition-all duration-500"
+              style={{ width: `${bottomPct}%` }}
+            />
+          </>
+        )}
+      </div>
+      {/* Bottom team */}
+      <TeamRow
+        logo={bottomSeed.logo}
+        abbrev={bottomSeed.abbrev}
+        seed={bottomSeed.seed}
+        wins={bottomSeedWins}
+        pct={bottomPct}
+        isWinner={isComplete && bottomSeedWins >= 4}
+        isLoser={isComplete && bottomSeedWins < 4}
+        showPct={!isComplete}
+      />
+    </div>
+  );
+}
+
+function TeamRow({
+  logo,
+  abbrev,
+  seed,
+  wins,
+  pct,
+  isWinner,
+  isLoser,
+  showPct,
+}: {
+  logo: string;
+  abbrev: string;
+  seed: number;
+  wins: number;
+  pct: number;
+  isWinner: boolean;
+  isLoser: boolean;
+  showPct: boolean;
+}) {
+  return (
+    <div className={`flex items-center gap-1.5 px-2 py-1.5 ${isLoser ? 'opacity-40' : ''}`}>
+      <img src={logo} alt={abbrev} className="w-6 h-6 object-contain flex-shrink-0" />
+      <span className="text-[11px] text-gray-400 w-3 text-center flex-shrink-0">{seed}</span>
+      <span className={`text-xs font-semibold flex-1 truncate ${
+        isWinner ? 'text-gray-900' : 'text-gray-700'
+      }`}>
+        {abbrev}
+      </span>
+      {showPct && (
+        <span className={`text-[10px] font-medium tabular-nums flex-shrink-0 ${
+          pct >= 50 ? 'text-emerald-600' : 'text-gray-400'
+        }`}>
+          {pct}%
+        </span>
+      )}
+      <div className="flex gap-0.5 flex-shrink-0">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div
+            key={i}
+            className={`w-2 h-2 rounded-full ${
+              i < wins ? 'bg-emerald-500' : 'bg-gray-200'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
