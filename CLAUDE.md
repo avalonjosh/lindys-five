@@ -91,9 +91,127 @@ All endpoints use base URL `https://api-web.nhle.com/v1` (proxied through `/api/
 
 **Admin sections:** Analytics, Posts (blog CRUD + cron triggers), Outreach (contacts), Newsletter (subscriber management + email sending).
 
-**Newsletter:** Subscribers stored in Vercel KV. Email verification with 24h tokens. Emails sent via Resend. Two email types: game-recap and set-recap. Webhook tracking for delivery/open/click/bounce rates. Subscribers can subscribe to specific teams.
-
 **Environment variables needed:** `ADMIN_PASSWORD_HASH`, `ADMIN_SESSION_SECRET`, `RESEND_API_KEY`, `NEXT_PUBLIC_SITE_URL`, `CRON_SECRET`.
+
+## Cron Jobs
+
+All crons are configured in `vercel.json` and authorized via `CRON_SECRET` Bearer token. Admin can manually trigger any cron via `POST /api/cron/trigger`.
+
+| Cron | Schedule (UTC) | Purpose |
+|------|---------------|---------|
+| `game-recap` | `0 4 * * *` (4am daily) | Generate blog post for completed Sabres games (last 48h). Uses Claude to write 400-600 word recap from boxscore/play-by-play data. Auto fact-checks before publishing. |
+| `set-recap` | `0 11 * * 0` (11am Sundays) | Generate blog post for completed 5-game sets. 600-900 word analysis. Accepts optional `setNumber` and `force` params. |
+| `weekly-roundup` | `0 10 * * 1` (10am Mondays) | Generate 600-900 word weekly recap of Sabres games (Mon-Sun). |
+| `news-scan` | `0 10 * * 2,5` (10am Tue/Fri) | Search for Sabres news via Claude web search. Importance >= 7 only. Jaccard similarity (40%) for dedup against recent stories. |
+| `bills-game-recap` | `0 5,10 * * 1` (5am+10am Mon) | Bills game recaps from ESPN API data. |
+| `bills-weekly-roundup` | `0 10 * * 1` (10am Mondays) | Bills weekly roundup. Detects NFL season vs offseason. |
+| `bills-news-scan` | `0 10 * * 2,5` (10am Tue/Fri) | Bills news scan (same pattern as Sabres). |
+| `email-game-recap` | `0 12 * * *` (noon daily) | Send game recap emails to verified subscribers for any team with completed games in last 24h. |
+| `email-set-recap` | `0 14 * * *` (2pm daily) | Send set recap emails when a 5-game set completes. |
+| `analytics-cleanup` | `0 3 * * *` (3am daily) | Delete hourly keys >7 days old, daily keys >90 days old. Trim sorted sets to top 200/100. |
+
+**AI models used:** Claude Sonnet 4 (content generation with prompt caching), Claude Haiku (news importance detection).
+
+**Content pipeline:** Cron generates blog post → auto-publishes if setting enabled → email cron sends newsletter to subscribers.
+
+## Email Trigger Flow
+
+### 1. Verification Email
+**Trigger:** User subscribes via signup form → `POST /api/newsletter/subscribe`
+**Flow:** Create subscriber (unverified) → generate 24h token → send email with verify link → user clicks → `GET /api/newsletter/verify` → mark verified
+
+### 2. Game Recap Email
+**Trigger:** `email-game-recap` cron (noon UTC daily)
+**Flow:** Check NHL API for completed games → for each team with games + subscribers → check dupe flag (`email:game-recap-sent:{team}:{date}`, 48h expiry) → fetch boxscore + standings → compute playoff probability delta → render email with score, goal scorers, three stars, next game CTA → batch send (100/batch) via Resend
+**Manual:** `POST /api/newsletter/send` with `{ team, type: "game-recap" }`
+
+### 3. Set Recap Email
+**Trigger:** `email-set-recap` cron (2pm UTC daily)
+**Flow:** Fetch season schedule → compute 5-game sets → find latest completed set → check dupe flag (`email:set-recap-sent:{team}:{setNumber}`, no expiry) → render email with set record, target met/missed, game results, playoff probability → batch send
+**Manual:** `POST /api/newsletter/send` with `{ team, type: "set-recap" }`
+
+### 4. Simple Blog Recap (fallback)
+**Trigger:** Manual `POST /api/newsletter/send` with `{ slug }` when data-driven email fails
+**Flow:** Fetch blog post by slug → convert markdown to email HTML → render simple template with content + buttons
+
+### Webhook Tracking
+**Endpoint:** `POST /api/webhook/resend` — receives Resend delivery events
+**Events tracked:** `email.delivered`, `email.opened`, `email.clicked`, `email.bounced`, `email.complained`
+**Flow:** Resend sends webhook → lookup send record via `email:resend-map:{resendId}` → increment stat counter on `email:send:{sendRecordId}`
+
+## KV Data Model
+
+### Blog
+| Key Pattern | Type | Expiry | Purpose |
+|-------------|------|--------|---------|
+| `blog:post:{postId}` | String (JSON) | None | Full BlogPost object |
+| `blog:slug:{slug}` | String | None | Slug → post ID mapping |
+| `blog:posts` | Sorted Set | None | All post IDs (score = publishedAt ms) |
+| `blog:posts:{team}` | Sorted Set | None | Post IDs by team |
+| `blog:posts:type:{type}` | Sorted Set | None | Post IDs by type (game-recap, news-analysis, weekly-roundup, set-recap, custom) |
+| `blog:views:{postId}` | Integer | None | View counter |
+| `blog:pinned` | String | None | ID of pinned post |
+| `blog:settings:auto-publish-{type}` | Boolean | None | Auto-publish toggle per content type |
+
+### Cron Processing
+| Key Pattern | Type | Expiry | Purpose |
+|-------------|------|--------|---------|
+| `blog:gamerecap:processed` | Set | None | Processed Sabres game IDs |
+| `blog:bills-gamerecap:processed` | Set | None | Processed Bills game IDs |
+| `blog:gamerecap:log:{gameId}` | String (JSON) | None | Processing audit log |
+| `blog:setrecap:processed` | Set | None | Processed set numbers |
+| `blog:setrecap:log:{setNumber}` | String (JSON) | None | Set recap audit log |
+| `blog:news:processed` | Set | None | Processed Sabres news story keys |
+| `blog:bills-news:processed` | Set | None | Processed Bills news story keys |
+| `blog:news:recent-keywords` | List | None | Last 50 story objects for dedup |
+| `blog:bills-news:recent-keywords` | List | None | Last 50 Bills story objects |
+| `blog:weekly:last` | String (date) | None | Last Sabres weekly roundup date |
+| `blog:bills-weekly:last` | String (date) | None | Last Bills weekly roundup date |
+
+### Newsletter
+| Key Pattern | Type | Expiry | Purpose |
+|-------------|------|--------|---------|
+| `email:subscriber:{id}` | String (JSON) | None | Subscriber record (email, teams, verified, source) |
+| `email:subscribers` | Set | None | All subscriber IDs |
+| `email:subscribers:team:{team}` | Set | None | Subscriber IDs per team |
+| `email:verification:{token}` | String (JSON) | 24h | Verification token → subscriberId + expiresAt |
+| `email:send:{id}` | String (JSON) | None | Send record (stats: delivered, opened, clicked, bounced) |
+| `email:sends` | Sorted Set | None | Send IDs sorted by timestamp |
+| `email:resend-map:{resendId}` | String | 30 days | Resend email ID → send record ID (for webhook tracking) |
+| `email:game-recap-sent:{team}:{date}` | Boolean | 48h | Duplicate prevention per team/day |
+| `email:set-recap-sent:{team}:{setNumber}` | Boolean | None | Duplicate prevention per set |
+
+### Analytics
+| Key Pattern | Type | Expiry | Purpose |
+|-------------|------|--------|---------|
+| `analytics:pv:{date}` | Integer | 90 days | Daily pageview count |
+| `analytics:uv:{date}` | HyperLogLog | 90 days | Unique visitors (cardinality) |
+| `analytics:pv:hourly:{date}:{hour}` | Integer | 7 days | Hourly pageviews |
+| `analytics:top:pages:{date}` | Sorted Set | 90 days | Top pages by day |
+| `analytics:top:pages:alltime` | Sorted Set | None | Top 200 all-time pages |
+| `analytics:top:referrers:{date}` | Sorted Set | 90 days | Referrers by day |
+| `analytics:top:referrers:alltime` | Sorted Set | None | Top 100 all-time referrers |
+| `analytics:top:devices:{date}` | Sorted Set | 90 days | Device breakdown |
+| `analytics:top:browsers:{date}` | Sorted Set | 90 days | Browser breakdown |
+| `analytics:top:countries:{date}` | Sorted Set | 90 days | Country breakdown |
+| `analytics:top:teams:{date}` | Sorted Set | 90 days | Team page views |
+| `analytics:top:utm_source:{date}` | Sorted Set | 90 days | UTM source tracking |
+| `analytics:total:pv` | Integer | None | All-time pageview total |
+| `analytics:live:{visitorId}` | String | 60s | Currently active visitor's page |
+| `analytics:livefeed` | List | None | Last 50 real-time events |
+| `analytics:visitors:seen` | Set | None | All-time visitor IDs (new vs returning) |
+| `analytics:sessions:{date}` | Integer | 90 days | Session count |
+| `analytics:bounces:{date}` | Integer | 90 days | Bounce count |
+| `analytics:duration:sum:{date}` | Integer | 90 days | Total session duration (seconds) |
+| `analytics:duration:count:{date}` | Integer | 90 days | Session count for avg calculation |
+| `analytics:clicks:{date}` | Sorted Set | 90 days | Click targets by day |
+| `analytics:clicks:alltime` | Sorted Set | None | Top 100 all-time clicks |
+
+### Outreach
+| Key Pattern | Type | Expiry | Purpose |
+|-------------|------|--------|---------|
+| `outreach:contact:{id}` | String (JSON) | None | Media/influencer contact record |
+| `outreach:contacts` | Set | None | All contact IDs |
 
 ## SEO Implementation
 
