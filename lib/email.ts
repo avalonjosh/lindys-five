@@ -39,25 +39,25 @@ function renderVerificationEmail(verifyUrl: string): string {
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 20px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:20px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;">
-        <tr><td style="background:#003087;padding:24px 32px;">
+      <table cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
+        <tr><td style="background:#003087;padding:20px;">
           <h1 style="margin:0;color:#ffffff;font-size:24px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;letter-spacing:2px;text-transform:uppercase;font-style:normal;">Lindy's Five</h1>
         </td></tr>
-        <tr><td style="padding:32px;">
+        <tr><td style="padding:24px 20px;">
           <h2 style="margin:0 0 16px;color:#1e293b;font-size:20px;">Confirm your subscription</h2>
           <p style="margin:0 0 24px;color:#475569;font-size:16px;line-height:1.6;">
             Thanks for signing up for game recaps and set recaps from Lindy's Five. Click below to confirm your email:
           </p>
-          <a href="${verifyUrl}" style="display:inline-block;background:#003087;color:#ffffff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;">
+          <a href="${verifyUrl}" style="display:inline-block;background:#003087;color:#ffffff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;">
             Confirm Email
           </a>
           <p style="margin:24px 0 0;color:#94a3b8;font-size:13px;line-height:1.5;">
             If you didn't sign up, you can ignore this email. This link expires in 24 hours.
           </p>
         </td></tr>
-        <tr><td style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0;">
+        <tr><td style="background:#f8fafc;padding:16px 20px;border-top:1px solid #e2e8f0;">
           <p style="margin:0;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; NHL Playoff Odds &amp; Standings</p>
         </td></tr>
       </table>
@@ -456,12 +456,12 @@ function renderBoxscoreEmail(data: GameRecapData, blogPost?: BlogPost): string {
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 20px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:20px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;">
+      <table cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
 
         <!-- Header -->
-        <tr><td style="background:${primaryColor};padding:16px 32px;">
+        <tr><td style="background:${primaryColor};padding:16px 20px;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td><h1 style="margin:0;color:#ffffff;font-size:22px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;letter-spacing:2px;text-transform:uppercase;font-style:normal;">Lindy's Five</h1></td>
@@ -471,25 +471,25 @@ function renderBoxscoreEmail(data: GameRecapData, blogPost?: BlogPost): string {
         </td></tr>
 
         <!-- Score Block -->
-        <tr><td style="padding:28px 32px 20px;background:#ffffff;">
+        <tr><td style="padding:24px 20px 20px;background:#ffffff;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td align="center" width="40%">
-                <img src="${awayLogo}" alt="${awayAbbrev}" width="56" style="display:block;margin:0 auto 8px;max-height:56px;" />
+              <td align="center" width="35%">
+                <img src="${awayLogo}" alt="${awayAbbrev}" width="48" style="display:block;margin:0 auto 8px;max-height:48px;" />
                 <span style="font-size:14px;font-weight:700;color:#1e293b;">${awayAbbrev}</span>
               </td>
-              <td align="center" width="20%">
+              <td align="center" width="30%">
                 <table cellpadding="0" cellspacing="0">
                   <tr>
-                    <td align="right" style="font-size:36px;font-weight:800;color:${awayWon ? '#1e293b' : '#64748b'};padding-right:8px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;">${awayScore}</td>
-                    <td style="font-size:18px;color:#94a3b8;padding:0 4px;">-</td>
-                    <td align="left" style="font-size:36px;font-weight:800;color:${homeWon ? '#1e293b' : '#64748b'};padding-left:8px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;">${homeScore}</td>
+                    <td align="right" style="font-size:32px;font-weight:800;color:${awayWon ? '#1e293b' : '#64748b'};padding-right:6px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;">${awayScore}</td>
+                    <td style="font-size:18px;color:#94a3b8;padding:0 2px;">-</td>
+                    <td align="left" style="font-size:32px;font-weight:800;color:${homeWon ? '#1e293b' : '#64748b'};padding-left:6px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;">${homeScore}</td>
                   </tr>
                 </table>
                 <span style="display:block;margin-top:4px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">${finalLabel}</span>
               </td>
-              <td align="center" width="40%">
-                <img src="${homeLogo}" alt="${homeAbbrevDisplay}" width="56" style="display:block;margin:0 auto 8px;max-height:56px;" />
+              <td align="center" width="35%">
+                <img src="${homeLogo}" alt="${homeAbbrevDisplay}" width="48" style="display:block;margin:0 auto 8px;max-height:48px;" />
                 <span style="font-size:14px;font-weight:700;color:#1e293b;">${homeAbbrevDisplay}</span>
               </td>
             </tr>
@@ -497,7 +497,7 @@ function renderBoxscoreEmail(data: GameRecapData, blogPost?: BlogPost): string {
         </td></tr>
 
         <!-- Playoff Impact (both teams) -->
-        <tr><td style="padding:0 32px 20px;">
+        <tr><td style="padding:0 20px 20px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
             <tr><td style="padding:12px 16px 4px;">
               <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Playoff Impact</span>
@@ -535,7 +535,7 @@ function renderBoxscoreEmail(data: GameRecapData, blogPost?: BlogPost): string {
         </td></tr>
 
         <!-- Playoff Probability -->
-        <tr><td style="padding:0 32px 20px;">
+        <tr><td style="padding:0 20px 20px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
             <tr>
               <td style="padding:14px 16px;">
@@ -560,8 +560,8 @@ function renderBoxscoreEmail(data: GameRecapData, blogPost?: BlogPost): string {
           </table>
         </td></tr>
 
-        <!-- Season Progress -->
-        <tr><td style="padding:0 32px 20px;">
+        <!-- Season Progress (2x2 grid for mobile) -->
+        <tr><td style="padding:0 20px 20px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
             <tr><td style="padding:12px 16px 4px;">
               <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Season Progress</span>
@@ -569,19 +569,21 @@ function renderBoxscoreEmail(data: GameRecapData, blogPost?: BlogPost): string {
             <tr><td style="padding:4px 16px 14px;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td align="center" width="25%" style="padding:6px 0;">
+                  <td align="center" width="50%" style="padding:6px 0;">
                     <span style="display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;">Record</span>
                     <span style="display:block;font-size:16px;font-weight:700;color:#1e293b;">${seasonStats.record}</span>
                   </td>
-                  <td align="center" width="25%" style="padding:6px 0;">
+                  <td align="center" width="50%" style="padding:6px 0;">
                     <span style="display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;">Points</span>
                     <span style="display:block;font-size:16px;font-weight:700;color:#1e293b;">${seasonStats.points}</span>
                   </td>
-                  <td align="center" width="25%" style="padding:6px 0;">
+                </tr>
+                <tr>
+                  <td align="center" width="50%" style="padding:6px 0;">
                     <span style="display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;">Pace</span>
                     <span style="display:block;font-size:16px;font-weight:700;color:#1e293b;">${seasonStats.pace}</span>
                   </td>
-                  <td align="center" width="25%" style="padding:6px 0;">
+                  <td align="center" width="50%" style="padding:6px 0;">
                     <span style="display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;">Projected</span>
                     <span style="display:block;font-size:16px;font-weight:700;color:#1e293b;">${seasonStats.projected}</span>
                   </td>
@@ -604,7 +606,7 @@ function renderBoxscoreEmail(data: GameRecapData, blogPost?: BlogPost): string {
         ${blogPost ? renderBlogLink(blogPost) : ''}
 
         <!-- Footer -->
-        <tr><td style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0;">
+        <tr><td style="background:#f8fafc;padding:16px 20px;border-top:1px solid #e2e8f0;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td><p style="margin:0;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; NHL Playoff Odds &amp; Standings</p></td>
@@ -663,24 +665,19 @@ function renderGoalScorersSection(
   };
 
   return `
-        <tr><td style="padding:0 32px 20px;">
+        <tr><td style="padding:0 20px 20px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
             <tr><td style="padding:12px 16px 4px;">
               <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Goal Scorers</span>
             </td></tr>
-            <tr><td style="padding:4px 16px 14px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td width="50%" valign="top" style="padding-right:8px;">
-                    <span style="display:block;font-size:12px;font-weight:700;color:${primaryColor};margin-bottom:4px;">${teamAbbrev}</span>
-                    <table cellpadding="0" cellspacing="0" width="100%">${renderGoalList(goals.team, teamAbbrev)}</table>
-                  </td>
-                  <td width="50%" valign="top" style="padding-left:8px;border-left:1px solid #e2e8f0;">
-                    <span style="display:block;font-size:12px;font-weight:700;color:#64748b;margin-bottom:4px;">${oppAbbrev}</span>
-                    <table cellpadding="0" cellspacing="0" width="100%">${renderGoalList(goals.opponent, oppAbbrev)}</table>
-                  </td>
-                </tr>
-              </table>
+            <tr><td style="padding:4px 16px 10px;">
+              <span style="display:block;font-size:12px;font-weight:700;color:${primaryColor};margin-bottom:4px;">${teamAbbrev}</span>
+              <table cellpadding="0" cellspacing="0" width="100%">${renderGoalList(goals.team, teamAbbrev)}</table>
+            </td></tr>
+            <tr><td style="padding:0 16px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #e2e8f0;"></td></tr></table></td></tr>
+            <tr><td style="padding:10px 16px 14px;">
+              <span style="display:block;font-size:12px;font-weight:700;color:#64748b;margin-bottom:4px;">${oppAbbrev}</span>
+              <table cellpadding="0" cellspacing="0" width="100%">${renderGoalList(goals.opponent, oppAbbrev)}</table>
             </td></tr>
           </table>
         </td></tr>`;
@@ -701,24 +698,30 @@ function renderThreeStarsSection(stars: ThreeStar[]): string {
       ].filter(Boolean).join(', ') || `${s.position}`;
 
       return `
-        <td align="center" width="33%" style="padding:4px;">
-          <img src="${s.headshot}" alt="${name}" width="48" height="48" style="border-radius:50%;display:block;margin:0 auto 6px;" />
-          <span style="display:block;font-size:10px;color:#94a3b8;font-weight:700;">${starLabels[i]} Star</span>
-          <span style="display:block;font-size:13px;font-weight:700;color:#1e293b;margin-top:2px;">${name}</span>
-          <span style="display:block;font-size:12px;color:#64748b;">${s.teamAbbrev?.default} &middot; ${statLine}</span>
-        </td>`;
+            <tr><td style="padding:6px 0;${i < 2 ? 'border-bottom:1px solid #e2e8f0;' : ''}">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td width="48" valign="middle"><img src="${s.headshot}" alt="${name}" width="40" height="40" style="border-radius:50%;display:block;" /></td>
+                  <td valign="middle" style="padding-left:10px;">
+                    <span style="font-size:10px;color:#94a3b8;font-weight:700;">${starLabels[i]} Star</span><br/>
+                    <span style="font-size:13px;font-weight:700;color:#1e293b;">${name}</span>
+                    <span style="font-size:12px;color:#64748b;"> &middot; ${s.teamAbbrev?.default} &middot; ${statLine}</span>
+                  </td>
+                </tr>
+              </table>
+            </td></tr>`;
     })
     .join('');
 
   return `
-        <tr><td style="padding:0 32px 20px;">
+        <tr><td style="padding:0 20px 20px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
             <tr><td style="padding:12px 16px 4px;">
               <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Three Stars</span>
             </td></tr>
-            <tr><td style="padding:4px 16px 14px;">
+            <tr><td style="padding:4px 16px 10px;">
               <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>${starsHtml}</tr>
+                ${starsHtml}
               </table>
             </td></tr>
           </table>
@@ -730,13 +733,13 @@ function renderNextGameCTA(
   primaryColor: string
 ): string {
   return `
-        <tr><td style="padding:0 32px 24px;">
+        <tr><td style="padding:0 20px 24px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="background:${primaryColor};border-radius:8px;">
-            <tr><td style="padding:20px 24px;" align="center">
+            <tr><td style="padding:20px 16px;" align="center">
               <span style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Next Game</span>
-              <span style="display:block;font-size:20px;font-weight:800;color:#ffffff;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;text-transform:uppercase;letter-spacing:1px;font-style:normal;">${nextGame.opponent}</span>
+              <span style="display:block;font-size:18px;font-weight:800;color:#ffffff;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;text-transform:uppercase;letter-spacing:1px;font-style:normal;">${nextGame.opponent}</span>
               <span style="display:block;font-size:14px;color:rgba(255,255,255,0.8);margin:6px 0 16px;">${nextGame.date} &middot; ${nextGame.time} ET</span>
-              <a href="${nextGame.ticketLink}" style="display:inline-block;background:#ffffff;color:${primaryColor};padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">
+              <a href="${nextGame.ticketLink}" style="display:inline-block;background:#ffffff;color:${primaryColor};padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">
                 Get Tickets
               </a>
             </td></tr>
@@ -747,7 +750,7 @@ function renderNextGameCTA(
 function renderBlogLink(post: BlogPost): string {
   const postUrl = `${SITE_URL}/blog/${post.team}/${post.slug}`;
   return `
-        <tr><td style="padding:0 32px 20px;" align="center">
+        <tr><td style="padding:0 20px 20px;" align="center">
           <a href="${postUrl}" style="display:inline-block;background:#ffffff;color:#003087;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;border:2px solid #003087;">
             Read Full Written Recap &rarr;
           </a>
@@ -817,12 +820,12 @@ function renderSetRecapEmail(data: SetRecapEmailData): string {
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 20px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:20px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;">
+      <table cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
 
         <!-- Header -->
-        <tr><td style="background:${primaryColor};padding:16px 32px;">
+        <tr><td style="background:${primaryColor};padding:16px 20px;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td><h1 style="margin:0;color:#ffffff;font-size:22px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;letter-spacing:2px;text-transform:uppercase;font-style:normal;">Lindy's Five</h1></td>
@@ -832,7 +835,7 @@ function renderSetRecapEmail(data: SetRecapEmailData): string {
         </td></tr>
 
         <!-- Set Summary Hero -->
-        <tr><td style="padding:28px 32px 20px;background:#ffffff;">
+        <tr><td style="padding:24px 20px 20px;background:#ffffff;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td>
@@ -840,7 +843,7 @@ function renderSetRecapEmail(data: SetRecapEmailData): string {
                 <span style="display:block;font-size:13px;color:#64748b;margin-top:2px;">${dateRange}</span>
               </td>
               <td align="right">
-                <span style="display:block;font-size:36px;font-weight:800;color:${primaryColor};font-family:Impact,'Arial Narrow',Helvetica,sans-serif;font-style:normal;">${set.points}</span>
+                <span style="display:block;font-size:32px;font-weight:800;color:${primaryColor};font-family:Impact,'Arial Narrow',Helvetica,sans-serif;font-style:normal;">${set.points}</span>
                 <span style="display:block;font-size:12px;color:#64748b;">of ${set.maxPoints} points</span>
               </td>
             </tr>
@@ -848,30 +851,30 @@ function renderSetRecapEmail(data: SetRecapEmailData): string {
         </td></tr>
 
         <!-- Record Row -->
-        <tr><td style="padding:0 32px 12px;">
+        <tr><td style="padding:0 20px 12px;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td align="center" width="33%" style="padding:10px 4px;">
+              <td align="center" width="33%" style="padding:8px 4px;">
                 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border-radius:8px;">
-                  <tr><td align="center" style="padding:10px;">
-                    <span style="display:block;font-size:28px;font-weight:800;color:#16a34a;">${set.wins}</span>
-                    <span style="display:block;font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase;">Wins</span>
+                  <tr><td align="center" style="padding:10px 4px;">
+                    <span style="display:block;font-size:24px;font-weight:800;color:#16a34a;">${set.wins}</span>
+                    <span style="display:block;font-size:10px;font-weight:700;color:#16a34a;text-transform:uppercase;">Wins</span>
                   </td></tr>
                 </table>
               </td>
-              <td align="center" width="33%" style="padding:10px 4px;">
+              <td align="center" width="33%" style="padding:8px 4px;">
                 <table width="100%" cellpadding="0" cellspacing="0" style="background:#fefce8;border-radius:8px;">
-                  <tr><td align="center" style="padding:10px;">
-                    <span style="display:block;font-size:28px;font-weight:800;color:#ca8a04;">${set.otLosses}</span>
-                    <span style="display:block;font-size:11px;font-weight:700;color:#ca8a04;text-transform:uppercase;">OT Losses</span>
+                  <tr><td align="center" style="padding:10px 4px;">
+                    <span style="display:block;font-size:24px;font-weight:800;color:#ca8a04;">${set.otLosses}</span>
+                    <span style="display:block;font-size:10px;font-weight:700;color:#ca8a04;text-transform:uppercase;">OTL</span>
                   </td></tr>
                 </table>
               </td>
-              <td align="center" width="33%" style="padding:10px 4px;">
+              <td align="center" width="33%" style="padding:8px 4px;">
                 <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef2f2;border-radius:8px;">
-                  <tr><td align="center" style="padding:10px;">
-                    <span style="display:block;font-size:28px;font-weight:800;color:#dc2626;">${set.losses}</span>
-                    <span style="display:block;font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;">Losses</span>
+                  <tr><td align="center" style="padding:10px 4px;">
+                    <span style="display:block;font-size:24px;font-weight:800;color:#dc2626;">${set.losses}</span>
+                    <span style="display:block;font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase;">Losses</span>
                   </td></tr>
                 </table>
               </td>
@@ -880,12 +883,12 @@ function renderSetRecapEmail(data: SetRecapEmailData): string {
         </td></tr>
 
         <!-- Target Badge -->
-        <tr><td style="padding:0 32px 20px;" align="center">
+        <tr><td style="padding:0 20px 20px;" align="center">
           <span style="display:inline-block;background:${targetBadgeBg};color:${targetBadgeColor};padding:8px 20px;border-radius:20px;font-size:13px;font-weight:700;">${targetIcon} ${targetText}</span>
         </td></tr>
 
         <!-- Game Results -->
-        <tr><td style="padding:0 32px 20px;">
+        <tr><td style="padding:0 20px 20px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
             <tr><td style="padding:12px 16px 4px;">
               <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Game Results</span>
@@ -899,7 +902,7 @@ function renderSetRecapEmail(data: SetRecapEmailData): string {
         </td></tr>
 
         <!-- Playoff Probability -->
-        <tr><td style="padding:0 32px 20px;">
+        <tr><td style="padding:0 20px 20px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
             <tr>
               <td style="padding:14px 16px;">
@@ -924,8 +927,8 @@ function renderSetRecapEmail(data: SetRecapEmailData): string {
           </table>
         </td></tr>
 
-        <!-- Season Progress -->
-        <tr><td style="padding:0 32px 20px;">
+        <!-- Season Progress (2x2 grid for mobile) -->
+        <tr><td style="padding:0 20px 20px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
             <tr><td style="padding:12px 16px 4px;">
               <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Season Progress</span>
@@ -933,19 +936,21 @@ function renderSetRecapEmail(data: SetRecapEmailData): string {
             <tr><td style="padding:4px 16px 14px;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td align="center" width="25%" style="padding:6px 0;">
+                  <td align="center" width="50%" style="padding:6px 0;">
                     <span style="display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;">Record</span>
                     <span style="display:block;font-size:16px;font-weight:700;color:#1e293b;">${seasonStats.record}</span>
                   </td>
-                  <td align="center" width="25%" style="padding:6px 0;">
+                  <td align="center" width="50%" style="padding:6px 0;">
                     <span style="display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;">Points</span>
                     <span style="display:block;font-size:16px;font-weight:700;color:#1e293b;">${seasonStats.points}</span>
                   </td>
-                  <td align="center" width="25%" style="padding:6px 0;">
+                </tr>
+                <tr>
+                  <td align="center" width="50%" style="padding:6px 0;">
                     <span style="display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;">Pace</span>
                     <span style="display:block;font-size:16px;font-weight:700;color:#1e293b;">${seasonStats.pace}</span>
                   </td>
-                  <td align="center" width="25%" style="padding:6px 0;">
+                  <td align="center" width="50%" style="padding:6px 0;">
                     <span style="display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;">Projected</span>
                     <span style="display:block;font-size:16px;font-weight:700;color:#1e293b;">${seasonStats.projected}</span>
                   </td>
@@ -959,7 +964,7 @@ function renderSetRecapEmail(data: SetRecapEmailData): string {
         ${nextGame ? renderNextGameCTA(nextGame, primaryColor) : ''}
 
         <!-- Footer -->
-        <tr><td style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0;">
+        <tr><td style="background:#f8fafc;padding:16px 20px;border-top:1px solid #e2e8f0;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td><p style="margin:0;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; NHL Playoff Odds &amp; Standings</p></td>
@@ -1101,33 +1106,35 @@ function renderSimpleBlogRecap(post: BlogPost, postUrl: string): string {
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 20px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:20px 12px;">
     <tr><td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;">
-        <tr><td style="background:${primaryColor};padding:24px 32px;">
+      <table cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;">
+        <tr><td style="background:${primaryColor};padding:20px;">
           <h1 style="margin:0;color:#ffffff;font-size:24px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;letter-spacing:2px;text-transform:uppercase;font-style:normal;">Lindy's Five</h1>
         </td></tr>
-        <tr><td style="padding:32px;">
+        <tr><td style="padding:20px;">
           <h2 style="margin:0 0 20px;color:#1e293b;font-size:22px;">${post.title}</h2>
           <p style="margin:0 0 16px;color:#334155;font-size:15px;line-height:1.7;">
             ${contentHtml}
           </p>
-          <table cellpadding="0" cellspacing="0" style="margin:28px 0;">
+          <table cellpadding="0" cellspacing="0" width="100%" style="margin:28px 0;">
             <tr>
-              <td style="padding-right:12px;">
-                <a href="${postUrl}" style="display:inline-block;background:${primaryColor};color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">
+              <td style="padding-bottom:10px;">
+                <a href="${postUrl}" style="display:block;background:${primaryColor};color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;text-align:center;">
                   Read Full Recap
                 </a>
               </td>
+            </tr>
+            <tr>
               <td>
-                <a href="${trackerUrl}" style="display:inline-block;background:#ffffff;color:${primaryColor};padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;border:2px solid ${primaryColor};">
+                <a href="${trackerUrl}" style="display:block;background:#ffffff;color:${primaryColor};padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;border:2px solid ${primaryColor};text-align:center;">
                   View ${teamName} Tracker
                 </a>
               </td>
             </tr>
           </table>
         </td></tr>
-        <tr><td style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0;">
+        <tr><td style="background:#f8fafc;padding:16px 20px;border-top:1px solid #e2e8f0;">
           <p style="margin:0 0 8px;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; NHL Playoff Odds &amp; Standings</p>
           <a href="${unsubscribeUrl}" style="color:#94a3b8;font-size:12px;">Unsubscribe</a>
         </td></tr>
