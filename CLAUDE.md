@@ -46,7 +46,7 @@ NHL playoff odds tracker and scores site. Tracks playoff probability for all 32 
 
 ## Git Workflow
 - Solo project — push directly to `main`, no PRs
-- Always confirm before pushing
+- **Always ask before pushing** — never run `git push` without explicit user approval
 - Push to `main` triggers Vercel deploy automatically
 - Run `npx tsc --noEmit` before pushing to catch type errors
 
