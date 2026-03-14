@@ -377,6 +377,34 @@ function buildProjectedBracket(standings: StandingsTeam[]): {
   };
 }
 
+// ── SportsEvent structured data for active series ──
+
+function buildSportsEventSchema(
+  eastern: ConferenceBracket,
+  western: ConferenceBracket,
+  playoffsActive: boolean
+): object[] {
+  if (!playoffsActive) return [];
+  const events: object[] = [];
+  for (const conf of [eastern, western]) {
+    for (const round of conf.rounds) {
+      for (const matchup of round.matchups) {
+        if (!matchup.topSeed || !matchup.bottomSeed || matchup.isComplete) continue;
+        events.push({
+          '@context': 'https://schema.org',
+          '@type': 'SportsEvent',
+          name: `${matchup.topSeed.name} vs ${matchup.bottomSeed.name} — NHL Playoffs 2026`,
+          sport: 'Ice Hockey',
+          homeTeam: { '@type': 'SportsTeam', name: matchup.topSeed.name },
+          awayTeam: { '@type': 'SportsTeam', name: matchup.bottomSeed.name },
+          description: `Series: ${matchup.topSeedWins}-${matchup.bottomSeedWins}`,
+        });
+      }
+    }
+  }
+  return events;
+}
+
 // ── Page component ──
 
 export default async function PlayoffsPage() {
@@ -449,6 +477,7 @@ export default async function PlayoffsPage() {
                 { '@type': 'ListItem', position: 2, name: 'Playoffs', item: 'https://lindysfive.com/playoffs' },
               ],
             },
+            ...buildSportsEventSchema(eastern, western, playoffsActive),
           ]),
         }}
       />

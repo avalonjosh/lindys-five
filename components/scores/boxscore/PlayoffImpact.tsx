@@ -3,6 +3,7 @@
 import type { StandingsTeam } from '@/lib/types/boxscore';
 import { TEAMS } from '@/lib/teamConfig';
 import { getDivCutLine, getWcCutLine, computeProb } from '@/lib/utils/standingsCalc';
+import { computeSeriesWinProbability } from '@/lib/utils/playoffProbability';
 
 interface PlayoffImpactProps {
   homeTeam: { id: number; abbrev: string; score: number; logo: string; commonName: { default: string } };
@@ -10,6 +11,8 @@ interface PlayoffImpactProps {
   standings: StandingsTeam[];
   gameState: string;
   gameOutcome?: { lastPeriodType: string };
+  gameType?: number;
+  seriesStatus?: { topSeedAbbrev: string; topSeedWins: number; bottomSeedWins: number };
 }
 
 interface TeamImpact {
@@ -63,6 +66,8 @@ export default function PlayoffImpact({
   standings,
   gameState,
   gameOutcome,
+  gameType,
+  seriesStatus,
 }: PlayoffImpactProps) {
   if (!standings || standings.length === 0) return null;
 
@@ -76,6 +81,24 @@ export default function PlayoffImpact({
   const awayStanding = standings.find(t => t.teamAbbrev.default === awayTeam.abbrev);
 
   if (!homeStanding || !awayStanding) return null;
+
+  // Playoff games: show series win probability impact instead of standings impact
+  if (gameType === 3 && seriesStatus) {
+    try {
+      return (
+        <SeriesImpact
+          homeTeam={homeTeam}
+          awayTeam={awayTeam}
+          homeStanding={homeStanding}
+          awayStanding={awayStanding}
+          gameState={gameState}
+          seriesStatus={seriesStatus}
+        />
+      );
+    } catch {
+      return null;
+    }
+  }
 
   try {
     if (isFinal) {
@@ -311,4 +334,164 @@ function LiveImpact({
       </div>
     </div>
   );
+}
+
+// PLAYOFF game: show series win probability shift
+function SeriesImpact({
+  homeTeam,
+  awayTeam,
+  homeStanding,
+  awayStanding,
+  gameState,
+  seriesStatus,
+}: {
+  homeTeam: PlayoffImpactProps['homeTeam'];
+  awayTeam: PlayoffImpactProps['awayTeam'];
+  homeStanding: StandingsTeam;
+  awayStanding: StandingsTeam;
+  gameState: string;
+  seriesStatus: { topSeedAbbrev: string; topSeedWins: number; bottomSeedWins: number };
+}) {
+  const isFinal = gameState === 'FINAL' || gameState === 'OFF';
+  const homeIsTop = homeTeam.abbrev === seriesStatus.topSeedAbbrev;
+  const topStanding = homeIsTop ? homeStanding : awayStanding;
+  const bottomStanding = homeIsTop ? awayStanding : homeStanding;
+
+  const { topSeedWins, bottomSeedWins } = seriesStatus;
+
+  // Current series win probability
+  const currentTopPct = computeSeriesWinProbability(
+    topStanding.pointPctg, bottomStanding.pointPctg,
+    topSeedWins, bottomSeedWins, true
+  );
+
+  if (isFinal) {
+    // For final games, show before/after probability
+    const homeWon = homeTeam.score > awayTeam.score;
+    const prevTopWins = homeIsTop
+      ? (homeWon ? topSeedWins - 1 : topSeedWins)
+      : (homeWon ? topSeedWins : topSeedWins - 1);
+    const prevBottomWins = homeIsTop
+      ? (homeWon ? bottomSeedWins : bottomSeedWins - 1)
+      : (homeWon ? bottomSeedWins - 1 : bottomSeedWins);
+
+    const beforeTopPct = prevTopWins >= 0 && prevBottomWins >= 0
+      ? computeSeriesWinProbability(
+          topStanding.pointPctg, bottomStanding.pointPctg,
+          prevTopWins, prevBottomWins, true
+        )
+      : 50;
+
+    const teams = [
+      { abbrev: homeTeam.abbrev, name: getTeamName(homeTeam), logo: homeTeam.logo,
+        before: homeIsTop ? beforeTopPct : 100 - beforeTopPct,
+        after: homeIsTop ? currentTopPct : 100 - currentTopPct },
+      { abbrev: awayTeam.abbrev, name: getTeamName(awayTeam), logo: awayTeam.logo,
+        before: homeIsTop ? 100 - beforeTopPct : beforeTopPct,
+        after: homeIsTop ? 100 - currentTopPct : currentTopPct },
+    ];
+
+    return (
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2 mb-1">
+          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          </svg>
+          <h3 className="text-sm font-semibold text-gray-700">Series Impact</h3>
+        </div>
+        <p className="text-xs text-gray-400 mb-3">
+          Series: {topSeedWins}-{bottomSeedWins}
+        </p>
+        <div className="space-y-3">
+          {teams.map(t => (
+            <div key={t.abbrev} className="flex items-center gap-3">
+              <img src={t.logo} alt={t.name} className="w-7 h-7 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-800 truncate">{t.name}</p>
+                <p className="text-xs text-gray-500">
+                  {Math.round(t.before)}% <span className="mx-1">&rarr;</span> {Math.round(t.after)}%
+                </p>
+              </div>
+              <DeltaBadge delta={Math.round(t.after - t.before)} />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Live/Future: show win/loss scenarios
+  const topWinPct = computeSeriesWinProbability(
+    topStanding.pointPctg, bottomStanding.pointPctg,
+    topSeedWins + 1, bottomSeedWins, true
+  );
+  const topLossPct = computeSeriesWinProbability(
+    topStanding.pointPctg, bottomStanding.pointPctg,
+    topSeedWins, bottomSeedWins + 1, true
+  );
+
+  const scenarios = [
+    { abbrev: homeTeam.abbrev, name: getTeamName(homeTeam), logo: homeTeam.logo,
+      current: homeIsTop ? currentTopPct : 100 - currentTopPct,
+      winPct: homeIsTop ? topWinPct : 100 - topLossPct,
+      lossPct: homeIsTop ? topLossPct : 100 - topWinPct },
+    { abbrev: awayTeam.abbrev, name: getTeamName(awayTeam), logo: awayTeam.logo,
+      current: homeIsTop ? 100 - currentTopPct : currentTopPct,
+      winPct: homeIsTop ? 100 - topLossPct : topWinPct,
+      lossPct: homeIsTop ? 100 - topWinPct : topLossPct },
+  ];
+
+  return (
+    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+      <div className="flex items-center gap-2 mb-1">
+        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        </svg>
+        <h3 className="text-sm font-semibold text-gray-700">Series Stakes</h3>
+      </div>
+      <p className="text-xs text-gray-400 mb-3">
+        Series: {topSeedWins}-{bottomSeedWins}
+      </p>
+      <div className="space-y-4">
+        {scenarios.map(t => (
+          <div key={t.abbrev}>
+            <div className="flex items-center gap-2 mb-2">
+              <img src={t.logo} alt={t.name} className="w-6 h-6 flex-shrink-0" />
+              <p className="text-xs font-medium text-gray-800">{t.name}</p>
+              <span className="text-xs text-gray-400 ml-auto">Win series: {Math.round(t.current)}%</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-semibold text-green-700 uppercase tracking-wide">Win</p>
+                  <p className="text-xs text-gray-600">
+                    {Math.round(t.current)}%
+                    <span className="mx-0.5">&rarr;</span>
+                    {Math.round(t.winPct)}%
+                  </p>
+                </div>
+                <DeltaBadge delta={Math.round(t.winPct - t.current)} />
+              </div>
+              <div className="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-semibold text-red-700 uppercase tracking-wide">Loss</p>
+                  <p className="text-xs text-gray-600">
+                    {Math.round(t.current)}%
+                    <span className="mx-0.5">&rarr;</span>
+                    {Math.round(t.lossPct)}%
+                  </p>
+                </div>
+                <DeltaBadge delta={Math.round(t.lossPct - t.current)} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function getTeamName(team: { abbrev: string; commonName: { default: string } }): string {
+  const teamConfig = Object.values(TEAMS).find(t => t.abbreviation === team.abbrev);
+  return teamConfig?.name || team.commonName.default;
 }

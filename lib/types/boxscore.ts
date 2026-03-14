@@ -48,6 +48,7 @@ export interface BoxscoreTeam {
 
 export interface BoxscoreResponse {
   id: number;
+  gameType: number;
   gameState: string;
   gameDate: string;
   startTimeUTC: string;

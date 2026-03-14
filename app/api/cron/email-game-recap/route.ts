@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     const schedule = await fetchJsonWithRetry(`${NHL_API}/schedule/${dateStr}`);
 
-    // Collect all team abbreviations that had a completed game
+    // Collect all team abbreviations that had a completed game (regular season + playoffs)
     const teamsWithGames = new Set<string>();
     for (const gameWeek of schedule.gameWeek || []) {
       for (const game of gameWeek.games || []) {

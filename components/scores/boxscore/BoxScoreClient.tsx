@@ -24,6 +24,35 @@ import GoalieMatchup from './GoalieMatchup';
 import SeasonSeries from './SeasonSeries';
 import TeamStatsPreview from './TeamStatsPreview';
 
+async function fetchSeriesForGame(
+  homeAbbrev: string,
+  awayAbbrev: string
+): Promise<{ topSeedAbbrev: string; topSeedWins: number; bottomSeedWins: number } | null> {
+  try {
+    const res = await fetch('/api/playoffs/bracket');
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.bracket?.rounds) return null;
+    for (const round of data.bracket.rounds) {
+      for (const series of round.series || []) {
+        const teams = series.matchupTeams || [];
+        const abbrevs = teams.map((t: any) => t.team.abbrev);
+        if (abbrevs.includes(homeAbbrev) && abbrevs.includes(awayAbbrev)) {
+          const topTeam = teams.find((t: any) => t.seed?.isTop);
+          return {
+            topSeedAbbrev: topTeam?.team.abbrev || homeAbbrev,
+            topSeedWins: series.topSeedWins || 0,
+            bottomSeedWins: series.bottomSeedWins || 0,
+          };
+        }
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 interface BoxScoreClientProps {
   gameId: string;
 }
@@ -33,6 +62,7 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
   const [landing, setLanding] = useState<LandingResponse | null>(null);
   const [standings, setStandings] = useState<StandingsTeam[]>([]);
   const [rightRail, setRightRail] = useState<RightRailResponse | null>(null);
+  const [seriesStatus, setSeriesStatus] = useState<{ topSeedAbbrev: string; topSeedWins: number; bottomSeedWins: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -66,6 +96,10 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
         fetchRightRail(gameId).then((rightRailData) => {
           setRightRail(rightRailData);
         });
+        // Fetch series status for playoff games
+        if (data.boxscore.gameType === 3) {
+          fetchSeriesForGame(data.boxscore.homeTeam.abbrev, data.boxscore.awayTeam.abbrev).then(setSeriesStatus);
+        }
       }
     });
   }, [fetchData, gameId]);
@@ -175,6 +209,8 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
                   standings={standings}
                   gameState={boxscore.gameState}
                   gameOutcome={boxscore.gameOutcome}
+                  gameType={boxscore.gameType}
+                  seriesStatus={seriesStatus || undefined}
                 />
 
                 {standings.length > 0 && (
@@ -234,6 +270,8 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
                   standings={standings}
                   gameState={boxscore.gameState}
                   gameOutcome={boxscore.gameOutcome}
+                  gameType={boxscore.gameType}
+                  seriesStatus={seriesStatus || undefined}
                 />
 
                 {standings.length > 0 && (

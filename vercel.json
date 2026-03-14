@@ -41,6 +41,14 @@
     {
       "path": "/api/cron/email-set-recap",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/playoff-game-recap",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/series-recap",
+      "schedule": "0 12 * * *"
     }
   ]
 }
