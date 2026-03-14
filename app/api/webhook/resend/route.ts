@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
     // Look up which send record this email belongs to
     const sendRecordId = await getSendRecordIdForResendEmail(resendEmailId);
     if (!sendRecordId) {
+      console.warn(`Resend webhook: no send record found for email ID ${resendEmailId} (event: ${type})`);
       return NextResponse.json({ received: true });
     }
 

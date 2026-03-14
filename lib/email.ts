@@ -1181,12 +1181,25 @@ async function sendBatchEmails(subscribers: NewsletterSubscriber[], subject: str
       const response = await getResend().batch.send(emails);
       // Map Resend email IDs back to our send record for webhook tracking
       if (sendRecordId && response?.data) {
-        const resendIds = Array.isArray(response.data) ? response.data : [];
+        // SDK returns { data } where data could be:
+        // - Array of { id } directly from batch endpoint
+        // - Object with nested { data: [{ id }] }
+        const rawData = response.data as any;
+        const resendIds: any[] = Array.isArray(rawData)
+          ? rawData
+          : Array.isArray(rawData?.data)
+            ? rawData.data
+            : [];
         for (const item of resendIds) {
           const emailId = typeof item === 'object' && item !== null && 'id' in item ? (item as { id: string }).id : null;
           if (emailId) {
-            await kv.set(`email:resend-map:${emailId}`, sendRecordId, { ex: 60 * 60 * 24 * 30 }); // 30 day expiry
+            await kv.set(`email:resend-map:${emailId}`, sendRecordId, { ex: 60 * 60 * 24 * 30 });
           }
+        }
+        if (resendIds.length === 0) {
+          console.warn('Resend batch: no IDs extracted. response.data:', JSON.stringify(rawData).slice(0, 500));
+        } else {
+          console.log(`Resend batch: mapped ${resendIds.length} email IDs to send record ${sendRecordId}`);
         }
       }
     } catch (error) {
