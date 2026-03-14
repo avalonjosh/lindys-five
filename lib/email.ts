@@ -80,7 +80,7 @@ export async function sendGameRecapNewsletter(post: BlogPost) {
     console.error('Failed to send boxscore recap, falling back to blog recap:', error);
     // Fallback: send simple blog recap
     const subject = post.title;
-    const postUrl = `${SITE_URL}/blog/${post.team}/${post.slug}`;
+    const postUrl = `${SITE_URL}/blog/${post.team}/${post.slug}?utm_source=newsletter&utm_medium=email&utm_campaign=game-recap&utm_content=blog-link`;
     const html = renderSimpleBlogRecap(post, postUrl);
     const sendId = await recordEmailSend(post.team, subscribers.length, subject);
     await sendBatchEmails(subscribers, subject, html, sendId);
@@ -99,7 +99,7 @@ export async function sendSetRecapNewsletter(post: BlogPost) {
   } catch (error) {
     console.error('Failed to send data-driven set recap, falling back to blog:', error);
     const subject = post.title;
-    const postUrl = `${SITE_URL}/blog/${post.team}/${post.slug}`;
+    const postUrl = `${SITE_URL}/blog/${post.team}/${post.slug}?utm_source=newsletter&utm_medium=email&utm_campaign=set-recap&utm_content=blog-link`;
     const html = renderSimpleBlogRecap(post, postUrl);
     const sendId = await recordEmailSend(post.team, subscribers.length, subject);
     await sendBatchEmails(subscribers, subject, html, sendId);
@@ -154,7 +154,7 @@ export async function sendSetRecapForTeam(
   const targetMet = latestSet.points >= targetPoints;
 
   const primaryColor = teamConfig.colors.primary;
-  const trackerUrl = `${SITE_URL}/${teamSlug}`;
+  const trackerUrl = `${SITE_URL}/${teamSlug}?utm_source=newsletter&utm_medium=email&utm_campaign=set-recap&utm_content=tracker`;
 
   // Subject line
   const subject = `${teamConfig.name} Set ${latestSet.chunkNumber} Recap: ${latestSet.points} of ${latestSet.maxPoints} points (${latestSet.wins}W-${latestSet.otLosses}OTL-${latestSet.losses}L)`;
@@ -415,7 +415,7 @@ function renderBoxscoreEmail(data: GameRecapData, blogPost?: BlogPost): string {
   const periodType = landing.gameOutcome?.lastPeriodType;
   const finalLabel = periodType === 'OT' ? 'FINAL/OT' : periodType === 'SO' ? 'FINAL/SO' : 'FINAL';
 
-  const trackerUrl = `${SITE_URL}/${data.teamSlug}`;
+  const trackerUrl = `${SITE_URL}/${data.teamSlug}?utm_source=newsletter&utm_medium=email&utm_campaign=game-recap&utm_content=tracker`;
   const unsubscribeUrl = '{{UNSUBSCRIBE_URL}}';
 
   // Collect goal scorers
@@ -748,7 +748,7 @@ function renderNextGameCTA(
 }
 
 function renderBlogLink(post: BlogPost): string {
-  const postUrl = `${SITE_URL}/blog/${post.team}/${post.slug}`;
+  const postUrl = `${SITE_URL}/blog/${post.team}/${post.slug}?utm_source=newsletter&utm_medium=email&utm_campaign=game-recap&utm_content=blog-link`;
   return `
         <tr><td style="padding:0 20px 20px;" align="center">
           <a href="${postUrl}" style="display:inline-block;background:#ffffff;color:#003087;padding:10px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;border:2px solid #003087;">
@@ -1097,7 +1097,7 @@ function renderSimpleBlogRecap(post: BlogPost, postUrl: string): string {
   const teamConfig = TEAMS[post.team];
   const primaryColor = teamConfig?.colors.primary || '#003087';
   const teamName = teamConfig?.name || post.team;
-  const trackerUrl = `${SITE_URL}/${post.team}`;
+  const trackerUrl = `${SITE_URL}/${post.team}?utm_source=newsletter&utm_medium=email&utm_campaign=blog-recap&utm_content=tracker`;
   const unsubscribeUrl = '{{UNSUBSCRIBE_URL}}';
   const contentHtml = markdownToEmailHtml(post.content);
 
