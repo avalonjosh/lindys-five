@@ -8,6 +8,7 @@ import { computeSeriesWinProbability } from '@/lib/utils/playoffProbability';
 import PlayoffOddsClient, { type TeamData } from '@/components/PlayoffOddsClient';
 import StanleyCupOddsTable, { type CupOddsTeam } from '@/components/playoffs/StanleyCupOddsTable';
 import NewsletterModal from '@/components/newsletter/NewsletterModal';
+import GameTicker from '@/components/landing/GameTicker';
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
 
@@ -251,6 +252,7 @@ export default async function NHLPlayoffOddsPage() {
 
   return (
     <>
+      <GameTicker />
       <NewsletterModal />
 
       {/* JSON-LD Structured Data */}

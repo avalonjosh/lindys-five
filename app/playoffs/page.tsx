@@ -12,6 +12,7 @@ import type {
 } from '@/lib/types/playoffs';
 import { computeSeriesWinProbability } from '@/lib/utils/playoffProbability';
 import PlayoffBracketClient from '@/components/playoffs/PlayoffBracketClient';
+import GameTicker from '@/components/landing/GameTicker';
 
 export const revalidate = 60;
 
@@ -461,6 +462,7 @@ export default async function PlayoffsPage() {
 
   return (
     <>
+      <GameTicker />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
