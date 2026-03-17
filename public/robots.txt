@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /admin/*
 
-Sitemap: https://lindysfive.com/sitemap.xml
+Sitemap: https://www.lindysfive.com/sitemap.xml

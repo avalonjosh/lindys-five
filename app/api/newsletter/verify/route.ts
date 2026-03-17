@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 }
 
 function redirectWithMessage(status: string, message: string) {
-  const url = new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://lindysfive.com');
+  const url = new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://www.lindysfive.com');
   url.searchParams.set('newsletter', status);
   url.searchParams.set('message', message);
   return NextResponse.redirect(url.toString());

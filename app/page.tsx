@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     description:
       "NHL playoff odds, standings, and playoff picture for all 32 teams in 2025-26. Track playoff probability, Stanley Cup odds, and wild card race updated daily.",
     type: 'website',
-    url: 'https://lindysfive.com/',
+    url: 'https://www.lindysfive.com/',
     siteName: "Lindy's Five",
   },
   twitter: {
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
       "NHL playoff odds, standings, and projections for all 32 teams. Playoff picture, Stanley Cup odds, and wild card race updated daily.",
   },
   alternates: {
-    canonical: 'https://lindysfive.com/',
+    canonical: 'https://www.lindysfive.com/',
   },
   other: {
     'script:ld+json': JSON.stringify({
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
       name: "Lindy's Five",
       description:
         "NHL playoff odds, standings, and projections for all 32 teams",
-      url: 'https://lindysfive.com',
+      url: 'https://www.lindysfive.com',
       publisher: {
         '@type': 'Organization',
         name: 'JRR Apps',
@@ -51,7 +51,7 @@ export default function LandingPage() {
             name: "Lindy's Five",
             description:
               "Track your NHL team's playoff race with 5-game set analysis",
-            url: 'https://lindysfive.com',
+            url: 'https://www.lindysfive.com',
             publisher: {
               '@type': 'Organization',
               name: 'JRR Apps',

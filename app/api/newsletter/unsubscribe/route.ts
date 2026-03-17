@@ -51,7 +51,7 @@ function renderUnsubscribePage(message: string, success: boolean) {
     <div style="background:white;padding:32px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
       <p style="font-size:${success ? '48px' : '48px'};margin:0 0 16px;">${success ? '✓' : '!'}</p>
       <p style="color:#334155;font-size:16px;line-height:1.6;margin:0 0 24px;">${message}</p>
-      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://lindysfive.com'}"
+      <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.lindysfive.com'}"
          style="display:inline-block;background:#003087;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">
         Back to Lindy's Five
       </a>

@@ -120,7 +120,7 @@ Write ONLY the tweet text (MAXIMUM 180 characters). Make it sound like a real fa
       .trim();
 
     // Build the article URL
-    const articleUrl = `https://lindysfive.com/blog/${team}/${slug}`;
+    const articleUrl = `https://www.lindysfive.com/blog/${team}/${slug}`;
 
     // Construct full tweet with link and hashtags
     const fullTweet = `${tweetText}\n\n${articleUrl}\n\n${HASHTAGS[team]}`;

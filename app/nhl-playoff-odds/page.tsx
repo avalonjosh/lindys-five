@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     description:
       'NHL playoff odds, standings, and playoff picture for all 32 teams. Stanley Cup projections and wild card race updated daily.',
     type: 'website',
-    url: 'https://lindysfive.com/nhl-playoff-odds',
+    url: 'https://www.lindysfive.com/nhl-playoff-odds',
     siteName: "Lindy's Five",
   },
   twitter: {
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
       'NHL playoff odds, standings, and projections for all 32 teams. Playoff picture and Stanley Cup odds updated daily.',
   },
   alternates: {
-    canonical: 'https://lindysfive.com/nhl-playoff-odds',
+    canonical: 'https://www.lindysfive.com/nhl-playoff-odds',
   },
 };
 
@@ -264,7 +264,7 @@ export default async function NHLPlayoffOddsPage() {
               name: 'NHL Playoff Odds 2025-26',
               description:
                 'NHL playoff odds, standings, and playoff picture for all 32 teams in 2025-26. Stanley Cup projections and wild card race updated daily.',
-              url: 'https://lindysfive.com/nhl-playoff-odds',
+              url: 'https://www.lindysfive.com/nhl-playoff-odds',
               publisher: {
                 '@type': 'Organization',
                 name: 'JRR Apps',
@@ -278,13 +278,13 @@ export default async function NHLPlayoffOddsPage() {
                   '@type': 'ListItem',
                   position: 1,
                   name: 'Home',
-                  item: 'https://lindysfive.com/',
+                  item: 'https://www.lindysfive.com/',
                 },
                 {
                   '@type': 'ListItem',
                   position: 2,
                   name: 'NHL Playoff Odds',
-                  item: 'https://lindysfive.com/nhl-playoff-odds',
+                  item: 'https://www.lindysfive.com/nhl-playoff-odds',
                 },
               ],
             },

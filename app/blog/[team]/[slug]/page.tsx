@@ -48,7 +48,7 @@ export async function generateMetadata({
       title: post.title,
       description: post.metaDescription || post.excerpt,
       type: 'article',
-      url: `https://lindysfive.com/blog/${post.team}/${post.slug}`,
+      url: `https://www.lindysfive.com/blog/${post.team}/${post.slug}`,
       siteName: "Lindy's Five",
       publishedTime: post.publishedAt || post.createdAt,
       ...(post.ogImage && { images: [{ url: post.ogImage }] }),
@@ -60,7 +60,7 @@ export async function generateMetadata({
       ...(post.ogImage && { images: [post.ogImage] }),
     },
     alternates: {
-      canonical: `https://lindysfive.com/blog/${post.team}/${post.slug}`,
+      canonical: `https://www.lindysfive.com/blog/${post.team}/${post.slug}`,
     },
   };
 }
@@ -167,25 +167,25 @@ export default async function BlogPostPage({
         '@type': 'ListItem',
         position: 1,
         name: 'Home',
-        item: 'https://lindysfive.com',
+        item: 'https://www.lindysfive.com',
       },
       {
         '@type': 'ListItem',
         position: 2,
         name: 'Blog',
-        item: `https://lindysfive.com/blog/${team}`,
+        item: `https://www.lindysfive.com/blog/${team}`,
       },
       {
         '@type': 'ListItem',
         position: 3,
         name: config.displayName,
-        item: `https://lindysfive.com/blog/${team}`,
+        item: `https://www.lindysfive.com/blog/${team}`,
       },
       {
         '@type': 'ListItem',
         position: 4,
         name: post.title,
-        item: `https://lindysfive.com/blog/${team}/${slug}`,
+        item: `https://www.lindysfive.com/blog/${team}/${slug}`,
       },
     ],
   };

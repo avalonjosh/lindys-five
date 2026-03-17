@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   }
 
   const range = request.nextUrl.searchParams.get('range') || '7d';
-  const siteUrl = process.env.GSC_SITE_URL || 'https://lindysfive.com';
+  const siteUrl = process.env.GSC_SITE_URL || 'https://www.lindysfive.com';
 
   // Calculate date range
   const endDate = new Date();

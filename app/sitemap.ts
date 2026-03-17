@@ -10,7 +10,7 @@ const TEAM_ROUTES = [
   'sharks', 'kraken',
 ];
 
-const BASE_URL = 'https://lindysfive.com';
+const BASE_URL = 'https://www.lindysfive.com';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();

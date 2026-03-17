@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: `Game Box Score | Lindy's Five`,
       description: 'Full NHL box score with player stats, scoring summary, and playoff probability impact.',
       type: 'website',
-      url: `https://lindysfive.com/scores/${gameId}`,
+      url: `https://www.lindysfive.com/scores/${gameId}`,
       siteName: "Lindy's Five",
     },
     twitter: {
@@ -36,19 +36,19 @@ export default async function BoxScorePage({ params }: PageProps) {
         '@type': 'ListItem',
         position: 1,
         name: 'Home',
-        item: 'https://lindysfive.com',
+        item: 'https://www.lindysfive.com',
       },
       {
         '@type': 'ListItem',
         position: 2,
         name: 'Scores',
-        item: 'https://lindysfive.com/scores',
+        item: 'https://www.lindysfive.com/scores',
       },
       {
         '@type': 'ListItem',
         position: 3,
         name: 'Box Score',
-        item: `https://lindysfive.com/scores/${gameId}`,
+        item: `https://www.lindysfive.com/scores/${gameId}`,
       },
     ],
   };

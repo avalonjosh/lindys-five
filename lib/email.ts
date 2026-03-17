@@ -16,7 +16,7 @@ function getResend(): Resend {
   return _resend;
 }
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://lindysfive.com';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.lindysfive.com';
 const FROM_EMAIL = "Lindy's Five <noreply@lindysfive.com>";
 const NHL_API = 'https://api-web.nhle.com/v1';
 

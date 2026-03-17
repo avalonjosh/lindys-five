@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     title: 'NHL Blog — Sabres Playoff Coverage & Game Recaps | Lindy\'s Five',
     description: 'Buffalo Sabres playoff coverage, game recaps, and NHL analysis.',
     type: 'website',
-    url: 'https://lindysfive.com/blog',
+    url: 'https://www.lindysfive.com/blog',
     siteName: 'Lindy\'s Five',
   },
   twitter: {
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     description: 'Buffalo Sabres playoff coverage, game recaps, and NHL analysis.',
   },
   alternates: {
-    canonical: 'https://lindysfive.com/blog',
+    canonical: 'https://www.lindysfive.com/blog',
   },
 };
 
@@ -71,7 +71,7 @@ export default async function BlogPage({
     '@type': 'CollectionPage',
     name: "Lindy's Five Blog",
     description: 'Buffalo sports coverage - Sabres game recaps, Bills analysis, and more',
-    url: 'https://lindysfive.com/blog',
+    url: 'https://www.lindysfive.com/blog',
     publisher: {
       '@type': 'Organization',
       name: "Lindy's Five",

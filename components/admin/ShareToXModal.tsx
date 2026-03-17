@@ -54,7 +54,7 @@ export default function ShareToXModal({ post, onClose }: ShareToXModalProps) {
       setError(err instanceof Error ? err.message : 'Failed to generate tweet');
       // Fallback tweet
       const hashtags = post.team === 'sabres' ? '#Sabres #LetsGoBuffalo #NHL' : '#Bills #GoBills #NFL';
-      setTweetText(`${post.title}\n\nhttps://lindysfive.com/blog/${post.team}/${post.slug}\n\n${hashtags}`);
+      setTweetText(`${post.title}\n\nhttps://www.lindysfive.com/blog/${post.team}/${post.slug}\n\n${hashtags}`);
     } finally {
       setLoading(false);
     }

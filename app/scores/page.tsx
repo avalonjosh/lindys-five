@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     title: "NHL Scores Today — Live Results, Box Scores & Playoff Impact",
     description: 'Live NHL scores and box scores for all 32 teams. See how each game impacts playoff odds and standings.',
     type: 'website',
-    url: 'https://lindysfive.com/scores',
+    url: 'https://www.lindysfive.com/scores',
     siteName: "Lindy's Five",
   },
   twitter: {
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     description: 'Live NHL scores for all 32 teams. See how each game impacts playoff odds.',
   },
   alternates: {
-    canonical: 'https://lindysfive.com/scores',
+    canonical: 'https://www.lindysfive.com/scores',
   },
 };
 
@@ -30,13 +30,13 @@ export default function ScoresPageWrapper() {
         '@type': 'ListItem',
         position: 1,
         name: 'Home',
-        item: 'https://lindysfive.com',
+        item: 'https://www.lindysfive.com',
       },
       {
         '@type': 'ListItem',
         position: 2,
         name: 'Scores',
-        item: 'https://lindysfive.com/scores',
+        item: 'https://www.lindysfive.com/scores',
       },
     ],
   };

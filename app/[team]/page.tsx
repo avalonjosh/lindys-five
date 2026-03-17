@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: TeamPageProps): Promise<Metad
       title: `${fullName} Playoff Odds 2025-26 — Chances, Standings & Projections`,
       description: `${fullName} playoff odds, chances, and Stanley Cup projections for the 2025-26 NHL season. Points pace and playoff picture updated daily.`,
       type: 'website',
-      url: `https://lindysfive.com/${team.id}`,
+      url: `https://www.lindysfive.com/${team.id}`,
       images: [{ url: team.logo }],
       siteName: "Lindy's Five",
     },
@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: TeamPageProps): Promise<Metad
       images: [team.logo],
     },
     alternates: {
-      canonical: `https://lindysfive.com/${team.id}`,
+      canonical: `https://www.lindysfive.com/${team.id}`,
     },
   };
 }
@@ -70,7 +70,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
     '@type': 'WebPage',
     name: `${fullName} Playoff Odds & Standings 2025-26`,
     description: `${fullName} playoff odds, chances, and Stanley Cup projections for 2025-26. Track playoff probability, points pace, and playoff picture updated daily.`,
-    url: `https://lindysfive.com/${team.id}`,
+    url: `https://www.lindysfive.com/${team.id}`,
     publisher: {
       '@type': 'Organization',
       name: "Lindy's Five",
@@ -125,13 +125,13 @@ export default async function TeamPage({ params }: TeamPageProps) {
         '@type': 'ListItem',
         position: 1,
         name: 'Home',
-        item: 'https://lindysfive.com',
+        item: 'https://www.lindysfive.com',
       },
       {
         '@type': 'ListItem',
         position: 2,
         name: fullName,
-        item: `https://lindysfive.com/${team.id}`,
+        item: `https://www.lindysfive.com/${team.id}`,
       },
     ],
   };

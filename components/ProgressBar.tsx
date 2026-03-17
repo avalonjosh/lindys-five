@@ -777,7 +777,7 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
   // Share functionality
   const hostname = window.location.hostname;
   const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-  const baseUrl = isLocalhost ? `http://${hostname}:${window.location.port}` : 'https://lindysfive.com';
+  const baseUrl = isLocalhost ? `http://${hostname}:${window.location.port}` : 'https://www.lindysfive.com';
   const teamUrl = `${baseUrl}/team/${teamId}`;
 
   const tweetText = `Track the ${teamName}'s road to the playoffs! 🏒

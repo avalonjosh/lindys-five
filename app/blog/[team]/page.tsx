@@ -55,7 +55,7 @@ export async function generateMetadata({
       title: `${config.displayName} | Lindy's Five Blog`,
       description: `${config.displayName} coverage - game recaps, analysis, and more.`,
       type: 'website',
-      url: `https://lindysfive.com/blog/${team}`,
+      url: `https://www.lindysfive.com/blog/${team}`,
       siteName: "Lindy's Five",
     },
     twitter: {
@@ -64,7 +64,7 @@ export async function generateMetadata({
       description: `${config.displayName} coverage - game recaps, analysis, and more.`,
     },
     alternates: {
-      canonical: `https://lindysfive.com/blog/${team}`,
+      canonical: `https://www.lindysfive.com/blog/${team}`,
     },
   };
 }
@@ -109,7 +109,7 @@ export default async function TeamBlogPage({
     '@type': 'CollectionPage',
     name: `${config.displayName} - Lindy's Five Blog`,
     description: `${config.displayName} coverage - game recaps, analysis, and more`,
-    url: `https://lindysfive.com/blog/${team}`,
+    url: `https://www.lindysfive.com/blog/${team}`,
     publisher: {
       '@type': 'Organization',
       name: "Lindy's Five",
@@ -128,19 +128,19 @@ export default async function TeamBlogPage({
         '@type': 'ListItem',
         position: 1,
         name: 'Home',
-        item: 'https://lindysfive.com',
+        item: 'https://www.lindysfive.com',
       },
       {
         '@type': 'ListItem',
         position: 2,
         name: 'Blog',
-        item: `https://lindysfive.com/blog/${team}`,
+        item: `https://www.lindysfive.com/blog/${team}`,
       },
       {
         '@type': 'ListItem',
         position: 3,
         name: config.displayName,
-        item: `https://lindysfive.com/blog/${team}`,
+        item: `https://www.lindysfive.com/blog/${team}`,
       },
     ],
   };

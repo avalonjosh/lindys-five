@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     "NHL playoff odds, standings, and projections for all 32 teams. Track playoff probability, Stanley Cup odds, points pace, and playoff picture updated daily.",
   openGraph: {
     type: 'website',
-    url: 'https://lindysfive.com/',
+    url: 'https://www.lindysfive.com/',
     title: "NHL Playoff Odds, Standings & Projections 2025-26 | Lindy's Five",
     description:
       "NHL playoff odds, standings, and projections for all 32 teams. Track playoff probability, Stanley Cup odds, points pace, and playoff picture updated daily.",
