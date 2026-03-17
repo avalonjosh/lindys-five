@@ -24,17 +24,17 @@ export default function AdminNav({ activeTab }: AdminNavProps) {
     >
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4 sm:gap-8">
+          <div className="flex items-center gap-2 sm:gap-8 min-w-0">
             <h1
               className="text-2xl sm:text-3xl md:text-4xl font-bold text-white shrink-0"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
               Admin
             </h1>
-            <nav className="flex gap-1">
+            <nav className="flex gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               <Link
                 href="/admin/analytics"
-                className={`px-3 sm:px-4 py-2 rounded-t text-xs sm:text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 rounded-t text-xs sm:text-sm font-medium transition-colors shrink-0 whitespace-nowrap ${
                   activeTab === 'analytics'
                     ? 'text-white border-b-2'
                     : 'text-white/60 hover:text-white/90'
@@ -45,7 +45,7 @@ export default function AdminNav({ activeTab }: AdminNavProps) {
               </Link>
               <Link
                 href="/admin/posts"
-                className={`px-3 sm:px-4 py-2 rounded-t text-xs sm:text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 rounded-t text-xs sm:text-sm font-medium transition-colors shrink-0 whitespace-nowrap ${
                   activeTab === 'posts'
                     ? 'text-white border-b-2'
                     : 'text-white/60 hover:text-white/90'
@@ -56,7 +56,7 @@ export default function AdminNav({ activeTab }: AdminNavProps) {
               </Link>
               <Link
                 href="/admin/outreach"
-                className={`px-3 sm:px-4 py-2 rounded-t text-xs sm:text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 rounded-t text-xs sm:text-sm font-medium transition-colors shrink-0 whitespace-nowrap ${
                   activeTab === 'outreach'
                     ? 'text-white border-b-2'
                     : 'text-white/60 hover:text-white/90'
@@ -67,7 +67,7 @@ export default function AdminNav({ activeTab }: AdminNavProps) {
               </Link>
               <Link
                 href="/admin/newsletter"
-                className={`px-3 sm:px-4 py-2 rounded-t text-xs sm:text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 rounded-t text-xs sm:text-sm font-medium transition-colors shrink-0 whitespace-nowrap ${
                   activeTab === 'newsletter'
                     ? 'text-white border-b-2'
                     : 'text-white/60 hover:text-white/90'
