@@ -23,61 +23,14 @@ export default function AdminNav({ activeTab }: AdminNavProps) {
       style={{ background: '#003087', borderBottomColor: '#0A1128' }}
     >
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3">
+        {/* Top row: title + actions */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-8 min-w-0">
-            <h1
-              className="text-2xl sm:text-3xl md:text-4xl font-bold text-white shrink-0"
-              style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-            >
-              Admin
-            </h1>
-            <nav className="flex gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-              <Link
-                href="/admin/analytics"
-                className={`px-3 sm:px-4 py-2 rounded-t text-xs sm:text-sm font-medium transition-colors shrink-0 whitespace-nowrap ${
-                  activeTab === 'analytics'
-                    ? 'text-white border-b-2'
-                    : 'text-white/60 hover:text-white/90'
-                }`}
-                style={activeTab === 'analytics' ? { borderBottomColor: '#FCB514' } : {}}
-              >
-                Analytics
-              </Link>
-              <Link
-                href="/admin/posts"
-                className={`px-3 sm:px-4 py-2 rounded-t text-xs sm:text-sm font-medium transition-colors shrink-0 whitespace-nowrap ${
-                  activeTab === 'posts'
-                    ? 'text-white border-b-2'
-                    : 'text-white/60 hover:text-white/90'
-                }`}
-                style={activeTab === 'posts' ? { borderBottomColor: '#FCB514' } : {}}
-              >
-                Posts
-              </Link>
-              <Link
-                href="/admin/outreach"
-                className={`px-3 sm:px-4 py-2 rounded-t text-xs sm:text-sm font-medium transition-colors shrink-0 whitespace-nowrap ${
-                  activeTab === 'outreach'
-                    ? 'text-white border-b-2'
-                    : 'text-white/60 hover:text-white/90'
-                }`}
-                style={activeTab === 'outreach' ? { borderBottomColor: '#FCB514' } : {}}
-              >
-                Outreach
-              </Link>
-              <Link
-                href="/admin/newsletter"
-                className={`px-3 sm:px-4 py-2 rounded-t text-xs sm:text-sm font-medium transition-colors shrink-0 whitespace-nowrap ${
-                  activeTab === 'newsletter'
-                    ? 'text-white border-b-2'
-                    : 'text-white/60 hover:text-white/90'
-                }`}
-                style={activeTab === 'newsletter' ? { borderBottomColor: '#FCB514' } : {}}
-              >
-                Newsletter
-              </Link>
-            </nav>
-          </div>
+          <h1
+            className="text-2xl sm:text-3xl md:text-4xl font-bold text-white shrink-0"
+            style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+          >
+            Admin
+          </h1>
           <div className="flex items-center gap-2 sm:gap-4">
             <Link
               href="/"
@@ -96,6 +49,28 @@ export default function AdminNav({ activeTab }: AdminNavProps) {
             </button>
           </div>
         </div>
+        {/* Tab row: full width, evenly distributed */}
+        <nav className="flex mt-2">
+          {([
+            { key: 'analytics', label: 'Analytics', href: '/admin/analytics' },
+            { key: 'posts', label: 'Posts', href: '/admin/posts' },
+            { key: 'outreach', label: 'Outreach', href: '/admin/outreach' },
+            { key: 'newsletter', label: 'Newsletter', href: '/admin/newsletter' },
+          ] as const).map(tab => (
+            <Link
+              key={tab.key}
+              href={tab.href}
+              className={`flex-1 text-center py-2 text-xs sm:text-sm font-medium transition-colors ${
+                activeTab === tab.key
+                  ? 'text-white border-b-2'
+                  : 'text-white/60 hover:text-white/90'
+              }`}
+              style={activeTab === tab.key ? { borderBottomColor: '#FCB514' } : {}}
+            >
+              {tab.label}
+            </Link>
+          ))}
+        </nav>
       </div>
     </header>
   );
