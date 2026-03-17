@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     description:
       'Live NHL playoff bracket with series win probabilities and Stanley Cup odds for all remaining teams.',
     type: 'website',
-    url: 'https://lindysfive.com/playoffs',
+    url: 'https://www.lindysfive.com/playoffs',
     siteName: "Lindy's Five",
   },
   twitter: {
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     description: 'Live playoff bracket with series win probabilities and Stanley Cup odds.',
   },
   alternates: {
-    canonical: 'https://lindysfive.com/playoffs',
+    canonical: 'https://www.lindysfive.com/playoffs',
   },
 };
 
@@ -470,15 +470,15 @@ export default async function PlayoffsPage() {
               '@type': 'WebPage',
               name: 'NHL Playoff Bracket 2026',
               description: 'NHL playoff bracket with series odds and Stanley Cup predictions.',
-              url: 'https://lindysfive.com/playoffs',
+              url: 'https://www.lindysfive.com/playoffs',
               publisher: { '@type': 'Organization', name: 'JRR Apps' },
             },
             {
               '@context': 'https://schema.org',
               '@type': 'BreadcrumbList',
               itemListElement: [
-                { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://lindysfive.com/' },
-                { '@type': 'ListItem', position: 2, name: 'Playoffs', item: 'https://lindysfive.com/playoffs' },
+                { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.lindysfive.com/' },
+                { '@type': 'ListItem', position: 2, name: 'Playoffs', item: 'https://www.lindysfive.com/playoffs' },
               ],
             },
             ...buildSportsEventSchema(eastern, western, playoffsActive),

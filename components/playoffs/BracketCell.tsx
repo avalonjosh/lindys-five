@@ -1,6 +1,13 @@
 'use client';
 
+import Link from 'next/link';
+import { TEAMS } from '@/lib/teamConfig';
 import type { BracketMatchup } from '@/lib/types/playoffs';
+
+function getTeamSlug(abbrev: string): string | null {
+  const entry = Object.entries(TEAMS).find(([, t]) => t.abbreviation === abbrev);
+  return entry ? entry[0] : null;
+}
 
 interface BracketCellProps {
   matchup: BracketMatchup;
@@ -35,6 +42,7 @@ export default function BracketCell({ matchup }: BracketCellProps) {
         isWinner={isComplete && topSeedWins >= 4}
         isLoser={isComplete && topSeedWins < 4}
         showPct={!isComplete}
+        slug={getTeamSlug(topSeed.abbrev)}
       />
       {/* Divider with probability bar */}
       <div className="relative h-[3px] bg-gray-100">
@@ -61,6 +69,7 @@ export default function BracketCell({ matchup }: BracketCellProps) {
         isWinner={isComplete && bottomSeedWins >= 4}
         isLoser={isComplete && bottomSeedWins < 4}
         showPct={!isComplete}
+        slug={getTeamSlug(bottomSeed.abbrev)}
       />
     </div>
   );
@@ -75,6 +84,7 @@ function TeamRow({
   isWinner,
   isLoser,
   showPct,
+  slug,
 }: {
   logo: string;
   abbrev: string;
@@ -84,16 +94,33 @@ function TeamRow({
   isWinner: boolean;
   isLoser: boolean;
   showPct: boolean;
+  slug: string | null;
 }) {
+  const logoEl = <img src={logo} alt={abbrev} className="w-6 h-6 object-contain flex-shrink-0" />;
+
   return (
     <div className={`flex items-center gap-1.5 px-2 py-1.5 ${isLoser ? 'opacity-40' : ''}`}>
-      <img src={logo} alt={abbrev} className="w-6 h-6 object-contain flex-shrink-0" />
-      <span className="text-[11px] text-gray-400 w-3 text-center flex-shrink-0">{seed}</span>
-      <span className={`text-xs font-semibold flex-1 truncate ${
-        isWinner ? 'text-gray-900' : 'text-gray-700'
-      }`}>
-        {abbrev}
-      </span>
+      {slug ? (
+        <Link href={`/${slug}`} className="flex items-center gap-1.5 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+          {logoEl}
+          <span className="text-[11px] text-gray-400 w-3 text-center flex-shrink-0">{seed}</span>
+          <span className={`text-xs font-semibold flex-1 truncate ${
+            isWinner ? 'text-gray-900' : 'text-gray-700'
+          }`}>
+            {abbrev}
+          </span>
+        </Link>
+      ) : (
+        <>
+          {logoEl}
+          <span className="text-[11px] text-gray-400 w-3 text-center flex-shrink-0">{seed}</span>
+          <span className={`text-xs font-semibold flex-1 truncate ${
+            isWinner ? 'text-gray-900' : 'text-gray-700'
+          }`}>
+            {abbrev}
+          </span>
+        </>
+      )}
       {showPct && (
         <span className={`text-[10px] font-medium tabular-nums flex-shrink-0 ${
           pct >= 50 ? 'text-emerald-600' : 'text-gray-400'

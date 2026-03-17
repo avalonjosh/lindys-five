@@ -1,7 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { TEAMS } from '@/lib/teamConfig';
 import type { BracketMatchup } from '@/lib/types/playoffs';
+
+function getTeamSlug(abbrev: string): string | null {
+  const entry = Object.entries(TEAMS).find(([, t]) => t.abbreviation === abbrev);
+  return entry ? entry[0] : null;
+}
 
 interface SeriesCardProps {
   matchup: BracketMatchup;
@@ -70,11 +76,26 @@ export default function SeriesCard({ matchup, compact }: SeriesCardProps) {
       <div className="p-4">
         {/* Top Seed */}
         <div className={`flex items-center gap-3 py-2 ${isComplete && topSeedWins < 4 ? 'opacity-40' : ''}`}>
-          <img src={topSeed.logo} alt={topSeed.abbrev} className="w-10 h-10 object-contain" />
-          <div className="flex-1">
-            <span className="text-sm font-semibold text-gray-900">{topSeed.name}</span>
-            <span className="ml-2 text-xs text-gray-400">({topSeed.seed})</span>
-          </div>
+          {(() => {
+            const slug = getTeamSlug(topSeed.abbrev);
+            return slug ? (
+              <Link href={`/${slug}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                <img src={topSeed.logo} alt={topSeed.abbrev} className="w-10 h-10 object-contain" />
+                <div className="flex-1">
+                  <span className="text-sm font-semibold text-gray-900">{topSeed.name}</span>
+                  <span className="ml-2 text-xs text-gray-400">({topSeed.seed})</span>
+                </div>
+              </Link>
+            ) : (
+              <>
+                <img src={topSeed.logo} alt={topSeed.abbrev} className="w-10 h-10 object-contain" />
+                <div className="flex-1">
+                  <span className="text-sm font-semibold text-gray-900">{topSeed.name}</span>
+                  <span className="ml-2 text-xs text-gray-400">({topSeed.seed})</span>
+                </div>
+              </>
+            );
+          })()}
           <div className="flex items-center gap-3">
             {!compact && !isComplete && (
               <span className={`text-xs font-medium ${topPct >= 50 ? 'text-emerald-600' : 'text-gray-400'}`}>
@@ -87,11 +108,26 @@ export default function SeriesCard({ matchup, compact }: SeriesCardProps) {
 
         {/* Bottom Seed */}
         <div className={`flex items-center gap-3 py-2 ${isComplete && bottomSeedWins < 4 ? 'opacity-40' : ''}`}>
-          <img src={bottomSeed.logo} alt={bottomSeed.abbrev} className="w-10 h-10 object-contain" />
-          <div className="flex-1">
-            <span className="text-sm font-semibold text-gray-900">{bottomSeed.name}</span>
-            <span className="ml-2 text-xs text-gray-400">({bottomSeed.seed})</span>
-          </div>
+          {(() => {
+            const slug = getTeamSlug(bottomSeed.abbrev);
+            return slug ? (
+              <Link href={`/${slug}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                <img src={bottomSeed.logo} alt={bottomSeed.abbrev} className="w-10 h-10 object-contain" />
+                <div className="flex-1">
+                  <span className="text-sm font-semibold text-gray-900">{bottomSeed.name}</span>
+                  <span className="ml-2 text-xs text-gray-400">({bottomSeed.seed})</span>
+                </div>
+              </Link>
+            ) : (
+              <>
+                <img src={bottomSeed.logo} alt={bottomSeed.abbrev} className="w-10 h-10 object-contain" />
+                <div className="flex-1">
+                  <span className="text-sm font-semibold text-gray-900">{bottomSeed.name}</span>
+                  <span className="ml-2 text-xs text-gray-400">({bottomSeed.seed})</span>
+                </div>
+              </>
+            );
+          })()}
           <div className="flex items-center gap-3">
             {!compact && !isComplete && (
               <span className={`text-xs font-medium ${bottomPct >= 50 ? 'text-emerald-600' : 'text-gray-400'}`}>
