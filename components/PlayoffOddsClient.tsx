@@ -67,9 +67,9 @@ function TeamRow({ team, rank }: { team: TeamData; rank: number }) {
       <td className="py-2.5 px-2">
         <Link href={team.slug ? `/${team.slug}` : '#'} className="flex items-center gap-2 group">
           <img src={team.logo} alt={team.name} className="w-6 h-6 flex-shrink-0" loading="lazy" />
-          <span className="text-gray-900 font-medium group-hover:text-blue-600 transition-colors truncate">
+          <span className="text-gray-900 font-medium group-hover:text-blue-600 transition-colors md:truncate">
             <span className="hidden md:inline">{team.name}</span>
-            <span className="md:hidden">{team.abbrev}</span>
+            <span className="md:hidden whitespace-nowrap">{team.abbrev}</span>
           </span>
         </Link>
       </td>
