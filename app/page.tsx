@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import FavoriteTeamsGrid from '@/components/landing/FavoriteTeamsGrid';
+import GameTicker from '@/components/landing/GameTicker';
 
 export const metadata: Metadata = {
   title: "NHL Playoff Odds & Standings 2025-26 — Projections for All 32 Teams",
@@ -60,6 +61,7 @@ export default function LandingPage() {
         }}
       />
 
+      <GameTicker />
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
         <div className="max-w-4xl w-full">
           {/* Header */}
