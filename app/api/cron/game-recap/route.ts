@@ -5,6 +5,7 @@ import { getAutoPublishSetting } from '@/app/api/blog/settings/route';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { quickFactCheck } from '@/lib/factCheck';
 import { sendGameRecapNewsletter } from '@/lib/email';
+import { generateAndUploadOgImage } from '@/lib/utils/ogImage';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 const GAME_END_BUFFER_MS = 30 * 60 * 1000; // 30 minutes
@@ -192,7 +193,8 @@ async function createPost(postData: any) {
     team: postData.team, type: postData.type, status: postData.status,
     createdAt: now, publishedAt: postData.status === 'published' ? now : null, updatedAt: now,
     gameId: postData.gameId, opponent: postData.opponent, gameDate: postData.gameDate,
-    aiGenerated: true, aiModel: postData.aiModel, metaDescription: postData.metaDescription
+    aiGenerated: true, aiModel: postData.aiModel, metaDescription: postData.metaDescription,
+    ...(postData.ogImage && { ogImage: postData.ogImage })
   };
 
   await kv.set(`blog:post:${id}`, post);
@@ -278,10 +280,30 @@ export async function GET(request: NextRequest) {
         const otSuffix = periodType === 'OT' ? ' in overtime' : periodType === 'SO' ? ' in a shootout' : '';
         const metaDescription = `Game recap: Buffalo Sabres ${isWin ? 'defeat' : 'fall to'} ${opponent} ${sabresScore}-${oppScore}${otSuffix}. Full breakdown and analysis.`;
 
+        // Generate OG image
+        let ogImage: string | undefined;
+        try {
+          const homeAbbrev = game.homeTeam?.abbrev || 'BUF';
+          const awayAbbrev = game.awayTeam?.abbrev || oppAbbrev;
+          const imageSlug = `game-recap-${awayAbbrev.toLowerCase()}-vs-${homeAbbrev.toLowerCase()}-${game.gameDate}`;
+          ogImage = await generateAndUploadOgImage({
+            type: 'game-recap',
+            homeAbbrev,
+            awayAbbrev,
+            homeScore: game.homeTeam?.score || 0,
+            awayScore: game.awayTeam?.score || 0,
+            gameDate: game.gameDate,
+            periodType: periodType !== 'REG' ? periodType : undefined,
+          }, imageSlug);
+        } catch (imgError) {
+          console.error(`Failed to generate OG image for game ${game.id}:`, imgError);
+        }
+
         const post = await createPost({
           title, content, team: 'sabres', type: 'game-recap',
           status: shouldPublish ? 'published' : 'draft',
-          gameId: game.id, opponent: oppAbbrev, gameDate: game.gameDate, metaDescription, aiModel: 'claude-sonnet-4-20250514'
+          gameId: game.id, opponent: oppAbbrev, gameDate: game.gameDate, metaDescription, aiModel: 'claude-sonnet-4-20250514',
+          ogImage
         });
 
         await markGameProcessed(game.id, post.id, { opponent: oppAbbrev, gameDate: game.gameDate, result: `${sabresScore}-${oppScore}` });

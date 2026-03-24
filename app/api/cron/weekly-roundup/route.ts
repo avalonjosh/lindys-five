@@ -3,6 +3,7 @@ import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '@/app/api/blog/settings/route';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
+import { generateAndUploadOgImage } from '@/lib/utils/ogImage';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
@@ -223,7 +224,8 @@ async function createPost(postData: any) {
     team: postData.team, type: postData.type, status: postData.status,
     createdAt: now, publishedAt: postData.status === 'published' ? now : null, updatedAt: now,
     weekStartDate: postData.weekStartDate, weekEndDate: postData.weekEndDate,
-    aiGenerated: true, aiModel: 'claude-sonnet-4-20250514', metaDescription: postData.metaDescription
+    aiGenerated: true, aiModel: 'claude-sonnet-4-20250514', metaDescription: postData.metaDescription,
+    ...(postData.ogImage && { ogImage: postData.ogImage })
   };
 
   await kv.set(`blog:post:${id}`, post);
@@ -313,10 +315,27 @@ export async function GET(request: NextRequest) {
 
     const autoPublish = await getAutoPublishSetting('weekly');
 
+    // Generate OG image
+    const weekRecord = `${weekWins}-${weekLosses}-${weekOtLosses}`;
+    let ogImage: string | undefined;
+    try {
+      const weekStartStr2 = weekStart.toISOString().split('T')[0];
+      const weekEndStr2 = weekEnd.toISOString().split('T')[0];
+      ogImage = await generateAndUploadOgImage({
+        type: 'weekly-roundup',
+        teamAbbrev: 'BUF',
+        weekRecord,
+        weekStart: weekStartStr2,
+        weekEnd: weekEndStr2,
+      }, `weekly-roundup-${weekStartStr2}`);
+    } catch (imgError) {
+      console.error('Failed to generate OG image for weekly roundup:', imgError);
+    }
+
     const post = await createPost({
       title, content, team: 'sabres', type: 'weekly-roundup',
       status: autoPublish ? 'published' : 'draft',
-      weekStartDate: weekStart.toISOString(), weekEndDate: weekEnd.toISOString(), metaDescription
+      weekStartDate: weekStart.toISOString(), weekEndDate: weekEnd.toISOString(), metaDescription, ogImage
     });
 
     await kv.set('blog:weekly:last', weekStartStr);

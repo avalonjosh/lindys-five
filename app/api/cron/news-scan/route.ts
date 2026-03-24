@@ -3,6 +3,7 @@ import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '@/app/api/blog/settings/route';
 import { fetchJsonWithRetry, calculateJaccardSimilarity, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
+import { generateAndUploadOgImage } from '@/lib/utils/ogImage';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 const SEMANTIC_SIMILARITY_THRESHOLD = 0.4;
@@ -193,7 +194,8 @@ async function createPost(postData: any) {
     team: 'sabres', type: 'news-analysis', status: postData.status,
     createdAt: now, publishedAt: postData.status === 'published' ? now : null, updatedAt: now,
     newsTopics: postData.newsTopics, sourceHeadlines: postData.sourceHeadlines,
-    aiGenerated: true, aiModel: 'claude-sonnet-4-20250514', metaDescription: postData.metaDescription
+    aiGenerated: true, aiModel: 'claude-sonnet-4-20250514', metaDescription: postData.metaDescription,
+    ...(postData.ogImage && { ogImage: postData.ogImage })
   };
 
   await kv.set(`blog:post:${id}`, post);
@@ -267,9 +269,22 @@ export async function GET(request: NextRequest) {
       const title = generateTitle(story.topic);
       const metaDescription = `Analysis: ${story.topic.substring(0, 120)}. A Lindy's Five take on the latest Sabres news.`;
 
+      // Generate OG image
+      let ogImage: string | undefined;
+      try {
+        const newsSlug = storyKey.substring(0, 60);
+        ogImage = await generateAndUploadOgImage({
+          type: 'news-analysis',
+          teamAbbrev: 'BUF',
+          headline: title,
+        }, `news-${newsSlug}`);
+      } catch (imgError) {
+        console.error(`Failed to generate OG image for news story:`, imgError);
+      }
+
       const post = await createPost({
         title, content: articleContent, status: autoPublish ? 'published' : 'draft',
-        newsTopics: story.keywords || [story.topic], sourceHeadlines: [story.topic], metaDescription
+        newsTopics: story.keywords || [story.topic], sourceHeadlines: [story.topic], metaDescription, ogImage
       });
 
       await markStoryProcessed(storyKey, post.id, keywords);

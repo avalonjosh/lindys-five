@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '@/app/api/blog/settings/route';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { sendSetRecapNewsletter } from '@/lib/email';
+import { generateAndUploadOgImage } from '@/lib/utils/ogImage';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
@@ -140,7 +141,8 @@ async function createPost(postData: any) {
     team: postData.team, type: postData.type, status: postData.status,
     createdAt: now, publishedAt: postData.status === 'published' ? now : null, updatedAt: now,
     setNumber: postData.setNumber, setStartDate: postData.setStartDate, setEndDate: postData.setEndDate,
-    opponent: postData.opponent, aiGenerated: true, aiModel: postData.aiModel, metaDescription: postData.metaDescription
+    opponent: postData.opponent, aiGenerated: true, aiModel: postData.aiModel, metaDescription: postData.metaDescription,
+    ...(postData.ogImage && { ogImage: postData.ogImage })
   };
 
   await kv.set(`blog:post:${id}`, post);
@@ -218,11 +220,27 @@ export async function GET(request: NextRequest) {
     const title = generateSetTitle(targetSetNumber, stats.wins, stats.losses, stats.otLosses, stats.points);
     const metaDescription = `Buffalo Sabres Set ${targetSetNumber} recap: ${stats.wins}-${stats.losses}-${stats.otLosses} (${stats.points} points) from ${formatDate(stats.startDate)} to ${formatDate(stats.endDate)}.`;
 
+    // Generate OG image
+    let ogImage: string | undefined;
+    try {
+      ogImage = await generateAndUploadOgImage({
+        type: 'set-recap',
+        teamAbbrev: 'BUF',
+        setNumber: targetSetNumber,
+        wins: stats.wins,
+        losses: stats.losses,
+        otLosses: stats.otLosses,
+        targetMet: stats.points >= 6,
+      }, `set-recap-${targetSetNumber}-${stats.startDate}`);
+    } catch (imgError) {
+      console.error(`Failed to generate OG image for set ${targetSetNumber}:`, imgError);
+    }
+
     const post = await createPost({
       title, content, team: 'sabres', type: 'set-recap',
       status: autoPublish ? 'published' : 'draft',
       setNumber: targetSetNumber, setStartDate: stats.startDate, setEndDate: stats.endDate,
-      opponent: opponents, metaDescription, aiModel: 'claude-sonnet-4-20250514'
+      opponent: opponents, metaDescription, aiModel: 'claude-sonnet-4-20250514', ogImage
     });
 
     await markSetProcessed(targetSetNumber, post.id, { record: `${stats.wins}-${stats.losses}-${stats.otLosses}`, points: stats.points, startDate: stats.startDate, endDate: stats.endDate });
