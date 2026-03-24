@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '@/app/api/blog/settings/route';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { generateAndUploadOgImage } from '@/lib/utils/ogImage';
+import { generateAndPostTweet } from '@/lib/utils/postToX';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
@@ -339,6 +340,20 @@ export async function GET(request: NextRequest) {
     });
 
     await kv.set('blog:weekly:last', weekStartStr);
+
+    // Post to X if published
+    if (post.status === 'published') {
+      try {
+        const tweetResult = await generateAndPostTweet(post);
+        if (tweetResult.success) {
+          console.log(`Tweet posted for weekly roundup: ${tweetResult.tweetId}`);
+        } else {
+          console.warn('Failed to tweet weekly roundup:', tweetResult.error);
+        }
+      } catch (tweetError) {
+        console.error('Failed to post tweet for weekly roundup:', tweetError);
+      }
+    }
 
     return NextResponse.json({
       success: true, postId: post.id, postSlug: post.slug, status: post.status,

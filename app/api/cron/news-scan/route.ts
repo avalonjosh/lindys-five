@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '@/app/api/blog/settings/route';
 import { fetchJsonWithRetry, calculateJaccardSimilarity, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { generateAndUploadOgImage } from '@/lib/utils/ogImage';
+import { generateAndPostTweet } from '@/lib/utils/postToX';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 const SEMANTIC_SIMILARITY_THRESHOLD = 0.4;
@@ -288,6 +289,21 @@ export async function GET(request: NextRequest) {
       });
 
       await markStoryProcessed(storyKey, post.id, keywords);
+
+      // Post to X if published
+      if (post.status === 'published') {
+        try {
+          const tweetResult = await generateAndPostTweet(post);
+          if (tweetResult.success) {
+            console.log(`Tweet posted for news story ${storyKey}: ${tweetResult.tweetId}`);
+          } else {
+            console.warn(`Failed to tweet news story ${storyKey}:`, tweetResult.error);
+          }
+        } catch (tweetError) {
+          console.error(`Failed to post tweet for news story ${storyKey}:`, tweetError);
+        }
+      }
+
       results.push({ storyKey, postId: post.id, postSlug: post.slug, status: post.status, importance: story.importance });
     }
 

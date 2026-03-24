@@ -6,6 +6,7 @@ import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry
 import { quickFactCheck } from '@/lib/factCheck';
 import { sendGameRecapNewsletter } from '@/lib/email';
 import { generateAndUploadOgImage } from '@/lib/utils/ogImage';
+import { generateAndPostTweet } from '@/lib/utils/postToX';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 const GAME_END_BUFFER_MS = 30 * 60 * 1000; // 30 minutes
@@ -308,12 +309,23 @@ export async function GET(request: NextRequest) {
 
         await markGameProcessed(game.id, post.id, { opponent: oppAbbrev, gameDate: game.gameDate, result: `${sabresScore}-${oppScore}` });
 
-        // Send newsletter to subscribers if published
+        // Send newsletter and post to X if published
         if (post.status === 'published') {
           try {
             await sendGameRecapNewsletter(post);
           } catch (emailError) {
             console.error(`Failed to send newsletter for game ${game.id}:`, emailError);
+          }
+
+          try {
+            const tweetResult = await generateAndPostTweet(post);
+            if (tweetResult.success) {
+              console.log(`Tweet posted for game ${game.id}: ${tweetResult.tweetId}`);
+            } else {
+              console.warn(`Failed to tweet for game ${game.id}:`, tweetResult.error);
+            }
+          } catch (tweetError) {
+            console.error(`Failed to post tweet for game ${game.id}:`, tweetError);
           }
         }
 

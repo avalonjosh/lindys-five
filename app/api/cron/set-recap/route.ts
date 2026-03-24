@@ -5,6 +5,7 @@ import { getAutoPublishSetting } from '@/app/api/blog/settings/route';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { sendSetRecapNewsletter } from '@/lib/email';
 import { generateAndUploadOgImage } from '@/lib/utils/ogImage';
+import { generateAndPostTweet } from '@/lib/utils/postToX';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
@@ -245,12 +246,23 @@ export async function GET(request: NextRequest) {
 
     await markSetProcessed(targetSetNumber, post.id, { record: `${stats.wins}-${stats.losses}-${stats.otLosses}`, points: stats.points, startDate: stats.startDate, endDate: stats.endDate });
 
-    // Send newsletter to subscribers if published
+    // Send newsletter and post to X if published
     if (post.status === 'published') {
       try {
         await sendSetRecapNewsletter(post);
       } catch (emailError) {
         console.error(`Failed to send set recap newsletter:`, emailError);
+      }
+
+      try {
+        const tweetResult = await generateAndPostTweet(post);
+        if (tweetResult.success) {
+          console.log(`Tweet posted for set ${targetSetNumber}: ${tweetResult.tweetId}`);
+        } else {
+          console.warn(`Failed to tweet for set ${targetSetNumber}:`, tweetResult.error);
+        }
+      } catch (tweetError) {
+        console.error(`Failed to post tweet for set ${targetSetNumber}:`, tweetError);
       }
     }
 
