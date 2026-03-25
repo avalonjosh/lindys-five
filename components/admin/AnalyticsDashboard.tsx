@@ -1120,7 +1120,7 @@ function GSCTable({
   rows: { name: string; clicks: number; impressions: number; ctr: number; position: number }[];
 }) {
   return (
-    <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
+    <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 overflow-x-auto">
       <h3 className="text-lg font-bold text-white mb-3" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
         {title}
       </h3>
@@ -1129,7 +1129,7 @@ function GSCTable({
       ) : (
         <>
           {/* Header */}
-          <div className="flex items-center gap-2 text-[10px] text-slate-500 uppercase tracking-wider mb-2 px-1">
+          <div className="flex items-center gap-2 text-[10px] text-slate-500 uppercase tracking-wider mb-2 px-1 min-w-0">
             <span className="flex-1">Query</span>
             <span className="w-12 text-right">Clicks</span>
             <span className="w-14 text-right hidden sm:block">Impr</span>
