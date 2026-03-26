@@ -705,7 +705,7 @@ function renderThreeStarsSection(stars: ThreeStar[]): string {
                   <td valign="middle" style="padding-left:10px;">
                     <span style="font-size:10px;color:#94a3b8;font-weight:700;">${starLabels[i]} Star</span><br/>
                     <span style="font-size:13px;font-weight:700;color:#1e293b;">${name}</span>
-                    <span style="font-size:12px;color:#64748b;"> &middot; ${s.teamAbbrev?.default} &middot; ${statLine}</span>
+                    <span style="font-size:12px;color:#64748b;"> &middot; ${typeof s.teamAbbrev === 'string' ? s.teamAbbrev : s.teamAbbrev?.default} &middot; ${statLine}</span>
                   </td>
                 </tr>
               </table>

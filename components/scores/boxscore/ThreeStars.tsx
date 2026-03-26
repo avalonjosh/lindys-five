@@ -44,7 +44,8 @@ export default function ThreeStars({
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {sorted.map((star) => {
-          const teamConfig = getTeamByAbbrev(star.teamAbbrev.default);
+          const abbrev = typeof star.teamAbbrev === 'string' ? star.teamAbbrev : star.teamAbbrev.default;
+          const teamConfig = getTeamByAbbrev(abbrev);
           const accentColor = teamConfig?.colors.primary ?? '#6b7280';
 
           return (

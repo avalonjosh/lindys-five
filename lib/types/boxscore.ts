@@ -147,7 +147,7 @@ export interface PenaltyPeriod {
 export interface ThreeStar {
   star: number; // 1, 2, 3
   playerId: number;
-  teamAbbrev: { default: string };
+  teamAbbrev: string | { default: string };
   headshot: string;
   sweaterNo: number;
   name: { default: string };
