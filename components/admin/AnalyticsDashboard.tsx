@@ -105,6 +105,7 @@ export default function AnalyticsDashboard() {
   const [gsc, setGsc] = useState<GSCData | null>(null);
   const [gscError, setGscError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
@@ -128,22 +129,31 @@ export default function AnalyticsDashboard() {
           fetch(`/api/analytics/clicks?range=${range}&limit=15`),
         ]);
 
+      // Check for auth failures first
+      if (!ovRes.ok) {
+        const status = ovRes.status;
+        setError(status === 401 ? 'Session expired — please log in again' : `API error (${status})`);
+        return;
+      }
+
+      setError(null);
       setOverview(await ovRes.json());
-      if (tsRes) setTimeseries(await tsRes.json());
+      if (tsRes?.ok) setTimeseries(await tsRes.json());
       else setTimeseries(null);
 
-      setTopPages((await pagesRes.json()).items || []);
-      setTopReferrers((await refRes.json()).items || []);
-      setTopDevices((await devRes.json()).items || []);
-      setTopCountries((await countryRes.json()).items || []);
-      setTopCities((await citiesRes.json()).items || []);
-      setTopTeams((await teamsRes.json()).items || []);
-      setUtmSources((await utmSrcRes.json()).items || []);
-      setUtmCampaigns((await utmCampRes.json()).items || []);
-      setClicks((await clicksRes.json()).items || []);
+      setTopPages(pagesRes.ok ? (await pagesRes.json()).items || [] : []);
+      setTopReferrers(refRes.ok ? (await refRes.json()).items || [] : []);
+      setTopDevices(devRes.ok ? (await devRes.json()).items || [] : []);
+      setTopCountries(countryRes.ok ? (await countryRes.json()).items || [] : []);
+      setTopCities(citiesRes.ok ? (await citiesRes.json()).items || [] : []);
+      setTopTeams(teamsRes.ok ? (await teamsRes.json()).items || [] : []);
+      setUtmSources(utmSrcRes.ok ? (await utmSrcRes.json()).items || [] : []);
+      setUtmCampaigns(utmCampRes.ok ? (await utmCampRes.json()).items || [] : []);
+      setClicks(clicksRes.ok ? (await clicksRes.json()).items || [] : []);
       setLastUpdated(new Date());
     } catch (e) {
       console.error('Failed to fetch analytics:', e);
+      setError('Failed to load analytics data');
     } finally {
       setLoading(false);
     }
@@ -268,7 +278,17 @@ export default function AnalyticsDashboard() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
-        {loading && !overview ? (
+        {error ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <p className="text-red-400 text-lg mb-3">{error}</p>
+            <button
+              onClick={() => { setError(null); setLoading(true); fetchData(); }}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm"
+            >
+              Retry
+            </button>
+          </div>
+        ) : loading && !overview ? (
           <div className="flex items-center justify-center py-20">
             <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-700 border-t-[#FCB514]" />
           </div>

@@ -1228,12 +1228,9 @@ export async function getAllSubscribers(): Promise<NewsletterSubscriber[]> {
   const subscriberIds = await kv.smembers<string[]>('email:subscribers');
   if (!subscriberIds || subscriberIds.length === 0) return [];
 
-  const subscribers: NewsletterSubscriber[] = [];
-  for (const id of subscriberIds) {
-    const sub = await kv.get<NewsletterSubscriber>(`email:subscriber:${id}`);
-    if (sub) subscribers.push(sub);
-  }
-  return subscribers;
+  const keys = subscriberIds.map((id) => `email:subscriber:${id}`);
+  const results = await kv.mget<(NewsletterSubscriber | null)[]>(...keys);
+  return results.filter((s): s is NewsletterSubscriber => s !== null);
 }
 
 export async function deleteSubscriber(id: string): Promise<void> {
@@ -1256,12 +1253,9 @@ export async function getAllSendRecords(): Promise<EmailSendRecord[]> {
   const sendIds = await kv.zrange<string[]>('email:sends', 0, -1, { rev: true });
   if (!sendIds || sendIds.length === 0) return [];
 
-  const records: EmailSendRecord[] = [];
-  for (const id of sendIds) {
-    const record = await kv.get<EmailSendRecord>(`email:send:${id}`);
-    if (record) records.push(record);
-  }
-  return records;
+  const keys = sendIds.map((id) => `email:send:${id}`);
+  const results = await kv.mget<(EmailSendRecord | null)[]>(...keys);
+  return results.filter((r): r is EmailSendRecord => r !== null);
 }
 
 async function recordEmailSend(team: string, recipientCount: number, subject: string): Promise<string> {

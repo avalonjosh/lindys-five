@@ -17,6 +17,7 @@ export default function NewsletterDashboard() {
   const [sending, setSending] = useState(false);
   const [sendMessage, setSendMessage] = useState('');
   const [filterTeam, setFilterTeam] = useState('all');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     verifySession().then((ok) => {
@@ -27,21 +28,25 @@ export default function NewsletterDashboard() {
 
   async function loadData() {
     setLoading(true);
+    setError(null);
     try {
       const [subRes, sendRes] = await Promise.all([
         fetch('/api/newsletter/subscribers', { credentials: 'include' }),
         fetch('/api/newsletter/subscribers?type=sends', { credentials: 'include' }),
       ]);
-      if (subRes.ok) {
-        const data = await subRes.json();
-        setSubscribers(data.subscribers || []);
+      if (!subRes.ok || !sendRes.ok) {
+        const status = !subRes.ok ? subRes.status : sendRes.status;
+        setError(status === 401 ? 'Session expired — please log in again' : `Failed to load data (${status})`);
+        setLoading(false);
+        return;
       }
-      if (sendRes.ok) {
-        const data = await sendRes.json();
-        setSends(data.sends || []);
-      }
+      const subData = await subRes.json();
+      setSubscribers(subData.subscribers || []);
+      const sendData = await sendRes.json();
+      setSends(sendData.sends || []);
     } catch (err) {
       console.error('Failed to load newsletter data:', err);
+      setError('Failed to load newsletter data');
     }
     setLoading(false);
   }
@@ -138,6 +143,23 @@ export default function NewsletterDashboard() {
       <div className="min-h-screen bg-gray-50">
         <AdminNav activeTab="newsletter" />
         <div className="max-w-7xl mx-auto px-4 py-12 text-center text-gray-500">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <AdminNav activeTab="newsletter" />
+        <div className="max-w-7xl mx-auto px-4 py-12 text-center">
+          <p className="text-red-500 text-lg mb-3">{error}</p>
+          <button
+            onClick={loadData}
+            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
