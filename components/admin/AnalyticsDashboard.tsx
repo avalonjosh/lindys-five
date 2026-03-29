@@ -28,14 +28,6 @@ interface TopItem {
   count: number;
 }
 
-interface RealtimeData {
-  viewsThisHour: number;
-  viewsLastHour: number;
-  liveVisitors: number;
-  activePages: TopItem[];
-  liveFeed: { path: string; country: string; city: string; device: string; time: string }[];
-}
-
 interface GSCData {
   overview: {
     clicks: number;
@@ -96,12 +88,9 @@ export default function AnalyticsDashboard() {
   const [topReferrers, setTopReferrers] = useState<TopItem[]>([]);
   const [topDevices, setTopDevices] = useState<TopItem[]>([]);
   const [topCountries, setTopCountries] = useState<TopItem[]>([]);
-  const [topCities, setTopCities] = useState<TopItem[]>([]);
   const [topTeams, setTopTeams] = useState<TopItem[]>([]);
   const [utmSources, setUtmSources] = useState<TopItem[]>([]);
-  const [utmCampaigns, setUtmCampaigns] = useState<TopItem[]>([]);
   const [clicks, setClicks] = useState<TopItem[]>([]);
-  const [realtime, setRealtime] = useState<RealtimeData | null>(null);
   const [gsc, setGsc] = useState<GSCData | null>(null);
   const [gscError, setGscError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -114,7 +103,7 @@ export default function AnalyticsDashboard() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [ovRes, tsRes, pagesRes, refRes, devRes, countryRes, citiesRes, teamsRes, utmSrcRes, utmCampRes, clicksRes] =
+      const [ovRes, tsRes, pagesRes, refRes, devRes, countryRes, teamsRes, utmSrcRes, clicksRes] =
         await Promise.all([
           fetch(`/api/analytics/overview?range=${range}`),
           range !== 'alltime' ? fetch(`/api/analytics/timeseries?range=${range}`) : null,
@@ -122,10 +111,8 @@ export default function AnalyticsDashboard() {
           fetch(`/api/analytics/top?type=referrers&range=${range}&limit=10`),
           fetch(`/api/analytics/top?type=devices&range=${range}&limit=5`),
           fetch(`/api/analytics/top?type=countries&range=${range}&limit=10`),
-          fetch(`/api/analytics/top?type=cities&range=${range}&limit=15`),
           fetch(`/api/analytics/top?type=teams&range=${range}&limit=15`),
           fetch(`/api/analytics/top?type=utm_source&range=${range}&limit=10`),
-          fetch(`/api/analytics/top?type=utm_campaign&range=${range}&limit=10`),
           fetch(`/api/analytics/clicks?range=${range}&limit=15`),
         ]);
 
@@ -145,10 +132,8 @@ export default function AnalyticsDashboard() {
       setTopReferrers(refRes.ok ? (await refRes.json()).items || [] : []);
       setTopDevices(devRes.ok ? (await devRes.json()).items || [] : []);
       setTopCountries(countryRes.ok ? (await countryRes.json()).items || [] : []);
-      setTopCities(citiesRes.ok ? (await citiesRes.json()).items || [] : []);
       setTopTeams(teamsRes.ok ? (await teamsRes.json()).items || [] : []);
       setUtmSources(utmSrcRes.ok ? (await utmSrcRes.json()).items || [] : []);
-      setUtmCampaigns(utmCampRes.ok ? (await utmCampRes.json()).items || [] : []);
       setClicks(clicksRes.ok ? (await clicksRes.json()).items || [] : []);
       setLastUpdated(new Date());
     } catch (e) {
@@ -158,13 +143,6 @@ export default function AnalyticsDashboard() {
       setLoading(false);
     }
   }, [range]);
-
-  const fetchRealtime = useCallback(async () => {
-    try {
-      const res = await fetch('/api/analytics/realtime');
-      if (res.ok) setRealtime(await res.json());
-    } catch { /* silent */ }
-  }, []);
 
   const fetchGSC = useCallback(async () => {
     // GSC only has data for 7d/30d (not today or alltime)
@@ -189,17 +167,15 @@ export default function AnalyticsDashboard() {
     setLoading(true);
     fetchData();
     fetchGSC();
-    if (range === 'today') fetchRealtime();
-  }, [fetchData, fetchRealtime, fetchGSC, range]);
+  }, [fetchData, fetchGSC, range]);
 
   useEffect(() => {
     if (range !== 'today') return;
     const interval = setInterval(() => {
       fetchData();
-      fetchRealtime();
-    }, 30000);
+    }, 120000);
     return () => clearInterval(interval);
-  }, [range, fetchData, fetchRealtime]);
+  }, [range, fetchData]);
 
   const rangeOptions: { value: Range; label: string; shortLabel: string }[] = [
     { value: 'today', label: 'Today', shortLabel: 'Today' },
@@ -224,15 +200,6 @@ export default function AnalyticsDashboard() {
               >
                 Analytics
               </h2>
-              {/* Live badge — hidden on mobile, shown in realtime banner instead */}
-              {range === 'today' && realtime && (
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-green-900/40 border border-green-700/50 rounded-full">
-                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                  <span className="text-green-400 text-xs font-medium">
-                    {realtime.liveVisitors} live
-                  </span>
-                </div>
-              )}
               {lastUpdated && (
                 <span className="text-slate-500 text-[10px] sm:text-xs hidden md:inline">
                   Updated {lastUpdated.toLocaleTimeString()}
@@ -331,11 +298,6 @@ export default function AnalyticsDashboard() {
               />
             </div>
 
-            {/* Real-time banner */}
-            {range === 'today' && realtime && (
-              <RealtimeBanner data={realtime} />
-            )}
-
             {/* Chart */}
             {timeseries && <TimeseriesChart data={timeseries} range={range} />}
 
@@ -409,7 +371,6 @@ export default function AnalyticsDashboard() {
                 </div>
                 <div className="grid md:grid-cols-2 gap-4 mb-6">
                   <BarList title="Devices" items={topDevices} />
-                  <BarList title="Browsers" items={[]} emptyMessage="Browser data in Top leaderboards" />
                 </div>
               </>
             )}
@@ -427,9 +388,6 @@ export default function AnalyticsDashboard() {
                   <TopTable title="Referrers" items={topReferrers} emptyMessage="Share your link to start seeing referrer data" />
                   <TopTable title="UTM Sources" items={utmSources} emptyMessage="Add ?utm_source=... to your links to track campaigns" />
                 </div>
-                {utmCampaigns.length > 0 && (
-                  <TopTable title="UTM Campaigns" items={utmCampaigns} className="mb-6" />
-                )}
               </>
             )}
 
@@ -444,7 +402,6 @@ export default function AnalyticsDashboard() {
               <>
                 <div className="grid md:grid-cols-2 gap-4 mb-6">
                   <TopTable title="Countries" items={topCountries} showFlags formatName={countryName} />
-                  <TopTable title="Cities" items={topCities} emptyMessage="City data requires Vercel deployment" />
                 </div>
               </>
             )}
@@ -466,30 +423,16 @@ export default function AnalyticsDashboard() {
               </>
             )}
 
-            {/* ===== LIVE FEED ===== */}
-            {range === 'today' && realtime && realtime.liveFeed.length > 0 && (
-              <>
-                <SectionHeader
-                  title="Live Feed"
-                  subtitle="Real-time visitor activity"
-                  collapsed={collapsed['livefeed']}
-                  onToggle={() => toggleSection('livefeed')}
-                />
-                {!collapsed['livefeed'] && <LiveFeed feed={realtime.liveFeed} />}
-              </>
-            )}
-
             {/* Export */}
             <div className="mt-8 pt-6 border-t border-slate-700 flex items-center justify-between">
               <span className="text-slate-500 text-xs">
                 {lastUpdated && `Last updated ${lastUpdated.toLocaleTimeString()}`}
-                {range === 'today' && ' · Auto-refreshes every 30s'}
+                {range === 'today' && ' · Auto-refreshes every 2m'}
               </span>
               <ExportButton
                 topPages={topPages}
                 topReferrers={topReferrers}
                 topCountries={topCountries}
-                topCities={topCities}
                 topTeams={topTeams}
                 clicks={clicks}
                 range={range}
@@ -610,45 +553,6 @@ function Sparkline({ data }: { data: number[] }) {
     <svg className="absolute bottom-0 right-0 opacity-15" width={w} height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
       <polyline points={points} fill="none" stroke="#FCB514" strokeWidth={2} strokeLinejoin="round" />
     </svg>
-  );
-}
-
-function RealtimeBanner({ data }: { data: RealtimeData }) {
-  return (
-    <div className="bg-slate-800 rounded-xl border border-slate-700 mb-6 p-4">
-      {/* Mobile: stack vertically. Desktop: horizontal */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse" />
-          <span className="text-white font-bold text-lg">{data.liveVisitors}</span>
-          <span className="text-slate-400 text-sm">on site now</span>
-        </div>
-        <div className="hidden sm:block h-8 w-px bg-slate-700 shrink-0" />
-        <div className="flex gap-6">
-          <div>
-            <span className="text-slate-500 text-[10px] uppercase tracking-wide">This hour</span>
-            <p className="text-white font-bold">{data.viewsThisHour}</p>
-          </div>
-          <div>
-            <span className="text-slate-500 text-[10px] uppercase tracking-wide">Last hour</span>
-            <p className="text-white font-bold">{data.viewsLastHour}</p>
-          </div>
-        </div>
-        {data.activePages.length > 0 && (
-          <div className="hidden md:contents">
-            <div className="h-8 w-px bg-slate-700 shrink-0" />
-            <div className="flex flex-wrap gap-2">
-              {data.activePages.slice(0, 5).map((p, i) => (
-                <div key={i} className="px-2 py-1 bg-slate-700/50 rounded text-xs">
-                  <span className="text-slate-300">{prettifyPath(p.name)}</span>
-                  <span className="text-[#FCB514] ml-1 font-medium">{p.count}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
   );
 }
 
@@ -932,41 +836,10 @@ function BarList({
   );
 }
 
-function LiveFeed({ feed }: { feed: RealtimeData['liveFeed'] }) {
-  return (
-    <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 mb-6">
-      <div className="space-y-1 max-h-64 overflow-y-auto">
-        {feed.map((entry, i) => {
-          const ago = getTimeAgo(entry.time);
-          return (
-            <div key={i} className="flex items-center gap-3 text-xs py-1.5 border-b border-slate-700/50 last:border-0">
-              <span className="text-slate-600 w-14 shrink-0 tabular-nums">{ago}</span>
-              {entry.country && <span className="shrink-0">{countryFlag(entry.country)}</span>}
-              <span className="text-slate-300 truncate flex-1" title={entry.path}>{prettifyPath(entry.path)}</span>
-              <span className="text-slate-500 shrink-0 capitalize text-[10px] px-1.5 py-0.5 bg-slate-700/50 rounded">{entry.device}</span>
-              {entry.city && (
-                <span className="text-slate-500 shrink-0 hidden md:inline text-[10px]">{entry.city}</span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function getTimeAgo(isoTime: string): string {
-  const diff = Math.round((Date.now() - new Date(isoTime).getTime()) / 1000);
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  return `${Math.floor(diff / 3600)}h ago`;
-}
-
 function ExportButton({
   topPages,
   topReferrers,
   topCountries,
-  topCities,
   topTeams,
   clicks,
   range,
@@ -974,7 +847,6 @@ function ExportButton({
   topPages: TopItem[];
   topReferrers: TopItem[];
   topCountries: TopItem[];
-  topCities: TopItem[];
   topTeams: TopItem[];
   clicks: TopItem[];
   range: Range;
@@ -989,7 +861,6 @@ function ExportButton({
     add('Pages', topPages);
     add('Referrers', topReferrers);
     add('Countries', topCountries);
-    add('Cities', topCities);
     add('Teams', topTeams);
     add('Clicks', clicks);
 
