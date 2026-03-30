@@ -118,8 +118,11 @@ export default function TeamStatsPreview({
 
   const away = teamSeasonStats.awayTeam;
   const home = teamSeasonStats.homeTeam;
+  if (!away || !home) return null;
   const awayColor = getTeamColor(awayAbbrev);
   const homeColor = getTeamColor(homeAbbrev);
+  const fmt = (v: number | undefined, decimals: number) => v != null ? v.toFixed(decimals) : '—';
+  const pct = (v: number | undefined, decimals: number) => v != null ? `${(v * 100).toFixed(decimals)}%` : '—';
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
@@ -134,56 +137,56 @@ export default function TeamStatsPreview({
       <div className="space-y-4">
         <StatBar
           label="Power Play"
-          awayValue={`${(away.ppPctg * 100).toFixed(1)}%`}
-          homeValue={`${(home.ppPctg * 100).toFixed(1)}%`}
+          awayValue={pct(away.ppPctg, 1)}
+          homeValue={pct(home.ppPctg, 1)}
           awayRank={away.ppPctgRank}
           homeRank={home.ppPctgRank}
-          awayNum={away.ppPctg}
-          homeNum={home.ppPctg}
+          awayNum={away.ppPctg ?? 0}
+          homeNum={home.ppPctg ?? 0}
           awayColor={awayColor}
           homeColor={homeColor}
         />
         <StatBar
           label="Penalty Kill"
-          awayValue={`${(away.pkPctg * 100).toFixed(1)}%`}
-          homeValue={`${(home.pkPctg * 100).toFixed(1)}%`}
+          awayValue={pct(away.pkPctg, 1)}
+          homeValue={pct(home.pkPctg, 1)}
           awayRank={away.pkPctgRank}
           homeRank={home.pkPctgRank}
-          awayNum={away.pkPctg}
-          homeNum={home.pkPctg}
+          awayNum={away.pkPctg ?? 0}
+          homeNum={home.pkPctg ?? 0}
           awayColor={awayColor}
           homeColor={homeColor}
         />
         <StatBar
           label="Faceoff %"
-          awayValue={`${(away.faceoffWinningPctg * 100).toFixed(1)}%`}
-          homeValue={`${(home.faceoffWinningPctg * 100).toFixed(1)}%`}
+          awayValue={pct(away.faceoffWinningPctg, 1)}
+          homeValue={pct(home.faceoffWinningPctg, 1)}
           awayRank={away.faceoffWinningPctgRank}
           homeRank={home.faceoffWinningPctgRank}
-          awayNum={away.faceoffWinningPctg}
-          homeNum={home.faceoffWinningPctg}
+          awayNum={away.faceoffWinningPctg ?? 0}
+          homeNum={home.faceoffWinningPctg ?? 0}
           awayColor={awayColor}
           homeColor={homeColor}
         />
         <StatBar
           label="Goals For / Game"
-          awayValue={away.goalsForPerGamePlayed.toFixed(2)}
-          homeValue={home.goalsForPerGamePlayed.toFixed(2)}
+          awayValue={fmt(away.goalsForPerGamePlayed, 2)}
+          homeValue={fmt(home.goalsForPerGamePlayed, 2)}
           awayRank={away.goalsForPerGamePlayedRank}
           homeRank={home.goalsForPerGamePlayedRank}
-          awayNum={away.goalsForPerGamePlayed}
-          homeNum={home.goalsForPerGamePlayed}
+          awayNum={away.goalsForPerGamePlayed ?? 0}
+          homeNum={home.goalsForPerGamePlayed ?? 0}
           awayColor={awayColor}
           homeColor={homeColor}
         />
         <StatBar
           label="Goals Against / Game"
-          awayValue={away.goalsAgainstPerGamePlayed.toFixed(2)}
-          homeValue={home.goalsAgainstPerGamePlayed.toFixed(2)}
+          awayValue={fmt(away.goalsAgainstPerGamePlayed, 2)}
+          homeValue={fmt(home.goalsAgainstPerGamePlayed, 2)}
           awayRank={away.goalsAgainstPerGamePlayedRank}
           homeRank={home.goalsAgainstPerGamePlayedRank}
-          awayNum={away.goalsAgainstPerGamePlayed}
-          homeNum={home.goalsAgainstPerGamePlayed}
+          awayNum={away.goalsAgainstPerGamePlayed ?? 0}
+          homeNum={home.goalsAgainstPerGamePlayed ?? 0}
           awayColor={awayColor}
           homeColor={homeColor}
           lowerIsBetter

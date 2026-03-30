@@ -93,15 +93,15 @@ export default function GoalieMatchup({
         />
         <StatRow
           label="GAA"
-          away={awayStarter.gaa.toFixed(2)}
-          home={homeStarter.gaa.toFixed(2)}
-          better={compareLower(awayStarter.gaa, homeStarter.gaa)}
+          away={awayStarter.gaa != null ? awayStarter.gaa.toFixed(2) : '—'}
+          home={homeStarter.gaa != null ? homeStarter.gaa.toFixed(2) : '—'}
+          better={awayStarter.gaa != null && homeStarter.gaa != null ? compareLower(awayStarter.gaa, homeStarter.gaa) : null}
         />
         <StatRow
           label="SV%"
-          away={awayStarter.savePctg.toFixed(3)}
-          home={homeStarter.savePctg.toFixed(3)}
-          better={compareHigher(awayStarter.savePctg, homeStarter.savePctg)}
+          away={awayStarter.savePctg != null ? awayStarter.savePctg.toFixed(3) : '—'}
+          home={homeStarter.savePctg != null ? homeStarter.savePctg.toFixed(3) : '—'}
+          better={awayStarter.savePctg != null && homeStarter.savePctg != null ? compareHigher(awayStarter.savePctg, homeStarter.savePctg) : null}
         />
         <StatRow
           label="SO"
