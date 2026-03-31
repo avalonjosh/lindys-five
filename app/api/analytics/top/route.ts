@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { jwtVerify } from 'jose';
 import { getDateKey } from '@/lib/analytics';
+import { fetchTopItems } from '@/lib/ga4';
 
 async function verifyAdmin(request: NextRequest): Promise<boolean> {
   const token = request.cookies.get('admin_token')?.value;
@@ -14,6 +15,9 @@ async function verifyAdmin(request: NextRequest): Promise<boolean> {
     return false;
   }
 }
+
+// Types that stay in KV (not available in GA4)
+const KV_TYPES = ['teams'];
 
 export async function GET(request: NextRequest) {
   if (!(await verifyAdmin(request))) {
@@ -30,11 +34,31 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
   }
 
+  // Team data stays in KV since GA4 doesn't track teams natively
+  if (KV_TYPES.includes(type)) {
+    try {
+      return NextResponse.json(await fetchFromKV(type, range, limit));
+    } catch (error) {
+      console.error(`KV top ${type} error:`, error);
+      return NextResponse.json({ items: [] });
+    }
+  }
+
+  // Everything else comes from GA4
+  try {
+    const data = await fetchTopItems(type, range, limit);
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error(`GA4 top ${type} error:`, error);
+    return NextResponse.json({ items: [] });
+  }
+}
+
+async function fetchFromKV(type: string, range: string, limit: number) {
   if (range === 'alltime') {
     const key = `analytics:top:${type}:alltime`;
     const data = await kv.zrange(key, 0, limit - 1, { rev: true, withScores: true }) as (string | number)[];
-    const items = parseZrangeResult(data);
-    return NextResponse.json({ items });
+    return { items: parseZrangeResult(data) };
   }
 
   const days = range === '7d' ? 7 : range === '30d' ? 30 : 1;
@@ -43,11 +67,9 @@ export async function GET(request: NextRequest) {
     const dateKey = getDateKey();
     const key = `analytics:top:${type}:${dateKey}`;
     const data = await kv.zrange(key, 0, limit - 1, { rev: true, withScores: true }) as (string | number)[];
-    const items = parseZrangeResult(data);
-    return NextResponse.json({ items });
+    return { items: parseZrangeResult(data) };
   }
 
-  // Multi-day: merge sorted sets
   const merged = new Map<string, number>();
   const pipeline = kv.pipeline();
   for (let i = 0; i < days; i++) {
@@ -73,7 +95,7 @@ export async function GET(request: NextRequest) {
     .sort((a, b) => b.count - a.count)
     .slice(0, limit);
 
-  return NextResponse.json({ items });
+  return { items };
 }
 
 function parseZrangeResult(data: (string | number)[]): { name: string; count: number }[] {

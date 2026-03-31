@@ -561,8 +561,20 @@ function TimeseriesChart({ data, range }: { data: TimeseriesData; range: Range }
   const [showVisitors, setShowVisitors] = useState(true);
   const svgRef = useRef<SVGSVGElement>(null);
   const isToday = range === 'today';
-  const max = Math.max(...data.views, ...(showVisitors && data.visitors ? data.visitors : []), 1);
   const count = data.labels.length;
+
+  if (count === 0) {
+    return (
+      <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 mb-6">
+        <h3 className="text-lg font-bold text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+          Views Over Time <span className="text-xs font-normal text-slate-400 ml-1">(ET)</span>
+        </h3>
+        <p className="text-slate-500 text-sm mt-4">No data available for this period.</p>
+      </div>
+    );
+  }
+
+  const max = Math.max(...data.views, ...(showVisitors && data.visitors ? data.visitors : []), 1);
 
   const W = 800;
   const H = 200;
@@ -613,13 +625,20 @@ function TimeseriesChart({ data, range }: { data: TimeseriesData; range: Range }
       ? PAD_LEFT + idx * (barWidth + barGap) + barWidth / 2
       : PAD_LEFT + (idx / (count - 1)) * chartW;
     const y = PAD_TOP + chartH - (data.views[idx] / max) * chartH;
-    setTooltip({ x, y, label: data.labels[idx], views: data.views[idx], visitors: data.visitors?.[idx] });
+    const views = data.views[idx] ?? 0;
+    setTooltip({ x, y, label: data.labels[idx], views, visitors: data.visitors?.[idx] });
   };
 
-  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(frac => ({
+  const yTicksRaw = [0, 0.25, 0.5, 0.75, 1].map(frac => ({
     value: Math.round(max * frac),
     y: PAD_TOP + chartH - frac * chartH,
   }));
+  const seenTickValues = new Set<number>();
+  const yTicks = yTicksRaw.filter(t => {
+    if (seenTickValues.has(t.value)) return false;
+    seenTickValues.add(t.value);
+    return true;
+  });
 
   return (
     <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 mb-6">

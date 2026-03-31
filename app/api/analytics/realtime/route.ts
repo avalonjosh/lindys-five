@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
 import { jwtVerify } from 'jose';
-import { getDateKey, getHourKey } from '@/lib/analytics';
+import { fetchRealtime } from '@/lib/ga4';
 
 async function verifyAdmin(request: NextRequest): Promise<boolean> {
   const token = request.cookies.get('admin_token')?.value;
@@ -20,42 +19,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const today = getDateKey();
-  const currentHour = getHourKey();
-  const prevHour = String((parseInt(currentHour) - 1 + 24) % 24).padStart(2, '0');
-
-  const [viewsThisHour, viewsLastHour, activePages, liveKeys, recentEvents] = await Promise.all([
-    kv.get<number>(`analytics:pv:hourly:${today}:${currentHour}`),
-    kv.get<number>(`analytics:pv:hourly:${today}:${prevHour}`),
-    kv.zrange(`analytics:top:pages:${today}`, 0, 9, { rev: true, withScores: true }) as Promise<(string | number)[]>,
-    // Count live visitors by scanning live keys
-    kv.keys('analytics:live:*'),
-    // Recent events from the live feed list
-    kv.lrange('analytics:livefeed', 0, 19) as Promise<string[]>,
-  ]);
-
-  const pages: { name: string; count: number }[] = [];
-  if (activePages && Array.isArray(activePages)) {
-    for (let i = 0; i < activePages.length; i += 2) {
-      pages.push({ name: String(activePages[i]), count: Number(activePages[i + 1]) || 0 });
-    }
+  try {
+    const data = await fetchRealtime();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('GA4 realtime error:', error);
+    return NextResponse.json({
+      viewsThisHour: 0,
+      viewsLastHour: 0,
+      activePages: [],
+      liveVisitors: 0,
+      liveFeed: [],
+    });
   }
-
-  // Parse live feed entries
-  const liveFeed: { path: string; country: string; city: string; device: string; time: string }[] = [];
-  if (recentEvents) {
-    for (const entry of recentEvents) {
-      try {
-        liveFeed.push(JSON.parse(entry));
-      } catch { /* skip malformed */ }
-    }
-  }
-
-  return NextResponse.json({
-    viewsThisHour: viewsThisHour || 0,
-    viewsLastHour: viewsLastHour || 0,
-    activePages: pages,
-    liveVisitors: liveKeys?.length || 0,
-    liveFeed,
-  });
 }
