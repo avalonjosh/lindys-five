@@ -75,7 +75,7 @@ const mlbGradients: Record<string, { from: string; to: string; border: string; a
   nationals: { from: '#AB0003', to: '#820002', border: '#14225A', accent: '#ffffff' },
 };
 
-const bgTeamIds = ['lightning', 'orioles', 'reds', 'tigers', 'royals', 'dodgers', 'twins', 'athletics', 'padres', 'cardinals', 'nationals'];
+const bgTeamIds = ['lightning', 'orioles', 'reds', 'tigers', 'royals', 'dodgers', 'twins', 'athletics', 'padres', 'cardinals', 'nationals', 'rays'];
 
 const nhlTeamIds = [
   'ducks', 'bruins', 'sabres', 'flames', 'hurricanes', 'blackhawks', 'bluejackets',
