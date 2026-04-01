@@ -61,7 +61,7 @@ const mlbGradients: Record<string, { from: string; to: string; border: string; a
   brewers: { from: '#12284B', to: '#0d1e38', border: '#FFC52F', accent: '#FFC52F' },
   twins: { from: '#002B5C', to: '#001f44', border: '#D31145', accent: '#D31145' },
   mets: { from: '#002D72', to: '#002157', border: '#FF5910', accent: '#FF5910' },
-  yankees: { from: '#003087', to: '#002366', border: '#E4002C', accent: '#ffffff' },
+  yankees: { from: '#1C2841', to: '#131c2e', border: '#1C2841', accent: '#ffffff' },
   athletics: { from: '#003831', to: '#002a24', border: '#EFB21E', accent: '#EFB21E' },
   phillies: { from: '#E81828', to: '#b81320', border: '#002D72', accent: '#ffffff' },
   pirates: { from: '#27251F', to: '#131210', border: '#FDB827', accent: '#FDB827' },
@@ -75,7 +75,7 @@ const mlbGradients: Record<string, { from: string; to: string; border: string; a
   nationals: { from: '#AB0003', to: '#820002', border: '#14225A', accent: '#ffffff' },
 };
 
-const bgTeamIds = ['lightning'];
+const bgTeamIds = ['lightning', 'orioles', 'reds', 'tigers', 'royals', 'dodgers', 'twins', 'athletics', 'padres', 'cardinals', 'nationals'];
 
 const nhlTeamIds = [
   'ducks', 'bruins', 'sabres', 'flames', 'hurricanes', 'blackhawks', 'bluejackets',
@@ -95,9 +95,9 @@ const mlbTeamIds = [
 
 function getTeamData(teamId: string) {
   const nhlTeam = TEAMS[teamId];
-  if (nhlTeam) return { name: `${nhlTeam.city} ${nhlTeam.name}`, logo: nhlTeam.logo };
+  if (nhlTeam) return { name: `${nhlTeam.city} ${nhlTeam.name}`, logo: nhlTeam.logo, headerLogo: undefined };
   const mlbTeam = MLB_TEAMS[teamId];
-  if (mlbTeam) return { name: `${mlbTeam.city} ${mlbTeam.name}`, logo: mlbTeam.logo };
+  if (mlbTeam) return { name: `${mlbTeam.city} ${mlbTeam.name}`, logo: mlbTeam.logo, headerLogo: mlbTeam.headerLogo };
   return null;
 }
 
@@ -110,6 +110,7 @@ function FeaturedCard({ teamId }: { teamId: string }) {
   const g = getGradient(teamId);
   if (!team || !g) return null;
   const useBg = bgTeamIds.includes(teamId);
+  const displayLogo = team.headerLogo || team.logo;
 
   return (
     <Link
@@ -123,7 +124,7 @@ function FeaturedCard({ teamId }: { teamId: string }) {
             <Image src={team.logo} alt={team.name} width={128} height={128} className="w-32 h-32 group-hover:scale-110 transition-transform duration-300" />
           </div>
         ) : (
-          <Image src={team.logo} alt={team.name} width={160} height={160} className="w-40 h-40 mb-8 group-hover:scale-110 transition-transform duration-300" />
+          <Image src={displayLogo} alt={team.name} width={160} height={160} className="w-40 h-40 mb-8 group-hover:scale-110 transition-transform duration-300" />
         )}
         <h2 className="text-4xl md:text-5xl font-bold text-white mb-3" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>{team.name}</h2>
         <p className="font-bold text-lg" style={{ color: g.accent }}>View →</p>
@@ -137,6 +138,7 @@ function TeamCard({ teamId }: { teamId: string }) {
   const g = getGradient(teamId);
   if (!team || !g) return null;
   const useBg = bgTeamIds.includes(teamId);
+  const displayLogo = team.headerLogo || team.logo;
 
   return (
     <Link
@@ -150,7 +152,7 @@ function TeamCard({ teamId }: { teamId: string }) {
             <Image src={team.logo} alt={team.name} width={96} height={96} className="w-24 h-24 group-hover:scale-110 transition-transform duration-300" />
           </div>
         ) : (
-          <Image src={team.logo} alt={team.name} width={128} height={128} className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300" />
+          <Image src={displayLogo} alt={team.name} width={128} height={128} className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300" />
         )}
         <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>{team.name}</h2>
         <p className="font-semibold" style={{ color: g.accent }}>View →</p>
