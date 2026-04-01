@@ -194,7 +194,7 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
                 e.stopPropagation();
                 e.preventDefault();
                 trackClick('opponent-logo', opponentSlug || game.opponent);
-                router.push(`/${opponentSlug}`);
+                router.push(`/nhl/${opponentSlug}`);
               }}
               className={`rounded-lg p-1.5 md:p-2 shadow-sm border transition-transform hover:scale-110 cursor-pointer ${
                 isGoatMode ? '' : 'bg-white border-gray-200'

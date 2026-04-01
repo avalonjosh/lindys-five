@@ -168,7 +168,7 @@ export default async function TeamBlogPage({
           <div className="max-w-7xl mx-auto px-4 py-6">
             {/* Back link */}
             <Link
-              href="/sabres"
+              href="/nhl/sabres"
               className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-6"
             >
               <ArrowLeft className="w-4 h-4" />

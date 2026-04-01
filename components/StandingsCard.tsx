@@ -912,7 +912,7 @@ function TeamRow({
         const slug = getTeamSlug(team.teamAbbrev);
         const img = <img src={team.teamLogo} alt={team.teamAbbrev} className="w-6 h-6 object-contain" />;
         return slug ? (
-          <Link href={`/${slug}`} className="flex-shrink-0 hover:scale-110 transition-transform" onClick={(e) => e.stopPropagation()}>
+          <Link href={`/nhl/${slug}`} className="flex-shrink-0 hover:scale-110 transition-transform" onClick={(e) => e.stopPropagation()}>
             {img}
           </Link>
         ) : img;
@@ -1218,7 +1218,7 @@ function ScoresRow({
         const slug = getTeamSlug(team.teamAbbrev);
         const img = <img src={team.teamLogo} alt={team.teamAbbrev} className="w-6 h-6 object-contain" />;
         return slug ? (
-          <Link href={`/${slug}`} className="flex-shrink-0 hover:scale-110 transition-transform" onClick={(e) => e.stopPropagation()}>
+          <Link href={`/nhl/${slug}`} className="flex-shrink-0 hover:scale-110 transition-transform" onClick={(e) => e.stopPropagation()}>
             {img}
           </Link>
         ) : img;

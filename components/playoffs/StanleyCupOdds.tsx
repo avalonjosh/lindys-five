@@ -40,7 +40,7 @@ export default function StanleyCupOdds({ odds }: StanleyCupOddsProps) {
           return (
             <Link
               key={team.abbrev}
-              href={slug ? `/${slug}` : '#'}
+              href={slug ? `/nhl/${slug}` : '#'}
               className="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50/50 transition-colors"
             >
               <span className="w-5 text-xs text-gray-400 font-medium text-right">

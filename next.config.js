@@ -1,3 +1,13 @@
+// NHL team slugs for 301 redirects from /{team} to /nhl/{team}
+const NHL_SLUGS = [
+  'sabres', 'canadiens', 'redwings', 'senators', 'panthers', 'mapleleafs',
+  'lightning', 'bruins', 'devils', 'penguins', 'hurricanes', 'capitals',
+  'islanders', 'flyers', 'bluejackets', 'rangers', 'utah', 'avalanche',
+  'jets', 'stars', 'blackhawks', 'predators', 'wild', 'blues',
+  'goldenknights', 'oilers', 'canucks', 'flames', 'kings', 'ducks',
+  'sharks', 'kraken',
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
@@ -9,6 +19,13 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return NHL_SLUGS.map((slug) => ({
+      source: `/${slug}`,
+      destination: `/nhl/${slug}`,
+      permanent: true,
+    }));
+  },
   images: {
     remotePatterns: [
       {
@@ -18,6 +35,10 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: '*.public.blob.vercel-storage.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.mlbstatic.com',
       },
     ],
   },

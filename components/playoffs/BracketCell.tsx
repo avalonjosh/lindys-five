@@ -101,7 +101,7 @@ function TeamRow({
   return (
     <div className={`flex items-center gap-1.5 px-2 py-1.5 ${isLoser ? 'opacity-40' : ''}`}>
       {slug ? (
-        <Link href={`/${slug}`} className="flex items-center gap-1.5 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+        <Link href={`/nhl/${slug}`} className="flex items-center gap-1.5 flex-1 min-w-0 hover:opacity-80 transition-opacity">
           {logoEl}
           <span className="text-[11px] text-gray-400 w-3 text-center flex-shrink-0">{seed}</span>
           <span className={`text-xs font-semibold flex-1 truncate ${

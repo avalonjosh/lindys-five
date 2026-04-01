@@ -46,7 +46,7 @@ export default function StanleyCupOddsTable({ teams }: StanleyCupOddsTableProps)
                   <tr key={team.abbrev} className="border-b border-gray-100 hover:bg-blue-50/50 transition-colors">
                     <td className="py-2.5 px-3 text-gray-400 text-xs font-medium">{idx + 1}</td>
                     <td className="py-2.5 px-2">
-                      <Link href={team.slug ? `/${team.slug}` : '#'} className="flex items-center gap-2 group">
+                      <Link href={team.slug ? `/nhl/${team.slug}` : '#'} className="flex items-center gap-2 group">
                         <img src={team.logo} alt={team.name} className="w-6 h-6 flex-shrink-0" loading="lazy" />
                         <span className="text-gray-900 font-medium group-hover:text-blue-600 transition-colors truncate">
                           <span className="hidden md:inline">{team.name}</span>

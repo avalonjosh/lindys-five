@@ -1,0 +1,109 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
+import type { MLBBoxScoreData } from '@/lib/types/mlb';
+import { fetchMLBBoxScore } from '@/lib/services/mlbApi';
+import MLBGameHeader from './MLBGameHeader';
+import MLBScoringPlays from './MLBScoringPlays';
+import MLBBattingStats from './MLBBattingStats';
+import MLBPitchingStats from './MLBPitchingStats';
+
+interface Props {
+  gameId: string;
+}
+
+export default function MLBBoxScoreClient({ gameId }: Props) {
+  const [data, setData] = useState<MLBBoxScoreData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const loadData = async () => {
+    try {
+      const result = await fetchMLBBoxScore(parseInt(gameId));
+      setData(result);
+      setError(false);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [gameId]);
+
+  // Poll for live games
+  useEffect(() => {
+    if (!data) return;
+    const isLive = data.status === 'In Progress' || data.status === 'Warming Up';
+    if (!isLive) return;
+    const interval = setInterval(() => loadData(), 15000);
+    return () => clearInterval(interval);
+  }, [data?.status]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-transparent border-blue-500" />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Failed to load box score.</p>
+          <button onClick={loadData} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Retry</button>
+        </div>
+      </div>
+    );
+  }
+
+  const isComplete = data.status === 'Final' || data.status === 'Completed Early';
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Header */}
+      <header className="shadow-xl border-b-4" style={{ background: '#002D72', borderBottomColor: '#041E42' }}>
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <Link href="/mlb/scores" className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-4">
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm">Back to Scores</span>
+          </Link>
+          <div className="text-center">
+            <Link href="/">
+              <h1 className="text-3xl md:text-5xl font-bold text-white mb-1 hover:text-white/90 transition-colors" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                Lindy&apos;s Five
+              </h1>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
+        <MLBGameHeader data={data} />
+
+        {isComplete && data.scoringPlays.length > 0 && (
+          <MLBScoringPlays plays={data.scoringPlays} awayAbbrev={data.awayTeam.abbreviation} homeAbbrev={data.homeTeam.abbreviation} />
+        )}
+
+        {(isComplete || data.status === 'In Progress') && (
+          <>
+            <MLBBattingStats batters={data.batters.away} teamName={data.awayTeam.teamName} teamAbbrev={data.awayTeam.abbreviation} teamLogo={data.awayTeam.logo} />
+            <MLBBattingStats batters={data.batters.home} teamName={data.homeTeam.teamName} teamAbbrev={data.homeTeam.abbreviation} teamLogo={data.homeTeam.logo} />
+            <MLBPitchingStats pitchers={data.pitchers.away} teamName={data.awayTeam.teamName} teamAbbrev={data.awayTeam.abbreviation} teamLogo={data.awayTeam.logo} />
+            <MLBPitchingStats pitchers={data.pitchers.home} teamName={data.homeTeam.teamName} teamAbbrev={data.homeTeam.abbreviation} teamLogo={data.homeTeam.logo} />
+          </>
+        )}
+
+        <footer className="text-center text-xs text-gray-400 py-8">
+          Data provided by MLB Stats API &bull; &copy; {new Date().getFullYear()} JRR Apps
+        </footer>
+      </main>
+    </div>
+  );
+}

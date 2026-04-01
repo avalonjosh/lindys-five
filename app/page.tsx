@@ -1,42 +1,27 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import FavoriteTeamsGrid from '@/components/landing/FavoriteTeamsGrid';
-import GameTicker from '@/components/landing/GameTicker';
+import Image from 'next/image';
 
 export const metadata: Metadata = {
-  title: "NHL Playoff Odds & Standings 2025-26 — Projections for All 32 Teams",
+  title: "Lindy's Five — Track Every Season, Five Games at a Time",
   description:
-    "NHL playoff odds, standings, and playoff picture for all 32 teams in 2025-26. Track playoff probability, Stanley Cup odds, points pace, and wild card race updated daily.",
+    "NHL and MLB playoff odds, standings, and projections. Track your team's playoff race with 5-game set analysis, updated daily.",
   openGraph: {
-    title: "NHL Playoff Odds & Standings 2025-26 — Projections for All 32 Teams",
+    title: "Lindy's Five — Track Every Season, Five Games at a Time",
     description:
-      "NHL playoff odds, standings, and playoff picture for all 32 teams in 2025-26. Track playoff probability, Stanley Cup odds, and wild card race updated daily.",
+      "NHL and MLB playoff odds, standings, and projections. Track your team's playoff race with 5-game set analysis.",
     type: 'website',
     url: 'https://www.lindysfive.com/',
     siteName: "Lindy's Five",
   },
   twitter: {
     card: 'summary_large_image',
-    title: "NHL Playoff Odds & Standings 2025-26 — All 32 Teams",
+    title: "Lindy's Five — NHL & MLB Playoff Tracker",
     description:
-      "NHL playoff odds, standings, and projections for all 32 teams. Playoff picture, Stanley Cup odds, and wild card race updated daily.",
+      "Track your team's playoff race with 5-game set analysis. NHL and MLB standings, projections, and odds updated daily.",
   },
   alternates: {
     canonical: 'https://www.lindysfive.com/',
-  },
-  other: {
-    'script:ld+json': JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'WebSite',
-      name: "Lindy's Five",
-      description:
-        "NHL playoff odds, standings, and projections for all 32 teams",
-      url: 'https://www.lindysfive.com',
-      publisher: {
-        '@type': 'Organization',
-        name: 'JRR Apps',
-      },
-    }),
   },
 };
 
@@ -50,67 +35,102 @@ export default function LandingPage() {
             '@context': 'https://schema.org',
             '@type': 'WebSite',
             name: "Lindy's Five",
-            description:
-              "Track your NHL team's playoff race with 5-game set analysis",
+            description: "Track every season, five games at a time. NHL and MLB playoff odds and projections.",
             url: 'https://www.lindysfive.com',
-            publisher: {
-              '@type': 'Organization',
-              name: 'JRR Apps',
-            },
+            publisher: { '@type': 'Organization', name: 'JRR Apps' },
           }),
         }}
       />
 
-      <GameTicker />
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
         <div className="max-w-4xl w-full">
           {/* Header */}
-          <div className="text-center mb-12">
+          <div className="text-center mb-16">
             <p
-              className="text-2xl md:text-3xl font-bold text-gray-400 mb-2"
+              className="text-5xl md:text-7xl font-bold text-white mb-4"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
               Lindy&apos;s Five
             </p>
-            <h1
-              className="text-4xl md:text-6xl font-bold text-white mb-4"
-              style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-            >
-              NHL Playoff Odds &amp; Standings 2025-26
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-300 mb-2">
-              Playoff Picture, Projections &amp; Stanley Cup Odds for All 32 Teams
-            </p>
-            <p className="text-sm md:text-base text-gray-400">
-              Points Pace &bull; Wild Card Race &bull; Updated Daily
+            <p className="text-lg md:text-xl text-gray-400">
+              Track Every Season, Five Games at a Time
             </p>
           </div>
 
-          <FavoriteTeamsGrid />
+          {/* Sport Badges */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16 max-w-3xl mx-auto">
+            {/* NHL Badge */}
+            <Link
+              href="/nhl"
+              className="group relative rounded-2xl p-10 md:p-14 shadow-2xl border-4 transition-all duration-300 hover:scale-105"
+              style={{
+                background: 'linear-gradient(to bottom right, #003087, #0A1128)',
+                borderColor: '#ffffff',
+              }}
+            >
+              <div className="flex flex-col items-center text-center">
+                <Image
+                  src="https://assets.nhle.com/logos/nhl/svg/NHL_light.svg"
+                  alt="NHL"
+                  width={160}
+                  height={160}
+                  className="w-32 h-32 md:w-40 md:h-40 mb-6 group-hover:scale-110 transition-transform duration-300"
+                />
+                <h2
+                  className="text-4xl md:text-5xl font-bold text-white mb-2"
+                  style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+                >
+                  NHL
+                </h2>
+                <p className="text-sm md:text-base text-white/60 mb-4">
+                  32 Teams &bull; Playoff Odds &bull; Stanley Cup Race
+                </p>
+                <p className="font-bold text-lg text-white/80">Enter →</p>
+              </div>
+            </Link>
 
-          {/* Quick Links */}
-          <div className="text-center mb-12">
-            <div className="flex flex-wrap justify-center gap-4 text-sm">
-              <Link href="/playoffs" className="text-gray-400 hover:text-white transition-colors">
-                Playoff Bracket
-              </Link>
-              <span className="text-gray-600">|</span>
-              <Link href="/scores" className="text-gray-400 hover:text-white transition-colors">
-                NHL Scores Today
-              </Link>
-              <span className="text-gray-600">|</span>
-              <Link href="/blog/sabres" className="text-gray-400 hover:text-white transition-colors">
-                Sabres Blog
-              </Link>
-              <span className="text-gray-600">|</span>
-              <Link href="/feed.xml" className="text-gray-400 hover:text-white transition-colors">
-                RSS Feed
-              </Link>
-            </div>
+            {/* MLB Badge */}
+            <Link
+              href="/mlb"
+              className="group relative rounded-2xl p-10 md:p-14 shadow-2xl border-4 transition-all duration-300 hover:scale-105"
+              style={{
+                background: 'linear-gradient(to bottom right, #002D72, #041E42)',
+                borderColor: '#E4002C',
+              }}
+            >
+              <div className="flex flex-col items-center text-center">
+                <Image
+                  src="https://www.mlbstatic.com/team-logos/league-on-dark/1.svg"
+                  alt="MLB"
+                  width={160}
+                  height={160}
+                  className="w-32 h-32 md:w-40 md:h-40 mb-6 group-hover:scale-110 transition-transform duration-300"
+                />
+                <h2
+                  className="text-4xl md:text-5xl font-bold text-white mb-2"
+                  style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+                >
+                  MLB
+                </h2>
+                <p className="text-sm md:text-base text-white/60 mb-4">
+                  30 Teams &bull; Playoff Odds &bull; World Series Race
+                </p>
+                <p className="font-bold text-lg text-white/80">Enter →</p>
+              </div>
+            </Link>
           </div>
 
           {/* Footer */}
-          <div className="text-center mt-12 text-gray-400 text-sm">
+          <div className="text-center text-gray-500 text-sm">
+            <div className="flex flex-wrap justify-center gap-4 mb-4">
+              <Link href="/scores" className="text-gray-400 hover:text-white transition-colors">NHL Scores</Link>
+              <span className="text-gray-600">|</span>
+              <Link href="/mlb/scores" className="text-gray-400 hover:text-white transition-colors">MLB Scores</Link>
+              <span className="text-gray-600">|</span>
+              <Link href="/blog" className="text-gray-400 hover:text-white transition-colors">Blog</Link>
+              <span className="text-gray-600">|</span>
+              <Link href="/feed.xml" className="text-gray-400 hover:text-white transition-colors">RSS</Link>
+            </div>
             <p>&copy; {new Date().getFullYear()} JRR Apps. All rights reserved.</p>
           </div>
         </div>
@@ -118,4 +138,3 @@ export default function LandingPage() {
     </>
   );
 }
-

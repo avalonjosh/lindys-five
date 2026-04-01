@@ -79,7 +79,7 @@ export default function SeriesCard({ matchup, compact }: SeriesCardProps) {
           {(() => {
             const slug = getTeamSlug(topSeed.abbrev);
             return slug ? (
-              <Link href={`/${slug}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+              <Link href={`/nhl/${slug}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
                 <img src={topSeed.logo} alt={topSeed.abbrev} className="w-10 h-10 object-contain" />
                 <div className="flex-1">
                   <span className="text-sm font-semibold text-gray-900">{topSeed.name}</span>
@@ -111,7 +111,7 @@ export default function SeriesCard({ matchup, compact }: SeriesCardProps) {
           {(() => {
             const slug = getTeamSlug(bottomSeed.abbrev);
             return slug ? (
-              <Link href={`/${slug}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+              <Link href={`/nhl/${slug}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
                 <img src={bottomSeed.logo} alt={bottomSeed.abbrev} className="w-10 h-10 object-contain" />
                 <div className="flex-1">
                   <span className="text-sm font-semibold text-gray-900">{bottomSeed.name}</span>

@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { TEAMS } from '@/lib/teamConfig';
+import { MLB_TEAMS } from '@/lib/teamConfig/mlbTeams';
+import { getTeamUrl } from '@/lib/teamConfig';
 
-const teamGradients: Record<string, { from: string; to: string; border: string; accent: string }> = {
+const nhlGradients: Record<string, { from: string; to: string; border: string; accent: string }> = {
   sabres: { from: '#002654', to: '#001a3d', border: '#FCB514', accent: '#FCB514' },
   ducks: { from: '#F47A38', to: '#d66530', border: '#B9975B', accent: '#B9975B' },
   bruins: { from: '#000000', to: '#1a1a1a', border: '#FFB81C', accent: '#FFB81C' },
@@ -40,10 +42,42 @@ const teamGradients: Record<string, { from: string; to: string; border: string; 
   jets: { from: '#041E42', to: '#02152e', border: '#AC162C', accent: '#AC162C' },
 };
 
+const mlbGradients: Record<string, { from: string; to: string; border: string; accent: string }> = {
+  diamondbacks: { from: '#A71930', to: '#7d1224', border: '#E3D4AD', accent: '#E3D4AD' },
+  braves: { from: '#CE1141', to: '#9c0d31', border: '#13274F', accent: '#EAAA00' },
+  orioles: { from: '#DF4601', to: '#b83801', border: '#000000', accent: '#ffffff' },
+  redsox: { from: '#BD3039', to: '#96262e', border: '#0C2340', accent: '#ffffff' },
+  cubs: { from: '#0E3386', to: '#0a2666', border: '#CC3433', accent: '#CC3433' },
+  whitesox: { from: '#27251F', to: '#131210', border: '#C4CED4', accent: '#C4CED4' },
+  reds: { from: '#C6011F', to: '#9e0119', border: '#000000', accent: '#ffffff' },
+  guardians: { from: '#00385D', to: '#002a46', border: '#E31937', accent: '#E31937' },
+  rockies: { from: '#33006F', to: '#260054', border: '#C4CED4', accent: '#C4CED4' },
+  tigers: { from: '#0C2340', to: '#081a30', border: '#FA4616', accent: '#FA4616' },
+  astros: { from: '#002D62', to: '#00214a', border: '#EB6E1F', accent: '#EB6E1F' },
+  royals: { from: '#004687', to: '#003366', border: '#BD9B60', accent: '#BD9B60' },
+  angels: { from: '#BA0021', to: '#8e001a', border: '#003263', accent: '#ffffff' },
+  dodgers: { from: '#005A9C', to: '#004478', border: '#EF3E42', accent: '#ffffff' },
+  marlins: { from: '#00A3E0', to: '#007eb3', border: '#EF3340', accent: '#ffffff' },
+  brewers: { from: '#12284B', to: '#0d1e38', border: '#FFC52F', accent: '#FFC52F' },
+  twins: { from: '#002B5C', to: '#001f44', border: '#D31145', accent: '#D31145' },
+  mets: { from: '#002D72', to: '#002157', border: '#FF5910', accent: '#FF5910' },
+  yankees: { from: '#003087', to: '#002366', border: '#E4002C', accent: '#ffffff' },
+  athletics: { from: '#003831', to: '#002a24', border: '#EFB21E', accent: '#EFB21E' },
+  phillies: { from: '#E81828', to: '#b81320', border: '#002D72', accent: '#ffffff' },
+  pirates: { from: '#27251F', to: '#131210', border: '#FDB827', accent: '#FDB827' },
+  padres: { from: '#2F241D', to: '#1f1812', border: '#FFC425', accent: '#FFC425' },
+  giants: { from: '#27251F', to: '#131210', border: '#FD5A1E', accent: '#FD5A1E' },
+  mariners: { from: '#0C2C56', to: '#082140', border: '#005C5C', accent: '#005C5C' },
+  cardinals: { from: '#C41E3A', to: '#9a182e', border: '#0C2340', accent: '#ffffff' },
+  rays: { from: '#092C5C', to: '#062044', border: '#8FBCE6', accent: '#8FBCE6' },
+  txrangers: { from: '#003278', to: '#00255c', border: '#C0111F', accent: '#C0111F' },
+  bluejays: { from: '#134A8E', to: '#0e386b', border: '#E8291C', accent: '#E8291C' },
+  nationals: { from: '#AB0003', to: '#820002', border: '#14225A', accent: '#ffffff' },
+};
+
 const bgTeamIds = ['lightning'];
 
-// All 32 teams in alphabetical order by city
-const allTeamIds = [
+const nhlTeamIds = [
   'ducks', 'bruins', 'sabres', 'flames', 'hurricanes', 'blackhawks', 'bluejackets',
   'avalanche', 'stars', 'redwings', 'oilers', 'panthers', 'kings',
   'wild', 'canadiens', 'predators', 'devils', 'islanders', 'rangers',
@@ -51,48 +85,47 @@ const allTeamIds = [
   'lightning', 'mapleleafs', 'utah', 'canucks', 'goldenknights', 'capitals', 'jets',
 ];
 
-function FeaturedCard({ teamId }: { teamId: string }) {
-  const team = TEAMS[teamId];
-  const g = teamGradients[teamId];
-  if (!team || !g) return null;
+const mlbTeamIds = [
+  'diamondbacks', 'braves', 'orioles', 'redsox', 'cubs', 'whitesox',
+  'reds', 'guardians', 'rockies', 'tigers', 'astros', 'royals',
+  'angels', 'dodgers', 'marlins', 'brewers', 'twins', 'mets',
+  'yankees', 'athletics', 'phillies', 'pirates', 'padres', 'giants',
+  'mariners', 'cardinals', 'rays', 'txrangers', 'bluejays', 'nationals',
+];
 
+function getTeamData(teamId: string) {
+  const nhlTeam = TEAMS[teamId];
+  if (nhlTeam) return { name: `${nhlTeam.city} ${nhlTeam.name}`, logo: nhlTeam.logo };
+  const mlbTeam = MLB_TEAMS[teamId];
+  if (mlbTeam) return { name: `${mlbTeam.city} ${mlbTeam.name}`, logo: mlbTeam.logo };
+  return null;
+}
+
+function getGradient(teamId: string) {
+  return nhlGradients[teamId] || mlbGradients[teamId] || null;
+}
+
+function FeaturedCard({ teamId }: { teamId: string }) {
+  const team = getTeamData(teamId);
+  const g = getGradient(teamId);
+  if (!team || !g) return null;
   const useBg = bgTeamIds.includes(teamId);
 
   return (
     <Link
-      href={`/${teamId}`}
+      href={getTeamUrl(teamId)}
       className="group relative rounded-2xl p-12 shadow-2xl border-4 transition-all duration-300 hover:scale-105 w-full max-w-md"
-      style={{
-        background: `linear-gradient(to bottom right, ${g.from}, ${g.to})`,
-        borderColor: g.border,
-      }}
+      style={{ background: `linear-gradient(to bottom right, ${g.from}, ${g.to})`, borderColor: g.border }}
     >
       <div className="flex flex-col items-center text-center">
         {useBg ? (
           <div className="mb-8 p-4 rounded-full bg-white">
-            <Image
-              src={team.logo}
-              alt={`${team.city} ${team.name}`}
-              width={128}
-              height={128}
-              className="w-32 h-32 group-hover:scale-110 transition-transform duration-300"
-            />
+            <Image src={team.logo} alt={team.name} width={128} height={128} className="w-32 h-32 group-hover:scale-110 transition-transform duration-300" />
           </div>
         ) : (
-          <Image
-            src={team.logo}
-            alt={`${team.city} ${team.name}`}
-            width={160}
-            height={160}
-            className="w-40 h-40 mb-8 group-hover:scale-110 transition-transform duration-300"
-          />
+          <Image src={team.logo} alt={team.name} width={160} height={160} className="w-40 h-40 mb-8 group-hover:scale-110 transition-transform duration-300" />
         )}
-        <h2
-          className="text-4xl md:text-5xl font-bold text-white mb-3"
-          style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-        >
-          {team.city} {team.name}
-        </h2>
+        <h2 className="text-4xl md:text-5xl font-bold text-white mb-3" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>{team.name}</h2>
         <p className="font-bold text-lg" style={{ color: g.accent }}>View →</p>
       </div>
     </Link>
@@ -100,50 +133,27 @@ function FeaturedCard({ teamId }: { teamId: string }) {
 }
 
 function TeamCard({ teamId }: { teamId: string }) {
-  const team = TEAMS[teamId];
-  const g = teamGradients[teamId];
+  const team = getTeamData(teamId);
+  const g = getGradient(teamId);
   if (!team || !g) return null;
-
   const useBg = bgTeamIds.includes(teamId);
 
   return (
     <Link
-      href={`/${teamId}`}
+      href={getTeamUrl(teamId)}
       className="group relative rounded-2xl p-8 shadow-2xl border-2 transition-all duration-300 hover:scale-105"
-      style={{
-        background: `linear-gradient(to bottom right, ${g.from}, ${g.to})`,
-        borderColor: g.border,
-      }}
+      style={{ background: `linear-gradient(to bottom right, ${g.from}, ${g.to})`, borderColor: g.border }}
     >
       <div className="flex flex-col items-center text-center">
         {useBg ? (
           <div className="mb-6 p-4 rounded-full bg-white">
-            <Image
-              src={team.logo}
-              alt={`${team.city} ${team.name}`}
-              width={96}
-              height={96}
-              className="w-24 h-24 group-hover:scale-110 transition-transform duration-300"
-            />
+            <Image src={team.logo} alt={team.name} width={96} height={96} className="w-24 h-24 group-hover:scale-110 transition-transform duration-300" />
           </div>
         ) : (
-          <Image
-            src={team.logo}
-            alt={`${team.city} ${team.name}`}
-            width={128}
-            height={128}
-            className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300"
-          />
+          <Image src={team.logo} alt={team.name} width={128} height={128} className="w-32 h-32 mb-6 group-hover:scale-110 transition-transform duration-300" />
         )}
-        <h2
-          className="text-3xl font-bold text-white mb-2"
-          style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-        >
-          {team.city} {team.name}
-        </h2>
-        <p className="font-semibold" style={{ color: g.accent }}>
-          View →
-        </p>
+        <h2 className="text-3xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>{team.name}</h2>
+        <p className="font-semibold" style={{ color: g.accent }}>View →</p>
       </div>
     </Link>
   );
@@ -154,26 +164,12 @@ function PlayoffOddsCTA() {
     <Link
       href="/nhl-playoff-odds"
       className="group relative rounded-2xl px-8 py-8 md:px-12 shadow-2xl border-4 transition-all duration-300 hover:scale-105 w-full max-w-md md:max-w-2xl"
-      style={{
-        background: 'linear-gradient(to bottom right, #003087, #0A1128)',
-        borderColor: '#ffffff',
-      }}
+      style={{ background: 'linear-gradient(to bottom right, #003087, #0A1128)', borderColor: '#ffffff' }}
     >
       <div className="flex flex-col items-center text-center md:flex-row md:text-left md:items-center gap-6 md:gap-8">
-        <Image
-          src="https://assets.nhle.com/logos/nhl/svg/NHL_light.svg"
-          alt="NHL"
-          width={120}
-          height={120}
-          className="w-24 h-24 md:w-28 md:h-28 flex-shrink-0 group-hover:scale-110 transition-transform duration-300"
-        />
+        <Image src="https://assets.nhle.com/logos/nhl/svg/NHL_light.svg" alt="NHL" width={120} height={120} className="w-24 h-24 md:w-28 md:h-28 flex-shrink-0 group-hover:scale-110 transition-transform duration-300" />
         <div>
-          <h2
-            className="text-3xl md:text-5xl font-bold text-white mb-2"
-            style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-          >
-            NHL Playoff Odds 2025-26
-          </h2>
+          <h2 className="text-3xl md:text-5xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>NHL Playoff Odds 2025-26</h2>
           <p className="font-bold text-base md:text-lg text-white/70">Full standings & projections for all 32 teams →</p>
         </div>
       </div>
@@ -181,7 +177,11 @@ function PlayoffOddsCTA() {
   );
 }
 
-export default function FavoriteTeamsGrid() {
+interface FavoriteTeamsGridProps {
+  sport: 'nhl' | 'mlb';
+}
+
+export default function FavoriteTeamsGrid({ sport }: FavoriteTeamsGridProps) {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -190,30 +190,25 @@ export default function FavoriteTeamsGrid() {
       const saved = localStorage.getItem('favorite-teams');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setFavorites(parsed);
-        }
+        if (Array.isArray(parsed)) setFavorites(parsed);
       }
-    } catch {
-      // Ignore parse errors
-    }
+    } catch { /* ignore */ }
     setLoaded(true);
   }, []);
 
-  // Before localStorage is read, render default layout (matches SSR)
+  const allTeamIds = sport === 'nhl' ? nhlTeamIds : mlbTeamIds;
+  const teamLookup = sport === 'nhl' ? TEAMS : MLB_TEAMS;
+  const validFavorites = favorites.filter(id => teamLookup[id]);
+
   if (!loaded) {
     return (
       <>
-        <div className="flex justify-center mb-16">
-          <PlayoffOddsCTA />
-        </div>
-
-        <h2
-          className="text-3xl md:text-4xl font-bold text-gray-400 text-center mb-12"
-          style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-        >
-          All Teams
-        </h2>
+        {sport === 'nhl' && (
+          <div className="flex justify-center mb-16">
+            <PlayoffOddsCTA />
+          </div>
+        )}
+        <h2 className="text-3xl md:text-4xl font-bold text-gray-400 text-center mb-12" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>All Teams</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {allTeamIds.map(id => <TeamCard key={id} teamId={id} />)}
         </div>
@@ -221,22 +216,15 @@ export default function FavoriteTeamsGrid() {
     );
   }
 
-  const validFavorites = favorites.filter(id => TEAMS[id]);
-
-  // No favorites: playoff odds CTA featured, all 32 teams in grid
   if (validFavorites.length === 0) {
     return (
       <>
-        <div className="flex justify-center mb-16">
-          <PlayoffOddsCTA />
-        </div>
-
-        <h2
-          className="text-3xl md:text-4xl font-bold text-gray-400 text-center mb-12"
-          style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-        >
-          All Teams
-        </h2>
+        {sport === 'nhl' && (
+          <div className="flex justify-center mb-16">
+            <PlayoffOddsCTA />
+          </div>
+        )}
+        <h2 className="text-3xl md:text-4xl font-bold text-gray-400 text-center mb-12" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>All Teams</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {allTeamIds.map(id => <TeamCard key={id} teamId={id} />)}
         </div>
@@ -244,31 +232,15 @@ export default function FavoriteTeamsGrid() {
     );
   }
 
-  // Has favorites: show them featured at top, everyone else below
   const everyoneElse = allTeamIds.filter(id => !validFavorites.includes(id));
 
   return (
     <>
-      {/* Your Teams - featured */}
-      <h2
-        className="text-3xl md:text-4xl font-bold text-yellow-400 text-center mb-8"
-        style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-      >
-        Your Teams
-      </h2>
+      <h2 className="text-3xl md:text-4xl font-bold text-yellow-400 text-center mb-8" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>Your Teams</h2>
       <div className={`flex justify-center gap-6 mb-16 ${validFavorites.length > 1 ? 'flex-wrap' : ''}`}>
-        {validFavorites.map(id => (
-          <FeaturedCard key={id} teamId={id} />
-        ))}
+        {validFavorites.map(id => <FeaturedCard key={id} teamId={id} />)}
       </div>
-
-      {/* Everyone Else */}
-      <h2
-        className="text-3xl md:text-4xl font-bold text-gray-400 text-center mb-12"
-        style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-      >
-        Everyone Else
-      </h2>
+      <h2 className="text-3xl md:text-4xl font-bold text-gray-400 text-center mb-12" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>Everyone Else</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
         {everyoneElse.map(id => <TeamCard key={id} teamId={id} />)}
       </div>

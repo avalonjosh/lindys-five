@@ -1,13 +1,21 @@
 import type { MetadataRoute } from 'next';
 import { kv } from '@vercel/kv';
 
-const TEAM_ROUTES = [
+const NHL_TEAM_ROUTES = [
   'sabres', 'canadiens', 'redwings', 'senators', 'panthers', 'mapleleafs',
   'lightning', 'bruins', 'devils', 'penguins', 'hurricanes', 'capitals',
   'islanders', 'flyers', 'bluejackets', 'rangers', 'utah', 'avalanche',
   'jets', 'stars', 'blackhawks', 'predators', 'wild', 'blues',
   'goldenknights', 'oilers', 'canucks', 'flames', 'kings', 'ducks',
   'sharks', 'kraken',
+];
+
+const MLB_TEAM_ROUTES = [
+  'diamondbacks', 'braves', 'orioles', 'redsox', 'cubs', 'whitesox',
+  'reds', 'guardians', 'rockies', 'tigers', 'astros', 'royals',
+  'angels', 'dodgers', 'marlins', 'brewers', 'twins', 'mets',
+  'yankees', 'athletics', 'phillies', 'pirates', 'padres', 'giants',
+  'mariners', 'cardinals', 'rays', 'txrangers', 'bluejays', 'nationals',
 ];
 
 const BASE_URL = 'https://www.lindysfive.com';
@@ -40,15 +48,43 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily',
       priority: 0.7,
     },
-  ];
-
-  // All 32 team tracker routes
-  for (const team of TEAM_ROUTES) {
-    urls.push({
-      url: `${BASE_URL}/${team}`,
+    {
+      url: `${BASE_URL}/nhl`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.95,
+    },
+    {
+      url: `${BASE_URL}/mlb`,
       lastModified: now,
       changeFrequency: 'daily',
       priority: 0.9,
+    },
+    {
+      url: `${BASE_URL}/mlb/scores`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.7,
+    },
+  ];
+
+  // All 32 NHL team tracker routes
+  for (const team of NHL_TEAM_ROUTES) {
+    urls.push({
+      url: `${BASE_URL}/nhl/${team}`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.9,
+    });
+  }
+
+  // All 30 MLB team tracker routes
+  for (const team of MLB_TEAM_ROUTES) {
+    urls.push({
+      url: `${BASE_URL}/mlb/${team}`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.85,
     });
   }
 

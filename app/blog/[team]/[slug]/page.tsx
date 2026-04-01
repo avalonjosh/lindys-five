@@ -299,7 +299,7 @@ export default async function BlogPostPage({
           {showTrackerCTA && (
             <div className="mt-4">
               <Link
-                href={`/${post.team}`}
+                href={`/nhl/${post.team}`}
                 className="block rounded-2xl p-6 shadow-xl border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl"
                 style={{
                   background: `linear-gradient(135deg, ${postConfig.primary} 0%, ${postConfig.secondary} 100%)`,

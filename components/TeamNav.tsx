@@ -426,7 +426,7 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                     return (
                       <div key={team.id} className="relative group">
                         <button
-                          onClick={() => handleNavigation(`/${team.slug}`)}
+                          onClick={() => handleNavigation(`/nhl/${team.slug}`)}
                           className={`w-full text-left px-4 py-3 rounded-lg font-semibold transition-all flex items-center gap-3 ${
                             isActive
                               ? useClassicStyling
@@ -553,7 +553,7 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                     return (
                       <div key={team.id} className="relative group">
                         <button
-                          onClick={() => handleNavigation(`/${team.slug}`)}
+                          onClick={() => handleNavigation(`/nhl/${team.slug}`)}
                           className={`w-full text-left px-4 py-3 rounded-lg font-semibold transition-all flex items-center gap-3 ${
                             isActive
                               ? useClassicStyling

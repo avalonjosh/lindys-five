@@ -115,8 +115,8 @@ export default function ScoreCard({ game, favoriteTeamAbbrev, standings }: Score
   // Get team slugs for logo links
   const homeTeamSlug = getTeamSlug(game.homeTeam.abbrev);
   const awayTeamSlug = getTeamSlug(game.awayTeam.abbrev);
-  const homeLinkPath = homeTeamSlug ? `/${homeTeamSlug}` : '/';
-  const awayLinkPath = awayTeamSlug ? `/${awayTeamSlug}` : '/';
+  const homeLinkPath = homeTeamSlug ? `/nhl/${homeTeamSlug}` : '/';
+  const awayLinkPath = awayTeamSlug ? `/nhl/${awayTeamSlug}` : '/';
 
   // Generate ticket link for upcoming games
   const homeTeamConfig = getTeamConfig(game.homeTeam.abbrev);

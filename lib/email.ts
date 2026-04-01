@@ -154,7 +154,7 @@ export async function sendSetRecapForTeam(
   const targetMet = latestSet.points >= targetPoints;
 
   const primaryColor = teamConfig.colors.primary;
-  const trackerUrl = `${SITE_URL}/${teamSlug}?utm_source=newsletter&utm_medium=email&utm_campaign=set-recap&utm_content=tracker`;
+  const trackerUrl = `${SITE_URL}/nhl/${teamSlug}?utm_source=newsletter&utm_medium=email&utm_campaign=set-recap&utm_content=tracker`;
 
   // Subject line
   const subject = `${teamConfig.name} Set ${latestSet.chunkNumber} Recap: ${latestSet.points} of ${latestSet.maxPoints} points (${latestSet.wins}W-${latestSet.otLosses}OTL-${latestSet.losses}L)`;
@@ -415,7 +415,7 @@ function renderBoxscoreEmail(data: GameRecapData, blogPost?: BlogPost): string {
   const periodType = landing.gameOutcome?.lastPeriodType;
   const finalLabel = periodType === 'OT' ? 'FINAL/OT' : periodType === 'SO' ? 'FINAL/SO' : 'FINAL';
 
-  const trackerUrl = `${SITE_URL}/${data.teamSlug}?utm_source=newsletter&utm_medium=email&utm_campaign=game-recap&utm_content=tracker`;
+  const trackerUrl = `${SITE_URL}/nhl/${data.teamSlug}?utm_source=newsletter&utm_medium=email&utm_campaign=game-recap&utm_content=tracker`;
   const unsubscribeUrl = '{{UNSUBSCRIBE_URL}}';
 
   // Collect goal scorers
@@ -1097,7 +1097,7 @@ function renderSimpleBlogRecap(post: BlogPost, postUrl: string): string {
   const teamConfig = TEAMS[post.team];
   const primaryColor = teamConfig?.colors.primary || '#003087';
   const teamName = teamConfig?.name || post.team;
-  const trackerUrl = `${SITE_URL}/${post.team}?utm_source=newsletter&utm_medium=email&utm_campaign=blog-recap&utm_content=tracker`;
+  const trackerUrl = `${SITE_URL}/nhl/${post.team}?utm_source=newsletter&utm_medium=email&utm_campaign=blog-recap&utm_content=tracker`;
   const unsubscribeUrl = '{{UNSUBSCRIBE_URL}}';
   const contentHtml = markdownToEmailHtml(post.content);
 
