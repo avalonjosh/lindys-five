@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import type { MLBGameResult } from '@/lib/types/mlb';
 import { MLB_TEAMS } from '@/lib/teamConfig/mlbTeams';
+import { generateGameTicketLink } from '@/lib/utils/affiliateLinks';
 
 interface TeamColors {
   primary: string;
@@ -28,6 +29,14 @@ export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, 
   // Find opponent's tracker slug
   const opponentTeam = Object.values(MLB_TEAMS).find(t => t.abbreviation === game.opponent);
   const opponentSlug = opponentTeam?.id || null;
+
+  // Generate ticket link for upcoming games
+  const homeTeamAbbrev = game.isHome ? teamAbbreviation : game.opponent;
+  const awayTeamAbbrev = game.isHome ? game.opponent : teamAbbreviation;
+  const homeTeamConfig = Object.values(MLB_TEAMS).find(t => t.abbreviation === homeTeamAbbrev);
+  const ticketLink = isPending && homeTeamConfig
+    ? generateGameTicketLink(homeTeamConfig.slug, homeTeamConfig.city, homeTeamConfig.stubhubId, homeTeamAbbrev, awayTeamAbbrev, game.date)
+    : null;
 
   const isWin = game.outcome === 'W';
   const isLoss = game.outcome === 'L';
@@ -185,9 +194,22 @@ export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, 
                 </div>
               </div>
             ) : (
-              <div className="text-xs font-medium mb-2 text-gray-500">
-                Upcoming Game
-              </div>
+              <>
+                <div className="text-xs font-medium mb-2 text-gray-500">
+                  Upcoming Game
+                </div>
+                {ticketLink && (
+                  <a
+                    href={ticketLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-block px-3 py-1.5 text-xs font-bold rounded transition-all shadow-sm hover:shadow-md bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white"
+                  >
+                    Get Tickets
+                  </a>
+                )}
+              </>
             )}
           </div>
         </>

@@ -7,6 +7,7 @@ import { ArrowLeft } from 'lucide-react';
 import type { MLBScoreGame } from '@/lib/types/mlb';
 import { fetchMLBScores } from '@/lib/services/mlbApi';
 import { MLB_TEAMS } from '@/lib/teamConfig/mlbTeams';
+import { generateGameTicketLink } from '@/lib/utils/affiliateLinks';
 import DateNavigation from '@/components/scores/DateNavigation';
 
 const getTodayString = (): string => {
@@ -151,6 +152,10 @@ function MLBScoreCard({ game, favoriteAbbrev }: { game: MLBScoreGame; favoriteAb
 
   const awaySlug = Object.values(MLB_TEAMS).find(t => t.abbreviation === game.awayTeam.abbrev)?.id;
   const homeSlug = Object.values(MLB_TEAMS).find(t => t.abbreviation === game.homeTeam.abbrev)?.id;
+  const homeTeamConfig = Object.values(MLB_TEAMS).find(t => t.abbreviation === game.homeTeam.abbrev);
+  const ticketLink = isUpcoming && homeTeamConfig
+    ? generateGameTicketLink(homeTeamConfig.slug, homeTeamConfig.city, homeTeamConfig.stubhubId, game.homeTeam.abbrev, game.awayTeam.abbrev)
+    : null;
 
   const handleCardClick = () => {
     if (game.gameId) router.push(`/mlb/scores/${game.gameId}`);
@@ -210,9 +215,26 @@ function MLBScoreCard({ game, favoriteAbbrev }: { game: MLBScoreGame; favoriteAb
       style={isFavoriteGame ? { borderColor: '#FFB81C' } : undefined}
       onClick={handleCardClick}
     >
-      {/* Status badge */}
+      {/* Status badge + TV + Tickets */}
       <div className="flex items-center justify-between mb-3">
         {renderStatusBadge()}
+        <div className="flex items-center gap-3">
+          {!isComplete && game.tvNetworks && (
+            <span className="text-xs text-gray-400">{game.tvNetworks}</span>
+          )}
+          {ticketLink && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.open(ticketLink, '_blank', 'noopener,noreferrer');
+              }}
+              className="px-2 py-0.5 text-xs font-bold rounded bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+            >
+              Tickets
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Away Team */}

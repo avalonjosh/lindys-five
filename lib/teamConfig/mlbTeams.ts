@@ -20,7 +20,9 @@ export interface MLBTeamConfig {
     border: string;
     text: string;
   };
+  stubhubId: number;
   logo: string;
+  headerLogo?: string; // White/light version for dark header backgrounds
 }
 
 const darkMode = (primary: string) => ({
@@ -42,6 +44,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'diamondbacks',
     colors: { primary: '#A71930', secondary: '#E3D4AD', accent: '#000000' },
     darkMode: darkMode('#A71930'),
+    stubhubId: 9926,
     logo: 'https://www.mlbstatic.com/team-logos/109.svg',
   },
   braves: {
@@ -54,6 +57,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'braves',
     colors: { primary: '#CE1141', secondary: '#13274F', accent: '#EAAA00' },
     darkMode: darkMode('#CE1141'),
+    stubhubId: 2841,
     logo: 'https://www.mlbstatic.com/team-logos/144.svg',
   },
   orioles: {
@@ -66,6 +70,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'orioles',
     colors: { primary: '#DF4601', secondary: '#000000', accent: '#DF4601' },
     darkMode: darkMode('#DF4601'),
+    stubhubId: 2542,
     logo: 'https://www.mlbstatic.com/team-logos/110.svg',
   },
   redsox: {
@@ -76,8 +81,9 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     city: 'Boston',
     abbreviation: 'BOS',
     slug: 'redsox',
-    colors: { primary: '#BD3039', secondary: '#0C2340', accent: '#BD3039' },
+    colors: { primary: '#BD3039', secondary: '#0C2340', accent: '#FFFFFF' },
     darkMode: darkMode('#BD3039'),
+    stubhubId: 6310,
     logo: 'https://www.mlbstatic.com/team-logos/111.svg',
   },
   cubs: {
@@ -90,6 +96,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'cubs',
     colors: { primary: '#0E3386', secondary: '#CC3433', accent: '#0E3386' },
     darkMode: darkMode('#0E3386'),
+    stubhubId: 2818,
     logo: 'https://www.mlbstatic.com/team-logos/112.svg',
   },
   whitesox: {
@@ -102,6 +109,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'whitesox',
     colors: { primary: '#27251F', secondary: '#C4CED4', accent: '#27251F' },
     darkMode: darkMode('#27251F'),
+    stubhubId: 2819,
     logo: 'https://www.mlbstatic.com/team-logos/145.svg',
   },
   reds: {
@@ -114,6 +122,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'reds',
     colors: { primary: '#C6011F', secondary: '#000000', accent: '#C6011F' },
     darkMode: darkMode('#C6011F'),
+    stubhubId: 6311,
     logo: 'https://www.mlbstatic.com/team-logos/113.svg',
   },
   guardians: {
@@ -126,6 +135,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'guardians',
     colors: { primary: '#00385D', secondary: '#E31937', accent: '#00385D' },
     darkMode: darkMode('#00385D'),
+    stubhubId: 7421,
     logo: 'https://www.mlbstatic.com/team-logos/114.svg',
   },
   rockies: {
@@ -138,6 +148,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'rockies',
     colors: { primary: '#33006F', secondary: '#C4CED4', accent: '#33006F' },
     darkMode: darkMode('#33006F'),
+    stubhubId: 7420,
     logo: 'https://www.mlbstatic.com/team-logos/115.svg',
   },
   tigers: {
@@ -150,6 +161,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'tigers',
     colors: { primary: '#0C2340', secondary: '#FA4616', accent: '#0C2340' },
     darkMode: darkMode('#0C2340'),
+    stubhubId: 6312,
     logo: 'https://www.mlbstatic.com/team-logos/116.svg',
   },
   astros: {
@@ -162,6 +174,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'astros',
     colors: { primary: '#002D62', secondary: '#EB6E1F', accent: '#002D62' },
     darkMode: darkMode('#002D62'),
+    stubhubId: 7422,
     logo: 'https://www.mlbstatic.com/team-logos/117.svg',
   },
   royals: {
@@ -174,6 +187,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'royals',
     colors: { primary: '#004687', secondary: '#BD9B60', accent: '#004687' },
     darkMode: darkMode('#004687'),
+    stubhubId: 7423,
     logo: 'https://www.mlbstatic.com/team-logos/118.svg',
   },
   angels: {
@@ -184,8 +198,9 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     city: 'Los Angeles',
     abbreviation: 'LAA',
     slug: 'angels',
-    colors: { primary: '#BA0021', secondary: '#003263', accent: '#BA0021' },
+    colors: { primary: '#BA0021', secondary: '#003263', accent: '#FFFFFF' },
     darkMode: darkMode('#BA0021'),
+    stubhubId: 7424,
     logo: 'https://www.mlbstatic.com/team-logos/108.svg',
   },
   dodgers: {
@@ -198,6 +213,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'dodgers',
     colors: { primary: '#005A9C', secondary: '#EF3E42', accent: '#005A9C' },
     darkMode: darkMode('#005A9C'),
+    stubhubId: 7436,
     logo: 'https://www.mlbstatic.com/team-logos/119.svg',
   },
   marlins: {
@@ -210,6 +226,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'marlins',
     colors: { primary: '#00A3E0', secondary: '#EF3340', accent: '#000000' },
     darkMode: darkMode('#00A3E0'),
+    stubhubId: 7425,
     logo: 'https://www.mlbstatic.com/team-logos/146.svg',
   },
   brewers: {
@@ -222,6 +239,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'brewers',
     colors: { primary: '#FFC52F', secondary: '#12284B', accent: '#FFC52F' },
     darkMode: darkMode('#FFC52F'),
+    stubhubId: 7426,
     logo: 'https://www.mlbstatic.com/team-logos/158.svg',
   },
   twins: {
@@ -234,6 +252,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'twins',
     colors: { primary: '#002B5C', secondary: '#D31145', accent: '#002B5C' },
     darkMode: darkMode('#002B5C'),
+    stubhubId: 6313,
     logo: 'https://www.mlbstatic.com/team-logos/142.svg',
   },
   mets: {
@@ -246,6 +265,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'mets',
     colors: { primary: '#002D72', secondary: '#FF5910', accent: '#002D72' },
     darkMode: darkMode('#002D72'),
+    stubhubId: 6314,
     logo: 'https://www.mlbstatic.com/team-logos/121.svg',
   },
   yankees: {
@@ -256,9 +276,11 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     city: 'New York',
     abbreviation: 'NYY',
     slug: 'yankees',
-    colors: { primary: '#003087', secondary: '#E4002C', accent: '#003087' },
-    darkMode: darkMode('#003087'),
+    colors: { primary: '#1C2841', secondary: '#8E9AA5', accent: '#FFFFFF' },
+    darkMode: darkMode('#1C2841'),
+    stubhubId: 6309,
     logo: 'https://www.mlbstatic.com/team-logos/147.svg',
+    headerLogo: 'https://www.mlbstatic.com/team-logos/team-cap-on-dark/147.svg',
   },
   athletics: {
     sport: 'mlb',
@@ -270,6 +292,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'athletics',
     colors: { primary: '#003831', secondary: '#EFB21E', accent: '#003831' },
     darkMode: darkMode('#003831'),
+    stubhubId: 7427,
     logo: 'https://www.mlbstatic.com/team-logos/133.svg',
   },
   phillies: {
@@ -280,8 +303,9 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     city: 'Philadelphia',
     abbreviation: 'PHI',
     slug: 'phillies',
-    colors: { primary: '#E81828', secondary: '#002D72', accent: '#E81828' },
+    colors: { primary: '#E81828', secondary: '#002D72', accent: '#FFFFFF' },
     darkMode: darkMode('#E81828'),
+    stubhubId: 6315,
     logo: 'https://www.mlbstatic.com/team-logos/143.svg',
   },
   pirates: {
@@ -294,6 +318,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'pirates',
     colors: { primary: '#27251F', secondary: '#FDB827', accent: '#27251F' },
     darkMode: darkMode('#27251F'),
+    stubhubId: 7428,
     logo: 'https://www.mlbstatic.com/team-logos/134.svg',
   },
   padres: {
@@ -306,6 +331,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'padres',
     colors: { primary: '#2F241D', secondary: '#FFC425', accent: '#2F241D' },
     darkMode: darkMode('#2F241D'),
+    stubhubId: 7429,
     logo: 'https://www.mlbstatic.com/team-logos/135.svg',
   },
   giants: {
@@ -318,6 +344,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'giants',
     colors: { primary: '#FD5A1E', secondary: '#27251F', accent: '#FD5A1E' },
     darkMode: darkMode('#FD5A1E'),
+    stubhubId: 7430,
     logo: 'https://www.mlbstatic.com/team-logos/137.svg',
   },
   mariners: {
@@ -328,8 +355,9 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     city: 'Seattle',
     abbreviation: 'SEA',
     slug: 'mariners',
-    colors: { primary: '#0C2C56', secondary: '#005C5C', accent: '#0C2C56' },
+    colors: { primary: '#0C2C56', secondary: '#005C5C', accent: '#FFFFFF' },
     darkMode: darkMode('#0C2C56'),
+    stubhubId: 7431,
     logo: 'https://www.mlbstatic.com/team-logos/136.svg',
   },
   cardinals: {
@@ -340,8 +368,9 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     city: 'St. Louis',
     abbreviation: 'STL',
     slug: 'cardinals',
-    colors: { primary: '#C41E3A', secondary: '#0C2340', accent: '#C41E3A' },
+    colors: { primary: '#C41E3A', secondary: '#0C2340', accent: '#FFFFFF' },
     darkMode: darkMode('#C41E3A'),
+    stubhubId: 6316,
     logo: 'https://www.mlbstatic.com/team-logos/138.svg',
   },
   rays: {
@@ -354,6 +383,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'rays',
     colors: { primary: '#092C5C', secondary: '#8FBCE6', accent: '#092C5C' },
     darkMode: darkMode('#092C5C'),
+    stubhubId: 7432,
     logo: 'https://www.mlbstatic.com/team-logos/139.svg',
   },
   txrangers: {
@@ -366,6 +396,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'txrangers',
     colors: { primary: '#003278', secondary: '#C0111F', accent: '#003278' },
     darkMode: darkMode('#003278'),
+    stubhubId: 7433,
     logo: 'https://www.mlbstatic.com/team-logos/140.svg',
   },
   bluejays: {
@@ -378,6 +409,7 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     slug: 'bluejays',
     colors: { primary: '#134A8E', secondary: '#E8291C', accent: '#134A8E' },
     darkMode: darkMode('#134A8E'),
+    stubhubId: 7434,
     logo: 'https://www.mlbstatic.com/team-logos/141.svg',
   },
   nationals: {
@@ -388,8 +420,9 @@ export const MLB_TEAMS: Record<string, MLBTeamConfig> = {
     city: 'Washington',
     abbreviation: 'WSH',
     slug: 'nationals',
-    colors: { primary: '#AB0003', secondary: '#14225A', accent: '#AB0003' },
+    colors: { primary: '#AB0003', secondary: '#14225A', accent: '#FFFFFF' },
     darkMode: darkMode('#AB0003'),
+    stubhubId: 7435,
     logo: 'https://www.mlbstatic.com/team-logos/120.svg',
   },
 };

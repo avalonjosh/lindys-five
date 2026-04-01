@@ -11,6 +11,9 @@ import MLBProgressBar from './MLBProgressBar';
 import MLBTeamNav from './MLBTeamNav';
 import MLBStandingsCard from './MLBStandingsCard';
 
+// Teams whose logo blends into their header background color
+const mlbBgTeamIds = ['orioles', 'reds', 'cardinals', 'angels', 'phillies', 'nationals', 'rays', 'tigers', 'royals', 'twins', 'dodgers', 'giants', 'rockies', 'padres'];
+
 interface MLBTeamTrackerProps {
   team: MLBTeamConfig;
 }
@@ -182,11 +185,21 @@ export default function MLBTeamTracker({ team }: MLBTeamTrackerProps) {
               className="hover:opacity-80 transition-opacity cursor-pointer focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 rounded-lg"
               title="Back to Home"
             >
-              <img
-                src={team.logo}
-                alt={`${fullName} Logo`}
-                className="w-16 h-16 md:w-24 md:h-24 mb-2 md:mb-3"
-              />
+              {mlbBgTeamIds.includes(team.id) ? (
+                <div className="mb-2 md:mb-3 p-3 md:p-4 rounded-full bg-white">
+                  <img
+                    src={team.logo}
+                    alt={`${fullName} Logo`}
+                    className="w-12 h-12 md:w-18 md:h-18"
+                  />
+                </div>
+              ) : (
+                <img
+                  src={team.headerLogo || team.logo}
+                  alt={`${fullName} Logo`}
+                  className="w-16 h-16 md:w-24 md:h-24 mb-2 md:mb-3"
+                />
+              )}
             </button>
             <p
               className="text-4xl md:text-6xl font-bold mb-2 tracking-wider text-white"

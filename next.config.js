@@ -40,6 +40,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'www.mlbstatic.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'img.mlbstatic.com',
+      },
     ],
   },
 };

@@ -9,6 +9,11 @@ import MLBGameHeader from './MLBGameHeader';
 import MLBScoringPlays from './MLBScoringPlays';
 import MLBBattingStats from './MLBBattingStats';
 import MLBPitchingStats from './MLBPitchingStats';
+import MLBProbablePitchers from './MLBProbablePitchers';
+import MLBTeamComparison from './MLBTeamComparison';
+import MLBStandingsContext from './MLBStandingsContext';
+import MLBRecentForm from './MLBRecentForm';
+import MLBSeasonSeries from './MLBSeasonSeries';
 
 interface Props {
   gameId: string;
@@ -64,6 +69,8 @@ export default function MLBBoxScoreClient({ gameId }: Props) {
   }
 
   const isComplete = data.status === 'Final' || data.status === 'Completed Early';
+  const isLive = data.status === 'In Progress';
+  const isUpcoming = !isComplete && !isLive;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -86,6 +93,46 @@ export default function MLBBoxScoreClient({ gameId }: Props) {
 
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
         <MLBGameHeader data={data} />
+
+        {/* Upcoming game preview */}
+        {isUpcoming && (
+          <>
+            <MLBProbablePitchers
+              awayPitcherId={data.awayTeam.probablePitcherId}
+              homePitcherId={data.homeTeam.probablePitcherId}
+              awayAbbrev={data.awayTeam.abbreviation}
+              homeAbbrev={data.homeTeam.abbreviation}
+              awayLogo={data.awayTeam.logo}
+              homeLogo={data.homeTeam.logo}
+            />
+            <MLBTeamComparison
+              awayTeamId={data.awayTeam.id}
+              homeTeamId={data.homeTeam.id}
+              awayAbbrev={data.awayTeam.abbreviation}
+              homeAbbrev={data.homeTeam.abbreviation}
+            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <MLBStandingsContext
+                awayAbbrev={data.awayTeam.abbreviation}
+                homeAbbrev={data.homeTeam.abbreviation}
+                awayLogo={data.awayTeam.logo}
+                homeLogo={data.homeTeam.logo}
+              />
+              <MLBRecentForm
+                awayTeamId={data.awayTeam.id}
+                homeTeamId={data.homeTeam.id}
+                awayAbbrev={data.awayTeam.abbreviation}
+                homeAbbrev={data.homeTeam.abbreviation}
+              />
+            </div>
+            <MLBSeasonSeries
+              awayTeamId={data.awayTeam.id}
+              homeTeamId={data.homeTeam.id}
+              awayAbbrev={data.awayTeam.abbreviation}
+              homeAbbrev={data.homeTeam.abbreviation}
+            />
+          </>
+        )}
 
         {isComplete && data.scoringPlays.length > 0 && (
           <MLBScoringPlays plays={data.scoringPlays} awayAbbrev={data.awayTeam.abbreviation} homeAbbrev={data.homeTeam.abbreviation} />

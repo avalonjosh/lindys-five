@@ -32,13 +32,18 @@ function convertToStubHubSlug(slug: string, city: string): string {
   const citySlug = city.toLowerCase().replace(/\s+/g, '-');
   const teamSlug = slug.toLowerCase().replace(/\s+/g, '-');
 
-  // Handle special cases
+  // Handle special cases — NHL
   if (slug === 'mapleleafs') return `${citySlug}-maple-leafs`;
   if (slug === 'redwings') return `${citySlug}-red-wings`;
   if (slug === 'bluejackets') return `${citySlug}-blue-jackets`;
   if (slug === 'goldenknights') return `${citySlug}-golden-knights`;
-  // Utah Hockey Club (temporary name until officially renamed)
   if (slug === 'utah') return 'utah-hockey-club';
+
+  // Handle special cases — MLB
+  if (slug === 'redsox') return `${citySlug}-red-sox`;
+  if (slug === 'whitesox') return `${citySlug}-white-sox`;
+  if (slug === 'bluejays') return `${citySlug}-blue-jays`;
+  if (slug === 'txrangers') return 'texas-rangers';
 
   return `${citySlug}-${teamSlug}`;
 }

@@ -42,6 +42,7 @@ export interface MLBScoreGame {
   homeTeam: { abbrev: string; name: string; logo: string; score: number; wins?: number; losses?: number };
   inning?: number;
   inningHalf?: 'Top' | 'Bot';
+  tvNetworks?: string;
 }
 
 export interface MLBBoxScoreData {
@@ -49,8 +50,8 @@ export interface MLBBoxScoreData {
   status: string;
   venue: string;
   dateTime: string;
-  awayTeam: { id: number; abbreviation: string; teamName: string; logo: string };
-  homeTeam: { id: number; abbreviation: string; teamName: string; logo: string };
+  awayTeam: { id: number; abbreviation: string; teamName: string; logo: string; probablePitcherId?: number };
+  homeTeam: { id: number; abbreviation: string; teamName: string; logo: string; probablePitcherId?: number };
   linescore: {
     innings: { num: number; away: { runs: number }; home: { runs: number } }[];
     away: { runs: number; hits: number; errors: number };
@@ -99,6 +100,36 @@ export interface MLBScoringPlay {
   description: string;
   awayScore: number;
   homeScore: number;
+}
+
+export interface MLBPitcherPreview {
+  id: number;
+  name: string;
+  era: string;
+  wins: number;
+  losses: number;
+  ip: string;
+  so: number;
+  whip: string;
+}
+
+export interface MLBTeamSeasonStats {
+  batting: { avg: string; ops: string; hr: number; runsPerGame: string };
+  pitching: { era: string; whip: string; soPerNine: string };
+}
+
+export interface MLBRecentGame {
+  date: string;
+  opponent: string;
+  won: boolean;
+  teamScore: number;
+  oppScore: number;
+}
+
+export interface MLBSeriesRecord {
+  wins: number;
+  losses: number;
+  games: { date: string; awayScore: number; homeScore: number; awayAbbrev: string; homeAbbrev: string }[];
 }
 
 export interface MLBStandingsTeam {
