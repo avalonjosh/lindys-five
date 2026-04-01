@@ -327,7 +327,7 @@ function SeasonSection({
         }`}>
           {/* Current points bar */}
           <div
-            className="h-8 rounded-l-full transition-all duration-500 relative shadow-md"
+            className={`h-8 rounded-l-full transition-all duration-500 relative shadow-md${currentProgress >= 100 ? ' rounded-r-full' : ''}`}
             style={{ width: `${Math.min(currentProgress, 100)}%`, backgroundColor: barColor }}
           >
             {/* Show points label when there's enough room */}
@@ -737,7 +737,7 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
 
   // Calculate playoff probabilities
   // Main probability uses position-aware model when cut line data available
-  const probability = cutLineData
+  const rawProbability = cutLineData
     ? computePositionAwareProbability(
         stats.projectedPoints,
         stats.gamesPlayed,
@@ -746,12 +746,14 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
         cutLineData.isInPlayoffPosition
       ).probability
     : probabilityForFinalPoints(stats.projectedPoints, stats.gamesPlayed, stats.playoffTarget);
+  const probability = rawProbability === 99 ? 100 : rawProbability;
   // Lindy's Five probability always uses the fixed 96-point target
-  const lindysFiveProbability = probabilityForFinalPoints(
+  const rawLindysFiveProbability = probabilityForFinalPoints(
     stats.projectedPoints,
     stats.gamesPlayed,
     stats.playoffTarget
   );
+  const lindysFiveProbability = rawLindysFiveProbability === 99 ? 100 : rawLindysFiveProbability;
   const probabilityColorRaw = getProbabilityColor();
   const probabilityColor = probabilityColorRaw === 'team'
     ? (isGoatMode ? darkModeColors.accent : teamColors.primary)
