@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import type { MLBGameResult } from '@/lib/types/mlb';
 import { MLB_TEAMS } from '@/lib/teamConfig/mlbTeams';
 import { generateGameTicketLink } from '@/lib/utils/affiliateLinks';
+import MLBLiveGameOverlay from './MLBLiveGameOverlay';
 
 interface TeamColors {
   primary: string;
@@ -23,7 +24,8 @@ interface MLBGameBoxProps {
 
 export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, hypotheticalOutcome, teamAbbreviation = 'NYY', teamColors }: MLBGameBoxProps) {
   const router = useRouter();
-  const isPending = game.outcome === 'PENDING';
+  const isLive = game.gameState === 'In Progress' || game.gameState === 'Warming Up';
+  const isPending = game.outcome === 'PENDING' && !isLive;
   const isClickable = whatIfMode && isPending && onGameClick;
 
   // Find opponent's tracker slug
@@ -76,6 +78,33 @@ export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, 
     }
   };
 
+  // Live game — render overlay with link to box score
+  if (isLive) {
+    const gameLink = game.gameId ? `/mlb/scores/${game.gameId}` : null;
+    const overlay = (
+      <MLBLiveGameOverlay
+        game={game}
+        gameNumber={gameNumber}
+        teamAbbreviation={teamAbbreviation}
+        teamColors={teamColors}
+      />
+    );
+    if (gameLink) {
+      return (
+        <div
+          className="block h-full cursor-pointer"
+          onClick={() => router.push(gameLink)}
+          role="link"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter') router.push(gameLink); }}
+        >
+          {overlay}
+        </div>
+      );
+    }
+    return overlay;
+  }
+
   const cardContent = (
     <div
       className={`h-full bg-gradient-to-br from-blue-50 to-slate-50 ${borderClass} ${shadowStyle} ${opacity} rounded-xl p-2.5 md:p-3 transition-all ${
@@ -111,21 +140,21 @@ export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, 
                 e.preventDefault();
                 router.push(`/mlb/${opponentSlug}`);
               }}
-              className="rounded-lg p-1.5 md:p-2 shadow-sm border bg-white border-gray-200 transition-transform hover:scale-110 cursor-pointer"
+              className="rounded-lg p-3 md:p-3.5 shadow-sm border bg-white border-gray-200 transition-transform hover:scale-110 cursor-pointer"
               title={`View ${game.opponent} tracker`}
             >
               <img
                 src={game.opponentLogo}
                 alt={game.opponent}
-                className="w-14 h-14 md:w-12 md:h-12 object-contain"
+                className="w-10 h-10 md:w-9 md:h-9 object-contain"
               />
             </button>
           ) : (
-            <div className="rounded-lg p-1.5 md:p-2 shadow-sm border bg-white border-gray-200">
+            <div className="rounded-lg p-3 md:p-3.5 shadow-sm border bg-white border-gray-200">
               <img
                 src={game.opponentLogo}
                 alt={game.opponent}
-                className="w-14 h-14 md:w-12 md:h-12 object-contain"
+                className="w-10 h-10 md:w-9 md:h-9 object-contain"
               />
             </div>
           )}

@@ -216,11 +216,11 @@ function MLBScoreCard({ game, favoriteAbbrev }: { game: MLBScoreGame; favoriteAb
       onClick={handleCardClick}
     >
       {/* Status badge + TV + Tickets */}
-      <div className="flex items-center justify-between mb-3">
-        {renderStatusBadge()}
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex-shrink-0">{renderStatusBadge()}</div>
+        <div className="flex items-center gap-2 min-w-0">
           {!isComplete && game.tvNetworks && (
-            <span className="text-xs text-gray-400">{game.tvNetworks}</span>
+            <span className="text-xs text-gray-400 truncate hidden sm:inline">{game.tvNetworks}</span>
           )}
           {ticketLink && (
             <button

@@ -131,7 +131,7 @@ export default function MLBChunkCard({ chunk, teamColors, teamAbbrev, whatIfMode
           const hypoOutcome = hypotheticalResults?.get(game.gameId || 0)?.outcome as ('W' | 'L' | undefined) || null;
           return (
             <MLBGameBox
-              key={game.gameId || `pending-${chunk.chunkNumber}-${idx}`}
+              key={game.gameId ? `${game.gameId}-${idx}` : `pending-${chunk.chunkNumber}-${idx}`}
               game={game}
               gameNumber={(chunk.chunkNumber - 1) * 5 + idx + 1}
               whatIfMode={whatIfMode}

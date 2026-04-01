@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import type { MLBPitcherPreview } from '@/lib/types/mlb';
 import { fetchPitcherStats } from '@/lib/services/mlbApi';
+import { MLB_TEAMS } from '@/lib/teamConfig/mlbTeams';
 
 interface Props {
   awayPitcherId?: number;
@@ -24,11 +25,13 @@ function PitcherCard({ pitcher, teamAbbrev, teamLogo, label }: {
       <div className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-2">{label}</div>
       {pitcher ? (
         <>
-          <img
-            src={`https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${pitcher.id}/headshot/67/current`}
-            alt={pitcher.name}
-            className="w-20 h-20 rounded-full mx-auto mb-2 object-cover bg-gray-100"
-          />
+          <div className="w-24 h-24 rounded-full mx-auto mb-2 overflow-hidden" style={{ backgroundColor: '#b0b0b0' }}>
+            <img
+              src={`https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:83:current.png/w_213,q_auto:best/v1/people/${pitcher.id}/headshot/83/current`}
+              alt={pitcher.name}
+              className="w-full h-full object-contain"
+            />
+          </div>
           <div className="text-sm font-bold text-gray-900 mb-1">{pitcher.name}</div>
           <div className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
             {pitcher.era} ERA

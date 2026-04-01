@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import type { MLBBoxScoreData } from '@/lib/types/mlb';
 import { fetchMLBBoxScore } from '@/lib/services/mlbApi';
 import MLBGameHeader from './MLBGameHeader';
@@ -74,25 +72,9 @@ export default function MLBBoxScoreClient({ gameId }: Props) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Header */}
-      <header className="shadow-xl border-b-4" style={{ background: '#002D72', borderBottomColor: '#041E42' }}>
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <Link href="/mlb/scores" className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-4">
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm">Back to Scores</span>
-          </Link>
-          <div className="text-center">
-            <Link href="/">
-              <h1 className="text-3xl md:text-5xl font-bold text-white mb-1 hover:text-white/90 transition-colors" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-                Lindy&apos;s Five
-              </h1>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <MLBGameHeader data={data} />
 
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
-        <MLBGameHeader data={data} />
 
         {/* Upcoming game preview */}
         {isUpcoming && (

@@ -128,8 +128,14 @@ export default function MLBTeamTracker({ team }: MLBTeamTrackerProps) {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(() => loadData(), pollingIntervalRef.current);
-    return () => clearInterval(interval);
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = () => {
+      timer = setTimeout(() => {
+        loadData().then(poll);
+      }, pollingIntervalRef.current);
+    };
+    poll();
+    return () => clearTimeout(timer);
   }, [team.mlbId]);
 
   if (loading && chunks.length === 0) {
