@@ -11,6 +11,8 @@ import StandingsCard from '@/components/StandingsCard';
 import TeamNav from '@/components/TeamNav';
 import type { TeamConfig } from '@/lib/teamConfig';
 import { getDarkModeColors } from '@/lib/teamConfig';
+import ClinchCelebration from '@/components/ClinchCelebration';
+import SteamEffect from '@/components/SteamEffect';
 import {
   saveChunkStatsToCache,
   loadChunkStatsFromCache
@@ -23,6 +25,15 @@ interface TeamTrackerProps {
 export default function TeamTracker({ team }: TeamTrackerProps) {
   const router = useRouter();
   const darkModeColors = getDarkModeColors(team);
+  const [hasClinched, setHasClinched] = useState(false);
+  const [celebrateOverride, setCelebrateOverride] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('celebrate') === 'true') {
+      setCelebrateOverride(true);
+    }
+  }, []);
   const [chunks, setChunks] = useState<GameChunk[]>([]);
   const [stats, setStats] = useState<SeasonStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,11 +54,14 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
 
     return initialCache;
   });
-  const [isGoatMode, setIsGoatMode] = useState(() => {
-    if (typeof window === 'undefined') return false;
+  const [isGoatMode, setIsGoatMode] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
     const saved = localStorage.getItem(`${team.id}-theme`);
-    return saved === 'goat';
-  });
+    if (saved === 'goat') setIsGoatMode(true);
+    setHasMounted(true);
+  }, [team.id]);
   const [whatIfMode, setWhatIfMode] = useState(false);
   const [hypotheticalResults, setHypotheticalResults] = useState<Map<number, GameResult>>(new Map());
   const [yearOverYearMode, setYearOverYearMode] = useState(false);
@@ -449,6 +463,11 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
           : `bg-gradient-to-br ${darkModeColors.backgroundGradient}`
       }`}
     >
+    {/* Clinch Celebration */}
+    {(hasClinched || celebrateOverride) && (
+      <ClinchCelebration teamColors={effectiveTeamColors} />
+    )}
+
     {/* Header */}
     <header
       className={`shadow-xl border-b-4 ${
@@ -554,11 +573,16 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
                 className="h-16 md:h-24 mb-2 md:mb-3 w-auto"
               />
             ) : (
-              <img
-                src={logoUrl}
-                alt={`${team.city} ${team.name} Logo`}
-                className="w-16 h-16 md:w-24 md:h-24 mb-2 md:mb-3"
-              />
+              <div className="relative mb-2 md:mb-3">
+                <img
+                  src={logoUrl}
+                  alt={`${team.city} ${team.name} Logo`}
+                  className="w-16 h-16 md:w-24 md:h-24"
+                />
+                {team.id === 'sabres' && isGoatMode && (hasClinched || celebrateOverride) && (
+                  <SteamEffect />
+                )}
+              </div>
             )}
           </button>
           <p
@@ -635,6 +659,8 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
           showShareButton={true}
           teamName={`${team.city} ${team.name}`}
           teamAbbrev={team.abbreviation}
+          onClinchDetected={() => setHasClinched(true)}
+          celebrateOverride={celebrateOverride}
         />
       )}
 

@@ -48,6 +48,8 @@ interface ProgressBarProps {
   showShareButton?: boolean;
   teamName?: string;
   teamAbbrev: string;
+  onClinchDetected?: (indicator: string) => void;
+  celebrateOverride?: boolean;
 }
 
 // Helper function to render a season section
@@ -68,7 +70,8 @@ function SeasonSection({
   cutLineLoading,
   cutLineError,
   lindysFiveProbability,
-  teamName
+  teamName,
+  celebrateOverride
 }: {
   stats: SeasonStats;
   isGoatMode: boolean;
@@ -87,6 +90,7 @@ function SeasonSection({
   cutLineError?: boolean;
   lindysFiveProbability?: number;
   teamName?: string;
+  celebrateOverride?: boolean;
 }) {
   const { totalPoints, gamesPlayed, gamesRemaining, currentPace, projectedPoints, playoffTarget } = stats;
 
@@ -178,6 +182,24 @@ function SeasonSection({
           {cutLineData.clinchIndicator === 'y' && 'Clinched Division'}
           {cutLineData.clinchIndicator === 'z' && "Clinched Presidents' Trophy"}
           {cutLineData.clinchIndicator === 'p' && "Clinched Presidents' Trophy"}
+        </div>
+      )}
+
+      {/* Sabres drought banner */}
+      {!isLastYear && teamId === 'sabres' && (celebrateOverride || (cutLineData?.clinchIndicator && cutLineData.clinchIndicator !== 'e')) && (
+        <div
+          className="mb-3 py-3 px-4 rounded-lg text-center overflow-hidden relative"
+          style={{ background: 'linear-gradient(135deg, #002654 0%, #003A7A 50%, #002654 100%)' }}
+        >
+          <div
+            className="absolute inset-0 opacity-20"
+            style={{
+              background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,185,29,0.15) 10px, rgba(255,185,29,0.15) 20px)',
+            }}
+          />
+          <p className="relative text-lg sm:text-xl md:text-2xl font-black tracking-wide" style={{ color: '#FFB91D' }}>
+            The 14-Year Drought Is Over!
+          </p>
         </div>
       )}
 
@@ -610,7 +632,7 @@ function SeasonSection({
   );
 }
 
-export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearOverYearLoading, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors, teamId, showShareButton, teamName, teamAbbrev }: ProgressBarProps) {
+export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearOverYearLoading, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors, teamId, showShareButton, teamName, teamAbbrev, onClinchDetected, celebrateOverride }: ProgressBarProps) {
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [playoffExpanded, setPlayoffExpanded] = useState(false);
@@ -746,6 +768,10 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
         isInPlayoffPosition,
         clinchIndicator: userTeam.clinchIndicator,
       });
+
+      if (userTeam.clinchIndicator && userTeam.clinchIndicator !== 'e' && onClinchDetected) {
+        onClinchDetected(userTeam.clinchIndicator);
+      }
     } catch (err) {
       console.error('Error calculating cut line:', err);
       setCutLineError(true);
@@ -894,6 +920,7 @@ ${teamUrl}
           cutLineError={cutLineError}
           lindysFiveProbability={lindysFiveProbability}
           teamName={teamName}
+          celebrateOverride={celebrateOverride}
         />
 
         {/* Share Button - positioned relative to current season section, hidden when playoff dropdown is open */}
