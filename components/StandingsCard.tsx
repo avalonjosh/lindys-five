@@ -59,6 +59,7 @@ interface StandingTeam {
   l10Wins: number;
   l10Losses: number;
   l10OtLosses: number;
+  clinchIndicator?: string;
 }
 
 interface StandingsCardProps {
@@ -154,6 +155,7 @@ export default function StandingsCard({
         l10Wins: team.l10Wins || 0,
         l10Losses: team.l10Losses || 0,
         l10OtLosses: team.l10OtLosses || 0,
+        clinchIndicator: team.clinchIndicator || undefined,
       }));
 
       setStandings(parsedStandings);
@@ -263,7 +265,7 @@ export default function StandingsCard({
     const divisionData = divisions.map(divName => {
       const divTeams = conferenceTeams
         .filter(t => t.divisionName === divName)
-        .sort((a, b) => a.divisionRank - b.divisionRank);
+        .sort((a, b) => a.divisionRank - b.divisionRank || (b.pointPctg || 0) - (a.pointPctg || 0));
       return {
         name: divName,
         leader: divTeams[0],
@@ -272,8 +274,8 @@ export default function StandingsCard({
       };
     });
 
-    // Sort divisions by leader's points (A = better record)
-    divisionData.sort((a, b) => b.leader.points - a.leader.points);
+    // Sort divisions by leader's points, then pointPctg tiebreaker (A = better record)
+    divisionData.sort((a, b) => b.leader.points - a.leader.points || (b.leader.pointPctg || 0) - (a.leader.pointPctg || 0));
     const [divA, divB] = divisionData;
 
     if (!divA || !divB) return null;
@@ -281,7 +283,7 @@ export default function StandingsCard({
     // Get wild cards (teams ranked 4+ in their division, sorted by points)
     const wildcards = conferenceTeams
       .filter(t => t.divisionRank > 3)
-      .sort((a, b) => b.points - a.points)
+      .sort((a, b) => b.points - a.points || (b.pointPctg || 0) - (a.pointPctg || 0))
       .slice(0, 2);
 
     const wc1 = wildcards[0]; // Better wild card
@@ -804,7 +806,7 @@ function StandingsHeader({
       {/* Logo spacer */}
       <span className="w-6"></span>
       {/* Team */}
-      <span className="w-10 lg:w-12">Team</span>
+      <span className="w-14 lg:w-16 flex-shrink-0">Team</span>
       {/* W */}
       <span className="w-6 lg:w-8 text-right">W</span>
       {/* L */}
@@ -918,9 +920,9 @@ function TeamRow({
         ) : img;
       })()}
 
-      {/* Team abbrev */}
+      {/* Team abbrev + clinch */}
       <span
-        className={`w-10 lg:w-12 text-sm font-semibold ${
+        className={`w-14 lg:w-16 flex-shrink-0 text-sm font-semibold ${
           isUserTeam
             ? ''
             : isGoatMode ? 'text-zinc-300' : 'text-gray-700'
@@ -928,6 +930,11 @@ function TeamRow({
         style={isUserTeam ? { color: accentColor } : undefined}
       >
         {team.teamAbbrev}
+        {team.clinchIndicator && (
+          team.clinchIndicator === 'e'
+            ? <span className="ml-1 w-3.5 h-3.5 inline-flex items-center justify-center text-[7px] font-bold uppercase rounded border border-gray-400 bg-white text-gray-900 align-middle">E</span>
+            : <span className="ml-1 w-3.5 h-3.5 inline-flex items-center justify-center text-[7px] font-bold uppercase rounded bg-gray-300 text-gray-900 align-middle">{team.clinchIndicator.toUpperCase()}</span>
+        )}
       </span>
 
       {/* Wins */}
@@ -1083,7 +1090,7 @@ function ScoresHeader({ isGoatMode }: { isGoatMode: boolean }) {
     <div className={`flex items-center gap-2 lg:gap-4 px-2 pb-1 text-xs font-medium ${headerColor}`} style={{ borderLeft: '3px solid transparent' }}>
       <span className="w-5 text-center">#</span>
       <span className="w-6"></span>
-      <span className="w-10 lg:w-12">Team</span>
+      <span className="w-14 lg:w-16 flex-shrink-0">Team</span>
       {/* Desktop: separate W/L/OT columns (hidden on mobile for scores view to fit Tonight column) */}
       <span className="hidden lg:block w-8 text-right">W</span>
       <span className="hidden lg:block w-8 text-right">L</span>
@@ -1224,9 +1231,9 @@ function ScoresRow({
         ) : img;
       })()}
 
-      {/* Team abbrev */}
+      {/* Team abbrev + clinch */}
       <span
-        className={`w-10 lg:w-12 text-sm font-semibold ${
+        className={`w-14 lg:w-16 flex-shrink-0 text-sm font-semibold ${
           isUserTeam
             ? ''
             : isGoatMode ? 'text-zinc-300' : 'text-gray-700'
@@ -1234,6 +1241,11 @@ function ScoresRow({
         style={isUserTeam ? { color: accentColor } : undefined}
       >
         {team.teamAbbrev}
+        {team.clinchIndicator && (
+          team.clinchIndicator === 'e'
+            ? <span className="ml-1 w-3.5 h-3.5 inline-flex items-center justify-center text-[7px] font-bold uppercase rounded border border-gray-400 bg-white text-gray-900 align-middle">E</span>
+            : <span className="ml-1 w-3.5 h-3.5 inline-flex items-center justify-center text-[7px] font-bold uppercase rounded bg-gray-300 text-gray-900 align-middle">{team.clinchIndicator.toUpperCase()}</span>
+        )}
       </span>
 
       {/* Desktop: Wins (record columns hidden on mobile for scores view to fit Tonight column) */}

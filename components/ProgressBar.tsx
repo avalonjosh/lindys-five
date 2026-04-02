@@ -17,6 +17,7 @@ interface CutLineState {
   wc2TeamAbbrev: string;
   divBubbleTeamAbbrev: string;
   isInPlayoffPosition: boolean;
+  clinchIndicator?: string;
 }
 
 interface TeamColors {
@@ -164,6 +165,21 @@ function SeasonSection({
           </div>
         )}
       </div>
+
+      {/* Clinch / Elimination banner */}
+      {!isLastYear && cutLineData?.clinchIndicator && (
+        <div className={`mb-3 px-3 py-2 rounded-lg text-center text-sm font-bold ${
+          cutLineData.clinchIndicator === 'e'
+            ? 'bg-red-50 text-red-700 border border-red-200'
+            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+        }`}>
+          {cutLineData.clinchIndicator === 'e' && 'Eliminated from Playoff Contention'}
+          {cutLineData.clinchIndicator === 'x' && 'Clinched Playoff Spot'}
+          {cutLineData.clinchIndicator === 'y' && 'Clinched Division'}
+          {cutLineData.clinchIndicator === 'z' && "Clinched Presidents' Trophy"}
+          {cutLineData.clinchIndicator === 'p' && "Clinched Presidents' Trophy"}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-3 md:mb-4">
         {/* Games Played Card */}
@@ -634,6 +650,7 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
         divisionRank: number;
         conferenceName: string;
         divisionName: string;
+        clinchIndicator?: string;
       }
 
       const parsedStandings: StandingTeam[] = data.standings.map((team: any) => ({
@@ -643,6 +660,7 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
         divisionRank: team.divisionSequence || 0,
         conferenceName: team.conferenceName || '',
         divisionName: team.divisionName || '',
+        clinchIndicator: team.clinchIndicator || undefined,
       }));
 
       // Find user's team
@@ -726,6 +744,7 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
         wc2TeamAbbrev: wc2Team.teamAbbrev,
         divBubbleTeamAbbrev,
         isInPlayoffPosition,
+        clinchIndicator: userTeam.clinchIndicator,
       });
     } catch (err) {
       console.error('Error calculating cut line:', err);

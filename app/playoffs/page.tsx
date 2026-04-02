@@ -306,18 +306,18 @@ function buildProjectedBracket(standings: StandingsTeam[]): {
     const divisionData = divOrder.map(divName => {
       const divTeams = confTeams
         .filter(t => t.divisionName === divName)
-        .sort((a, b) => a.divisionSequence - b.divisionSequence);
+        .sort((a, b) => a.divisionSequence - b.divisionSequence || b.pointPctg - a.pointPctg);
       return { name: divName, teams: divTeams };
     });
 
-    // Sort divisions by leader's points (A = better record)
-    divisionData.sort((a, b) => b.teams[0].points - a.teams[0].points);
+    // Sort divisions by leader's points, then pointPctg tiebreaker (A = better record)
+    divisionData.sort((a, b) => b.teams[0].points - a.teams[0].points || b.teams[0].pointPctg - a.teams[0].pointPctg);
     const [divA, divB] = divisionData;
 
     // Wild cards: teams ranked 4+ in their division, sorted by conference-wide points
     const wildcards = confTeams
       .filter(t => t.divisionSequence > 3)
-      .sort((a, b) => b.points - a.points)
+      .sort((a, b) => b.points - a.points || b.pointPctg - a.pointPctg)
       .slice(0, 2);
 
     const wc1 = wildcards[0]; // Better WC → plays divB leader

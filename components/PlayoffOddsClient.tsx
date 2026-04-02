@@ -23,6 +23,7 @@ export interface TeamData {
   divisionSequence: number;
   conferenceSequence: number;
   isInPlayoffs: boolean;
+  clinchIndicator?: string;
 }
 
 type ViewMode = 'wildcard' | 'division' | 'conference' | 'league';
@@ -56,6 +57,14 @@ function TableHeader() {
   );
 }
 
+function ClinchBadge({ indicator }: { indicator?: string }) {
+  if (!indicator) return null;
+  if (indicator === 'e') {
+    return <span className="ml-1 w-4 h-4 inline-flex items-center justify-center text-[9px] font-bold uppercase rounded border border-gray-400 bg-white text-gray-900">E</span>;
+  }
+  return <span className="ml-1 w-4 h-4 inline-flex items-center justify-center text-[9px] font-bold uppercase rounded bg-gray-300 text-gray-900">{indicator.toUpperCase()}</span>;
+}
+
 function TeamRow({ team, rank }: { team: TeamData; rank: number }) {
   return (
     <tr
@@ -71,6 +80,7 @@ function TeamRow({ team, rank }: { team: TeamData; rank: number }) {
             <span className="hidden md:inline">{team.name}</span>
             <span className="md:hidden whitespace-nowrap">{team.abbrev}</span>
           </span>
+          <ClinchBadge indicator={team.clinchIndicator} />
         </Link>
       </td>
       <td className="py-2.5 px-2 text-center text-gray-500">{team.gamesPlayed}</td>

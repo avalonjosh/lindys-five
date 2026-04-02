@@ -287,7 +287,7 @@ function TeamHeader({ hasGames }: { hasGames: boolean }) {
     <div className="flex items-center gap-2 lg:gap-4 px-2 pb-1 text-xs font-medium text-gray-400" style={{ borderLeft: '3px solid transparent' }}>
       <span className="w-5 text-center">#</span>
       <span className="w-6" />
-      <span className="w-10 lg:w-12">Team</span>
+      <span className="w-14 lg:w-16 flex-shrink-0">Team</span>
       {/* W/L/OT hidden on mobile when scores are shown */}
       <span className="hidden lg:block w-8 text-right">W</span>
       <span className="hidden lg:block w-8 text-right">L</span>
@@ -368,14 +368,19 @@ function TeamRow({
         ) : img;
       })()}
 
-      {/* Abbrev */}
+      {/* Abbrev + clinch */}
       <span
-        className={`w-10 lg:w-12 text-sm font-semibold ${
+        className={`w-14 lg:w-16 flex-shrink-0 text-sm font-semibold ${
           isHighlighted ? '' : 'text-gray-700'
         }`}
         style={isHighlighted ? { color: accentColor } : undefined}
       >
         {team.teamAbbrev.default}
+        {team.clinchIndicator && (
+          team.clinchIndicator === 'e'
+            ? <span className="ml-1 w-3.5 h-3.5 inline-flex items-center justify-center text-[7px] font-bold uppercase rounded border border-gray-400 bg-white text-gray-900 align-middle">E</span>
+            : <span className="ml-1 w-3.5 h-3.5 inline-flex items-center justify-center text-[7px] font-bold uppercase rounded bg-gray-300 text-gray-900 align-middle">{team.clinchIndicator.toUpperCase()}</span>
+        )}
       </span>
 
       {/* W - hidden on mobile */}

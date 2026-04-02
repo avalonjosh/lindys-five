@@ -261,6 +261,7 @@ export interface StandingsTeam {
   roadWins: number;
   roadLosses: number;
   roadOtLosses: number;
+  clinchIndicator?: string;
 }
 
 export interface BoxScoreData {

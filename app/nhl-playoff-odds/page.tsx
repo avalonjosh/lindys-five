@@ -172,6 +172,7 @@ function buildTeamData(standings: StandingsTeam[]): TeamData[] {
     divisionSequence: team.divisionSequence,
     conferenceSequence: team.conferenceSequence,
     isInPlayoffs: isInPlayoffPosition(team),
+    clinchIndicator: team.clinchIndicator,
   }));
 }
 
