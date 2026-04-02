@@ -44,6 +44,9 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.svg',
   },
+  other: {
+    'impact-site-verification': '48d72d29-439f-487e-b8ad-27c53de0eb72',
+  },
 };
 
 export default function RootLayout({
