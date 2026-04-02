@@ -85,11 +85,11 @@ export default function MLBProgressBar({ stats, teamColors }: MLBProgressBarProp
           <div className="w-full rounded-full h-8 relative shadow-inner bg-gray-200">
             {/* Current wins bar */}
             <div
-              className="h-8 rounded-l-full transition-all duration-500 relative shadow-md"
-              style={{ width: `${Math.min(currentProgress, 100)}%`, backgroundColor: teamColors.primary }}
+              className="h-8 rounded-l-full transition-all duration-500 relative shadow-md flex items-center justify-end"
+              style={{ width: `${Math.max(Math.min(currentProgress, 100), 5)}%`, backgroundColor: teamColors.primary }}
             >
               {currentProgress > 0 && (
-                <span className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 text-xs md:text-sm font-bold text-white">
+                <span className="pr-1.5 md:pr-3 text-[10px] md:text-sm font-bold text-white whitespace-nowrap">
                   {totalWins}
                 </span>
               )}
