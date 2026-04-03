@@ -9,16 +9,25 @@ function getTeamSlug(abbrev: string): string | null {
   return entry ? entry[0] : null;
 }
 
-interface BracketCellProps {
-  matchup: BracketMatchup;
+function getTeamColor(abbrev: string): string {
+  const entry = Object.values(TEAMS).find(t => t.abbreviation === abbrev);
+  return entry?.colors.primary || '#003087';
 }
 
-export default function BracketCell({ matchup }: BracketCellProps) {
+interface BracketCellProps {
+  matchup: BracketMatchup;
+  cupFinal?: boolean;
+}
+
+export default function BracketCell({ matchup, cupFinal }: BracketCellProps) {
   const { topSeed, bottomSeed, topSeedWins, bottomSeedWins, isComplete, topSeedSeriesWinPct, bottomSeedSeriesWinPct } = matchup;
 
   if (!topSeed || !bottomSeed) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm h-full flex items-center justify-center min-h-[72px]">
+      <div className="bg-gray-50 rounded-lg border border-gray-200 shadow-sm flex flex-col items-center justify-center py-3 px-3">
+        {cupFinal && (
+          <img src="/stanley-cup.png" alt="Stanley Cup" className="w-16 h-20 object-contain mb-1" />
+        )}
         <span className="text-xs text-gray-400">TBD</span>
       </div>
     );
@@ -103,7 +112,6 @@ function TeamRow({
       {slug ? (
         <Link href={`/nhl/${slug}`} className="flex items-center gap-1.5 flex-1 min-w-0 hover:opacity-80 transition-opacity">
           {logoEl}
-          <span className="text-[11px] text-gray-400 w-3 text-center flex-shrink-0">{seed}</span>
           <span className={`text-xs font-semibold flex-1 truncate ${
             isWinner ? 'text-gray-900' : 'text-gray-700'
           }`}>
@@ -113,7 +121,6 @@ function TeamRow({
       ) : (
         <>
           {logoEl}
-          <span className="text-[11px] text-gray-400 w-3 text-center flex-shrink-0">{seed}</span>
           <span className={`text-xs font-semibold flex-1 truncate ${
             isWinner ? 'text-gray-900' : 'text-gray-700'
           }`}>
@@ -122,22 +129,18 @@ function TeamRow({
         </>
       )}
       {showPct && (
-        <span className={`text-[10px] font-medium tabular-nums flex-shrink-0 ${
-          pct >= 50 ? 'text-emerald-600' : 'text-gray-400'
-        }`}>
+        <span
+          className="text-[10px] font-bold tabular-nums flex-shrink-0 text-white rounded px-1 py-0.5 leading-none"
+          style={{ backgroundColor: pct >= 50 ? getTeamColor(abbrev) : '#9ca3af' }}
+        >
           {pct}%
         </span>
       )}
-      <div className="flex gap-0.5 flex-shrink-0">
-        {Array.from({ length: 4 }, (_, i) => (
-          <div
-            key={i}
-            className={`w-2 h-2 rounded-full ${
-              i < wins ? 'bg-emerald-500' : 'bg-gray-200'
-            }`}
-          />
-        ))}
-      </div>
+      <span className={`text-xs font-bold tabular-nums flex-shrink-0 ${
+        wins > 0 ? 'text-gray-700' : 'text-gray-300'
+      }`}>
+        {wins}
+      </span>
     </div>
   );
 }
