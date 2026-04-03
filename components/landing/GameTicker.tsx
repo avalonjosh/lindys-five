@@ -112,6 +112,7 @@ export default function GameTicker() {
     if (!el) return;
 
     const interval = setInterval(() => {
+      if (el.scrollWidth <= el.clientWidth) return;
       if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 1) {
         el.scrollLeft = 0;
       } else {
