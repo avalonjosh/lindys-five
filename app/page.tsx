@@ -62,7 +62,7 @@ export default function LandingPage() {
             {/* NHL Badge */}
             <Link
               href="/nhl"
-              className="group relative rounded-2xl p-10 md:p-14 shadow-2xl border-4 transition-all duration-300 hover:scale-105"
+              className="group relative rounded-2xl p-6 md:p-14 shadow-2xl border-4 transition-all duration-300 hover:scale-105"
               style={{
                 background: 'linear-gradient(to bottom right, #003087, #0A1128)',
                 borderColor: '#ffffff',
@@ -72,17 +72,11 @@ export default function LandingPage() {
                 <Image
                   src="https://assets.nhle.com/logos/nhl/svg/NHL_light.svg"
                   alt="NHL"
-                  width={160}
-                  height={160}
-                  className="w-32 h-32 md:w-40 md:h-40 mb-6 group-hover:scale-110 transition-transform duration-300"
+                  width={200}
+                  height={200}
+                  className="w-40 h-40 md:w-48 md:h-48 mb-3 group-hover:scale-110 transition-transform duration-300"
                 />
-                <h2
-                  className="text-4xl md:text-5xl font-bold text-white mb-2"
-                  style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-                >
-                  NHL
-                </h2>
-                <p className="text-sm md:text-base text-white/60 mb-4">
+                <p className="text-xs sm:text-sm md:text-base text-white/60 mb-2 whitespace-nowrap">
                   32 Teams &bull; Playoff Odds &bull; Stanley Cup Race
                 </p>
                 <p className="font-bold text-lg text-white/80">Enter →</p>
@@ -92,7 +86,7 @@ export default function LandingPage() {
             {/* MLB Badge */}
             <Link
               href="/mlb"
-              className="group relative rounded-2xl p-10 md:p-14 shadow-2xl border-4 transition-all duration-300 hover:scale-105"
+              className="group relative rounded-2xl p-6 md:p-14 shadow-2xl border-4 transition-all duration-300 hover:scale-105"
               style={{
                 background: 'linear-gradient(to bottom right, #002D72, #041E42)',
                 borderColor: '#E4002C',
@@ -102,17 +96,11 @@ export default function LandingPage() {
                 <Image
                   src="https://www.mlbstatic.com/team-logos/league-on-dark/1.svg"
                   alt="MLB"
-                  width={160}
-                  height={160}
-                  className="w-32 h-32 md:w-40 md:h-40 mb-6 group-hover:scale-110 transition-transform duration-300"
+                  width={200}
+                  height={200}
+                  className="w-40 h-40 md:w-48 md:h-48 mb-3 group-hover:scale-110 transition-transform duration-300"
                 />
-                <h2
-                  className="text-4xl md:text-5xl font-bold text-white mb-2"
-                  style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-                >
-                  MLB
-                </h2>
-                <p className="text-sm md:text-base text-white/60 mb-4">
+                <p className="text-xs sm:text-sm md:text-base text-white/60 mb-2 whitespace-nowrap">
                   30 Teams &bull; Playoff Odds &bull; World Series Race
                 </p>
                 <p className="font-bold text-lg text-white/80">Enter →</p>
