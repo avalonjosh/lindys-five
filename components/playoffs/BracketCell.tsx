@@ -112,7 +112,7 @@ function TeamRow({
       {slug ? (
         <Link href={`/nhl/${slug}`} className="flex items-center gap-1.5 flex-1 min-w-0 hover:opacity-80 transition-opacity">
           {logoEl}
-          <span className={`text-xs font-semibold flex-1 truncate hidden lg:inline ${
+          <span className={`text-xs font-semibold flex-1 truncate  ${
             isWinner ? 'text-gray-900' : 'text-gray-700'
           }`}>
             {abbrev}
@@ -121,7 +121,7 @@ function TeamRow({
       ) : (
         <>
           {logoEl}
-          <span className={`text-xs font-semibold flex-1 truncate hidden lg:inline ${
+          <span className={`text-xs font-semibold flex-1 truncate  ${
             isWinner ? 'text-gray-900' : 'text-gray-700'
           }`}>
             {abbrev}

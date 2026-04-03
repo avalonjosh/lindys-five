@@ -193,7 +193,7 @@ function MobileBracket({ eastern, western }: { eastern: ConferenceBracket; weste
   return (
     <div className="space-y-2">
       {/* ── Top half: Division A from each conference + R2 ── */}
-      <div className="grid gap-x-1" style={{ gridTemplateColumns: '1fr auto auto 1fr' }}>
+      <div className="grid gap-x-1" style={{ gridTemplateColumns: '1fr 2.5rem 2.5rem 1fr' }}>
         {/* R1 labels */}
         <div className="text-center text-[10px] font-semibold text-gray-400 uppercase mb-1">R1</div>
         <div className="text-center text-[10px] font-semibold text-gray-400 uppercase mb-1 col-span-2">R2</div>
@@ -238,7 +238,7 @@ function MobileBracket({ eastern, western }: { eastern: ConferenceBracket; weste
       </div>
 
       {/* ── Bottom half: Division B from each conference + R2 ── */}
-      <div className="grid gap-x-1" style={{ gridTemplateColumns: '1fr auto auto 1fr' }}>
+      <div className="grid gap-x-1" style={{ gridTemplateColumns: '1fr 2.5rem 2.5rem 1fr' }}>
         {/* West R1 div B */}
         <div className="space-y-1.5">
           <BracketCell matchup={westR1[2]} />
@@ -305,7 +305,7 @@ function DesktopBracket({ eastern, western }: { eastern: ConferenceBracket; west
   // 13-column grid: West on left, East on right
   // Col: wR1 | c | wR2 | c | wCF | c | Final | c | eCF | c | eR2 | c | eR1
   //       1    2    3    4    5    6    7      8    9   10   11  12   13
-  const colTemplate = '2fr 12px 2fr 12px 2fr 12px 2fr 12px 2fr 12px 2fr 12px 2fr';
+  const colTemplate = '3fr 12px 2fr 12px 1.5fr 12px 2fr 12px 1.5fr 12px 2fr 12px 3fr';
 
   return (
     <div>
