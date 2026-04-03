@@ -98,7 +98,7 @@ export default function MLBProgressBar({ stats, teamColors }: MLBProgressBarProp
             {/* Expected pace marker — triangle + white line, same as NHL */}
             <div
               className="absolute top-0 h-8 flex flex-col items-center"
-              style={{ left: `calc(${Math.min(expectedProgress, 100)}% - 4px)` }}
+              style={{ left: `calc(${Math.max(Math.min(expectedProgress, 100), currentProgress < expectedProgress ? Math.max(currentProgress, 5) + 2 : 0)}% - 4px)` }}
             >
               <div className={`w-0 h-0 border-l-[4px] border-r-[4px] border-t-[5px] border-l-transparent border-r-transparent -mb-px ${indicatorColor}`} />
               {currentProgress <= expectedProgress && (
