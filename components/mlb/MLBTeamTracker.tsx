@@ -10,6 +10,7 @@ import MLBChunkCard from './MLBChunkCard';
 import MLBProgressBar from './MLBProgressBar';
 import MLBTeamNav from './MLBTeamNav';
 import MLBStandingsCard from './MLBStandingsCard';
+import MerchCTA from '@/components/affiliate/MerchCTA';
 
 // Teams whose logo blends into their header background color
 const mlbBgTeamIds = ['orioles', 'reds', 'cardinals', 'angels', 'phillies', 'nationals', 'rays', 'tigers', 'royals', 'twins', 'dodgers', 'giants', 'rockies', 'padres'];
@@ -222,6 +223,15 @@ export default function MLBTeamTracker({ team }: MLBTeamTrackerProps) {
             <p className="text-xs md:text-base opacity-90 px-2 leading-tight text-white">
               5-Game Set Analysis &bull; Target: 3+ wins per set
             </p>
+            <div className="mt-2">
+              <MerchCTA
+                teamCity={team.city}
+                teamName={team.name}
+                sport="mlb"
+                variant="compact"
+                primaryColor={team.colors.secondary}
+              />
+            </div>
           </div>
         </div>
       </header>

@@ -13,6 +13,7 @@ import type { TeamConfig } from '@/lib/teamConfig';
 import { getDarkModeColors } from '@/lib/teamConfig';
 import ClinchCelebration from '@/components/ClinchCelebration';
 import SteamEffect from '@/components/SteamEffect';
+import MerchCTA from '@/components/affiliate/MerchCTA';
 import {
   saveChunkStatsToCache,
   loadChunkStatsFromCache
@@ -630,6 +631,15 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
           >
             5-Game Set Analysis &bull; Target: 6+ points per set
           </p>
+          <div className="mt-2">
+            <MerchCTA
+              teamCity={team.city}
+              teamName={team.name}
+              sport="nhl"
+              variant="compact"
+              primaryColor={isGoatMode ? darkModeColors.accent : team.colors.accent}
+            />
+          </div>
         </div>
       </div>
     </header>

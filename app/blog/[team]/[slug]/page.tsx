@@ -9,6 +9,7 @@ import AuthorByline from '@/components/blog/AuthorByline';
 import NextGameCTA from '@/components/blog/NextGameCTA';
 import ViewTracker from '@/components/blog/ViewTracker';
 import NewsletterSignup from '@/components/newsletter/NewsletterSignup';
+import MerchCTA from '@/components/affiliate/MerchCTA';
 
 export const dynamic = 'force-dynamic';
 
@@ -285,6 +286,17 @@ export default async function BlogPostPage({
             primaryColor={postConfig.primary}
             accentColor={postConfig.accent}
           />
+
+          {/* Merch CTA */}
+          {post.team === 'sabres' && (
+            <MerchCTA
+              teamCity="Buffalo"
+              teamName="Sabres"
+              sport="nhl"
+              variant="card"
+              primaryColor={postConfig.primary}
+            />
+          )}
 
           {/* Next Game CTA - For Sabres articles */}
           {showTicketCTA && (

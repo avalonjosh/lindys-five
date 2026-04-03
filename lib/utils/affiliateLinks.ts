@@ -1,6 +1,8 @@
 /**
- * Affiliate link utilities for StubHub/Partnerize integration
+ * Affiliate link utilities for StubHub/Partnerize and Amazon Associates integration
  */
+
+const AMAZON_TAG = process.env.NEXT_PUBLIC_AMAZON_TAG || 'lindysfive-20';
 
 const STUBHUB_BASE_URL = 'https://stubhub.prf.hn/click';
 // Campaign Reference (camref) from Partnerize - specific to StubHub NORAM campaign
@@ -137,4 +139,18 @@ export function generateGameTicketLink(
     teamSlug: venueTeamSlug,
     teamCity: venueTeamCity
   });
+}
+
+/**
+ * Generates an Amazon Associates affiliate link for team merchandise
+ *
+ * @param teamCity - Team city (e.g., 'Buffalo')
+ * @param teamName - Team name (e.g., 'Sabres')
+ * @param sport - 'nhl' or 'mlb'
+ * @returns Amazon search URL with affiliate tag
+ */
+export function generateAmazonMerchLink(teamCity: string, teamName: string, sport: 'nhl' | 'mlb'): string {
+  const league = sport === 'nhl' ? 'NHL' : 'MLB';
+  const query = encodeURIComponent(`${teamCity} ${teamName} ${league} jersey`);
+  return `https://www.amazon.com/s?k=${query}&tag=${AMAZON_TAG}`;
 }
