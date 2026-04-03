@@ -10,6 +10,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `Game ${gameId} — MLB Box Score`,
     description: `MLB box score, batting stats, pitching stats, and scoring plays.`,
+    openGraph: {
+      title: `MLB Game Box Score | Lindy's Five`,
+      description: 'MLB box score with batting stats, pitching stats, and scoring plays.',
+      type: 'website',
+      url: `https://www.lindysfive.com/mlb/scores/${gameId}`,
+      siteName: "Lindy's Five",
+    },
+    twitter: {
+      card: 'summary',
+      title: `MLB Game Box Score | Lindy's Five`,
+      description: 'MLB box score with batting stats, pitching stats, and scoring plays.',
+    },
     alternates: {
       canonical: `https://www.lindysfive.com/mlb/scores/${gameId}`,
     },

@@ -22,6 +22,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: `Game Box Score | Lindy's Five`,
       description: 'Full NHL box score with player stats and playoff impact.',
     },
+    alternates: {
+      canonical: `https://www.lindysfive.com/scores/${gameId}`,
+    },
   };
 }
 
