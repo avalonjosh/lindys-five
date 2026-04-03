@@ -220,9 +220,6 @@ export default function MLBTeamNav({ currentTeamId, teamColors, defaultTab = 'ml
                 <button onClick={() => handleNavigation('/playoffs')} className="w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold hover:bg-blue-50 text-gray-900 transition-all">
                   Playoff Bracket
                 </button>
-                <button onClick={() => handleNavigation('/blog')} className="w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold hover:bg-blue-50 text-gray-900 transition-all">
-                  Blog
-                </button>
               </>
             )}
 

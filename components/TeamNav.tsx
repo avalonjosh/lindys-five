@@ -432,14 +432,6 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                 >
                   Playoff Bracket
                 </button>
-                <button
-                  onClick={() => handleNavigation('/blog')}
-                  className={`w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold transition-all ${
-                    useClassicStyling ? 'hover:bg-zinc-800 text-white' : 'hover:bg-blue-50 text-gray-900'
-                  }`}
-                >
-                  Blog
-                </button>
               </>
             )}
 

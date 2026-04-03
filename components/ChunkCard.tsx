@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import type { GameChunk, ChunkStats, GameResult } from '@/lib/types';
 import GameBox from './GameBox';
+import MerchCTA from './affiliate/MerchCTA';
 import { calculateChunkStats } from '@/lib/utils/chunkCalculator';
+import { TEAMS } from '@/lib/teamConfig';
 
 interface TeamColors {
   primary: string;
@@ -314,6 +316,31 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
               <div className="text-sm py-4">Not Scheduled Yet</div>
             </div>
           ))}
+
+        {/* Shop Gear card in empty grid cell on mobile (odd game count) */}
+        {chunk.games.length % 2 === 1 && (() => {
+          const team = Object.values(TEAMS).find(t => t.abbreviation === teamAbbreviation);
+          if (!team) return null;
+          return (
+            <div
+              className={`sm:hidden rounded-lg border flex flex-col items-center justify-center p-3 gap-2 ${
+                isGoatMode ? 'border-zinc-700' : 'border-gray-200'
+              }`}
+              style={isGoatMode ? { backgroundColor: darkModeColors.cardBackground || darkModeColors.background } : undefined}
+            >
+              <p className={`text-xs font-semibold ${isGoatMode ? 'text-zinc-400' : 'text-gray-500'}`}>
+                Rep Your Team
+              </p>
+              <MerchCTA
+                teamCity={team.city}
+                teamName={team.name}
+                sport="nhl"
+                variant="compact"
+                primaryColor={isGoatMode ? darkModeColors.accent : teamColors.primary}
+              />
+            </div>
+          );
+        })()}
       </div>
 
       {/* Show Stats Button - Only show if set has completed games */}
