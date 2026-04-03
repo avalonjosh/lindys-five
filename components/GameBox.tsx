@@ -48,7 +48,7 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
   // If this is a live game, render the LiveGameOverlay wrapped in a link to boxscore
   if (isLiveGame) {
     return (
-      <Link href={`/scores/${game.gameId}`} className="block h-full">
+      <Link href={`/nhl/scores/${game.gameId}`} className="block h-full">
         <LiveGameOverlay
           game={game}
           gameNumber={gameNumber}
@@ -119,7 +119,7 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
   };
 
   // Link all games with a gameId to the boxscore/preview page
-  const gameLink = game.gameId ? `/scores/${game.gameId}` : null;
+  const gameLink = game.gameId ? `/nhl/scores/${game.gameId}` : null;
 
   const handleWinClick = (e: React.MouseEvent) => {
     e.stopPropagation();

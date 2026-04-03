@@ -43,7 +43,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.95,
     },
     {
-      url: `${BASE_URL}/scores`,
+      url: `${BASE_URL}/nhl/scores`,
       lastModified: now,
       changeFrequency: 'daily',
       priority: 0.7,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import type { NHLGame } from '@/lib/types';
 import type { StandingsTeam } from '@/lib/types/boxscore';
 import { fetchScoresByDate, pollLiveGames } from '@/lib/services/nhlApi';
@@ -40,21 +40,11 @@ const getFavoriteTeamAbbrev = (slug: string | null): string | null => {
   return team?.abbreviation || null;
 };
 
-// Get favorite team path for back button
-const getFavoriteTeamPath = (): { path: string; label: string } => {
-  const slug = getFavoriteTeamSlug();
-  if (slug) {
-    return { path: `/${slug}`, label: 'Back to Tracker' };
-  }
-  return { path: '/', label: 'Back to Home' };
-};
-
 export default function ScoresPageClient() {
   const [selectedDate, setSelectedDate] = useState(getTodayString());
   const [games, setGames] = useState<NHLGame[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [backLink, setBackLink] = useState<{ path: string; label: string }>({ path: '/', label: 'Back to Home' });
   const [favoriteTeamAbbrev, setFavoriteTeamAbbrev] = useState<string | null>(null);
   const [standings, setStandings] = useState<StandingsTeam[]>([]);
 
@@ -62,7 +52,6 @@ export default function ScoresPageClient() {
   useEffect(() => {
     const slug = getFavoriteTeamSlug();
     if (slug) {
-      setBackLink({ path: `/${slug}`, label: 'Back to Tracker' });
       setFavoriteTeamAbbrev(getFavoriteTeamAbbrev(slug));
     }
   }, []);
@@ -177,18 +166,18 @@ export default function ScoresPageClient() {
         }}
       >
         <div className="max-w-7xl mx-auto px-4 py-6">
-          {/* Back link */}
-          <Link
-            href={backLink.path}
-            className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-6"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm">{backLink.label}</span>
-          </Link>
+          {/* Nav hamburger */}
+          <div className="mb-6">
+            <MLBTeamNav
+              currentTeamId=""
+              teamColors={{ primary: '#003087', secondary: '#FFB81C', accent: '#FFFFFF' }}
+              defaultTab="nhl"
+            />
+          </div>
 
           {/* Header Content */}
           <div className="text-center">
-            <Link href="/">
+            <Link href="/" className="inline-block">
               <h1
                 className="text-5xl md:text-7xl font-bold text-white mb-2 hover:text-white/90 transition-colors"
                 style={{ fontFamily: 'Bebas Neue, sans-serif' }}
@@ -196,9 +185,16 @@ export default function ScoresPageClient() {
                 Lindy&apos;s Five
               </h1>
             </Link>
-            <p className="text-xl text-white/80 mb-8">
-              Scores
-            </p>
+            <div className="flex items-center justify-center gap-2 mb-8">
+              <img
+                src="https://assets.nhle.com/logos/nhl/svg/NHL_light.svg"
+                alt="NHL"
+                className="w-6 h-6"
+              />
+              <p className="text-xl text-white/80">
+                NHL Scores
+              </p>
+            </div>
             <div className="flex justify-center">
               <DateNavigation
                 selectedDate={selectedDate}

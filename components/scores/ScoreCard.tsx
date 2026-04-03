@@ -239,7 +239,7 @@ export default function ScoreCard({ game, favoriteTeamAbbrev, standings }: Score
   );
 
   const handleCardClick = () => {
-    router.push(`/scores/${game.id}`);
+    router.push(`/nhl/scores/${game.id}`);
   };
 
   return (

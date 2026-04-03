@@ -86,7 +86,7 @@ export default function SeasonSeries({
           return (
             <Link
               key={game.id}
-              href={`/scores/${game.id}`}
+              href={`/nhl/scores/${game.id}`}
               className="block transition-colors"
             >
               {content}
@@ -126,7 +126,7 @@ export default function SeasonSeries({
           return (
             <Link
               key={game.id}
-              href={`/scores/${game.id}`}
+              href={`/nhl/scores/${game.id}`}
               className="block transition-colors"
             >
               {content}

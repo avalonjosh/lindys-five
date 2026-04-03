@@ -159,7 +159,7 @@ export default function SeriesCard({ matchup, compact }: SeriesCardProps) {
           {games.filter(g => g.gameState === 'FINAL' || g.gameState === 'OFF' || g.gameState === 'LIVE' || g.gameState === 'CRIT').map(g => (
             <Link
               key={g.gameId}
-              href={`/scores/${g.gameId}`}
+              href={`/nhl/scores/${g.gameId}`}
               className="flex items-center justify-between text-xs text-gray-500 hover:text-blue-600 transition-colors"
             >
               <span>Game {g.gameNumber}</span>

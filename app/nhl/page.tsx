@@ -58,7 +58,7 @@ export default function NHLLandingPage() {
             <div className="flex flex-wrap justify-center gap-4 text-sm">
               <Link href="/playoffs" className="text-gray-400 hover:text-white transition-colors">Playoff Bracket</Link>
               <span className="text-gray-600">|</span>
-              <Link href="/scores" className="text-gray-400 hover:text-white transition-colors">NHL Scores Today</Link>
+              <Link href="/nhl/scores" className="text-gray-400 hover:text-white transition-colors">NHL Scores Today</Link>
               <span className="text-gray-600">|</span>
               <Link href="/blog/sabres" className="text-gray-400 hover:text-white transition-colors">Sabres Blog</Link>
               <span className="text-gray-600">|</span>

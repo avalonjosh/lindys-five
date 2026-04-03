@@ -69,7 +69,7 @@ export function parseReferrerDomain(referrer: string): string {
 
 export function derivePageType(path: string): string {
   if (path === '/') return 'landing';
-  if (path === '/scores') return 'scores';
+  if (path === '/nhl/scores') return 'scores';
   if (path === '/nhl-playoff-odds') return 'playoff-odds';
   if (path.startsWith('/blog/') && path.split('/').length > 3) return 'blog-post';
   if (path.startsWith('/blog')) return 'blog-index';
@@ -84,7 +84,7 @@ export function extractTeamFromPath(path: string): string | null {
     return null;
   }
   const slug = path.replace(/^\//, '');
-  if (slug && !slug.includes('/') && slug !== 'scores' && slug !== 'nhl-playoff-odds') {
+  if (slug && !slug.includes('/') && slug !== 'nhl-playoff-odds') {
     return slug;
   }
   return null;

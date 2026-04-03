@@ -61,7 +61,7 @@ const COUNTRY_NAMES: Record<string, string> = {
 
 function prettifyPath(path: string): string {
   if (path === '/') return 'Home';
-  if (path === '/scores') return 'Live Scores';
+  if (path === '/nhl/scores') return 'NHL Scores';
   if (path === '/nhl-playoff-odds') return 'NHL Playoff Odds';
   if (path === '/blog') return 'Blog';
   if (TEAM_SLUG_MAP[path]) return TEAM_SLUG_MAP[path];

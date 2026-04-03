@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import { TEAMS } from '@/lib/teamConfig';
 import type { StandingsTeam } from '@/lib/types/boxscore';
 import type { PlayoffBracketResponse } from '@/lib/types/playoffs';
@@ -304,7 +305,14 @@ export default async function NHLPlayoffOddsPage() {
             borderBottomColor: '#0A1128',
           }}
         >
-          <div className="max-w-7xl mx-auto px-4 py-8 md:py-12 text-center">
+          <div className="max-w-7xl mx-auto px-4 py-8 md:py-12 text-center relative">
+            <div className="absolute top-4 left-4">
+              <MLBTeamNav
+                currentTeamId=""
+                teamColors={{ primary: '#003087', secondary: '#FFB81C', accent: '#FFFFFF' }}
+                defaultTab="nhl"
+              />
+            </div>
             <Link href="/" className="inline-block mb-2">
               <p
                 className="text-xl md:text-2xl font-bold text-white/70 hover:text-white transition-colors"

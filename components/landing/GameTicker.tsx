@@ -148,7 +148,7 @@ export default function GameTicker() {
           return (
             <Link
               key={game.id}
-              href={`/scores/${game.id}`}
+              href={`/nhl/scores/${game.id}`}
               className="flex items-center gap-2 px-3 py-1 border-r border-white/10 last:border-r-0 hover:bg-white/5 transition-colors shrink-0"
             >
               {/* Away Team */}

@@ -492,7 +492,7 @@ function TeamRow({
             if (isClickable) {
               return (
                 <Link
-                  href={`/scores/${game.id}`}
+                  href={`/nhl/scores/${game.id}`}
                   className="flex flex-col items-center hover:underline"
                 >
                   {content}

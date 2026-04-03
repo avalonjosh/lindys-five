@@ -20,11 +20,23 @@ const nextConfig = {
     ];
   },
   async redirects() {
-    return NHL_SLUGS.map((slug) => ({
-      source: `/${slug}`,
-      destination: `/nhl/${slug}`,
-      permanent: true,
-    }));
+    return [
+      ...NHL_SLUGS.map((slug) => ({
+        source: `/${slug}`,
+        destination: `/nhl/${slug}`,
+        permanent: true,
+      })),
+      {
+        source: '/scores',
+        destination: '/nhl/scores',
+        permanent: true,
+      },
+      {
+        source: '/scores/:gameId',
+        destination: '/nhl/scores/:gameId',
+        permanent: true,
+      },
+    ];
   },
   images: {
     remotePatterns: [

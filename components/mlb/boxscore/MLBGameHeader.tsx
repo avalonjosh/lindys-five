@@ -23,7 +23,8 @@ function ordinal(n: number): string {
 function getInningText(data: MLBBoxScoreData): string {
   const inning = data.currentInning;
   if (!inning) return 'Live';
-  const half = data.inningHalf === 'top' ? 'Top' : data.inningHalf === 'bottom' ? 'Bot' : '';
+  const h = data.inningHalf?.toLowerCase();
+  const half = h === 'top' ? 'Top' : h === 'bottom' || h === 'bot' ? 'Bot' : '';
   return `${half} ${ordinal(inning)}`;
 }
 

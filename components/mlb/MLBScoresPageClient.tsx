@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import type { MLBScoreGame } from '@/lib/types/mlb';
 import { fetchMLBScores } from '@/lib/services/mlbApi';
 import { MLB_TEAMS } from '@/lib/teamConfig/mlbTeams';
@@ -37,15 +37,12 @@ export default function MLBScoresPageClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [favoriteAbbrev, setFavoriteAbbrev] = useState<string | null>(null);
-  const [backLink, setBackLink] = useState({ path: '/mlb', label: 'Back to MLB' });
-
   useEffect(() => {
     const slug = getFavoriteMLBSlug();
     if (slug) {
       const team = MLB_TEAMS[slug];
       if (team) {
         setFavoriteAbbrev(team.abbreviation);
-        setBackLink({ path: `/mlb/${slug}`, label: 'Back to Tracker' });
       }
     }
   }, []);
@@ -89,17 +86,28 @@ export default function MLBScoresPageClient() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <header className="shadow-xl border-b-4" style={{ background: '#002D72', borderBottomColor: '#041E42' }}>
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <Link href={backLink.path} className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-6">
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm">{backLink.label}</span>
-          </Link>
+          <div className="mb-6">
+            <MLBTeamNav
+              currentTeamId=""
+              teamColors={{ primary: '#002D72', secondary: '#E31937', accent: '#FFFFFF' }}
+            />
+          </div>
           <div className="text-center">
-            <Link href="/">
+            <Link href="/" className="inline-block">
               <h1 className="text-5xl md:text-7xl font-bold text-white mb-2 hover:text-white/90 transition-colors" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
                 Lindy&apos;s Five
               </h1>
             </Link>
-            <p className="text-xl text-white/80 mb-8">MLB Scores</p>
+            <div className="flex items-center justify-center gap-2 mb-8">
+              <img
+                src="https://www.mlbstatic.com/team-logos/league-on-dark/1.svg"
+                alt="MLB"
+                className="w-6 h-6"
+              />
+              <p className="text-xl text-white/80">
+                MLB Scores
+              </p>
+            </div>
             <div className="flex justify-center">
               <DateNavigation selectedDate={selectedDate} onDateChange={(d) => { setSelectedDate(d); setLoading(true); }} />
             </div>

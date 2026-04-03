@@ -194,7 +194,7 @@ export default function GameHeader({ boxscore, landing }: GameHeaderProps) {
       <div className="max-w-4xl mx-auto px-4 py-4">
         {/* Back link */}
         <Link
-          href="/scores"
+          href="/nhl/scores"
           className="inline-flex items-center gap-1 text-sm text-white/70 hover:text-white transition-colors mb-4"
         >
           <ArrowLeft className="w-4 h-4" />

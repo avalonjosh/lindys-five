@@ -123,7 +123,7 @@ export default function LandingPage() {
           {/* Footer */}
           <div className="text-center text-gray-500 text-sm">
             <div className="flex flex-wrap justify-center gap-4 mb-4">
-              <Link href="/scores" className="text-gray-400 hover:text-white transition-colors">NHL Scores</Link>
+              <Link href="/nhl/scores" className="text-gray-400 hover:text-white transition-colors">NHL Scores</Link>
               <span className="text-gray-600">|</span>
               <Link href="/mlb/scores" className="text-gray-400 hover:text-white transition-colors">MLB Scores</Link>
               <span className="text-gray-600">|</span>

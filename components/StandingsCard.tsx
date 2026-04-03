@@ -1420,7 +1420,7 @@ function ScoresRow({
           );
           if (isClickable && game) {
             return (
-              <Link href={`/scores/${game.id}`} className="hover:underline">
+              <Link href={`/nhl/scores/${game.id}`} className="hover:underline">
                 {content}
               </Link>
             );
