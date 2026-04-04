@@ -25,7 +25,8 @@ interface MLBGameBoxProps {
 export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, hypotheticalOutcome, teamAbbreviation = 'NYY', teamColors }: MLBGameBoxProps) {
   const router = useRouter();
   const isLive = game.gameState === 'In Progress' || game.gameState === 'Warming Up';
-  const isPending = game.outcome === 'PENDING' && !isLive;
+  const isPostponed = game.gameState === 'Postponed';
+  const isPending = game.outcome === 'PENDING' && !isLive && !isPostponed;
   const isClickable = whatIfMode && isPending && onGameClick;
 
   // Find opponent's tracker slug
@@ -43,20 +44,24 @@ export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, 
   const isWin = game.outcome === 'W';
   const isLoss = game.outcome === 'L';
 
-  const borderClass = isPending
+  const borderClass = isPostponed
+    ? 'border-2 border-dashed'
+    : isPending
     ? 'border-2'
     : isWin
     ? 'border-2'
     : 'border-2 border-dashed';
 
-  const borderColorStyle = isPending
+  const borderColorStyle = isPostponed
+    ? { borderColor: '#d1d5db', borderStyle: 'dashed' as const }
+    : isPending
     ? { borderColor: '#e5e7eb' }
     : isWin
     ? { borderColor: teamColors.primary }
     : { borderColor: '#d1d5db', borderStyle: 'dashed' as const };
 
   const shadowStyle = isWin ? 'shadow-lg' : 'shadow-md';
-  const opacity = isLoss ? 'opacity-75' : 'opacity-100';
+  const opacity = isPostponed ? 'opacity-60' : isLoss ? 'opacity-75' : 'opacity-100';
 
   const getOutcomeText = () => {
     if (game.outcome === 'W') return 'WIN';
@@ -163,7 +168,25 @@ export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, 
       </div>
 
       {/* Score or Status */}
-      {!isPending ? (
+      {isPostponed ? (
+        <>
+          <div className="flex justify-center items-center gap-2 md:gap-3 mb-2">
+            <div className="text-center">
+              <div className="text-xs font-semibold mb-1 text-gray-400">{teamAbbreviation}</div>
+              <div className="text-3xl font-bold text-gray-300">—</div>
+            </div>
+            <div className="text-xl md:text-2xl font-light text-gray-300">-</div>
+            <div className="text-center">
+              <div className="text-xs font-semibold mb-1 text-gray-400">{game.opponent}</div>
+              <div className="text-3xl font-bold text-gray-300">—</div>
+            </div>
+          </div>
+          <div className="text-center pt-2 border-t-2 border-gray-200">
+            <div className="text-sm font-bold text-orange-500">POSTPONED</div>
+            <div className="text-xs mt-1 text-gray-400">{game.date}</div>
+          </div>
+        </>
+      ) : !isPending ? (
         <>
           <div className="flex justify-center items-center gap-2 md:gap-3 mb-2">
             <div className="text-center">

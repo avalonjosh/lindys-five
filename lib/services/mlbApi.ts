@@ -55,7 +55,8 @@ export async function fetchMLBSchedule(teamId: number, season: number): Promise<
       const status = game.status?.detailedState || '';
       const isComplete = status === 'Final' || status === 'Completed Early';
       const isLive = status === 'In Progress' || status === 'Warming Up';
-      const isPending = !isComplete && !isLive;
+      const isPostponed = status === 'Postponed';
+      const isPending = !isComplete && !isLive && !isPostponed;
 
       const teamScore = teamData?.score ?? 0;
       const opponentScore = opponentData?.score ?? 0;
