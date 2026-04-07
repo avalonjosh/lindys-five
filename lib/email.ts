@@ -244,7 +244,7 @@ async function sendBoxscoreRecapForTeam(
     const wcCutLine = getWcCutLine(standing, standings);
     const inPlayoffs = isInPlayoffPosition(standing);
     const before = computePositionAwareProbability(
-      projectedBefore, gpBefore, divCutLine, wcCutLine, inPlayoffs
+      projectedBefore, gpBefore, divCutLine, wcCutLine, inPlayoffs, standing.clinchIndicator
     ).probability;
     return { before, after };
   }

@@ -755,7 +755,8 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
         stats.gamesPlayed,
         divisionCutLine,
         wildcardCutLine,
-        isInPlayoffPosition
+        isInPlayoffPosition,
+        userTeam.clinchIndicator
       );
 
       setCutLineData({
@@ -788,7 +789,8 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
         stats.gamesPlayed,
         cutLineData.divisionCutLine,
         cutLineData.wildcardCutLine,
-        cutLineData.isInPlayoffPosition
+        cutLineData.isInPlayoffPosition,
+        cutLineData.clinchIndicator
       ).probability
     : probabilityForFinalPoints(stats.projectedPoints, stats.gamesPlayed, stats.playoffTarget);
   const probability = rawProbability === 99 ? 100 : rawProbability;

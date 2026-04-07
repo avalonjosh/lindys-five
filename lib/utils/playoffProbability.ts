@@ -255,8 +255,19 @@ export function computePositionAwareProbability(
   gamesPlayed: number,
   divCutLine: number,
   wcCutLine: number,
-  isInPlayoffPosition: boolean
+  isInPlayoffPosition: boolean,
+  clinchIndicator?: string
 ): { probability: number; activePath: 'division' | 'wildcard'; effectiveCutLine: number } {
+  // Teams that have clinched a playoff spot are guaranteed 100%
+  // x = clinched playoff, y = clinched division, z = clinched conference, p = Presidents' Trophy
+  if (clinchIndicator && ['x', 'y', 'z', 'p'].includes(clinchIndicator)) {
+    return { probability: 100, activePath: 'division', effectiveCutLine: 0 };
+  }
+  // Eliminated teams are 0%
+  if (clinchIndicator === 'e') {
+    return { probability: 0, activePath: 'wildcard', effectiveCutLine: 0 };
+  }
+
   // Position bonus: teams currently holding a playoff spot have an advantage
   // Scales with games played (more meaningful later in season)
   let positionBonus = 0;

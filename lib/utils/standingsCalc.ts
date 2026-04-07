@@ -71,7 +71,7 @@ export function getPlayoffProbability(team: StandingsTeam, standings: StandingsT
   const inPlayoffs = isInPlayoffPosition(team);
 
   const { probability } = computePositionAwareProbability(
-    projected, team.gamesPlayed, divCutLine, wcCutLine, inPlayoffs
+    projected, team.gamesPlayed, divCutLine, wcCutLine, inPlayoffs, team.clinchIndicator
   );
   return probability === 99 ? 100 : probability;
 }
@@ -92,7 +92,7 @@ export function computeProb(
   const projected = getProjectedPoints(points, gamesPlayed);
   const inPlayoffs = isInPlayoffPosition(team);
   const { probability } = computePositionAwareProbability(
-    projected, gamesPlayed, divCutLine, wcCutLine, inPlayoffs
+    projected, gamesPlayed, divCutLine, wcCutLine, inPlayoffs, team.clinchIndicator
   );
   return probability;
 }
