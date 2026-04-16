@@ -20,6 +20,8 @@ export default function SkaterMatchup({
   awayAbbrev,
 }: SkaterMatchupProps) {
   if (!skaterComparison?.leaders || skaterComparison.leaders.length === 0) return null;
+  const renderable = skaterComparison.leaders.filter((l) => l.awayLeader && l.homeLeader);
+  if (renderable.length === 0) return null;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
@@ -35,7 +37,7 @@ export default function SkaterMatchup({
       </div>
 
       <div className="space-y-4">
-        {skaterComparison.leaders.map((leader) => {
+        {renderable.map((leader) => {
           const { category, awayLeader, homeLeader } = leader;
           const label = CATEGORY_LABELS[category] || category;
           const awayWins = awayLeader.value > homeLeader.value;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { fetchBoxScoreData, fetchStandingsForDate, fetchRightRail } from '@/lib/services/boxscoreApi';
+import { fetchBoxScoreData, fetchStandingsForDate, fetchRightRail, fetchPlayoffPreGameContext, fetchPlayoffSeriesHub, type PlayoffPreGameContext, type SeriesHubData } from '@/lib/services/boxscoreApi';
 import type {
   BoxscoreResponse,
   LandingResponse,
@@ -23,6 +23,7 @@ import SkaterMatchup from './SkaterMatchup';
 import GoalieMatchup from './GoalieMatchup';
 import SeasonSeries from './SeasonSeries';
 import TeamStatsPreview from './TeamStatsPreview';
+import SeriesHub from './SeriesHub';
 
 async function fetchSeriesForGame(
   homeAbbrev: string,
@@ -53,6 +54,23 @@ async function fetchSeriesForGame(
   }
 }
 
+function computeSeriesWins(
+  games: Array<{ gameState: string; homeTeam: { abbrev: string; score?: number }; awayTeam: { abbrev: string; score?: number } }>,
+  homeAbbrev: string,
+  awayAbbrev: string
+): { awayTeamWins: number; homeTeamWins: number } {
+  let homeTeamWins = 0;
+  let awayTeamWins = 0;
+  for (const g of games) {
+    if (g.gameState !== 'FINAL' && g.gameState !== 'OFF') continue;
+    if (g.homeTeam.score == null || g.awayTeam.score == null) continue;
+    const winnerAbbrev = g.homeTeam.score > g.awayTeam.score ? g.homeTeam.abbrev : g.awayTeam.abbrev;
+    if (winnerAbbrev === homeAbbrev) homeTeamWins++;
+    else if (winnerAbbrev === awayAbbrev) awayTeamWins++;
+  }
+  return { awayTeamWins, homeTeamWins };
+}
+
 interface BoxScoreClientProps {
   gameId: string;
 }
@@ -63,6 +81,8 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
   const [standings, setStandings] = useState<StandingsTeam[]>([]);
   const [rightRail, setRightRail] = useState<RightRailResponse | null>(null);
   const [seriesStatus, setSeriesStatus] = useState<{ topSeedAbbrev: string; topSeedWins: number; bottomSeedWins: number } | null>(null);
+  const [playoffPreGame, setPlayoffPreGame] = useState<PlayoffPreGameContext | null>(null);
+  const [seriesHub, setSeriesHub] = useState<SeriesHubData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -90,8 +110,35 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
       if (data) {
         // Fetch standings and right-rail non-blocking after initial load
         const gameDate = data.boxscore.gameDate;
+        const isPlayoffPreGame =
+          data.boxscore.gameType === 3 &&
+          (data.boxscore.gameState === 'FUT' || data.boxscore.gameState === 'PRE');
+
         fetchStandingsForDate(gameDate).then((standingsData) => {
           setStandings(standingsData);
+          // Derive season from gameId prefix (e.g. 2025020001 → 20252026)
+          const gameIdStr = String(data.boxscore.id);
+          const startYear = parseInt(gameIdStr.slice(0, 4), 10);
+          const season = `${startYear}${startYear + 1}`;
+          if (isPlayoffPreGame) {
+            fetchPlayoffPreGameContext(
+              data.boxscore.homeTeam.abbrev,
+              data.boxscore.awayTeam.abbrev,
+              data.boxscore.homeTeam.id,
+              data.boxscore.awayTeam.id,
+              season,
+              standingsData
+            ).then(setPlayoffPreGame);
+          }
+          if (data.boxscore.gameType === 3) {
+            fetchPlayoffSeriesHub(
+              data.boxscore.homeTeam.abbrev,
+              data.boxscore.awayTeam.abbrev,
+              season,
+              standingsData,
+              gameId
+            ).then(setSeriesHub);
+          }
         });
         fetchRightRail(gameId).then((rightRailData) => {
           setRightRail(rightRailData);
@@ -203,85 +250,117 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
             {/* Future game: playoff stakes + standings first, then preview */}
             {isFuture && (
               <>
-                <PlayoffImpact
-                  homeTeam={boxscore.homeTeam}
-                  awayTeam={boxscore.awayTeam}
-                  standings={standings}
-                  gameState={boxscore.gameState}
-                  gameOutcome={boxscore.gameOutcome}
-                  gameType={boxscore.gameType}
-                  seriesStatus={seriesStatus || undefined}
-                />
+                {boxscore.gameType === 3 ? (
+                  seriesHub && <SeriesHub data={seriesHub} currentGameId={gameId} />
+                ) : (
+                  <>
+                    <PlayoffImpact
+                      homeTeam={boxscore.homeTeam}
+                      awayTeam={boxscore.awayTeam}
+                      standings={standings}
+                      gameState={boxscore.gameState}
+                      gameOutcome={boxscore.gameOutcome}
+                      gameType={boxscore.gameType}
+                      seriesStatus={seriesStatus || undefined}
+                    />
 
-                {standings.length > 0 && (
-                  <StandingsSnapshot
-                    standings={standings}
-                    homeAbbrev={boxscore.homeTeam.abbrev}
-                    awayAbbrev={boxscore.awayTeam.abbrev}
-                    gameDate={boxscore.gameDate}
-                    currentGameId={gameId}
-                  />
+                    {standings.length > 0 && (
+                      <StandingsSnapshot
+                        standings={standings}
+                        homeAbbrev={boxscore.homeTeam.abbrev}
+                        awayAbbrev={boxscore.awayTeam.abbrev}
+                        gameDate={boxscore.gameDate}
+                        currentGameId={gameId}
+                      />
+                    )}
+                  </>
                 )}
 
-                {/* Pre-game matchup sections */}
-                {landing.matchup?.skaterComparison && (
-                  <SkaterMatchup
-                    skaterComparison={landing.matchup.skaterComparison}
-                    homeAbbrev={boxscore.homeTeam.abbrev}
-                    awayAbbrev={boxscore.awayTeam.abbrev}
-                  />
-                )}
+                {/* Pre-game matchup sections (fall back to synthesized data for playoff FUT) */}
+                {(() => {
+                  const skaterComparison = landing.matchup?.skaterComparison || playoffPreGame?.skaterComparison;
+                  return skaterComparison ? (
+                    <SkaterMatchup
+                      skaterComparison={skaterComparison}
+                      homeAbbrev={boxscore.homeTeam.abbrev}
+                      awayAbbrev={boxscore.awayTeam.abbrev}
+                    />
+                  ) : null;
+                })()}
 
-                {landing.matchup?.goalieComparison && (
-                  <GoalieMatchup
-                    goalieComparison={landing.matchup.goalieComparison}
-                    homeAbbrev={boxscore.homeTeam.abbrev}
-                    awayAbbrev={boxscore.awayTeam.abbrev}
-                  />
-                )}
+                {(() => {
+                  const goalieComparison = landing.matchup?.goalieComparison || playoffPreGame?.goalieComparison;
+                  return goalieComparison ? (
+                    <GoalieMatchup
+                      goalieComparison={goalieComparison}
+                      homeAbbrev={boxscore.homeTeam.abbrev}
+                      awayAbbrev={boxscore.awayTeam.abbrev}
+                    />
+                  ) : null;
+                })()}
 
-                {rightRail?.teamSeasonStats && rightRail?.last10Record && (
-                  <TeamStatsPreview
-                    teamSeasonStats={rightRail.teamSeasonStats}
-                    last10Record={rightRail.last10Record}
-                    homeAbbrev={boxscore.homeTeam.abbrev}
-                    awayAbbrev={boxscore.awayTeam.abbrev}
-                  />
-                )}
+                {(() => {
+                  const teamSeasonStats = rightRail?.teamSeasonStats || playoffPreGame?.teamSeasonStats;
+                  const last10Record = rightRail?.last10Record || playoffPreGame?.last10Record;
+                  return teamSeasonStats && last10Record ? (
+                    <TeamStatsPreview
+                      teamSeasonStats={teamSeasonStats}
+                      last10Record={last10Record}
+                      homeAbbrev={boxscore.homeTeam.abbrev}
+                      awayAbbrev={boxscore.awayTeam.abbrev}
+                    />
+                  ) : null;
+                })()}
 
-                {rightRail?.seasonSeries && rightRail.seasonSeries.length > 0 && (
-                  <SeasonSeries
-                    games={rightRail.seasonSeries}
-                    seriesWins={rightRail.seasonSeriesWins}
-                    homeAbbrev={boxscore.homeTeam.abbrev}
-                    awayAbbrev={boxscore.awayTeam.abbrev}
-                    currentGameId={gameId}
-                  />
-                )}
+                {(() => {
+                  const seasonSeriesGames = (rightRail?.seasonSeries && rightRail.seasonSeries.length > 0)
+                    ? rightRail.seasonSeries
+                    : playoffPreGame?.seasonSeries || [];
+                  const seriesWins = rightRail?.seasonSeriesWins || computeSeriesWins(
+                    seasonSeriesGames,
+                    boxscore.homeTeam.abbrev,
+                    boxscore.awayTeam.abbrev
+                  );
+                  return seasonSeriesGames.length > 0 ? (
+                    <SeasonSeries
+                      games={seasonSeriesGames}
+                      seriesWins={seriesWins}
+                      homeAbbrev={boxscore.homeTeam.abbrev}
+                      awayAbbrev={boxscore.awayTeam.abbrev}
+                      currentGameId={gameId}
+                    />
+                  ) : null;
+                })()}
               </>
             )}
 
             {/* Playoff impact + standings for live/final games (future games show these above) */}
             {!isFuture && (
               <>
-                <PlayoffImpact
-                  homeTeam={boxscore.homeTeam}
-                  awayTeam={boxscore.awayTeam}
-                  standings={standings}
-                  gameState={boxscore.gameState}
-                  gameOutcome={boxscore.gameOutcome}
-                  gameType={boxscore.gameType}
-                  seriesStatus={seriesStatus || undefined}
-                />
+                {boxscore.gameType === 3 ? (
+                  seriesHub && <SeriesHub data={seriesHub} currentGameId={gameId} />
+                ) : (
+                  <>
+                    <PlayoffImpact
+                      homeTeam={boxscore.homeTeam}
+                      awayTeam={boxscore.awayTeam}
+                      standings={standings}
+                      gameState={boxscore.gameState}
+                      gameOutcome={boxscore.gameOutcome}
+                      gameType={boxscore.gameType}
+                      seriesStatus={seriesStatus || undefined}
+                    />
 
-                {standings.length > 0 && (
-                  <StandingsSnapshot
-                    standings={standings}
-                    homeAbbrev={boxscore.homeTeam.abbrev}
-                    awayAbbrev={boxscore.awayTeam.abbrev}
-                    gameDate={boxscore.gameDate}
-                    currentGameId={gameId}
-                  />
+                    {standings.length > 0 && (
+                      <StandingsSnapshot
+                        standings={standings}
+                        homeAbbrev={boxscore.homeTeam.abbrev}
+                        awayAbbrev={boxscore.awayTeam.abbrev}
+                        gameDate={boxscore.gameDate}
+                        currentGameId={gameId}
+                      />
+                    )}
+                  </>
                 )}
               </>
             )}

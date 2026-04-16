@@ -50,6 +50,7 @@ export interface BoxscoreResponse {
   id: number;
   gameType: number;
   gameState: string;
+  gameScheduleState?: string;
   gameDate: string;
   startTimeUTC: string;
   venue: { default: string };

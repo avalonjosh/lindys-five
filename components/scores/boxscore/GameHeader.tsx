@@ -19,20 +19,24 @@ const getTeamSlug = (abbrev: string): string | null => {
 };
 
 // Format game date/time in Eastern timezone
-const formatGameDateTime = (utcTime: string): string => {
+const formatGameDateTime = (utcTime: string, timeTbd = false): string => {
   const date = new Date(utcTime);
-  const options: Intl.DateTimeFormatOptions = {
+  const dateOptions: Intl.DateTimeFormatOptions = {
     timeZone: 'America/New_York',
     weekday: 'short',
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+  };
+  const datePart = date.toLocaleString('en-US', dateOptions);
+  if (timeTbd) return `${datePart}, TBD`;
+  const timePart = date.toLocaleString('en-US', {
+    timeZone: 'America/New_York',
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
-  };
-  const formatted = date.toLocaleString('en-US', options);
-  return `${formatted} ET`;
+  });
+  return `${datePart}, ${timePart} ET`;
 };
 
 // Get TV networks string (US only, limit to 2)
@@ -129,7 +133,9 @@ export default function GameHeader({ boxscore, landing }: GameHeaderProps) {
 
   const tvNetworks = getTvNetworks(boxscore.tvBroadcasts);
   const venue = boxscore.venue?.default;
-  const dateTimeStr = boxscore.startTimeUTC ? formatGameDateTime(boxscore.startTimeUTC) : '';
+  const dateTimeStr = boxscore.startTimeUTC
+    ? formatGameDateTime(boxscore.startTimeUTC, boxscore.gameScheduleState === 'TBD')
+    : '';
 
   // Ticket link for future games
   const venueTeamConfig = Object.values(TEAMS).find(t => t.abbreviation === homeTeam.abbrev);

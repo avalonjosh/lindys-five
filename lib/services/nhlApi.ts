@@ -3,6 +3,54 @@ import type { PlayoffBracketResponse } from '../types/playoffs';
 
 const API_BASE = '/api/v1';
 
+interface NHLSeriesStatusRaw {
+  round?: number;
+  seriesAbbrev?: string;
+  seriesTitle?: string;
+  seriesLetter?: string;
+  neededToWin?: number;
+  topSeedTeamAbbrev?: string;
+  topSeedWins?: number;
+  bottomSeedTeamAbbrev?: string;
+  bottomSeedWins?: number;
+  gameNumberOfSeries?: number;
+}
+
+function normalizeSeriesStatus(raw: unknown): string | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  if (typeof raw === 'string') return raw;
+  if (typeof raw !== 'object') return undefined;
+
+  const s = raw as NHLSeriesStatusRaw;
+  const topAbbrev = s.topSeedTeamAbbrev;
+  const botAbbrev = s.bottomSeedTeamAbbrev;
+  const topWins = s.topSeedWins ?? 0;
+  const botWins = s.bottomSeedWins ?? 0;
+  const needed = s.neededToWin ?? 4;
+  const gameNum = s.gameNumberOfSeries;
+
+  if (topWins >= needed && topAbbrev) return `${topAbbrev} wins ${topWins}-${botWins}`;
+  if (botWins >= needed && botAbbrev) return `${botAbbrev} wins ${botWins}-${topWins}`;
+
+  let status: string;
+  if (topWins === 0 && botWins === 0) {
+    status = gameNum ? `Game ${gameNum}` : 'Game 1';
+  } else if (topWins === botWins) {
+    status = `Series tied ${topWins}-${botWins}`;
+  } else if (topWins > botWins && topAbbrev) {
+    status = `${topAbbrev} leads ${topWins}-${botWins}`;
+  } else if (botAbbrev) {
+    status = `${botAbbrev} leads ${botWins}-${topWins}`;
+  } else {
+    return undefined;
+  }
+
+  if (gameNum && !status.startsWith('Game ')) {
+    status += ` \u2022 Game ${gameNum}`;
+  }
+  return status;
+}
+
 // Rate limiter to avoid overwhelming the NHL API
 // Serializes requests with minimum delay between them
 const MAX_CONCURRENT = 4;
@@ -499,6 +547,13 @@ export async function fetchScoresByDate(date: string): Promise<NHLGame[]> {
 
     // Include regular season (2) and playoff (3) games
     const regularSeasonGames = dayData.games.filter((game: NHLGame) => game.gameType === 2 || game.gameType === 3);
+
+    // NHL API returns seriesStatus as an object for playoff games; normalize to string
+    regularSeasonGames.forEach((game: NHLGame) => {
+      if (game.gameType === 3) {
+        game.seriesStatus = normalizeSeriesStatus((game as unknown as { seriesStatus?: unknown }).seriesStatus);
+      }
+    });
 
     console.log(`✅ Found ${regularSeasonGames.length} games for ${date}`);
 

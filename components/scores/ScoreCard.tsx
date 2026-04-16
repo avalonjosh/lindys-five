@@ -178,8 +178,10 @@ export default function ScoreCard({ game, favoriteTeamAbbrev, standings }: Score
       );
     }
 
-    // Upcoming
-    const timeStr = game.startTimeUTC ? formatStartTime(game.startTimeUTC) : 'TBD';
+    // Upcoming — NHL returns a placeholder startTimeUTC with gameScheduleState "TBD" when time isn't set
+    const timeStr = (game.gameScheduleState === 'TBD' || !game.startTimeUTC)
+      ? 'TBD'
+      : formatStartTime(game.startTimeUTC);
     return (
       <span className="px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-700">
         {timeStr}
@@ -306,8 +308,8 @@ export default function ScoreCard({ game, favoriteTeamAbbrev, standings }: Score
         </div>
       )}
 
-      {/* Playoff Stakes */}
-      {(homeStakes || awayStakes) && (
+      {/* Playoff Stakes (regular season only) */}
+      {game.gameType !== 3 && (homeStakes || awayStakes) && (
         <>
           <div className="border-t border-gray-100 mt-1 pt-2">
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">

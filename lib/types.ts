@@ -3,6 +3,7 @@ export interface NHLGame {
   gameDate: string;
   startTimeUTC?: string;
   gameState: string; // "FINAL", "LIVE", "FUT", "OFF"
+  gameScheduleState?: string; // "OK", "TBD", "PPD", etc. — "TBD" means time not set yet
   gameType: number; // 1 = preseason, 2 = regular, 3 = playoffs
   awayTeam: {
     id: number;
