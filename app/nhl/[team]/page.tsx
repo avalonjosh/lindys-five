@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { TEAMS } from '@/lib/teamConfig';
 import TeamTracker from '@/components/TeamTracker';
-import TeamPlayoffStatus from '@/components/playoffs/TeamPlayoffStatus';
 import NewsletterModal from '@/components/newsletter/NewsletterModal';
 import { fetchWithRetry } from '@/lib/services/nhlApi';
 import { calculateChunks, calculateSeasonStats } from '@/lib/utils/chunkCalculator';
@@ -324,7 +323,6 @@ export default async function TeamPage({ params }: TeamPageProps) {
           {seoContent || `${fullName} playoff odds, chances, and Stanley Cup projections for the 2025-26 NHL season. Track ${possessive(fullName)} points pace, playoff picture, playoff probability, and wild card standings — updated daily.`}
         </p>
       </div>
-      <TeamPlayoffStatus teamAbbrev={team.abbreviation} teamName={team.name} primaryColor={team.colors.primary} />
       <TeamTracker team={team} />
       <NewsletterModal
         team={teamSlug}
