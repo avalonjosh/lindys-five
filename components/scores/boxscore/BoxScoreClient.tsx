@@ -110,9 +110,7 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
       if (data) {
         // Fetch standings and right-rail non-blocking after initial load
         const gameDate = data.boxscore.gameDate;
-        const isPlayoffPreGame =
-          data.boxscore.gameType === 3 &&
-          (data.boxscore.gameState === 'FUT' || data.boxscore.gameState === 'PRE');
+        const isPlayoff = data.boxscore.gameType === 3;
 
         fetchStandingsForDate(gameDate).then((standingsData) => {
           setStandings(standingsData);
@@ -120,7 +118,8 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
           const gameIdStr = String(data.boxscore.id);
           const startYear = parseInt(gameIdStr.slice(0, 4), 10);
           const season = `${startYear}${startYear + 1}`;
-          if (isPlayoffPreGame) {
+          if (isPlayoff) {
+            // Synthesize head-to-head + preview data (FUT/PRE uses all of it; LIVE/FINAL uses just seasonSeries)
             fetchPlayoffPreGameContext(
               data.boxscore.homeTeam.abbrev,
               data.boxscore.awayTeam.abbrev,
@@ -129,8 +128,6 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
               season,
               standingsData
             ).then(setPlayoffPreGame);
-          }
-          if (data.boxscore.gameType === 3) {
             fetchPlayoffSeriesHub(
               data.boxscore.homeTeam.abbrev,
               data.boxscore.awayTeam.abbrev,
@@ -171,6 +168,20 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
         const data: BoxScoreData = await fetchBoxScoreData(gameId);
         setBoxscore(data.boxscore);
         setLanding(data.landing);
+
+        // Refresh SeriesHub each poll so schedule row + series score reflect live/final state
+        if (data.boxscore.gameType === 3) {
+          const gameIdStr = String(data.boxscore.id);
+          const startYear = parseInt(gameIdStr.slice(0, 4), 10);
+          const season = `${startYear}${startYear + 1}`;
+          fetchPlayoffSeriesHub(
+            data.boxscore.homeTeam.abbrev,
+            data.boxscore.awayTeam.abbrev,
+            season,
+            standings,
+            gameId
+          ).then(setSeriesHub);
+        }
 
         // Stop polling if game became FINAL
         const newState = data.boxscore.gameState;
@@ -374,16 +385,26 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
               />
             )}
 
-            {/* Season series for started/finished games */}
-            {!isFuture && rightRail?.seasonSeries && rightRail.seasonSeries.length > 0 && (
-              <SeasonSeries
-                games={rightRail.seasonSeries}
-                seriesWins={rightRail.seasonSeriesWins}
-                homeAbbrev={boxscore.homeTeam.abbrev}
-                awayAbbrev={boxscore.awayTeam.abbrev}
-                currentGameId={gameId}
-              />
-            )}
+            {/* Season series for started/finished games (fall back to synthesized data for playoff games) */}
+            {!isFuture && (() => {
+              const seasonSeriesGames = (rightRail?.seasonSeries && rightRail.seasonSeries.length > 0)
+                ? rightRail.seasonSeries
+                : playoffPreGame?.seasonSeries || [];
+              const seriesWins = rightRail?.seasonSeriesWins || computeSeriesWins(
+                seasonSeriesGames,
+                boxscore.homeTeam.abbrev,
+                boxscore.awayTeam.abbrev
+              );
+              return seasonSeriesGames.length > 0 ? (
+                <SeasonSeries
+                  games={seasonSeriesGames}
+                  seriesWins={seriesWins}
+                  homeAbbrev={boxscore.homeTeam.abbrev}
+                  awayAbbrev={boxscore.awayTeam.abbrev}
+                  currentGameId={gameId}
+                />
+              ) : null;
+            })()}
 
             {/* Sections below only render for started/finished games */}
             {!isFuture && (
