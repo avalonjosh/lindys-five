@@ -759,15 +759,8 @@ export default async function PlayoffsPage() {
           </div>
         </header>
 
-        {/* Breadcrumb */}
-        <nav className="max-w-7xl mx-auto px-4 py-3 text-sm text-gray-500">
-          <Link href="/" className="hover:text-gray-700 transition-colors">Home</Link>
-          <span className="mx-2">/</span>
-          <span className="text-gray-600">Playoffs</span>
-        </nav>
-
         {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-4 pb-16">
+        <main className="max-w-7xl mx-auto px-4 pt-6 pb-16">
           <PlayoffBracketClient
             eastern={eastern}
             western={western}
