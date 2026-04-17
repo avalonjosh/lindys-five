@@ -14,6 +14,7 @@ import { getDarkModeColors } from '@/lib/teamConfig';
 import ClinchCelebration from '@/components/ClinchCelebration';
 import SteamEffect from '@/components/SteamEffect';
 import MerchCTA from '@/components/affiliate/MerchCTA';
+import PlayoffJourney, { type JourneySeries } from '@/components/playoffs/PlayoffJourney';
 import {
   saveChunkStatsToCache,
   loadChunkStatsFromCache
@@ -57,12 +58,139 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
   });
   const [isGoatMode, setIsGoatMode] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
+  const [playoffSeries, setPlayoffSeries] = useState<JourneySeries[]>([]);
 
   useEffect(() => {
     const saved = localStorage.getItem(`${team.id}-theme`);
     if (saved === 'goat') setIsGoatMode(true);
     setHasMounted(true);
   }, [team.id]);
+
+  // Fetch playoff bracket and build the team's journey (series per round)
+  useEffect(() => {
+    let cancelled = false;
+    interface BracketSeries {
+      seriesLetter: string;
+      topSeedWins: number;
+      bottomSeedWins: number;
+      games: JourneySeries['games'];
+      matchupTeams: Array<{
+        seed?: { isTop: boolean };
+        team: { abbrev: string; commonName?: { default: string }; name?: { default: string }; logo: string };
+      }>;
+    }
+    interface BracketRound {
+      roundNumber: number;
+      roundLabel: string;
+      series: BracketSeries[];
+    }
+    interface ScheduleGame {
+      gameType: number;
+      gameState: string;
+      homeTeam: { abbrev: string; score?: number };
+      awayTeam: { abbrev: string; score?: number };
+      gameOutcome?: { lastPeriodType: string };
+    }
+
+    const myAbbrev = team.abbreviation;
+    Promise.all([
+      fetch('/api/playoffs/bracket').then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/v1/club-schedule-season/${myAbbrev}/20252026`).then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([bracketData, scheduleData]) => {
+        if (cancelled || !bracketData?.bracket?.rounds) return;
+
+        // Regular-season H2H record (team's W-L-OTL vs each opponent)
+        const h2hByOpponent = new Map<string, { wins: number; losses: number; otLosses: number; gamesPlayed: number }>();
+        for (const g of (scheduleData?.games || []) as ScheduleGame[]) {
+          if (g.gameType !== 2) continue;
+          if (g.gameState !== 'FINAL' && g.gameState !== 'OFF') continue;
+          const isHome = g.homeTeam.abbrev === myAbbrev;
+          const myScore = isHome ? g.homeTeam.score ?? 0 : g.awayTeam.score ?? 0;
+          const oppScore = isHome ? g.awayTeam.score ?? 0 : g.homeTeam.score ?? 0;
+          const oppAbbrev = isHome ? g.awayTeam.abbrev : g.homeTeam.abbrev;
+          let outcome: 'W' | 'L' | 'OTL';
+          if (myScore > oppScore) outcome = 'W';
+          else if (g.gameOutcome?.lastPeriodType && g.gameOutcome.lastPeriodType !== 'REG') outcome = 'OTL';
+          else outcome = 'L';
+          const rec = h2hByOpponent.get(oppAbbrev) || { wins: 0, losses: 0, otLosses: 0, gamesPlayed: 0 };
+          rec.gamesPlayed++;
+          if (outcome === 'W') rec.wins++;
+          else if (outcome === 'OTL') rec.otLosses++;
+          else rec.losses++;
+          h2hByOpponent.set(oppAbbrev, rec);
+        }
+
+        // Per-team stats from standings (point %, goal diff, home/road win %)
+        interface TeamStrength {
+          pointPctg: number;
+          goalDiffPerGame?: number;
+          homeWinPct?: number;
+          roadWinPct?: number;
+        }
+        const strengthMap = new Map<string, TeamStrength>();
+        for (const row of bracketData.standings || []) {
+          const abbrev = row?.teamAbbrev?.default;
+          if (!abbrev || typeof row.pointPctg !== 'number') continue;
+          const gp = row.gamesPlayed || 0;
+          const goalFor = row.goalFor || 0;
+          const goalAgainst = row.goalAgainst || 0;
+          const homeGP = row.homeGamesPlayed || 0;
+          const roadGP = row.roadGamesPlayed || 0;
+          strengthMap.set(abbrev, {
+            pointPctg: row.pointPctg,
+            goalDiffPerGame: gp > 0 ? (goalFor - goalAgainst) / gp : undefined,
+            homeWinPct: homeGP > 0 ? (row.homeWins || 0) / homeGP : undefined,
+            roadWinPct: roadGP > 0 ? (row.roadWins || 0) / roadGP : undefined,
+          });
+        }
+
+        const mine: JourneySeries[] = [];
+        for (const round of bracketData.bracket.rounds as BracketRound[]) {
+          for (const s of round.series || []) {
+            const me = s.matchupTeams.find((t) => t.team.abbrev === myAbbrev);
+            const opp = s.matchupTeams.find((t) => t.team.abbrev !== myAbbrev);
+            if (!me || !opp) continue;
+            const teamWins = me.seed?.isTop ? s.topSeedWins : s.bottomSeedWins;
+            const oppWins = me.seed?.isTop ? s.bottomSeedWins : s.topSeedWins;
+            mine.push({
+              roundNumber: round.roundNumber,
+              roundLabel: round.roundLabel,
+              seriesLetter: s.seriesLetter,
+              teamAbbrev: myAbbrev,
+              opponent: {
+                abbrev: opp.team.abbrev,
+                name: opp.team.commonName?.default || opp.team.name?.default || opp.team.abbrev,
+                logo: opp.team.logo,
+              },
+              teamWins,
+              opponentWins: oppWins,
+              neededToWin: 4,
+              games: s.games || [],
+              isComplete: teamWins >= 4 || oppWins >= 4,
+              didAdvance: teamWins >= 4,
+              teamPointPctg: strengthMap.get(myAbbrev)?.pointPctg,
+              opponentPointPctg: strengthMap.get(opp.team.abbrev)?.pointPctg,
+              teamHasHomeIce: !!me.seed?.isTop,
+              regularSeasonH2H: h2hByOpponent.get(opp.team.abbrev),
+              teamGoalDiffPerGame: strengthMap.get(myAbbrev)?.goalDiffPerGame,
+              opponentGoalDiffPerGame: strengthMap.get(opp.team.abbrev)?.goalDiffPerGame,
+              teamHomeWinPct: strengthMap.get(myAbbrev)?.homeWinPct,
+              teamRoadWinPct: strengthMap.get(myAbbrev)?.roadWinPct,
+              opponentHomeWinPct: strengthMap.get(opp.team.abbrev)?.homeWinPct,
+              opponentRoadWinPct: strengthMap.get(opp.team.abbrev)?.roadWinPct,
+            });
+          }
+        }
+        setPlayoffSeries(mine);
+      })
+      .catch(() => {
+        /* silent — playoffs not active or endpoint unavailable */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [team.abbreviation]);
   const [whatIfMode, setWhatIfMode] = useState(false);
   const [hypotheticalResults, setHypotheticalResults] = useState<Map<number, GameResult>>(new Map());
   const [yearOverYearMode, setYearOverYearMode] = useState(false);
@@ -464,8 +592,8 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
           : `bg-gradient-to-br ${darkModeColors.backgroundGradient}`
       }`}
     >
-    {/* Clinch Celebration */}
-    {(hasClinched || celebrateOverride) && (
+    {/* Clinch Celebration — suppressed once the team is in the playoffs */}
+    {playoffSeries.length === 0 && (hasClinched || celebrateOverride) && (
       <ClinchCelebration teamColors={effectiveTeamColors} />
     )}
 
@@ -645,8 +773,8 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
     </header>
 
     <main className="max-w-7xl mx-auto px-4 py-6">
-      {/* Progress Bar */}
-      {stats && (
+      {/* Progress Bar — in playoff mode we move this below PlayoffJourney (see that branch) */}
+      {stats && playoffSeries.length === 0 && (
         <ProgressBar
           stats={whatIfMode && hypotheticalResults.size > 0 ? calculateSeasonStats(getChunksWithHypotheticals()) : stats}
           isGoatMode={!useClassicStyling}
@@ -671,16 +799,19 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
           teamAbbrev={team.abbreviation}
           onClinchDetected={() => setHasClinched(true)}
           celebrateOverride={celebrateOverride}
+          inPlayoffs={playoffSeries.length > 0}
         />
       )}
 
-      {/* Standings Card */}
-      <StandingsCard
-        teamAbbrev={team.abbreviation}
-        isGoatMode={!useClassicStyling}
-        teamColors={effectiveTeamColors}
-        darkModeColors={darkModeColors}
-      />
+      {/* Standings Card — shown above the set grid during regular season; moved below Playoff Journey during playoffs */}
+      {playoffSeries.length === 0 && (
+        <StandingsCard
+          teamAbbrev={team.abbreviation}
+          isGoatMode={!useClassicStyling}
+          teamColors={effectiveTeamColors}
+          darkModeColors={darkModeColors}
+        />
+      )}
 
 
       {/* What If Mode Banner */}
@@ -725,7 +856,54 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
         </div>
       )}
 
-      {/* Set Grid */}
+      {/* Playoff Journey: when the team is in the playoffs, replace the set grid with stacked series cards */}
+      {playoffSeries.length > 0 ? (
+        <>
+          <PlayoffJourney
+            series={playoffSeries}
+            teamAbbrev={team.abbreviation}
+            teamName={team.name}
+            teamLogo={team.logo}
+            teamColors={effectiveTeamColors}
+            darkModeColors={darkModeColors}
+            isGoatMode={!useClassicStyling}
+          />
+          {stats && (
+            <ProgressBar
+              stats={stats}
+              isGoatMode={!useClassicStyling}
+              yearOverYearMode={yearOverYearMode}
+              yearOverYearLoading={yearOverYearLoading}
+              onYearOverYearToggle={() => setYearOverYearMode(!yearOverYearMode)}
+              lastSeasonStats={yearOverYearMode && lastSeasonData ? {
+                totalPoints: lastSeasonData.pointsLastYear,
+                totalGames: stats.totalGames,
+                gamesPlayed: stats.gamesPlayed,
+                gamesRemaining: stats.gamesRemaining,
+                currentPace: lastSeasonData.pointsLastYear / stats.gamesPlayed,
+                projectedPoints: Math.round((lastSeasonData.pointsLastYear / stats.gamesPlayed) * stats.totalGames),
+                playoffTarget: stats.playoffTarget,
+                pointsAboveBelow: Math.round((lastSeasonData.pointsLastYear / stats.gamesPlayed) * stats.totalGames) - stats.playoffTarget
+              } : undefined}
+              teamColors={effectiveTeamColors}
+              darkModeColors={darkModeColors}
+              teamId={team.id}
+              showShareButton={true}
+              teamName={`${team.city} ${team.name}`}
+              teamAbbrev={team.abbreviation}
+              onClinchDetected={() => setHasClinched(true)}
+              celebrateOverride={celebrateOverride}
+              inPlayoffs={true}
+            />
+          )}
+          <StandingsCard
+            teamAbbrev={team.abbreviation}
+            isGoatMode={!useClassicStyling}
+            teamColors={effectiveTeamColors}
+            darkModeColors={darkModeColors}
+          />
+        </>
+      ) : (
       <div className={`mb-4 ${whatIfMode ? '' : 'mt-4'}`}>
         <div className="flex justify-between items-center mb-3 gap-2">
           <h2
@@ -844,6 +1022,7 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
             })}
         </div>
       </div>
+      )}
 
       {/* Footer */}
       <footer className={`text-center text-sm mt-8 pb-8 ${

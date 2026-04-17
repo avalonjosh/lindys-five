@@ -1,0 +1,763 @@
+'use client';
+
+import Link from 'next/link';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { TEAMS } from '@/lib/teamConfig';
+import { generateGameTicketLink } from '@/lib/utils/affiliateLinks';
+import { trackClick } from '@/lib/analytics';
+import { computeSeriesWinProbability } from '@/lib/utils/playoffProbability';
+import { generateAmazonMerchLink } from '@/lib/utils/affiliateLinks';
+import { ShoppingBag } from 'lucide-react';
+
+export interface JourneyGame {
+  gameId: number;
+  gameNumber: number;
+  gameState: string;
+  gameScheduleState?: string;
+  startTimeUTC?: string;
+  ifNecessary?: boolean;
+  homeTeam: { abbrev: string; score?: number };
+  awayTeam: { abbrev: string; score?: number };
+  gameOutcome?: { lastPeriodType: string };
+}
+
+export interface JourneySeries {
+  roundNumber: number;
+  roundLabel: string;
+  seriesLetter: string;
+  teamAbbrev: string;
+  opponent: { abbrev: string; name: string; logo: string };
+  teamWins: number;
+  opponentWins: number;
+  neededToWin: number;
+  games: JourneyGame[];
+  isComplete: boolean;
+  didAdvance: boolean;
+  teamPointPctg?: number;
+  opponentPointPctg?: number;
+  teamHasHomeIce?: boolean;
+  regularSeasonH2H?: { wins: number; losses: number; otLosses: number; gamesPlayed: number };
+  teamGoalDiffPerGame?: number;
+  opponentGoalDiffPerGame?: number;
+  teamHomeWinPct?: number;
+  teamRoadWinPct?: number;
+  opponentHomeWinPct?: number;
+  opponentRoadWinPct?: number;
+}
+
+interface TeamColors {
+  primary: string;
+  secondary: string;
+  accent: string;
+}
+
+interface DarkModeColors {
+  background: string;
+  backgroundGradient?: string;
+  cardBackground?: string;
+  accent: string;
+  border: string;
+  text: string;
+}
+
+interface PlayoffJourneyProps {
+  series: JourneySeries[];
+  teamAbbrev: string;
+  teamName: string;
+  teamLogo: string;
+  teamColors: TeamColors;
+  darkModeColors: DarkModeColors;
+  isGoatMode: boolean;
+}
+
+const ROUND_ABBREV: Record<number, string> = { 1: 'R1', 2: 'R2', 3: 'CF', 4: 'SCF' };
+const NEXT_ROUND_LABEL: Record<number, string> = {
+  2: 'Round 2',
+  3: 'Conference Final',
+  4: 'Stanley Cup Final',
+  5: 'Stanley Cup Champions',
+};
+
+function gameOutcomeForTeam(game: JourneyGame, teamAbbrev: string): 'W' | 'L' | null {
+  const isFinal = game.gameState === 'FINAL' || game.gameState === 'OFF';
+  if (!isFinal || game.homeTeam.score == null || game.awayTeam.score == null) return null;
+  const teamScore = game.homeTeam.abbrev === teamAbbrev ? game.homeTeam.score : game.awayTeam.score;
+  const oppScore = game.homeTeam.abbrev === teamAbbrev ? game.awayTeam.score : game.homeTeam.score;
+  return teamScore > oppScore ? 'W' : 'L';
+}
+
+function formatGameDateTime(utc: string | undefined, tbd: boolean): { date: string; time: string } {
+  if (!utc) return { date: 'TBD', time: '' };
+  const d = new Date(utc);
+  const date = d.toLocaleString('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric' });
+  const time = tbd ? 'TBD' : d.toLocaleString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true }) + ' ET';
+  return { date, time };
+}
+
+// --- Dot row (win/loss history) ---
+function DotRow({ total, outcomes, winColor, lossColor, unplayedColor }: {
+  total: number;
+  outcomes: Array<'W' | 'L'>;
+  winColor: string;
+  lossColor: string;
+  unplayedColor: string;
+}) {
+  return (
+    <div className="flex gap-1.5 justify-center">
+      {Array.from({ length: total }).map((_, i) => {
+        const o = outcomes[i];
+        const color = o === 'W' ? winColor : o === 'L' ? lossColor : 'transparent';
+        const borderColor = o ? 'transparent' : unplayedColor;
+        return (
+          <span
+            key={i}
+            className="w-2.5 h-2.5 rounded-full border-2"
+            style={{ backgroundColor: color, borderColor: o ? color : borderColor }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+// --- Series card (redesigned to match ChunkCard's language) ---
+function SeriesCard({
+  s,
+  teamName,
+  teamLogo,
+  teamColors,
+  darkModeColors,
+  isGoatMode,
+}: {
+  s: JourneySeries;
+  teamName: string;
+  teamLogo: string;
+  teamColors: TeamColors;
+  darkModeColors: DarkModeColors;
+  isGoatMode: boolean;
+}) {
+  const totalDots = s.neededToWin * 2 - 1;
+  const orderedOutcomes: Array<'W' | 'L'> = [];
+  for (const g of s.games) {
+    const o = gameOutcomeForTeam(g, s.teamAbbrev);
+    if (o) orderedOutcomes.push(o);
+  }
+
+  const leading = s.teamWins > s.opponentWins;
+  const trailing = s.opponentWins > s.teamWins;
+  const advanced = s.didAdvance;
+  const eliminated = s.isComplete && !advanced;
+
+  // Border state — like ChunkCard: solid team color for success, dashed for failure
+  let borderStyle: React.CSSProperties;
+  if (advanced) {
+    borderStyle = { borderColor: isGoatMode ? darkModeColors.accent : teamColors.primary, borderStyle: 'solid', borderWidth: 2 };
+  } else if (eliminated) {
+    borderStyle = { borderColor: isGoatMode ? darkModeColors.border : '#d1d5db', borderStyle: 'dashed', borderWidth: 2 };
+  } else {
+    borderStyle = { borderColor: isGoatMode ? darkModeColors.border : '#e5e7eb', borderStyle: 'solid', borderWidth: 2 };
+  }
+
+  const cardBg = isGoatMode ? darkModeColors.cardBackground || darkModeColors.background : '#ffffff';
+  const accent = isGoatMode ? darkModeColors.accent : teamColors.primary;
+  const strongText = isGoatMode ? darkModeColors.text : '#111827';
+  const subText = isGoatMode ? `${darkModeColors.text}99` : '#6b7280';
+  const mutedText = isGoatMode ? `${darkModeColors.text}66` : '#9ca3af';
+  const rowHover = isGoatMode ? 'hover:bg-white/5' : 'hover:bg-gray-50';
+  const statBoxBg = isGoatMode
+    ? `linear-gradient(to bottom right, ${darkModeColors.cardBackground || darkModeColors.background}, ${darkModeColors.background})`
+    : undefined;
+  const statBoxBorder = isGoatMode ? darkModeColors.border : '#dbeafe';
+
+  // Status pill copy & color
+  let pillText = '';
+  let pillStyle: React.CSSProperties = {};
+  if (advanced) {
+    const next = NEXT_ROUND_LABEL[s.roundNumber + 1] || 'Next round';
+    pillText = `Won ${s.teamWins}-${s.opponentWins} → ${next}`;
+    pillStyle = { backgroundColor: `${accent}20`, color: accent, borderColor: `${accent}50` };
+  } else if (eliminated) {
+    pillText = `Eliminated ${s.teamWins}-${s.opponentWins}`;
+    pillStyle = { backgroundColor: isGoatMode ? `${darkModeColors.border}40` : '#f3f4f6', color: subText, borderColor: isGoatMode ? darkModeColors.border : '#d1d5db' };
+  } else if (leading) {
+    pillText = `Leads ${s.teamWins}-${s.opponentWins}`;
+    pillStyle = { backgroundColor: `${accent}20`, color: accent, borderColor: `${accent}50` };
+  } else if (trailing) {
+    pillText = `Trails ${s.teamWins}-${s.opponentWins}`;
+    pillStyle = { backgroundColor: isGoatMode ? `${darkModeColors.border}40` : '#f3f4f6', color: subText, borderColor: isGoatMode ? darkModeColors.border : '#d1d5db' };
+  } else if (s.teamWins > 0 || s.opponentWins > 0) {
+    pillText = `Series tied ${s.teamWins}-${s.opponentWins}`;
+    pillStyle = { backgroundColor: isGoatMode ? `${darkModeColors.border}40` : '#f3f4f6', color: subText, borderColor: isGoatMode ? darkModeColors.border : '#e5e7eb' };
+  }
+  const showPill = pillText.length > 0;
+
+  const remainingToClinch = Math.max(0, s.neededToWin - s.teamWins);
+
+  // Round title in display-type form (e.g., "1ST ROUND", "CONFERENCE FINAL", "STANLEY CUP FINAL")
+  const titleText = s.roundLabel.replace(/-/g, ' ').toUpperCase();
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-4 sm:p-5"
+      style={{ ...borderStyle, backgroundColor: cardBg }}
+    >
+      {/* Desktop (sm+): round badge anchored to the top-left corner of the card */}
+      <span
+        className="hidden sm:inline-block absolute top-5 left-5 z-10 px-4 py-1.5 rounded-full text-base tracking-[0.15em] shadow-sm"
+        style={{
+          backgroundColor: accent,
+          color: isGoatMode && darkModeColors.accent.toUpperCase() === '#FFFFFF' ? '#000000' : '#ffffff',
+          fontFamily: 'Bebas Neue, sans-serif',
+        }}
+      >
+        {titleText}
+      </span>
+
+      {/* Mobile: round badge centered above the matchup row (normal flow) */}
+      <div className="sm:hidden relative flex justify-center mb-3">
+        <span
+          className="inline-block px-4 py-1.5 rounded-full text-lg tracking-[0.15em] shadow-sm"
+          style={{
+            backgroundColor: accent,
+            color: isGoatMode && darkModeColors.accent.toUpperCase() === '#FFFFFF' ? '#000000' : '#ffffff',
+            fontFamily: 'Bebas Neue, sans-serif',
+          }}
+        >
+          {titleText}
+        </span>
+      </div>
+
+      {/* Matchup row — logos flank the score, team names omitted (logos carry identity) */}
+      <div className="relative flex items-center justify-center gap-4 sm:gap-6 mb-4">
+        {teamLogo && (
+          <Image src={teamLogo} alt={s.teamAbbrev} width={80} height={80} className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0" unoptimized />
+        )}
+
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+          <span
+            className="text-3xl sm:text-4xl font-bold tabular-nums"
+            style={{ color: s.teamWins > s.opponentWins ? accent : s.teamWins === s.opponentWins ? strongText : mutedText }}
+          >
+            {s.teamWins}
+          </span>
+          <span className="text-sm" style={{ color: mutedText }}>—</span>
+          <span
+            className="text-3xl sm:text-4xl font-bold tabular-nums"
+            style={{ color: s.opponentWins > s.teamWins ? strongText : mutedText }}
+          >
+            {s.opponentWins}
+          </span>
+        </div>
+
+        {s.opponent.logo && (
+          <Image src={s.opponent.logo} alt={s.opponent.abbrev} width={80} height={80} className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0" unoptimized />
+        )}
+      </div>
+
+      {/* Dot row — hidden pre-series (0-0) when all dots would be empty */}
+      {(s.teamWins > 0 || s.opponentWins > 0) && (
+        <div className="relative mb-5">
+          <DotRow
+            total={totalDots}
+            outcomes={orderedOutcomes}
+            winColor={accent}
+            lossColor={isGoatMode ? `${darkModeColors.text}66` : '#9ca3af'}
+            unplayedColor={isGoatMode ? darkModeColors.border : '#d1d5db'}
+          />
+        </div>
+      )}
+
+      {/* Stat grid: Series Win Odds / To Clinch / Regular Season H2H */}
+      {(() => {
+        const boxClass = 'rounded-xl p-2 sm:p-3 text-center border';
+        const boxStyle: React.CSSProperties = {
+          background: isGoatMode ? statBoxBg : 'linear-gradient(to bottom right, #eff6ff, #dbeafe)',
+          borderColor: statBoxBorder,
+        };
+        const numClass = 'text-2xl sm:text-3xl font-bold';
+        const labelClass = 'text-[10px] font-semibold mt-0.5 uppercase tracking-wide';
+
+        const hasOddsData =
+          !advanced && !eliminated && s.teamPointPctg != null && s.opponentPointPctg != null;
+        const oddsNum = hasOddsData
+          ? Math.round(
+              computeSeriesWinProbability(
+                s.teamPointPctg!,
+                s.opponentPointPctg!,
+                s.teamWins,
+                s.opponentWins,
+                s.teamHasHomeIce ?? true,
+                {
+                  teamGoalDiffPerGame: s.teamGoalDiffPerGame,
+                  oppGoalDiffPerGame: s.opponentGoalDiffPerGame,
+                  teamHomeWinPct: s.teamHomeWinPct,
+                  teamRoadWinPct: s.teamRoadWinPct,
+                  oppHomeWinPct: s.opponentHomeWinPct,
+                  oppRoadWinPct: s.opponentRoadWinPct,
+                }
+              )
+            )
+          : null;
+
+        const h2h = s.regularSeasonH2H;
+        const h2hText =
+          h2h && h2h.gamesPlayed > 0
+            ? `${h2h.wins}-${h2h.losses}-${h2h.otLosses}`
+            : '—';
+
+        return (
+          <div className="relative grid grid-cols-3 gap-2 mb-4">
+            <div className={boxClass} style={boxStyle}>
+              <div className={numClass} style={{ color: advanced ? accent : eliminated ? mutedText : accent }}>
+                {advanced ? '100%' : eliminated ? '0%' : oddsNum != null ? `${oddsNum}%` : '—'}
+              </div>
+              <div className={labelClass} style={{ color: subText }}>
+                Win Odds
+              </div>
+            </div>
+            <div className={boxClass} style={boxStyle}>
+              <div className={numClass} style={{ color: eliminated ? mutedText : accent }}>
+                {advanced || eliminated ? '—' : remainingToClinch}
+              </div>
+              <div className={labelClass} style={{ color: subText }}>
+                To Clinch
+              </div>
+            </div>
+            <div className={boxClass} style={boxStyle}>
+              <div className={numClass} style={{ color: strongText }}>
+                {h2hText}
+              </div>
+              <div className={labelClass} style={{ color: subText }}>
+                Reg. Season
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Status pill — only shown once the series has started (or finished) */}
+      {showPill && (
+        <div className="relative flex justify-center mb-4">
+          <span
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold border"
+            style={pillStyle}
+          >
+            {pillText}
+          </span>
+        </div>
+      )}
+
+      {/* Games grid (same visual language as regular-season GameBox) */}
+      {s.games.length > 0 ? (
+        <div className="relative border-t pt-4" style={{ borderColor: isGoatMode ? darkModeColors.border : '#f3f4f6' }}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            {s.games.map((g) => (
+              <PlayoffGameBox
+                key={g.gameId || g.gameNumber}
+                g={g}
+                opponent={s.opponent}
+                teamAbbrev={s.teamAbbrev}
+                teamColors={teamColors}
+                darkModeColors={darkModeColors}
+                isGoatMode={isGoatMode}
+              />
+            ))}
+
+            {/* Filler cards — quieter than game cards (dashed border, plain bg, no shadow, muted captions) */}
+            {(() => {
+              const teamCfg = Object.values(TEAMS).find((t) => t.abbreviation === s.teamAbbrev);
+              const fillerBg = isGoatMode
+                ? (darkModeColors.cardBackground ? `${darkModeColors.cardBackground}80` : '#18181b')
+                : '#ffffff';
+              const fillerBorder: React.CSSProperties = {
+                borderWidth: 2,
+                borderStyle: 'dashed',
+                borderColor: isGoatMode ? `${darkModeColors.border}80` : '#e5e7eb',
+              };
+              const fillerBase = 'h-full min-h-[260px] rounded-xl p-3 md:p-4 flex flex-col items-center justify-center text-center gap-2';
+              const fillerStyle: React.CSSProperties = { ...fillerBorder, background: fillerBg };
+              const captionClass = 'text-[10px] font-bold uppercase tracking-wider';
+              const headlineClass = 'text-sm font-bold';
+              const descClass = 'text-[11px] leading-snug px-1';
+              const subtleText = isGoatMode ? `${darkModeColors.text}99` : '#6b7280';
+              const mutedCaption = isGoatMode ? `${darkModeColors.text}66` : '#9ca3af';
+              const strongFillText = isGoatMode ? darkModeColors.text : '#374151';
+              const accent = isGoatMode ? darkModeColors.accent : teamColors.primary;
+              const buttonTextColor = isGoatMode && darkModeColors.accent.toUpperCase() === '#FFFFFF' ? '#000000' : '#ffffff';
+
+              const ShopGearCard = (mobileOnly: boolean) => {
+                if (!teamCfg) return null;
+                const merchLink = generateAmazonMerchLink(teamCfg.city, teamCfg.name, 'nhl');
+                return (
+                  <div
+                    className={`${fillerBase} ${mobileOnly ? 'sm:hidden' : 'hidden sm:flex'}`}
+                    style={fillerStyle}
+                  >
+                    <p className={captionClass} style={{ color: mutedCaption }}>Shop</p>
+                    <p className={headlineClass} style={{ color: strongFillText }}>
+                      {teamCfg.name} Gear
+                    </p>
+                    <p className={descClass} style={{ color: subtleText }}>
+                      Rep your team this playoff run.
+                    </p>
+                    <a
+                      href={merchLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => trackClick('merch', `${teamCfg.city}-${teamCfg.name}`.toLowerCase().replace(/\s+/g, '-'))}
+                      className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded transition-all hover:shadow-sm"
+                      style={{
+                        background: `linear-gradient(to right, ${accent}, ${accent}dd)`,
+                        color: buttonTextColor,
+                      }}
+                    >
+                      <ShoppingBag size={12} className="sm:hidden" />
+                      Shop Gear
+                    </a>
+                  </div>
+                );
+              };
+
+              return (
+                <>
+                  {s.games.length % 2 === 1 && ShopGearCard(true)}
+                  {ShopGearCard(false)}
+
+                  <div className={`${fillerBase} hidden sm:flex`} style={fillerStyle}>
+                    <p className={captionClass} style={{ color: mutedCaption }}>Stay Updated</p>
+                    <p className={headlineClass} style={{ color: strongFillText }}>Playoff Recap Emails</p>
+                    <p className={descClass} style={{ color: subtleText }}>
+                      After every game, in your inbox.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        trackClick('newsletter-cta', 'playoff-journey');
+                        if (typeof window !== 'undefined') {
+                          window.dispatchEvent(new CustomEvent('team-starred', { detail: { teamId: teamCfg?.id } }));
+                        }
+                      }}
+                      className="mt-1 inline-block px-3 py-1.5 text-xs font-bold rounded transition-all hover:shadow-sm"
+                      style={{
+                        background: `linear-gradient(to right, ${accent}, ${accent}dd)`,
+                        color: buttonTextColor,
+                      }}
+                    >
+                      Subscribe
+                    </button>
+                  </div>
+
+                  <Link
+                    href="/playoffs"
+                    onClick={() => trackClick('bracket-cta', 'playoff-journey')}
+                    className={`${fillerBase} hidden sm:flex transition-transform hover:scale-[1.02]`}
+                    style={fillerStyle}
+                  >
+                    <p className={captionClass} style={{ color: mutedCaption }}>Explore</p>
+                    <p className={headlineClass} style={{ color: strongFillText }}>Full Playoff Bracket</p>
+                    <p className={descClass} style={{ color: subtleText }}>
+                      All 8 series, live results.
+                    </p>
+                    <span
+                      className="mt-1 inline-block px-3 py-1.5 text-xs font-bold rounded"
+                      style={{
+                        background: `linear-gradient(to right, ${accent}, ${accent}dd)`,
+                        color: buttonTextColor,
+                      }}
+                    >
+                      View Bracket
+                    </span>
+                  </Link>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      ) : (
+        <div className="relative border-t pt-4 text-center text-xs" style={{ borderColor: isGoatMode ? darkModeColors.border : '#f3f4f6', color: mutedText }}>
+          Schedule coming soon
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Single playoff game box — mirrors regular-season GameBox structure, styling, and functionality ---
+function PlayoffGameBox({
+  g,
+  opponent,
+  teamAbbrev,
+  teamColors,
+  darkModeColors,
+  isGoatMode,
+}: {
+  g: JourneyGame;
+  opponent: { abbrev: string; name: string; logo: string };
+  teamAbbrev: string;
+  teamColors: TeamColors;
+  darkModeColors: DarkModeColors;
+  isGoatMode: boolean;
+}) {
+  const router = useRouter();
+  const outcome = gameOutcomeForTeam(g, teamAbbrev);
+  const isFinal = g.gameState === 'FINAL' || g.gameState === 'OFF';
+  const isLive = g.gameState === 'LIVE' || g.gameState === 'CRIT';
+  const isTbd = g.gameScheduleState === 'TBD';
+  const isPending = !isFinal && !isLive;
+  const isHome = g.homeTeam.abbrev === teamAbbrev;
+  const teamScore = isHome ? g.homeTeam.score : g.awayTeam.score;
+  const oppScore = isHome ? g.awayTeam.score : g.homeTeam.score;
+  const periodSuffix = g.gameOutcome?.lastPeriodType === 'OT' ? ' (OT)' : g.gameOutcome?.lastPeriodType === 'SO' ? ' (SO)' : g.gameOutcome?.lastPeriodType && g.gameOutcome.lastPeriodType !== 'REG' ? ` (${g.gameOutcome.lastPeriodType})` : '';
+
+  const teamPrimaryColor = isGoatMode ? darkModeColors.accent : teamColors.primary;
+  const isWin = outcome === 'W';
+  const isLoss = outcome === 'L';
+
+  // Border: solid team color for wins, dashed gray for losses, solid red for LIVE, neutral for upcoming
+  let borderStyle: React.CSSProperties = { borderWidth: 2 };
+  if (isWin) {
+    borderStyle = { borderWidth: 2, borderStyle: 'solid', borderColor: isGoatMode ? darkModeColors.border : teamColors.primary };
+  } else if (isLoss) {
+    borderStyle = { borderWidth: 2, borderStyle: 'dashed', borderColor: isGoatMode ? darkModeColors.border : '#d1d5db' };
+  } else if (isLive) {
+    borderStyle = { borderWidth: 2, borderStyle: 'solid', borderColor: '#dc2626' };
+  } else {
+    borderStyle = { borderWidth: 2, borderStyle: 'solid', borderColor: isGoatMode ? darkModeColors.border : '#e5e7eb' };
+  }
+
+  const cardBg = isGoatMode
+    ? (darkModeColors.cardBackground
+        ? `linear-gradient(to bottom right, ${darkModeColors.cardBackground}f8, ${darkModeColors.cardBackground}f0)`
+        : 'linear-gradient(to bottom right, #27272a, #18181b)')
+    : 'linear-gradient(to bottom right, #eff6ff, #f8fafc)';
+
+  const shadowClass = isWin ? 'shadow-lg' : 'shadow-md';
+  const opacity = isLoss ? 'opacity-75' : 'opacity-100';
+
+  // Opponent team config for logo navigation + ticket link
+  const opponentTeam = Object.values(TEAMS).find((t) => t.abbreviation === opponent.abbrev);
+  const opponentSlug = opponentTeam?.id || null;
+  const homeTeam = isHome
+    ? Object.values(TEAMS).find((t) => t.abbreviation === teamAbbrev)
+    : opponentTeam;
+  const ticketLink =
+    isPending && homeTeam && g.startTimeUTC
+      ? generateGameTicketLink(
+          homeTeam.slug,
+          homeTeam.city,
+          homeTeam.stubhubId,
+          isHome ? teamAbbrev : opponent.abbrev,
+          isHome ? opponent.abbrev : teamAbbrev,
+          g.startTimeUTC
+        )
+      : null;
+
+  const getOutcomeText = () => {
+    if (isWin) return 'WIN';
+    if (isLoss) return 'LOSS';
+    return 'UPCOMING';
+  };
+
+  // Date formatting
+  const gameDate = g.startTimeUTC ? new Date(g.startTimeUTC) : null;
+  const weekdayStr = gameDate ? gameDate.toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'short' }) : '';
+  const dateStr = gameDate ? gameDate.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' }) : '';
+  const timeStr = gameDate && !isTbd ? gameDate.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true }) : '';
+  const finalDateStr = gameDate ? gameDate.toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric' }) : '';
+
+  const subText = isGoatMode ? `${darkModeColors.text}99` : '#6b7280';
+  const mutedText = isGoatMode ? `${darkModeColors.text}66` : '#9ca3af';
+  const strongText = isGoatMode ? darkModeColors.text : '#1f2937';
+
+  const cardContent = (
+    <div
+      className={`h-full min-h-[260px] rounded-xl p-2.5 md:p-3 transition-all hover:shadow-lg ${shadowClass} ${opacity} flex flex-col`}
+      style={{ ...borderStyle, background: cardBg }}
+    >
+      {/* Game number + HOME/AWAY */}
+      <div className="flex justify-between items-center mb-2">
+        <span className="text-xs font-bold" style={{ color: subText }}>
+          Gm {g.gameNumber}
+        </span>
+        <span className="text-xs font-bold" style={{ color: teamPrimaryColor }}>
+          {isHome ? 'HOME' : 'AWAY'}
+        </span>
+      </div>
+
+      {/* Opponent label + logo */}
+      <div className="text-center mb-2">
+        <div className="text-xs font-semibold mb-1.5" style={{ color: subText }}>
+          {isHome ? 'vs' : '@'}
+        </div>
+        <div className="flex flex-col items-center gap-1.5">
+          {opponentSlug ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                trackClick('opponent-logo', opponentSlug);
+                router.push(`/nhl/${opponentSlug}`);
+              }}
+              className="rounded-lg p-1.5 md:p-2 shadow-sm border transition-transform hover:scale-110 cursor-pointer"
+              style={{
+                backgroundColor: isGoatMode ? darkModeColors.cardBackground || darkModeColors.background : '#ffffff',
+                borderColor: isGoatMode ? darkModeColors.border : '#e5e7eb',
+              }}
+              title={`View ${opponent.name} tracker`}
+            >
+              {opponent.logo && (
+                <img src={opponent.logo} alt={opponent.abbrev} className="w-14 h-14 md:w-12 md:h-12 object-contain" />
+              )}
+            </button>
+          ) : (
+            <div
+              className="rounded-lg p-1.5 md:p-2 shadow-sm border"
+              style={{
+                backgroundColor: isGoatMode ? darkModeColors.cardBackground || darkModeColors.background : '#ffffff',
+                borderColor: isGoatMode ? darkModeColors.border : '#e5e7eb',
+              }}
+            >
+              {opponent.logo && (
+                <img src={opponent.logo} alt={opponent.abbrev} className="w-14 h-14 md:w-12 md:h-12 object-contain" />
+              )}
+            </div>
+          )}
+          <div className="text-sm font-bold" style={{ color: strongText }}>{opponent.abbrev}</div>
+        </div>
+      </div>
+
+      {/* Score section (for final + live) OR upcoming status */}
+      {isFinal || isLive ? (
+        <>
+          <div className="flex justify-center items-center gap-2 md:gap-3 mb-2">
+            <div className="text-center">
+              <div className="text-xs font-semibold mb-1" style={{ color: subText }}>{teamAbbrev}</div>
+              <div className="text-3xl md:text-3xl font-bold" style={{ color: strongText }}>{teamScore ?? 0}</div>
+            </div>
+            <div className="text-xl md:text-2xl font-light" style={{ color: mutedText }}>-</div>
+            <div className="text-center">
+              <div className="text-xs font-semibold mb-1" style={{ color: subText }}>{opponent.abbrev}</div>
+              <div className="text-3xl md:text-3xl font-bold" style={{ color: strongText }}>{oppScore ?? 0}</div>
+            </div>
+          </div>
+
+          <div className="text-center pt-2 border-t-2" style={{ borderColor: isGoatMode ? darkModeColors.border : '#e5e7eb' }}>
+            {isLive ? (
+              <div className="inline-flex items-center gap-1 text-sm font-bold" style={{ color: '#dc2626' }}>
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: '#dc2626' }} />
+                LIVE
+              </div>
+            ) : (
+              <div className="text-sm font-bold" style={{ color: teamPrimaryColor }}>
+                {getOutcomeText()}{periodSuffix}
+              </div>
+            )}
+            {finalDateStr && !isLive && (
+              <div className="text-xs mt-1" style={{ color: subText }}>{finalDateStr}</div>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="text-center py-3">
+          {!g.startTimeUTC ? (
+            // No date/time info at all (e.g. "if necessary" games) — compact fallback
+            <>
+              <div className="text-sm font-semibold mb-2" style={{ color: strongText }}>
+                {g.ifNecessary ? 'If necessary' : 'TBD'}
+              </div>
+              <div className="text-xs font-medium" style={{ color: subText }}>Upcoming Game</div>
+            </>
+          ) : (
+            // Date known (even if scheduleState === 'TBD' — NHL supplies a placeholder date); show "TBD" for time if unconfirmed
+            <>
+              <div className="text-xs font-semibold mb-1" style={{ color: subText }}>{weekdayStr}</div>
+              <div className="text-sm font-semibold mb-2" style={{ color: strongText }}>{dateStr}</div>
+              <div className="text-xs font-semibold mb-2" style={{ color: teamPrimaryColor }}>
+                {isTbd ? 'TBD' : timeStr}
+              </div>
+              <div className="text-xs font-medium mb-2" style={{ color: subText }}>Upcoming Game</div>
+              {ticketLink && (
+                <a
+                  href={ticketLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    trackClick('ticket', opponent.abbrev);
+                  }}
+                  className="inline-block px-3 py-1.5 text-xs font-bold rounded transition-all shadow-sm hover:shadow-md text-white"
+                  style={{
+                    background: isGoatMode
+                      ? `linear-gradient(to right, #b91c1c, #991b1b)`
+                      : `linear-gradient(to right, ${teamColors.primary}, ${teamColors.primary}dd)`,
+                  }}
+                >
+                  Get Tickets
+                </a>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  // Wrapping: TBD/no-id → plain div, upcoming with ticket link → use onClick to avoid nested <a>, else Link
+  if (isTbd || !g.gameId) {
+    return <div className="h-full">{cardContent}</div>;
+  }
+  if (ticketLink) {
+    const gameLink = `/nhl/scores/${g.gameId}`;
+    return (
+      <div
+        className="block h-full cursor-pointer"
+        onClick={() => router.push(gameLink)}
+        role="link"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') router.push(gameLink);
+        }}
+      >
+        {cardContent}
+      </div>
+    );
+  }
+  return (
+    <Link href={`/nhl/scores/${g.gameId}`} className="block h-full">
+      {cardContent}
+    </Link>
+  );
+}
+
+export default function PlayoffJourney({
+  series,
+  teamAbbrev,
+  teamName,
+  teamLogo,
+  teamColors,
+  darkModeColors,
+  isGoatMode,
+}: PlayoffJourneyProps) {
+  if (series.length === 0) return null;
+  const ordered = [...series].sort((a, b) => a.roundNumber - b.roundNumber);
+
+  return (
+    <div className="mb-4 mt-4">
+      <div className="grid grid-cols-1 gap-4">
+        {ordered.map((s) => (
+          <SeriesCard
+            key={s.seriesLetter}
+            s={s}
+            teamName={teamName}
+            teamLogo={teamLogo}
+            teamColors={teamColors}
+            darkModeColors={darkModeColors}
+            isGoatMode={isGoatMode}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}

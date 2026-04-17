@@ -50,6 +50,7 @@ interface ProgressBarProps {
   teamAbbrev: string;
   onClinchDetected?: (indicator: string) => void;
   celebrateOverride?: boolean;
+  inPlayoffs?: boolean;
 }
 
 // Helper function to render a season section
@@ -71,7 +72,8 @@ function SeasonSection({
   cutLineError,
   lindysFiveProbability,
   teamName,
-  celebrateOverride
+  celebrateOverride,
+  inPlayoffs
 }: {
   stats: SeasonStats;
   isGoatMode: boolean;
@@ -91,6 +93,7 @@ function SeasonSection({
   lindysFiveProbability?: number;
   teamName?: string;
   celebrateOverride?: boolean;
+  inPlayoffs?: boolean;
 }) {
   const { totalPoints, gamesPlayed, gamesRemaining, currentPace, projectedPoints, playoffTarget } = stats;
 
@@ -146,7 +149,7 @@ function SeasonSection({
           className={`text-xl md:text-2xl font-bold ${valueColor}`}
           style={valueStyle}
         >
-          {isLastYear ? `Last Year (${lastSeasonLabel})` : 'Season Progress'}
+          {isLastYear ? `Last Year (${lastSeasonLabel})` : inPlayoffs ? 'Regular Season Progress' : 'Season Progress'}
         </h3>
 
         {/* Desktop: Absolutely centered Playoff Probability text link */}
@@ -170,8 +173,8 @@ function SeasonSection({
         )}
       </div>
 
-      {/* Clinch / Elimination banner */}
-      {!isLastYear && cutLineData?.clinchIndicator && (
+      {/* Clinch / Elimination banner — suppressed once the team is in the playoffs */}
+      {!isLastYear && !inPlayoffs && cutLineData?.clinchIndicator && (
         <div className={`mb-3 px-3 py-2 rounded-lg text-center text-sm font-bold ${
           cutLineData.clinchIndicator === 'e'
             ? 'bg-red-50 text-red-700 border border-red-200'
@@ -185,8 +188,8 @@ function SeasonSection({
         </div>
       )}
 
-      {/* Sabres drought banner */}
-      {!isLastYear && teamId === 'sabres' && (celebrateOverride || (cutLineData?.clinchIndicator && cutLineData.clinchIndicator !== 'e')) && (
+      {/* Sabres drought banner — suppressed once the team is in the playoffs */}
+      {!isLastYear && !inPlayoffs && teamId === 'sabres' && (celebrateOverride || (cutLineData?.clinchIndicator && cutLineData.clinchIndicator !== 'e')) && (
         <div
           className="mb-3 py-3 px-4 rounded-lg text-center overflow-hidden relative"
           style={{ background: 'linear-gradient(135deg, #002654 0%, #003A7A 50%, #002654 100%)' }}
@@ -632,7 +635,7 @@ function SeasonSection({
   );
 }
 
-export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearOverYearLoading, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors, teamId, showShareButton, teamName, teamAbbrev, onClinchDetected, celebrateOverride }: ProgressBarProps) {
+export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearOverYearLoading, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors, teamId, showShareButton, teamName, teamAbbrev, onClinchDetected, celebrateOverride, inPlayoffs }: ProgressBarProps) {
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [playoffExpanded, setPlayoffExpanded] = useState(false);
@@ -923,6 +926,7 @@ ${teamUrl}
           lindysFiveProbability={lindysFiveProbability}
           teamName={teamName}
           celebrateOverride={celebrateOverride}
+          inPlayoffs={inPlayoffs}
         />
 
         {/* Share Button - positioned relative to current season section, hidden when playoff dropdown is open */}

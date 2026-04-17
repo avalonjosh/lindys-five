@@ -173,27 +173,63 @@ export function probabilityForFinalPoints(
  * @param oppWins    - Games lost so far in the series (0-4)
  * @param hasHomeIce - Whether this team has home-ice advantage
  */
+export interface SeriesOddsOptions {
+  // Goal differential per game — blended with point % for a stronger team-strength signal
+  teamGoalDiffPerGame?: number;
+  oppGoalDiffPerGame?: number;
+  // Team-specific home/road win rates — replaces the flat 4% home-ice boost
+  teamHomeWinPct?: number;
+  teamRoadWinPct?: number;
+  oppHomeWinPct?: number;
+  oppRoadWinPct?: number;
+}
+
 export function computeSeriesWinProbability(
   teamPtPctg: number,
   oppPtPctg: number,
   teamWins: number = 0,
   oppWins: number = 0,
-  hasHomeIce: boolean = true
+  hasHomeIce: boolean = true,
+  options: SeriesOddsOptions = {}
 ): number {
   // If series already decided
   if (teamWins >= 4) return 100;
   if (oppWins >= 4) return 0;
 
+  // Composite strength: 60% point %, 40% normalized goal-diff per game.
+  // Falls back to raw point % when goal-diff data is missing (preserves existing callers).
+  const normalizeGD = (gd: number) => 0.5 + Math.max(-1, Math.min(1, gd)) * 0.25;
+  const teamStrength =
+    options.teamGoalDiffPerGame != null
+      ? 0.6 * teamPtPctg + 0.4 * normalizeGD(options.teamGoalDiffPerGame)
+      : teamPtPctg;
+  const oppStrength =
+    options.oppGoalDiffPerGame != null
+      ? 0.6 * oppPtPctg + 0.4 * normalizeGD(options.oppGoalDiffPerGame)
+      : oppPtPctg;
+
   // Logistic model for single-game win probability
   // k controls sensitivity; 6 is tuned so a 0.600 vs 0.500 team ≈ 58% per game
   const k = 6;
-  const diff = teamPtPctg - oppPtPctg;
+  const diff = teamStrength - oppStrength;
   const baseP = 1 / (1 + Math.exp(-k * diff));
 
-  // Home-ice boost (~4% advantage in NHL historically)
-  const homeBoost = 0.04;
-  const pHome = Math.min(0.95, Math.max(0.05, baseP + homeBoost));
-  const pAway = Math.min(0.95, Math.max(0.05, baseP - homeBoost));
+  // Team-specific home-ice boost if splits are provided; otherwise flat 4% (historical league average).
+  // Formula: half the team's own home-vs-road win-rate differential, capped at 10%.
+  const FLAT_HOME_BOOST = 0.04;
+  const teamOwnBoost =
+    options.teamHomeWinPct != null && options.teamRoadWinPct != null
+      ? Math.min(0.10, Math.max(0, (options.teamHomeWinPct - options.teamRoadWinPct) / 2))
+      : FLAT_HOME_BOOST;
+  const oppOwnBoost =
+    options.oppHomeWinPct != null && options.oppRoadWinPct != null
+      ? Math.min(0.10, Math.max(0, (options.oppHomeWinPct - options.oppRoadWinPct) / 2))
+      : FLAT_HOME_BOOST;
+
+  // pHome is P(team wins) when team is at home → boost = +teamOwnBoost
+  // pAway is P(team wins) when team is on road → boost = -oppOwnBoost (opponent's home advantage working against us)
+  const pHome = Math.min(0.95, Math.max(0.05, baseP + teamOwnBoost));
+  const pAway = Math.min(0.95, Math.max(0.05, baseP - oppOwnBoost));
 
   // Best-of-7, 2-2-1-1-1 format: home team hosts games 1,2,5,7
   // Enumerate remaining games using dynamic programming
