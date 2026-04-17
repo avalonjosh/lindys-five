@@ -51,6 +51,7 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
   const [loadingStandings, setLoadingStandings] = useState(false);
   const [activeTab, setActiveTab] = useState<'nhl' | 'mlb'>('nhl');
   const [mlbStandings, setMlbStandings] = useState<MLBStandingsTeam[]>([]);
+  const [nhlPlayoffsActive, setNhlPlayoffsActive] = useState(false);
   const [mlbExpandedDivisions, setMlbExpandedDivisions] = useState<Record<string, boolean>>({
     'AL East': true, 'NL East': true,
   });
@@ -63,6 +64,27 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
   useEffect(() => {
     localStorage.setItem('favorite-teams', JSON.stringify(favorites));
   }, [favorites]);
+
+  // Detect whether the NHL playoffs are currently active — used to hide the redundant
+  // "Playoff Odds" nav item once the full bracket/odds/schedule page has gone live.
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/playoffs/bracket')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        interface BracketRoundLite { series?: Array<unknown> }
+        const rounds = (data?.bracket?.rounds || []) as BracketRoundLite[];
+        const hasSeries = rounds.some((r) => (r.series?.length || 0) > 0);
+        setNhlPlayoffsActive(hasSeries);
+      })
+      .catch(() => {
+        /* silent — assume not in playoffs */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Save expanded divisions to localStorage whenever they change
   useEffect(() => {
@@ -416,14 +438,16 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                 >
                   Scores
                 </button>
-                <button
-                  onClick={() => handleNavigation('/nhl-playoff-odds')}
-                  className={`w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold transition-all ${
-                    useClassicStyling ? 'hover:bg-zinc-800 text-white' : 'hover:bg-blue-50 text-gray-900'
-                  }`}
-                >
-                  Playoff Odds
-                </button>
+                {!nhlPlayoffsActive && (
+                  <button
+                    onClick={() => handleNavigation('/nhl-playoff-odds')}
+                    className={`w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold transition-all ${
+                      useClassicStyling ? 'hover:bg-zinc-800 text-white' : 'hover:bg-blue-50 text-gray-900'
+                    }`}
+                  >
+                    Playoff Odds
+                  </button>
+                )}
                 <button
                   onClick={() => handleNavigation('/playoffs')}
                   className={`w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold transition-all ${
