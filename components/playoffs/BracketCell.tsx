@@ -123,7 +123,7 @@ function TeamRow({
         </span>
       )}
       <span
-        className={`ml-auto text-base sm:text-2xl font-bold tabular-nums flex-shrink-0 min-w-[16px] sm:min-w-[20px] text-center ${
+        className={`ml-auto mr-0 sm:mr-1 text-base sm:text-2xl font-bold tabular-nums flex-shrink-0 min-w-[16px] sm:min-w-[20px] text-center ${
           isWinner ? 'text-gray-900' : wins > 0 ? 'text-gray-700' : 'text-gray-300'
         }`}
       >
