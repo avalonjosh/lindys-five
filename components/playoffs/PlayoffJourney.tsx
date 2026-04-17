@@ -228,11 +228,19 @@ function SeriesCard({
         </span>
       </div>
 
-      {/* Matchup row — logos flank the score, team names omitted (logos carry identity) */}
+      {/* Matchup row — logos flank the score, team names omitted (logos carry identity). Logos link to team trackers. */}
       <div className="relative flex items-center justify-center gap-4 sm:gap-6 mb-4">
-        {teamLogo && (
-          <Image src={teamLogo} alt={s.teamAbbrev} width={80} height={80} className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0" unoptimized />
-        )}
+        {teamLogo && (() => {
+          const teamSlug = Object.entries(TEAMS).find(([, t]) => t.abbreviation === s.teamAbbrev)?.[0];
+          const logoEl = (
+            <Image src={teamLogo} alt={s.teamAbbrev} width={80} height={80} className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 hover:scale-105 transition-transform" unoptimized />
+          );
+          return teamSlug ? (
+            <Link href={`/nhl/${teamSlug}`} onClick={() => trackClick('journey-team-logo', teamSlug)} className="flex-shrink-0">
+              {logoEl}
+            </Link>
+          ) : logoEl;
+        })()}
 
         <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
           <span
@@ -250,9 +258,17 @@ function SeriesCard({
           </span>
         </div>
 
-        {s.opponent.logo && (
-          <Image src={s.opponent.logo} alt={s.opponent.abbrev} width={80} height={80} className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0" unoptimized />
-        )}
+        {s.opponent.logo && (() => {
+          const oppSlug = Object.entries(TEAMS).find(([, t]) => t.abbreviation === s.opponent.abbrev)?.[0];
+          const logoEl = (
+            <Image src={s.opponent.logo} alt={s.opponent.abbrev} width={80} height={80} className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 hover:scale-105 transition-transform" unoptimized />
+          );
+          return oppSlug ? (
+            <Link href={`/nhl/${oppSlug}`} onClick={() => trackClick('journey-opponent-logo', oppSlug)} className="flex-shrink-0">
+              {logoEl}
+            </Link>
+          ) : logoEl;
+        })()}
       </div>
 
       {/* Dot row — hidden pre-series (0-0) when all dots would be empty */}
