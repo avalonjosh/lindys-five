@@ -440,7 +440,26 @@ function SeriesCard({
 
               return (
                 <>
-                  {s.games.length % 2 === 1 && ShopGearCard(true)}
+                  {/* Mobile: Full Playoff Bracket card fills the odd empty cell */}
+                  {s.games.length % 2 === 1 && (
+                    <Link
+                      href="/playoffs"
+                      onClick={() => trackClick('bracket-cta', 'playoff-journey')}
+                      className={`${fillerBase} sm:hidden transition-transform hover:scale-[1.02]`}
+                      style={fillerStyle}
+                    >
+                      <p className={captionClass} style={{ color: mutedCaption }}>Explore</p>
+                      <p className={headlineClass} style={{ color: strongFillText }}>Full Playoff Bracket</p>
+                      <p className={descClass} style={{ color: subtleText }}>
+                        All 8 series, live results.
+                      </p>
+                      <span className={outlineButtonClass} style={outlineButtonStyle}>
+                        View Bracket
+                      </span>
+                    </Link>
+                  )}
+
+                  {/* Desktop: trio of filler cards (Shop Gear / Newsletter / Bracket) */}
                   {ShopGearCard(false)}
 
                   <div className={`${fillerBase} hidden sm:flex`} style={fillerStyle}>
