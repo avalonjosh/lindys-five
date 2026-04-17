@@ -42,6 +42,7 @@ export default function MLBTeamNav({ currentTeamId, teamColors, defaultTab = 'ml
     'Atlantic Division': true, 'Metropolitan Division': true,
   });
   const [favoritesLoaded, setFavoritesLoaded] = useState(false);
+  const [nhlPlayoffsActive, setNhlPlayoffsActive] = useState(false);
   const router = useRouter();
 
   // Load favorites from localStorage on mount
@@ -59,6 +60,25 @@ export default function MLBTeamNav({ currentTeamId, teamColors, defaultTab = 'ml
       localStorage.setItem('favorite-teams', JSON.stringify(favorites));
     }
   }, [favorites, favoritesLoaded]);
+
+  // Detect NHL playoffs — hides the redundant "Playoff Odds" link once the /playoffs page has live series
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/playoffs/bracket')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        interface BracketRoundLite { series?: Array<unknown> }
+        const rounds = (data?.bracket?.rounds || []) as BracketRoundLite[];
+        setNhlPlayoffsActive(rounds.some((r) => (r.series?.length || 0) > 0));
+      })
+      .catch(() => {
+        /* silent — assume not in playoffs */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Fetch standings when menu opens
   useEffect(() => {
@@ -214,9 +234,11 @@ export default function MLBTeamNav({ currentTeamId, teamColors, defaultTab = 'ml
                 <button onClick={() => handleNavigation('/nhl/scores')} className="w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold hover:bg-blue-50 text-gray-900 transition-all">
                   Scores
                 </button>
-                <button onClick={() => handleNavigation('/nhl-playoff-odds')} className="w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold hover:bg-blue-50 text-gray-900 transition-all">
-                  Playoff Odds
-                </button>
+                {!nhlPlayoffsActive && (
+                  <button onClick={() => handleNavigation('/nhl-playoff-odds')} className="w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold hover:bg-blue-50 text-gray-900 transition-all">
+                    Playoff Odds
+                  </button>
+                )}
                 <button onClick={() => handleNavigation('/playoffs')} className="w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold hover:bg-blue-50 text-gray-900 transition-all">
                   Playoff Bracket
                 </button>
