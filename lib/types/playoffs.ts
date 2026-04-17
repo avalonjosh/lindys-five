@@ -42,7 +42,9 @@ export interface PlayoffGame {
   gameNumber: number; // 1-7
   gameDate: string;
   gameState: string; // FUT, PRE, LIVE, CRIT, FINAL, OFF
+  gameScheduleState?: string; // OK, TBD, PPD
   startTimeUTC?: string;
+  ifNecessary?: boolean;
   homeTeam: {
     id: number;
     abbrev: string;
@@ -89,9 +91,14 @@ export interface StanleyCupOddsEntry {
   logo: string;
   seed: number;
   conferenceName: string;
-  cupOdds: number; // 0-100
+  cupOdds: number; // 0-100 (alias of oddsCup, kept for backward compat)
   currentSeriesOdds: number; // odds to win current series
   isEliminated: boolean;
+  // Cumulative odds of reaching/winning each stage (0-100)
+  oddsR1?: number;   // chance of winning Round 1
+  oddsR2?: number;   // cumulative: chance of also winning Round 2
+  oddsConf?: number; // cumulative: chance of also winning Conference Final
+  oddsCup?: number;  // cumulative: chance of winning the Cup (same as cupOdds)
 }
 
 export type SeasonPhase = 'regular' | 'postseason-gap' | 'playoffs' | 'offseason';

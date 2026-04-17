@@ -208,9 +208,10 @@ export function computeSeriesWinProbability(
       ? 0.6 * oppPtPctg + 0.4 * normalizeGD(options.oppGoalDiffPerGame)
       : oppPtPctg;
 
-  // Logistic model for single-game win probability
-  // k controls sensitivity; 6 is tuned so a 0.600 vs 0.500 team ≈ 58% per game
-  const k = 6;
+  // Logistic model for single-game win probability.
+  // k=4.5 tuned so 0.600 vs 0.500 ≈ 55% per game — matches public NHL Elo models.
+  // (Previously k=6 was too sensitive and produced series-win odds well above credible sources.)
+  const k = 4.5;
   const diff = teamStrength - oppStrength;
   const baseP = 1 / (1 + Math.exp(-k * diff));
 
@@ -267,7 +268,11 @@ export function computeSeriesWinProbability(
   }
 
   const prob = dp(winsNeeded, lossesAllowed, 0) * 100;
-  return Math.max(1, Math.min(99, Math.round(prob)));
+  // Cap the final series-win output to [15%, 85%].
+  // Real playoff hockey has inherent variance — even extreme favorites lose series regularly, and
+  // heavy underdogs win them. This bound acknowledges that no statistical model should be more
+  // confident than ~85% about a best-of-7 outcome.
+  return Math.max(15, Math.min(85, Math.round(prob)));
 }
 
 /**

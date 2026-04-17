@@ -41,17 +41,139 @@ export const metadata: Metadata = {
 
 const NHL_API = 'https://api-web.nhle.com/v1';
 
+// NHL's /playoff-bracket/{season} endpoint is unreliable (often 404). Assemble the same PlayoffBracketResponse shape
+// from /playoff-series/carousel/{season} (seeds + wins) + /schedule/playoff-series/{season}/{letter} (per-series games).
+// Mirrors the logic in `app/api/playoffs/bracket/route.ts` — kept inline here so the server page can render without
+// round-tripping through our own API route during SSR.
+interface CarouselSide {
+  id: number;
+  abbrev: string;
+  wins: number;
+  logo: string;
+}
+interface CarouselSeries {
+  seriesLetter: string;
+  roundNumber: number;
+  neededToWin: number;
+  topSeed: CarouselSide;
+  bottomSeed: CarouselSide;
+}
+interface CarouselRound {
+  roundNumber: number;
+  roundLabel: string;
+  series: CarouselSeries[];
+}
+interface DetailTeam {
+  id: number;
+  abbrev: string;
+  name?: { default: string };
+  score?: number;
+}
+interface DetailGame {
+  id: number;
+  gameNumber: number;
+  gameDate?: string;
+  gameState: string;
+  gameScheduleState?: string;
+  startTimeUTC?: string;
+  ifNecessary?: boolean;
+  homeTeam: DetailTeam;
+  awayTeam: DetailTeam;
+  gameOutcome?: { lastPeriodType: string };
+}
+
+function teamCfgByAbbrev(abbrev: string) {
+  return Object.values(TEAMS).find((t) => t.abbreviation === abbrev);
+}
+
 async function fetchBracket(): Promise<PlayoffBracketResponse | null> {
+  const SEASON = '20252026';
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(`${NHL_API}/playoff-bracket/20252026`, {
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    const carouselRes = await fetch(`${NHL_API}/playoff-series/carousel/${SEASON}`, {
       next: { revalidate: 60 },
       signal: controller.signal,
     });
     clearTimeout(timeout);
-    if (!res.ok) return null;
-    return await res.json();
+    if (!carouselRes.ok) return null;
+    const carousel = await carouselRes.json();
+    const carouselRounds: CarouselRound[] = carousel.rounds || [];
+
+    // For each round × series, fetch the detail endpoint in parallel for the full game list
+    const rounds = await Promise.all(
+      carouselRounds.map(async (round) => {
+        const series = await Promise.all(
+          (round.series || []).map(async (s) => {
+            let detail: { topSeedTeam?: { name?: { default: string } }; bottomSeedTeam?: { name?: { default: string } }; games?: DetailGame[] } | null = null;
+            try {
+              const detailRes = await fetch(
+                `${NHL_API}/schedule/playoff-series/${SEASON}/${s.seriesLetter.toLowerCase()}`,
+                { next: { revalidate: 60 } }
+              );
+              if (detailRes.ok) detail = await detailRes.json();
+            } catch {
+              // ignore per-series failure — series still shows matchup without games
+            }
+
+            const assembleTeam = (side: CarouselSide, detailTeam?: { name?: { default: string } }) => {
+              const cfg = teamCfgByAbbrev(side.abbrev);
+              const commonName = detailTeam?.name?.default || cfg?.name || side.abbrev;
+              const fullName = cfg ? `${cfg.city} ${cfg.name}` : commonName;
+              return {
+                id: side.id,
+                abbrev: side.abbrev,
+                name: { default: fullName },
+                commonName: { default: commonName },
+                placeName: { default: cfg?.city || '' },
+                logo: side.logo,
+              };
+            };
+
+            const mapGame = (g: DetailGame) => ({
+              gameId: g.id,
+              gameNumber: g.gameNumber,
+              gameDate: g.gameDate || '',
+              gameState: g.gameState,
+              gameScheduleState: g.gameScheduleState,
+              startTimeUTC: g.startTimeUTC,
+              ifNecessary: g.ifNecessary,
+              homeTeam: { id: g.homeTeam.id, abbrev: g.homeTeam.abbrev, score: g.homeTeam.score },
+              awayTeam: { id: g.awayTeam.id, abbrev: g.awayTeam.abbrev, score: g.awayTeam.score },
+              gameOutcome: g.gameOutcome,
+            });
+
+            return {
+              seriesLetter: s.seriesLetter,
+              round: { number: round.roundNumber },
+              matchupTeams: [
+                {
+                  seed: { type: 'unknown', rank: 0, isTop: true },
+                  team: assembleTeam(s.topSeed, detail?.topSeedTeam),
+                  seriesRecord: { wins: s.topSeed.wins || 0, losses: s.bottomSeed.wins || 0 },
+                },
+                {
+                  seed: { type: 'unknown', rank: 0, isTop: false },
+                  team: assembleTeam(s.bottomSeed, detail?.bottomSeedTeam),
+                  seriesRecord: { wins: s.bottomSeed.wins || 0, losses: s.topSeed.wins || 0 },
+                },
+              ],
+              topSeedWins: s.topSeed.wins || 0,
+              bottomSeedWins: s.bottomSeed.wins || 0,
+              games: (detail?.games || []).map(mapGame),
+            };
+          })
+        );
+
+        return {
+          roundNumber: round.roundNumber,
+          roundLabel: round.roundLabel,
+          series,
+        };
+      })
+    );
+
+    return { rounds, seasonId: Number(SEASON) } as PlayoffBracketResponse;
   } catch {
     return null;
   }
@@ -116,8 +238,32 @@ function buildMatchup(
       topSeedSeriesWinPct = topWins >= 4 ? 100 : 0;
       bottomSeedSeriesWinPct = bottomWins >= 4 ? 100 : 0;
     } else {
+      // V2 model — same math as Cup Odds tab + team tracker Win Odds
+      const topStanding = standingsMap.get(topSeed.abbrev);
+      const botStanding = standingsMap.get(bottomSeed.abbrev);
+      const strengthFor = (st: StandingsTeam | undefined) => {
+        if (!st) return {};
+        const gp = st.gamesPlayed || 0;
+        const homeGP = (st.homeWins || 0) + (st.homeLosses || 0) + (st.homeOtLosses || 0);
+        const roadGP = (st.roadWins || 0) + (st.roadLosses || 0) + (st.roadOtLosses || 0);
+        return {
+          goalDiffPerGame: gp > 0 ? ((st.goalFor || 0) - (st.goalAgainst || 0)) / gp : undefined,
+          homeWinPct: homeGP > 0 ? (st.homeWins || 0) / homeGP : undefined,
+          roadWinPct: roadGP > 0 ? (st.roadWins || 0) / roadGP : undefined,
+        };
+      };
+      const topS = strengthFor(topStanding);
+      const botS = strengthFor(botStanding);
       topSeedSeriesWinPct = computeSeriesWinProbability(
-        topSeed.pointPctg, bottomSeed.pointPctg, topWins, bottomWins, true
+        topSeed.pointPctg, bottomSeed.pointPctg, topWins, bottomWins, true,
+        {
+          teamGoalDiffPerGame: topS.goalDiffPerGame,
+          oppGoalDiffPerGame: botS.goalDiffPerGame,
+          teamHomeWinPct: topS.homeWinPct,
+          teamRoadWinPct: topS.roadWinPct,
+          oppHomeWinPct: botS.homeWinPct,
+          oppRoadWinPct: botS.roadWinPct,
+        }
       );
       bottomSeedSeriesWinPct = 100 - topSeedSeriesWinPct;
     }
@@ -179,10 +325,28 @@ function buildCupOdds(
   standingsMap: Map<string, StandingsTeam>
 ): StanleyCupOddsEntry[] {
   const entries: StanleyCupOddsEntry[] = [];
+  // Extract the V2 stats block from a StandingsTeam (matches what team-tracker Win Odds uses).
+  interface TeamStrength {
+    goalDiffPerGame?: number;
+    homeWinPct?: number;
+    roadWinPct?: number;
+  }
+  const strengthFor = (st: StandingsTeam | undefined): TeamStrength => {
+    if (!st) return {};
+    const gp = st.gamesPlayed || 0;
+    const homeGP = (st.homeWins || 0) + (st.homeLosses || 0) + (st.homeOtLosses || 0);
+    const roadGP = (st.roadWins || 0) + (st.roadLosses || 0) + (st.roadOtLosses || 0);
+    return {
+      goalDiffPerGame: gp > 0 ? ((st.goalFor || 0) - (st.goalAgainst || 0)) / gp : undefined,
+      homeWinPct: homeGP > 0 ? (st.homeWins || 0) / homeGP : undefined,
+      roadWinPct: roadGP > 0 ? (st.roadWins || 0) / roadGP : undefined,
+    };
+  };
   const teamsInBracket = new Map<string, {
     abbrev: string; name: string; logo: string; seed: number;
     ptPctg: number; conferenceName: string; isEliminated: boolean;
     currentSeriesWinPct: number; roundsToWin: number;
+    strength: TeamStrength;
   }>();
 
   for (const round of bracket.rounds || []) {
@@ -203,6 +367,7 @@ function buildCupOdds(
           isEliminated: losses >= 4,
           currentSeriesWinPct: 50,
           roundsToWin: 5 - round.roundNumber,
+          strength: strengthFor(standing),
         });
       }
     }
@@ -222,7 +387,19 @@ function buildCupOdds(
         topData.currentSeriesWinPct = topWins >= 4 ? 100 : 0;
         bottomData.currentSeriesWinPct = bottomWins >= 4 ? 100 : 0;
       } else {
-        const topP = computeSeriesWinProbability(topData.ptPctg, bottomData.ptPctg, topWins, bottomWins, true);
+        // V2 model: composite strength (60% pt% + 40% goal-diff) + team-specific home ice.
+        // Matches the Win Odds math on the team-tracker page.
+        const topP = computeSeriesWinProbability(
+          topData.ptPctg, bottomData.ptPctg, topWins, bottomWins, true,
+          {
+            teamGoalDiffPerGame: topData.strength.goalDiffPerGame,
+            oppGoalDiffPerGame: bottomData.strength.goalDiffPerGame,
+            teamHomeWinPct: topData.strength.homeWinPct,
+            teamRoadWinPct: topData.strength.roadWinPct,
+            oppHomeWinPct: bottomData.strength.homeWinPct,
+            oppRoadWinPct: bottomData.strength.roadWinPct,
+          }
+        );
         topData.currentSeriesWinPct = topP;
         bottomData.currentSeriesWinPct = 100 - topP;
       }
@@ -231,18 +408,62 @@ function buildCupOdds(
 
   for (const [, team] of teamsInBracket) {
     if (team.isEliminated) {
-      entries.push({ abbrev: team.abbrev, name: team.name, logo: team.logo, seed: team.seed,
-        conferenceName: team.conferenceName, cupOdds: 0, currentSeriesOdds: 0, isEliminated: true });
+      entries.push({
+        abbrev: team.abbrev, name: team.name, logo: team.logo, seed: team.seed,
+        conferenceName: team.conferenceName, cupOdds: 0, currentSeriesOdds: 0, isEliminated: true,
+        oddsR1: 0, oddsR2: 0, oddsConf: 0, oddsCup: 0,
+      });
       continue;
     }
-    let cupProb = team.currentSeriesWinPct / 100;
-    for (let r = 1; r < team.roundsToWin; r++) {
-      const p = computeSeriesWinProbability(team.ptPctg, 0.5, 0, 0, team.seed <= 4);
-      cupProb *= p / 100;
+
+    // roundsToWin = 5 - currentRoundNumber (1→4, 2→3, 3→2, 4→1)
+    // currentRoundIndex = 5 - roundsToWin (1 if in R1, 2 if in R2, etc.)
+    const currentRoundIdx = 5 - team.roundsToWin;
+    const stageOdds: number[] = [0, 0, 0, 0]; // index 0 = R1, 1 = R2, 2 = Conf, 3 = Cup
+
+    // Past rounds: team already advanced → 100% probability for those stages (cumulative)
+    for (let stage = 1; stage < currentRoundIdx; stage++) {
+      stageOdds[stage - 1] = 100;
     }
-    entries.push({ abbrev: team.abbrev, name: team.name, logo: team.logo, seed: team.seed,
-      conferenceName: team.conferenceName, cupOdds: Math.round(cupProb * 1000) / 10,
-      currentSeriesOdds: Math.round(team.currentSeriesWinPct), isEliminated: false });
+    // Current round: use live series win %
+    stageOdds[currentRoundIdx - 1] = team.currentSeriesWinPct;
+    // Future rounds: chain using V2 projection vs a PLAYOFF-average opponent.
+    // Using a 0.500 "league average" opponent inflates projections because every real playoff
+    // opponent is above average (they made the playoffs). These values approximate the typical
+    // playoff team's profile — brings projected Cup odds in line with public models.
+    const PLAYOFF_OPP_PT_PCTG = 0.620;
+    const PLAYOFF_OPP_GOAL_DIFF = 0.20;
+    const PLAYOFF_OPP_HOME_WIN_PCT = 0.55;
+    const PLAYOFF_OPP_ROAD_WIN_PCT = 0.45;
+    let running = team.currentSeriesWinPct / 100;
+    for (let stage = currentRoundIdx + 1; stage <= 4; stage++) {
+      const p = computeSeriesWinProbability(
+        team.ptPctg, PLAYOFF_OPP_PT_PCTG, 0, 0, team.seed <= 4,
+        {
+          teamGoalDiffPerGame: team.strength.goalDiffPerGame,
+          oppGoalDiffPerGame: PLAYOFF_OPP_GOAL_DIFF,
+          teamHomeWinPct: team.strength.homeWinPct,
+          teamRoadWinPct: team.strength.roadWinPct,
+          oppHomeWinPct: PLAYOFF_OPP_HOME_WIN_PCT,
+          oppRoadWinPct: PLAYOFF_OPP_ROAD_WIN_PCT,
+        }
+      );
+      running *= p / 100;
+      stageOdds[stage - 1] = running * 100;
+    }
+
+    const cupOdds = Math.round(stageOdds[3] * 10) / 10;
+    entries.push({
+      abbrev: team.abbrev, name: team.name, logo: team.logo, seed: team.seed,
+      conferenceName: team.conferenceName,
+      cupOdds,
+      currentSeriesOdds: Math.round(team.currentSeriesWinPct),
+      isEliminated: false,
+      oddsR1: Math.round(stageOdds[0] * 10) / 10,
+      oddsR2: Math.round(stageOdds[1] * 10) / 10,
+      oddsConf: Math.round(stageOdds[2] * 10) / 10,
+      oddsCup: cupOdds,
+    });
   }
   return entries;
 }
@@ -351,12 +572,15 @@ function buildProjectedBracket(standings: StandingsTeam[]): {
       if (!team) continue;
       const isTop = team === matchup.topSeed;
       const currentP = isTop ? matchup.topSeedSeriesWinPct : matchup.bottomSeedSeriesWinPct;
-      // Chain: P(win R1) × P(win R2 vs avg) × P(win R3 vs avg) × P(win Final vs avg)
-      let cupProb = currentP / 100;
-      for (let r = 0; r < 3; r++) {
+      // Build stages: R1 uses currentP, R2-Cup chained vs avg opponent
+      const stageOdds: number[] = [currentP, 0, 0, 0];
+      let running = currentP / 100;
+      for (let stage = 2; stage <= 4; stage++) {
         const p = computeSeriesWinProbability(team.pointPctg, 0.5, 0, 0, team.seed <= 2);
-        cupProb *= p / 100;
+        running *= p / 100;
+        stageOdds[stage - 1] = running * 100;
       }
+      const cupProb = Math.round(stageOdds[3] * 10) / 10;
       cupOdds.push({
         abbrev: team.abbrev,
         name: team.name,
@@ -365,9 +589,13 @@ function buildProjectedBracket(standings: StandingsTeam[]): {
         conferenceName: conferences.find(c =>
           c.rounds[0]?.matchups.some(m => m.topSeed?.abbrev === team.abbrev || m.bottomSeed?.abbrev === team.abbrev)
         )?.conferenceName || '',
-        cupOdds: Math.round(cupProb * 1000) / 10,
+        cupOdds: cupProb,
         currentSeriesOdds: Math.round(currentP),
         isEliminated: false,
+        oddsR1: Math.round(stageOdds[0] * 10) / 10,
+        oddsR2: Math.round(stageOdds[1] * 10) / 10,
+        oddsConf: Math.round(stageOdds[2] * 10) / 10,
+        oddsCup: cupProb,
       });
     }
   }

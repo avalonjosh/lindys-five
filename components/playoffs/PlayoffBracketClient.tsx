@@ -5,6 +5,7 @@ import type { BracketMatchup, ConferenceBracket, StanleyCupOddsEntry } from '@/l
 import SeriesCard from './SeriesCard';
 import BracketCell from './BracketCell';
 import StanleyCupOdds from './StanleyCupOdds';
+import PlayoffScheduleList from './PlayoffScheduleList';
 
 interface PlayoffBracketClientProps {
   eastern: ConferenceBracket;
@@ -33,7 +34,7 @@ export default function PlayoffBracketClient({
   const [cupOdds, setCupOdds] = useState(initialCupOdds);
   const [hasLive, setHasLive] = useState(initialHasLive);
   const [activeRound, setActiveRound] = useState<number | null>(null);
-  const [view, setView] = useState<'bracket' | 'odds'>('bracket');
+  const [view, setView] = useState<'bracket' | 'odds' | 'schedule'>('bracket');
 
   // Determine current active round (latest round with games)
   useEffect(() => {
@@ -98,13 +99,24 @@ export default function PlayoffBracketClient({
             }`}
             style={view === 'odds' ? { background: '#003087' } : undefined}
           >
-            Cup Odds
+            Odds
+          </button>
+          <button
+            onClick={() => setView('schedule')}
+            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${
+              view === 'schedule' ? 'text-white' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+            }`}
+            style={view === 'schedule' ? { background: '#003087' } : undefined}
+          >
+            Schedule
           </button>
         </div>
       )}
 
       {view === 'odds' ? (
         <StanleyCupOdds odds={cupOdds} />
+      ) : view === 'schedule' ? (
+        <PlayoffScheduleList eastern={eastern} western={western} />
       ) : isProjected ? (
         /* ── Projected view: full bracket (same as live) + cup odds ── */
         <>
@@ -193,7 +205,7 @@ function MobileBracket({ eastern, western }: { eastern: ConferenceBracket; weste
   return (
     <div className="space-y-2">
       {/* ── Top half: Division A from each conference + R2 ── */}
-      <div className="grid gap-x-1" style={{ gridTemplateColumns: '1fr auto auto 1fr' }}>
+      <div className="grid gap-x-2" style={{ gridTemplateColumns: '1fr auto auto 1fr' }}>
         {/* R1 labels */}
         <div className="text-center text-[10px] font-semibold text-gray-400 uppercase mb-1">R1</div>
         <div className="text-center text-[10px] font-semibold text-gray-400 uppercase mb-1 col-span-2">R2</div>
@@ -206,12 +218,12 @@ function MobileBracket({ eastern, western }: { eastern: ConferenceBracket; weste
         </div>
         {/* R2 boxes */}
         <div className="flex items-center px-1">
-          <div className="w-14">
+          <div className="w-16">
             <BracketCell matchup={westR2[0]} />
           </div>
         </div>
         <div className="flex items-center px-1">
-          <div className="w-14">
+          <div className="w-16">
             <BracketCell matchup={eastR2[0]} />
           </div>
         </div>
@@ -238,7 +250,7 @@ function MobileBracket({ eastern, western }: { eastern: ConferenceBracket; weste
       </div>
 
       {/* ── Bottom half: Division B from each conference + R2 ── */}
-      <div className="grid gap-x-1" style={{ gridTemplateColumns: '1fr auto auto 1fr' }}>
+      <div className="grid gap-x-2" style={{ gridTemplateColumns: '1fr auto auto 1fr' }}>
         {/* West R1 div B */}
         <div className="space-y-1.5">
           <BracketCell matchup={westR1[2]} />
@@ -246,12 +258,12 @@ function MobileBracket({ eastern, western }: { eastern: ConferenceBracket; weste
         </div>
         {/* R2 boxes */}
         <div className="flex items-center px-1">
-          <div className="w-14">
+          <div className="w-16">
             <BracketCell matchup={westR2[1]} />
           </div>
         </div>
         <div className="flex items-center px-1">
-          <div className="w-14">
+          <div className="w-16">
             <BracketCell matchup={eastR2[1]} />
           </div>
         </div>
@@ -355,7 +367,7 @@ function DesktopBracket({ eastern, western }: { eastern: ConferenceBracket; west
       </div>
 
       {/* 13 cols × 4 rows bracket */}
-      <div className="grid" style={{ gridTemplateColumns: colTemplate, gridTemplateRows: 'repeat(4, 90px)' }}>
+      <div className="grid" style={{ gridTemplateColumns: colTemplate, gridTemplateRows: 'repeat(4, 140px)' }}>
 
         {/* ── West R1 (col 1, rows 1-4) ── */}
         <Cell col={1} row="1" matchup={westR1[0]} />
