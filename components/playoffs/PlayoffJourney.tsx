@@ -384,7 +384,13 @@ function SeriesCard({
               const mutedCaption = isGoatMode ? `${darkModeColors.text}66` : '#9ca3af';
               const strongFillText = isGoatMode ? darkModeColors.text : '#374151';
               const accent = isGoatMode ? darkModeColors.accent : teamColors.primary;
-              const buttonTextColor = isGoatMode && darkModeColors.accent.toUpperCase() === '#FFFFFF' ? '#000000' : '#ffffff';
+              // Outline button styling — quieter than the solid game-box CTAs
+              const outlineButtonClass = 'mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded border-2 transition-colors';
+              const outlineButtonStyle: React.CSSProperties = {
+                borderColor: accent,
+                color: accent,
+                backgroundColor: 'transparent',
+              };
 
               const ShopGearCard = (mobileOnly: boolean) => {
                 if (!teamCfg) return null;
@@ -406,11 +412,8 @@ function SeriesCard({
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => trackClick('merch', `${teamCfg.city}-${teamCfg.name}`.toLowerCase().replace(/\s+/g, '-'))}
-                      className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded transition-all hover:shadow-sm"
-                      style={{
-                        background: `linear-gradient(to right, ${accent}, ${accent}dd)`,
-                        color: buttonTextColor,
-                      }}
+                      className={outlineButtonClass}
+                      style={outlineButtonStyle}
                     >
                       <ShoppingBag size={12} className="sm:hidden" />
                       Shop Gear
@@ -438,11 +441,8 @@ function SeriesCard({
                           window.dispatchEvent(new CustomEvent('team-starred', { detail: { teamId: teamCfg?.id } }));
                         }
                       }}
-                      className="mt-1 inline-block px-3 py-1.5 text-xs font-bold rounded transition-all hover:shadow-sm"
-                      style={{
-                        background: `linear-gradient(to right, ${accent}, ${accent}dd)`,
-                        color: buttonTextColor,
-                      }}
+                      className={outlineButtonClass}
+                      style={outlineButtonStyle}
                     >
                       Subscribe
                     </button>
@@ -459,13 +459,7 @@ function SeriesCard({
                     <p className={descClass} style={{ color: subtleText }}>
                       All 8 series, live results.
                     </p>
-                    <span
-                      className="mt-1 inline-block px-3 py-1.5 text-xs font-bold rounded"
-                      style={{
-                        background: `linear-gradient(to right, ${accent}, ${accent}dd)`,
-                        color: buttonTextColor,
-                      }}
-                    >
+                    <span className={outlineButtonClass} style={outlineButtonStyle}>
                       View Bracket
                     </span>
                   </Link>

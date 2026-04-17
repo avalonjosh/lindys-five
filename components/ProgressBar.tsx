@@ -73,7 +73,9 @@ function SeasonSection({
   lindysFiveProbability,
   teamName,
   celebrateOverride,
-  inPlayoffs
+  inPlayoffs,
+  collapsed,
+  onCollapseToggle,
 }: {
   stats: SeasonStats;
   isGoatMode: boolean;
@@ -94,6 +96,8 @@ function SeasonSection({
   teamName?: string;
   celebrateOverride?: boolean;
   inPlayoffs?: boolean;
+  collapsed?: boolean;
+  onCollapseToggle?: () => void;
 }) {
   const { totalPoints, gamesPlayed, gamesRemaining, currentPace, projectedPoints, playoffTarget } = stats;
 
@@ -144,7 +148,7 @@ function SeasonSection({
   return (
     <>
       {/* Header row with title and centered pill (desktop) */}
-      <div className="relative mb-2 md:mb-3">
+      <div className={`relative flex items-center justify-between gap-2 ${collapsed ? '' : 'mb-2 md:mb-3'}`}>
         <h3
           className={`text-xl md:text-2xl font-bold ${valueColor}`}
           style={valueStyle}
@@ -152,8 +156,23 @@ function SeasonSection({
           {isLastYear ? `Last Year (${lastSeasonLabel})` : inPlayoffs ? 'Regular Season Progress' : 'Season Progress'}
         </h3>
 
+        {/* Collapse/expand chevron (only shown when onCollapseToggle is provided, i.e. playoff mode) */}
+        {onCollapseToggle && (
+          <button
+            type="button"
+            onClick={onCollapseToggle}
+            className={`flex-shrink-0 p-1 rounded transition-colors ${
+              isGoatMode ? 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+            }`}
+            aria-label={collapsed ? 'Expand Regular Season Progress' : 'Collapse Regular Season Progress'}
+            title={collapsed ? 'Expand' : 'Collapse'}
+          >
+            <ChevronDown size={20} className={`transition-transform duration-200 ${collapsed ? '' : 'rotate-180'}`} />
+          </button>
+        )}
+
         {/* Desktop: Absolutely centered Playoff Probability text link */}
-        {!isLastYear && probability !== undefined && onPlayoffToggle && (
+        {!isLastYear && !collapsed && probability !== undefined && onPlayoffToggle && (
           <div className="hidden md:flex absolute inset-0 justify-center items-center pointer-events-none">
             <button
               onClick={onPlayoffToggle}
@@ -172,6 +191,10 @@ function SeasonSection({
           </div>
         )}
       </div>
+
+      {/* When collapsed, everything below the header is hidden */}
+      {collapsed ? null : (
+      <>
 
       {/* Clinch / Elimination banner — suppressed once the team is in the playoffs */}
       {!isLastYear && !inPlayoffs && cutLineData?.clinchIndicator && (
@@ -631,6 +654,9 @@ function SeasonSection({
         </div>
       )}
 
+      </>
+      )}
+
     </>
   );
 }
@@ -639,6 +665,8 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [playoffExpanded, setPlayoffExpanded] = useState(false);
+  // Collapse the Regular Season Progress card by default during playoffs (secondary context)
+  const [sectionCollapsed, setSectionCollapsed] = useState<boolean>(!!inPlayoffs);
   const [cutLineData, setCutLineData] = useState<CutLineState | null>(null);
   const [cutLineLoading, setCutLineLoading] = useState(false);
   const [cutLineError, setCutLineError] = useState(false);
@@ -868,8 +896,8 @@ ${teamUrl}
         borderColor: darkModeColors.border
       } : undefined}
     >
-      {/* Year-over-Year Toggle Text Button */}
-      {onYearOverYearToggle && (
+      {/* Year-over-Year Toggle Text Button — hidden entirely in playoff mode (dropped to avoid chevron overlap and simplify the collapsed card) */}
+      {onYearOverYearToggle && !inPlayoffs && (
         <button
           onClick={onYearOverYearToggle}
           disabled={yearOverYearLoading}
@@ -927,10 +955,12 @@ ${teamUrl}
           teamName={teamName}
           celebrateOverride={celebrateOverride}
           inPlayoffs={inPlayoffs}
+          collapsed={inPlayoffs ? sectionCollapsed : undefined}
+          onCollapseToggle={inPlayoffs ? () => setSectionCollapsed((v) => !v) : undefined}
         />
 
-        {/* Share Button - positioned relative to current season section, hidden when playoff dropdown is open */}
-        {showShareButton && !playoffExpanded && (
+        {/* Share Button - positioned relative to current season section, hidden when playoff dropdown is open or in playoff mode */}
+        {showShareButton && !playoffExpanded && !inPlayoffs && (
           <div className="relative">
             {/* Share Menu */}
             {shareMenuOpen && (
@@ -1021,6 +1051,37 @@ ${teamUrl}
             </button>
           </div>
         )}
+
+        {/* Playoff mode: vs Last Year toggle pinned to the current-year section's bottom-right so it stays put when the Last Year section expands below */}
+        {inPlayoffs && onYearOverYearToggle && !sectionCollapsed && (
+          <button
+            onClick={onYearOverYearToggle}
+            disabled={yearOverYearLoading}
+            className={`absolute bottom-0 right-0 flex items-center gap-1 text-xs md:text-sm font-semibold transition-all focus:outline-none group z-10 ${
+              yearOverYearMode
+                ? ''
+                : isGoatMode
+                  ? 'text-zinc-500 hover:text-zinc-400'
+                  : 'text-gray-500 hover:text-gray-700'
+            } ${yearOverYearLoading ? 'opacity-70 cursor-wait' : ''}`}
+            style={yearOverYearMode ? (isGoatMode ? { color: darkModeColors.accent } : { color: teamColors.primary }) : undefined}
+            title={yearOverYearLoading ? 'Loading...' : yearOverYearMode ? `Hide ${lastSeasonLabel} comparison` : `Compare to ${lastSeasonLabel}`}
+          >
+            <span className={yearOverYearMode ? 'underline decoration-2 underline-offset-2' : ''}>
+              vs Last Year
+            </span>
+            {yearOverYearLoading ? (
+              <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : (
+              <svg className={`w-3 h-3 transition-transform ${yearOverYearMode ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+              </svg>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Divider and Last Year Section */}
@@ -1044,6 +1105,7 @@ ${teamUrl}
           />
         </>
       )}
+
     </div>
   );
 }
