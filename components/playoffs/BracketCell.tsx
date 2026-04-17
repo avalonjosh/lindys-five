@@ -105,7 +105,7 @@ function TeamRow({
   const logoEl = <img src={logo} alt={abbrev} className="w-10 h-10 sm:w-16 sm:h-16 object-contain flex-shrink-0" />;
 
   return (
-    <div className={`flex items-center gap-0 pl-1 pr-2 h-[52px] sm:h-[68px] ${isLoser ? 'opacity-40' : ''}`}>
+    <div className={`flex items-center gap-0 pl-1 pr-1 sm:pr-2 h-[52px] sm:h-[68px] ${isLoser ? 'opacity-40' : ''}`}>
       {slug ? (
         <Link href={`/nhl/${slug}`} className="flex-shrink-0 hover:opacity-80 transition-opacity">
           {logoEl}
