@@ -59,6 +59,7 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
   const [isGoatMode, setIsGoatMode] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
   const [playoffSeries, setPlayoffSeries] = useState<JourneySeries[]>([]);
+  const [playoffFetchLoaded, setPlayoffFetchLoaded] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(`${team.id}-theme`);
@@ -186,6 +187,9 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
       })
       .catch(() => {
         /* silent — playoffs not active or endpoint unavailable */
+      })
+      .finally(() => {
+        if (!cancelled) setPlayoffFetchLoaded(true);
       });
     return () => {
       cancelled = true;
@@ -592,8 +596,8 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
           : `bg-gradient-to-br ${darkModeColors.backgroundGradient}`
       }`}
     >
-    {/* Clinch Celebration — suppressed once the team is in the playoffs */}
-    {playoffSeries.length === 0 && (hasClinched || celebrateOverride) && (
+    {/* Clinch Celebration — suppressed once the team is in the playoffs, and kept off during the playoff-fetch load to avoid a flash */}
+    {playoffFetchLoaded && playoffSeries.length === 0 && (hasClinched || celebrateOverride) && (
       <ClinchCelebration teamColors={effectiveTeamColors} />
     )}
 
@@ -800,6 +804,7 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
           onClinchDetected={() => setHasClinched(true)}
           celebrateOverride={celebrateOverride}
           inPlayoffs={playoffSeries.length > 0}
+          playoffFetchLoaded={playoffFetchLoaded}
         />
       )}
 
@@ -894,6 +899,7 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
               onClinchDetected={() => setHasClinched(true)}
               celebrateOverride={celebrateOverride}
               inPlayoffs={true}
+              playoffFetchLoaded={playoffFetchLoaded}
             />
           )}
           <StandingsCard

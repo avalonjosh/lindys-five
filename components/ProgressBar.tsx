@@ -51,6 +51,7 @@ interface ProgressBarProps {
   onClinchDetected?: (indicator: string) => void;
   celebrateOverride?: boolean;
   inPlayoffs?: boolean;
+  playoffFetchLoaded?: boolean;
 }
 
 // Helper function to render a season section
@@ -74,6 +75,7 @@ function SeasonSection({
   teamName,
   celebrateOverride,
   inPlayoffs,
+  playoffFetchLoaded,
   collapsed,
   onCollapseToggle,
 }: {
@@ -96,6 +98,7 @@ function SeasonSection({
   teamName?: string;
   celebrateOverride?: boolean;
   inPlayoffs?: boolean;
+  playoffFetchLoaded?: boolean;
   collapsed?: boolean;
   onCollapseToggle?: () => void;
 }) {
@@ -196,8 +199,8 @@ function SeasonSection({
       {collapsed ? null : (
       <>
 
-      {/* Clinch / Elimination banner — suppressed once the team is in the playoffs */}
-      {!isLastYear && !inPlayoffs && cutLineData?.clinchIndicator && (
+      {/* Clinch / Elimination banner — suppressed once the team is in the playoffs; also suppressed while we don't yet know (avoids a load-time flash for playoff teams) */}
+      {!isLastYear && !inPlayoffs && playoffFetchLoaded !== false && cutLineData?.clinchIndicator && (
         <div className={`mb-3 px-3 py-2 rounded-lg text-center text-sm font-bold ${
           cutLineData.clinchIndicator === 'e'
             ? 'bg-red-50 text-red-700 border border-red-200'
@@ -211,8 +214,8 @@ function SeasonSection({
         </div>
       )}
 
-      {/* Sabres drought banner — suppressed once the team is in the playoffs */}
-      {!isLastYear && !inPlayoffs && teamId === 'sabres' && (celebrateOverride || (cutLineData?.clinchIndicator && cutLineData.clinchIndicator !== 'e')) && (
+      {/* Sabres drought banner — suppressed once the team is in the playoffs; also suppressed while the playoff fetch is still pending */}
+      {!isLastYear && !inPlayoffs && playoffFetchLoaded !== false && teamId === 'sabres' && (celebrateOverride || (cutLineData?.clinchIndicator && cutLineData.clinchIndicator !== 'e')) && (
         <div
           className="mb-3 py-3 px-4 rounded-lg text-center overflow-hidden relative"
           style={{ background: 'linear-gradient(135deg, #002654 0%, #003A7A 50%, #002654 100%)' }}
@@ -661,7 +664,7 @@ function SeasonSection({
   );
 }
 
-export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearOverYearLoading, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors, teamId, showShareButton, teamName, teamAbbrev, onClinchDetected, celebrateOverride, inPlayoffs }: ProgressBarProps) {
+export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearOverYearLoading, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors, teamId, showShareButton, teamName, teamAbbrev, onClinchDetected, celebrateOverride, inPlayoffs, playoffFetchLoaded }: ProgressBarProps) {
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [playoffExpanded, setPlayoffExpanded] = useState(false);
@@ -955,6 +958,7 @@ ${teamUrl}
           teamName={teamName}
           celebrateOverride={celebrateOverride}
           inPlayoffs={inPlayoffs}
+          playoffFetchLoaded={playoffFetchLoaded}
           collapsed={inPlayoffs ? sectionCollapsed : undefined}
           onCollapseToggle={inPlayoffs ? () => setSectionCollapsed((v) => !v) : undefined}
         />
@@ -1068,7 +1072,8 @@ ${teamUrl}
             title={yearOverYearLoading ? 'Loading...' : yearOverYearMode ? `Hide ${lastSeasonLabel} comparison` : `Compare to ${lastSeasonLabel}`}
           >
             <span className={yearOverYearMode ? 'underline decoration-2 underline-offset-2' : ''}>
-              vs Last Year
+              <span className="sm:hidden">{lastSeasonLabel?.replace(/-/g, '/')}</span>
+              <span className="hidden sm:inline">vs Last Year</span>
             </span>
             {yearOverYearLoading ? (
               <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
