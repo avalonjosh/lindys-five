@@ -183,7 +183,40 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
             });
           }
         }
-        setPlayoffSeries(mine);
+        // Enrich live playoff games with period/clock from boxscore
+        const liveGames: { seriesIdx: number; gameIdx: number; gameId: number }[] = [];
+        mine.forEach((s, si) => {
+          s.games.forEach((g, gi) => {
+            if ((g.gameState === 'LIVE' || g.gameState === 'CRIT') && g.gameId) {
+              liveGames.push({ seriesIdx: si, gameIdx: gi, gameId: g.gameId });
+            }
+          });
+        });
+
+        if (liveGames.length > 0) {
+          Promise.all(
+            liveGames.map(({ gameId }) =>
+              fetch(`/api/v1/gamecenter/${gameId}/boxscore`)
+                .then((r) => (r.ok ? r.json() : null))
+                .catch(() => null)
+            )
+          ).then((results) => {
+            if (cancelled) return;
+            results.forEach((data, i) => {
+              if (!data) return;
+              const { seriesIdx, gameIdx } = liveGames[i];
+              mine[seriesIdx].games[gameIdx] = {
+                ...mine[seriesIdx].games[gameIdx],
+                period: data.periodDescriptor?.number,
+                periodDescriptor: data.periodDescriptor,
+                clock: data.clock,
+              };
+            });
+            setPlayoffSeries([...mine]);
+          });
+        } else {
+          setPlayoffSeries(mine);
+        }
       })
       .catch(() => {
         /* silent — playoffs not active or endpoint unavailable */
@@ -195,6 +228,65 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
       cancelled = true;
     };
   }, [team.abbreviation]);
+
+  // Poll live playoff games every 15s to update period/clock/score
+  const playoffSeriesRef = useRef(playoffSeries);
+  playoffSeriesRef.current = playoffSeries;
+
+  useEffect(() => {
+    if (!playoffFetchLoaded) return;
+
+    const hasLive = playoffSeries.some((s) =>
+      s.games.some((g) => g.gameState === 'LIVE' || g.gameState === 'CRIT')
+    );
+    if (!hasLive) return;
+
+    const poll = () => {
+      const current = playoffSeriesRef.current;
+      const liveGames: { seriesIdx: number; gameIdx: number; gameId: number }[] = [];
+      current.forEach((s, si) => {
+        s.games.forEach((g, gi) => {
+          if ((g.gameState === 'LIVE' || g.gameState === 'CRIT') && g.gameId) {
+            liveGames.push({ seriesIdx: si, gameIdx: gi, gameId: g.gameId });
+          }
+        });
+      });
+      if (liveGames.length === 0) return;
+
+      Promise.all(
+        liveGames.map(({ gameId }) =>
+          fetch(`/api/v1/gamecenter/${gameId}/boxscore`)
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null)
+        )
+      ).then((results) => {
+        setPlayoffSeries((prev) => {
+          const updated = prev.map((s) => ({ ...s, games: [...s.games] }));
+          results.forEach((data, i) => {
+            if (!data) return;
+            const { seriesIdx, gameIdx } = liveGames[i];
+            if (updated[seriesIdx]?.games[gameIdx]) {
+              updated[seriesIdx].games[gameIdx] = {
+                ...updated[seriesIdx].games[gameIdx],
+                period: data.periodDescriptor?.number,
+                periodDescriptor: data.periodDescriptor,
+                clock: data.clock,
+                homeTeam: { ...updated[seriesIdx].games[gameIdx].homeTeam, score: data.homeTeam?.score },
+                awayTeam: { ...updated[seriesIdx].games[gameIdx].awayTeam, score: data.awayTeam?.score },
+                gameState: data.gameState,
+              };
+            }
+          });
+          return updated;
+        });
+      });
+    };
+
+    const interval = setInterval(poll, 15000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playoffFetchLoaded]);
+
   const [whatIfMode, setWhatIfMode] = useState(false);
   const [hypotheticalResults, setHypotheticalResults] = useState<Map<number, GameResult>>(new Map());
   const [yearOverYearMode, setYearOverYearMode] = useState(false);

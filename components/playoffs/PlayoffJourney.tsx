@@ -20,6 +20,9 @@ export interface JourneyGame {
   homeTeam: { abbrev: string; score?: number };
   awayTeam: { abbrev: string; score?: number };
   gameOutcome?: { lastPeriodType: string };
+  period?: number;
+  periodDescriptor?: { periodType?: string };
+  clock?: { timeRemaining?: string; inIntermission?: boolean };
 }
 
 export interface JourneySeries {
@@ -673,12 +676,42 @@ function PlayoffGameBox({
           </div>
 
           <div className="text-center pt-2 border-t-2" style={{ borderColor: isGoatMode ? darkModeColors.border : '#e5e7eb' }}>
-            {isLive ? (
-              <div className="inline-flex items-center gap-1 text-sm font-bold" style={{ color: '#dc2626' }}>
-                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: '#dc2626' }} />
-                LIVE
-              </div>
-            ) : (
+            {isLive ? (() => {
+              const livePeriod = g.period || 1;
+              const livePeriodType = g.periodDescriptor?.periodType || 'REG';
+              const liveIsIntermission = g.clock?.inIntermission || false;
+              const liveTimeRemaining = g.clock?.timeRemaining || '20:00';
+              const getOrdinalPeriod = (num: number, type: string): string => {
+                if (type === 'OT') return 'Overtime';
+                if (type === 'SO') return 'Shootout';
+                const ordinals = ['', '1st', '2nd', '3rd', '4th'];
+                return `${ordinals[num] || `${num}th`} Period`;
+              };
+              const livePeriodText = getOrdinalPeriod(livePeriod, livePeriodType);
+              return (
+                <>
+                  <div className="text-sm font-bold" style={{ color: teamPrimaryColor }}>
+                    {liveIsIntermission ? `End of ${livePeriodText}` : livePeriodText}
+                  </div>
+                  {!liveIsIntermission && (
+                    <div className={`text-xs font-semibold mt-1 ${isGoatMode ? 'text-zinc-400' : 'text-gray-600'}`}>
+                      {liveTimeRemaining}
+                    </div>
+                  )}
+                  <div className="mt-2 flex justify-center">
+                    {liveIsIntermission ? (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-bold text-white bg-orange-500 animate-pulse">
+                        INTERMISSION
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-bold text-white bg-red-600 animate-pulse">
+                        LIVE
+                      </span>
+                    )}
+                  </div>
+                </>
+              );
+            })() : (
               <div className="text-sm font-bold" style={{ color: teamPrimaryColor }}>
                 {getOutcomeText()}{periodSuffix}
               </div>
