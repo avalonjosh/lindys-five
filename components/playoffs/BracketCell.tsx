@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { TEAMS } from '@/lib/teamConfig';
 import type { BracketMatchup } from '@/lib/types/playoffs';
 
@@ -49,11 +50,14 @@ export default function BracketCell({ matchup, cupFinal }: BracketCellProps) {
   const bottomPct = Math.round(bottomSeedSeriesWinPct);
   const liveGame = matchup.games.find((g) => g.gameState === 'LIVE' || g.gameState === 'CRIT');
 
+  const router = useRouter();
+
   return (
     <div
       className={`bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden ${
-        liveGame ? 'ring-2 ring-green-400' : ''
+        liveGame ? 'ring-2 ring-green-400 cursor-pointer hover:shadow-md transition-shadow' : ''
       }`}
+      onClick={liveGame ? () => router.push(`/scores/${liveGame.gameId}`) : undefined}
     >
       <TeamRow
         logo={topSeed.logo}
@@ -107,7 +111,7 @@ function TeamRow({
   return (
     <div className={`flex items-center gap-0 pl-1 pr-1 sm:pr-2 h-[52px] sm:h-[68px] ${isLoser ? 'opacity-40' : ''}`}>
       {slug ? (
-        <Link href={`/nhl/${slug}`} className="flex-shrink-0 hover:opacity-80 transition-opacity">
+        <Link href={`/nhl/${slug}`} className="flex-shrink-0 hover:opacity-80 transition-opacity" onClick={(e) => e.stopPropagation()}>
           {logoEl}
         </Link>
       ) : (
