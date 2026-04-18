@@ -206,8 +206,7 @@ function SeriesCard({
       style={{ ...borderStyle, backgroundColor: cardBg }}
     >
       {/* Desktop (sm+): round badge anchored to the top-left corner of the card */}
-      <span
-        className="hidden sm:inline-block absolute top-5 left-5 z-10 px-4 py-1.5 rounded-full text-base tracking-[0.15em] shadow-sm"
+      <Link href="/playoffs" className="hidden sm:inline-block absolute top-5 left-5 z-10 px-4 py-1.5 rounded-full text-base tracking-[0.15em] shadow-sm hover:opacity-80 transition-opacity"
         style={{
           backgroundColor: accent,
           color: isGoatMode && darkModeColors.accent.toUpperCase() === '#FFFFFF' ? '#000000' : '#ffffff',
@@ -215,12 +214,12 @@ function SeriesCard({
         }}
       >
         {titleText}
-      </span>
+      </Link>
 
       {/* Mobile: round badge centered above the matchup row (normal flow) */}
       <div className="sm:hidden relative flex justify-center mb-3">
-        <span
-          className="inline-block px-4 py-1.5 rounded-full text-lg tracking-[0.15em] shadow-sm"
+        <Link href="/playoffs"
+          className="inline-block px-4 py-1.5 rounded-full text-lg tracking-[0.15em] shadow-sm hover:opacity-80 transition-opacity"
           style={{
             backgroundColor: accent,
             color: isGoatMode && darkModeColors.accent.toUpperCase() === '#FFFFFF' ? '#000000' : '#ffffff',
@@ -228,7 +227,7 @@ function SeriesCard({
           }}
         >
           {titleText}
-        </span>
+        </Link>
       </div>
 
       {/* Matchup row — logos flank the score, team names omitted (logos carry identity). Logos link to team trackers. */}
