@@ -687,16 +687,27 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
 
     try {
       const today = new Date().toISOString().split('T')[0];
-      const response = await fetch(`/api/v1/standings/${today}`);
+      let response = await fetch(`/api/v1/standings/${today}`);
 
       if (!response.ok) {
         throw new Error(`API returned status ${response.status}`);
       }
 
-      const data = await response.json();
+      let data = await response.json();
 
       if (!data.standings || !Array.isArray(data.standings)) {
         throw new Error('Invalid standings data');
+      }
+
+      // Post-regular-season dates return an empty array — fall back to /standings/now
+      if (data.standings.length === 0) {
+        response = await fetch(`/api/v1/standings/now`);
+        if (response.ok) {
+          data = await response.json();
+          if (!data.standings || !Array.isArray(data.standings)) {
+            throw new Error('Invalid standings data (fallback)');
+          }
+        }
       }
 
       interface StandingTeam {

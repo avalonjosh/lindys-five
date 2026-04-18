@@ -187,7 +187,15 @@ async function fetchStandings(): Promise<StandingsTeam[]> {
     });
     if (!res.ok) return [];
     const data = await res.json();
-    return data.standings || [];
+    const standings: StandingsTeam[] = data.standings || [];
+    // Post-regular-season dates (playoffs, offseason) return empty — fall back to /standings/now
+    if (standings.length === 0) {
+      const nowRes = await fetch(`${NHL_API}/standings/now`, { next: { revalidate: 300 } });
+      if (!nowRes.ok) return [];
+      const nowData = await nowRes.json();
+      return nowData.standings || [];
+    }
+    return standings;
   } catch {
     return [];
   }
