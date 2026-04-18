@@ -105,13 +105,21 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
           const today = new Date().toISOString().split('T')[0];
 
           // Fetch all standings at once from the NHL API with today's date
-          const response = await fetch(`/api/v1/standings/${today}`);
+          let response = await fetch(`/api/v1/standings/${today}`);
 
           if (!response.ok) {
             throw new Error(`API returned status ${response.status}`);
           }
 
-          const data = await response.json();
+          let data = await response.json();
+
+          // Post-regular-season dates return an empty array — fall back to /standings/now
+          if (Array.isArray(data?.standings) && data.standings.length === 0) {
+            response = await fetch(`/api/v1/standings/now`);
+            if (response.ok) {
+              data = await response.json();
+            }
+          }
 
           console.log('📊 Standings API response:', data);
 

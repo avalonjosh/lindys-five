@@ -91,26 +91,39 @@ export default function MLBTeamNav({ currentTeamId, teamColors, defaultTab = 'ml
   useEffect(() => {
     if (isOpen && activeTab === 'nhl' && nhlStandings.size === 0) {
       const today = new Date().toISOString().split('T')[0];
-      fetch(`/api/v1/standings/${today}`)
-        .then(r => r.json())
-        .then(data => {
-          if (data.standings) {
-            const map = new Map<string, TeamStandings>();
-            Object.values(TEAMS).forEach((team) => {
-              const s = data.standings.find((st: any) => st.teamAbbrev?.default === team.abbreviation);
-              if (s) {
-                map.set(team.id, {
-                  teamId: team.nhlId, teamAbbrev: team.abbreviation,
-                  points: s.points || 0, gamesPlayed: s.gamesPlayed || 0,
-                  wins: s.wins || 0, losses: s.losses || 0, otLosses: s.otLosses || 0,
-                  divisionSequence: s.divisionSequence,
-                });
-              }
+      const buildMap = (standings: Array<{ teamAbbrev?: { default: string }; points?: number; gamesPlayed?: number; wins?: number; losses?: number; otLosses?: number; divisionSequence?: number }>) => {
+        const map = new Map<string, TeamStandings>();
+        Object.values(TEAMS).forEach((team) => {
+          const s = standings.find((st) => st.teamAbbrev?.default === team.abbreviation);
+          if (s) {
+            map.set(team.id, {
+              teamId: team.nhlId, teamAbbrev: team.abbreviation,
+              points: s.points || 0, gamesPlayed: s.gamesPlayed || 0,
+              wins: s.wins || 0, losses: s.losses || 0, otLosses: s.otLosses || 0,
+              divisionSequence: s.divisionSequence,
             });
+          }
+        });
+        return map;
+      };
+      (async () => {
+        try {
+          let res = await fetch(`/api/v1/standings/${today}`);
+          if (!res.ok) return;
+          let data = await res.json();
+          // Post-regular-season dates return an empty array — fall back to /standings/now
+          if (Array.isArray(data?.standings) && data.standings.length === 0) {
+            res = await fetch(`/api/v1/standings/now`);
+            if (res.ok) data = await res.json();
+          }
+          if (data?.standings) {
+            const map = buildMap(data.standings);
             if (map.size > 0) setNhlStandings(map);
           }
-        })
-        .catch(() => {});
+        } catch {
+          /* silent */
+        }
+      })();
     }
   }, [isOpen, activeTab]);
 

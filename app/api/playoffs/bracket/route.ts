@@ -112,7 +112,20 @@ export async function GET() {
     ]);
 
     const standingsData = standingsRes.ok ? await standingsRes.json() : { standings: [] };
-    const standings = standingsData.standings || [];
+    let standings = standingsData.standings || [];
+    // Post-regular-season dates return empty; fall back to /standings/now so downstream consumers
+    // (conference routing, team-strength lookups for Win Odds) still have data.
+    if (standings.length === 0) {
+      try {
+        const nowRes = await fetch(`${NHL_API}/standings/now`, { next: { revalidate: 300 } });
+        if (nowRes.ok) {
+          const nowData = await nowRes.json();
+          standings = nowData.standings || [];
+        }
+      } catch {
+        /* silent — empty array is safe */
+      }
+    }
 
     if (!carouselRes.ok) {
       return NextResponse.json({
