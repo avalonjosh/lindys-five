@@ -71,7 +71,7 @@ export default function SeriesHub({ data, currentGameId }: SeriesHubProps) {
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-5">
       {/* Header: round + status */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-700 capitalize">{roundLabel.replace(/-/g, ' ')}</h3>
+        <Link href="/playoffs" className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-white bg-gray-700 hover:bg-gray-600 transition-colors">{roundLabel.replace(/-/g, ' ')}</Link>
         <span className="text-xs text-gray-400">Best of {neededToWin * 2 - 1}</span>
       </div>
 
@@ -117,9 +117,6 @@ export default function SeriesHub({ data, currentGameId }: SeriesHubProps) {
           )}
         </div>
       </div>
-
-      {/* Status line */}
-      <p className="text-center text-xs font-medium text-gray-500 mb-4">{statusLine}</p>
 
       {/* Schedule */}
       <div className="border-t border-gray-100 pt-3">
