@@ -87,14 +87,16 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
   const [error, setError] = useState<string | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
     try {
-      const data: BoxScoreData = await fetchBoxScoreData(gameId);
+      const data: BoxScoreData = await fetchBoxScoreData(gameId, signal);
       setBoxscore(data.boxscore);
       setLanding(data.landing);
       setError(null);
       return data;
     } catch (err) {
+      // Abort isn't a real failure — user navigated away before the response landed
+      if ((err as Error)?.name === 'AbortError') return null;
       console.error('Failed to fetch box score data:', err);
       setError('Failed to load box score. Please try again.');
       return null;
@@ -103,49 +105,52 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
     }
   }, [gameId]);
 
-  // Initial data load
+  // Initial data load — cancel in-flight fetches when gameId changes or the component unmounts
   useEffect(() => {
-    setLoading(true);
-    fetchData().then((data) => {
-      if (data) {
-        // Fetch standings and right-rail non-blocking after initial load
-        const gameDate = data.boxscore.gameDate;
-        const isPlayoff = data.boxscore.gameType === 3;
+    const controller = new AbortController();
+    const { signal } = controller;
 
-        fetchStandingsForDate(gameDate).then((standingsData) => {
-          setStandings(standingsData);
-          // Derive season from gameId prefix (e.g. 2025020001 → 20252026)
-          const gameIdStr = String(data.boxscore.id);
-          const startYear = parseInt(gameIdStr.slice(0, 4), 10);
-          const season = `${startYear}${startYear + 1}`;
-          if (isPlayoff) {
-            // Synthesize head-to-head + preview data (FUT/PRE uses all of it; LIVE/FINAL uses just seasonSeries)
-            fetchPlayoffPreGameContext(
-              data.boxscore.homeTeam.abbrev,
-              data.boxscore.awayTeam.abbrev,
-              data.boxscore.homeTeam.id,
-              data.boxscore.awayTeam.id,
-              season,
-              standingsData
-            ).then(setPlayoffPreGame);
-            fetchPlayoffSeriesHub(
-              data.boxscore.homeTeam.abbrev,
-              data.boxscore.awayTeam.abbrev,
-              season,
-              standingsData,
-              gameId
-            ).then(setSeriesHub);
-          }
-        });
-        fetchRightRail(gameId).then((rightRailData) => {
-          setRightRail(rightRailData);
-        });
-        // Fetch series status for playoff games
-        if (data.boxscore.gameType === 3) {
-          fetchSeriesForGame(data.boxscore.homeTeam.abbrev, data.boxscore.awayTeam.abbrev).then(setSeriesStatus);
+    setLoading(true);
+    fetchData(signal).then((data) => {
+      if (!data || signal.aborted) return;
+      const gameDate = data.boxscore.gameDate;
+      const isPlayoff = data.boxscore.gameType === 3;
+
+      fetchStandingsForDate(gameDate).then((standingsData) => {
+        if (signal.aborted) return;
+        setStandings(standingsData);
+        const gameIdStr = String(data.boxscore.id);
+        const startYear = parseInt(gameIdStr.slice(0, 4), 10);
+        const season = `${startYear}${startYear + 1}`;
+        if (isPlayoff) {
+          fetchPlayoffPreGameContext(
+            data.boxscore.homeTeam.abbrev,
+            data.boxscore.awayTeam.abbrev,
+            data.boxscore.homeTeam.id,
+            data.boxscore.awayTeam.id,
+            season,
+            standingsData
+          ).then((v) => { if (!signal.aborted) setPlayoffPreGame(v); });
+          fetchPlayoffSeriesHub(
+            data.boxscore.homeTeam.abbrev,
+            data.boxscore.awayTeam.abbrev,
+            season,
+            standingsData,
+            gameId
+          ).then((v) => { if (!signal.aborted) setSeriesHub(v); });
         }
+      });
+      fetchRightRail(gameId, signal).then((v) => { if (!signal.aborted) setRightRail(v); });
+      if (data.boxscore.gameType === 3) {
+        fetchSeriesForGame(data.boxscore.homeTeam.abbrev, data.boxscore.awayTeam.abbrev).then((v) => {
+          if (!signal.aborted) setSeriesStatus(v);
+        });
       }
     });
+
+    return () => {
+      controller.abort();
+    };
   }, [fetchData, gameId]);
 
   // Poll every 15s for LIVE games (re-fetch boxscore + landing only, not standings)

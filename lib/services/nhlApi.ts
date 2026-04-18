@@ -91,27 +91,54 @@ function releaseSlot(): void {
   }
 }
 
-// Helper function to retry failed requests with exponential backoff
-export async function fetchWithRetry(url: string, maxRetries: number = 3): Promise<Response> {
+// Custom Error used when NHL rate-limits us (429) and we exhaust retries.
+// Callers can check `isRateLimitError(err)` to log quietly instead of treating it as a real failure.
+export class RateLimitError extends Error {
+  isRateLimit = true as const;
+  constructor(message = 'NHL rate limit — retries exhausted') {
+    super(message);
+    this.name = 'RateLimitError';
+  }
+}
+
+export function isRateLimitError(err: unknown): boolean {
+  if (!err) return false;
+  if (err instanceof RateLimitError) return true;
+  if (typeof err === 'object' && err && (err as { isRateLimit?: boolean }).isRateLimit) return true;
+  const msg = (err as Error)?.message || '';
+  return msg.includes('429');
+}
+
+// Helper function to retry failed requests with exponential backoff.
+// Accepts an optional AbortSignal so callers can cancel stale requests (e.g. user navigated to another game).
+export async function fetchWithRetry(url: string, maxRetries: number = 3, signal?: AbortSignal): Promise<Response> {
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   await acquireSlot();
   let lastError: Error | null = null;
 
   try {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
       try {
-        const response = await fetch(url);
+        const response = await fetch(url, { signal });
         if (response.ok) {
           return response;
         }
 
         // Retry on 429 (rate limit) or 5xx (server error)
         if (response.status === 429 || response.status >= 500) {
-          lastError = new Error(`Server error: ${response.status}`);
+          lastError = response.status === 429 ? new RateLimitError() : new Error(`Server error: ${response.status}`);
           if (attempt < maxRetries - 1) {
             const delay = response.status === 429
               ? Math.pow(2, attempt) * 2000  // 2s, 4s, 8s for rate limits
               : Math.pow(2, attempt) * 1000; // 1s, 2s, 4s for server errors
-            await new Promise(resolve => setTimeout(resolve, delay));
+            await new Promise((resolve, reject) => {
+              const t = setTimeout(resolve, delay);
+              signal?.addEventListener('abort', () => {
+                clearTimeout(t);
+                reject(new DOMException('Aborted', 'AbortError'));
+              }, { once: true });
+            });
             continue;
           }
         } else {
@@ -119,6 +146,8 @@ export async function fetchWithRetry(url: string, maxRetries: number = 3): Promi
           throw new Error(`API returned status ${response.status}`);
         }
       } catch (error) {
+        // Preserve AbortError so callers can distinguish cancellation from failure
+        if ((error as Error)?.name === 'AbortError') throw error;
         lastError = error as Error;
         // Network error or fetch failed, retry
         if (attempt < maxRetries - 1) {
@@ -291,7 +320,11 @@ export async function fetchSabresSchedule(season: string = '20252026', teamAbbre
     scheduleCache.set(cacheKey, { data: results, timestamp: Date.now() });
     return results;
   } catch (error) {
-    console.error('❌ Error fetching schedule:', error);
+    if (isRateLimitError(error)) {
+      console.warn('NHL rate-limited schedule fetch');
+    } else {
+      console.error('❌ Error fetching schedule:', error);
+    }
     // Re-throw the error so the caller knows the fetch failed
     // This allows App.tsx to keep existing data instead of clearing it
     throw error;
@@ -513,7 +546,11 @@ async function fetchStandingsMap(): Promise<Map<string, { wins: number; losses: 
 
     console.log(`📊 Loaded standings for ${standingsMap.size} teams`);
   } catch (error) {
-    console.error('Failed to fetch standings:', error);
+    if (isRateLimitError(error)) {
+      console.warn('NHL rate-limited standings fetch — continuing without records');
+    } else {
+      console.error('Failed to fetch standings:', error);
+    }
   }
 
   return standingsMap;
@@ -674,7 +711,11 @@ export async function fetchScoresByDate(date: string): Promise<NHLGame[]> {
       return aTime.localeCompare(bTime);
     });
   } catch (error) {
-    console.error('❌ Error fetching scores for date:', date, error);
+    if (isRateLimitError(error)) {
+      console.warn('NHL rate-limited scores fetch for', date);
+    } else {
+      console.error('❌ Error fetching scores for date:', date, error);
+    }
     throw error;
   }
 }

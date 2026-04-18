@@ -1,4 +1,4 @@
-import { fetchWithRetry } from './nhlApi';
+import { fetchWithRetry, isRateLimitError } from './nhlApi';
 import type {
   BoxscoreResponse,
   LandingResponse,
@@ -45,13 +45,13 @@ export interface PlayoffPreGameContext {
   seasonSeries: SeasonSeriesGame[];
 }
 
-export async function fetchBoxScoreData(gameId: string): Promise<{
+export async function fetchBoxScoreData(gameId: string, signal?: AbortSignal): Promise<{
   boxscore: BoxscoreResponse;
   landing: LandingResponse;
 }> {
   const [boxscoreRes, landingRes] = await Promise.all([
-    fetchWithRetry(`${API_BASE}/gamecenter/${gameId}/boxscore`),
-    fetchWithRetry(`${API_BASE}/gamecenter/${gameId}/landing`),
+    fetchWithRetry(`${API_BASE}/gamecenter/${gameId}/boxscore`, 3, signal),
+    fetchWithRetry(`${API_BASE}/gamecenter/${gameId}/landing`, 3, signal),
   ]);
 
   const [boxscore, landing] = await Promise.all([
@@ -62,9 +62,9 @@ export async function fetchBoxScoreData(gameId: string): Promise<{
   return { boxscore, landing };
 }
 
-export async function fetchRightRail(gameId: string): Promise<RightRailResponse | null> {
+export async function fetchRightRail(gameId: string, signal?: AbortSignal): Promise<RightRailResponse | null> {
   try {
-    const response = await fetch(`${API_BASE}/gamecenter/${gameId}/right-rail`);
+    const response = await fetch(`${API_BASE}/gamecenter/${gameId}/right-rail`, { signal });
     if (!response.ok) return null;
     return await response.json();
   } catch {
@@ -490,7 +490,11 @@ export async function fetchStandingsForDate(date: string): Promise<StandingsTeam
     }
     return standings;
   } catch (error) {
-    console.error('Failed to fetch standings:', error);
+    if (isRateLimitError(error)) {
+      console.warn('NHL rate-limited standings fetch — returning empty');
+    } else {
+      console.error('Failed to fetch standings:', error);
+    }
     return [];
   }
 }

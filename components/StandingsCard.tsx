@@ -5,6 +5,7 @@ import { ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import type { NHLGame } from '@/lib/types';
 import { fetchScoresByDate } from '@/lib/services/nhlApi';
+import { fetchNhlStandingsClient } from '@/lib/services/standingsFetch';
 import { TEAMS } from '@/lib/teamConfig';
 
 const getTeamSlug = (abbrev: string): string | null => {
@@ -110,20 +111,13 @@ export default function StandingsCard({
     setError(null);
 
     try {
-      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-      const response = await fetch(`/api/v1/standings/${today}`);
+      const rawStandings = await fetchNhlStandingsClient();
 
-      if (!response.ok) {
-        throw new Error(`API returned status ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (!data.standings || !Array.isArray(data.standings)) {
+      if (rawStandings.length === 0) {
         throw new Error('Invalid standings data');
       }
 
-      const parsedStandings: StandingTeam[] = data.standings.map((team: any) => ({
+      const parsedStandings: StandingTeam[] = rawStandings.map((team: any) => ({
         teamAbbrev: team.teamAbbrev?.default || '',
         teamName: team.teamName?.default || team.teamCommonName?.default || '',
         teamLogo: team.teamLogo || `https://assets.nhle.com/logos/nhl/svg/${team.teamAbbrev?.default}_light.svg`,

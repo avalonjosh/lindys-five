@@ -5,7 +5,7 @@ import Link from 'next/link';
 import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import type { NHLGame } from '@/lib/types';
 import type { StandingsTeam } from '@/lib/types/boxscore';
-import { fetchScoresByDate, pollLiveGames } from '@/lib/services/nhlApi';
+import { fetchScoresByDate, pollLiveGames, isRateLimitError } from '@/lib/services/nhlApi';
 import { fetchStandingsForDate } from '@/lib/services/boxscoreApi';
 import ScoreCard from '@/components/scores/ScoreCard';
 import DateNavigation from '@/components/scores/DateNavigation';
@@ -97,8 +97,13 @@ export default function ScoresPageClient() {
       setGames(data);
       setError(null);
     } catch (err) {
-      console.error('Failed to fetch games:', err);
-      setError('Failed to load games. Please try again.');
+      if (isRateLimitError(err)) {
+        // Transient NHL rate-limit — don't surface a scary error banner; next poll will recover
+        console.warn('NHL rate-limited scores fetch — will retry on next poll');
+      } else {
+        console.error('Failed to fetch games:', err);
+        setError('Failed to load games. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

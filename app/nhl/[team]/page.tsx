@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { TEAMS } from '@/lib/teamConfig';
 import TeamTracker from '@/components/TeamTracker';
 import NewsletterModal from '@/components/newsletter/NewsletterModal';
-import { fetchWithRetry } from '@/lib/services/nhlApi';
+import { fetchWithRetry, isRateLimitError } from '@/lib/services/nhlApi';
 import { calculateChunks, calculateSeasonStats } from '@/lib/utils/chunkCalculator';
 import { computePositionAwareProbability, getPlayoffStatusMessage } from '@/lib/utils/playoffProbability';
 import type { GameResult } from '@/lib/types';
@@ -299,7 +299,11 @@ export default async function TeamPage({ params }: TeamPageProps) {
       seoContent = lines.join(' ');
     }
   } catch (e) {
-    console.error(`SEO data fetch failed for ${team.abbreviation}:`, e);
+    if (isRateLimitError(e)) {
+      console.warn(`SEO data fetch rate-limited for ${team.abbreviation} — falling back to default meta`);
+    } else {
+      console.error(`SEO data fetch failed for ${team.abbreviation}:`, e);
+    }
   }
 
   return (

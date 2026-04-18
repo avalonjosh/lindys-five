@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { GameChunk, SeasonStats, ChunkStats, GameResult } from '@/lib/types';
-import { fetchSabresSchedule, fetchLastSeasonComparison } from '@/lib/services/nhlApi';
+import { fetchSabresSchedule, fetchLastSeasonComparison, isRateLimitError } from '@/lib/services/nhlApi';
 import { calculateChunks, calculateSeasonStats, calculateChunkStats } from '@/lib/utils/chunkCalculator';
 import ChunkCard from '@/components/ChunkCard';
 import ProgressBar from '@/components/ProgressBar';
@@ -373,10 +373,15 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
         }
       }
     } catch (err) {
-      console.error('Error loading data:', err);
+      if (isRateLimitError(err)) {
+        // Transient NHL 429 — skip noisy logging and keep any existing data on screen
+        console.warn('NHL rate-limited team schedule fetch — will retry on next poll');
+      } else {
+        console.error('Error loading data:', err);
+      }
       // Only show error if we have no existing data (initial load failure)
       // Don't clear existing data on error during auto-refresh
-      if (chunks.length === 0) {
+      if (chunks.length === 0 && !isRateLimitError(err)) {
         setError(true);
       }
     } finally {
