@@ -58,6 +58,8 @@ export default function GameTicker() {
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isPaused, setIsPaused] = useState(false);
+  // Whether all games fit within the container — if so, we center instead of left-aligning
+  const [fitsInView, setFitsInView] = useState(false);
 
   const fetchGames = useCallback(async () => {
     try {
@@ -123,6 +125,21 @@ export default function GameTicker() {
     return () => clearInterval(interval);
   }, [isPaused, games]);
 
+  // Measure whether the games row fits inside the container — used to center vs left-align
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const measure = () => setFitsInView(el.scrollWidth <= el.clientWidth + 1);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [games]);
+
   if (loading || games.length === 0) return null;
 
   return (
@@ -136,7 +153,7 @@ export default function GameTicker() {
     >
       <div
         ref={scrollRef}
-        className="flex items-center gap-0 overflow-x-auto scrollbar-hide py-2 px-2"
+        className={`flex items-center gap-0 overflow-x-auto scrollbar-hide py-2 px-2 ${fitsInView ? 'justify-center' : ''}`}
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {games.map((game) => {
