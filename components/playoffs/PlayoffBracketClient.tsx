@@ -351,21 +351,6 @@ function DesktopBracket({ eastern, western }: { eastern: ConferenceBracket; west
         </div>
       </div>
 
-      {/* Division labels positioned above R1 columns */}
-      <div className="grid mb-0" style={{ gridTemplateColumns: colTemplate }}>
-        <div style={{ gridColumn: '1' }}>
-          <div className="text-center text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">
-            {getDivisionLabel(westR1, 0, 'Western')}
-          </div>
-        </div>
-        <div style={{ gridColumn: '2 / 13' }} />
-        <div style={{ gridColumn: '13' }}>
-          <div className="text-center text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">
-            {getDivisionLabel(eastR1, 0, 'Eastern')}
-          </div>
-        </div>
-      </div>
-
       {/* 13 cols × 4 rows bracket */}
       <div className="grid" style={{ gridTemplateColumns: colTemplate, gridTemplateRows: 'repeat(4, 140px)' }}>
 
