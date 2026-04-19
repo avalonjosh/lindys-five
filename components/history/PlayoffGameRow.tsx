@@ -92,7 +92,9 @@ export default function PlayoffGameRow({
         </div>
       )}
 
-      {game.gameId && <InlineBoxscore gameId={game.gameId} />}
+      {game.gameId && (
+        <InlineBoxscore gameId={game.gameId} defaultOpen={!game.youtubeId} />
+      )}
     </div>
   );
 }

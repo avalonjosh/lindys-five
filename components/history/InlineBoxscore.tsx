@@ -15,6 +15,7 @@ import type {
 
 interface InlineBoxscoreProps {
   gameId: string;
+  defaultOpen?: boolean;
 }
 
 interface LoadedData {
@@ -87,8 +88,8 @@ function threeStarStatLine(s: ThreeStar): string {
   return '';
 }
 
-export default function InlineBoxscore({ gameId }: InlineBoxscoreProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function InlineBoxscore({ gameId, defaultOpen = false }: InlineBoxscoreProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const [data, setData] = useState<LoadedData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,6 +136,7 @@ export default function InlineBoxscore({ gameId }: InlineBoxscoreProps) {
   return (
     <details
       className="group mt-3 rounded-md border border-gray-200 bg-white"
+      open={isOpen}
       onToggle={(e) => setIsOpen((e.currentTarget as HTMLDetailsElement).open)}
     >
       <summary className="cursor-pointer list-none flex items-center justify-between px-3 py-2 text-xs sm:text-sm font-semibold text-gray-700 hover:text-gray-900">
