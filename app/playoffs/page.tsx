@@ -764,6 +764,14 @@ export default async function PlayoffsPage() {
                   ? 'Confirmed first-round matchups — series win probabilities and Stanley Cup odds'
                   : 'If the season ended today — series win probabilities and Stanley Cup odds'}
             </p>
+            <div className="mt-4">
+              <Link
+                href="/nhl/sabres/history"
+                className="inline-block text-xs md:text-sm text-white/70 hover:text-white underline underline-offset-4 transition-colors"
+              >
+                Sabres Playoff History →
+              </Link>
+            </div>
           </div>
         </header>
 

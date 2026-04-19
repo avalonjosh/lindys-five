@@ -8,6 +8,7 @@ import { generateGameTicketLink } from '@/lib/utils/affiliateLinks';
 import { trackClick } from '@/lib/analytics';
 import { computeSeriesWinProbability } from '@/lib/utils/playoffProbability';
 import { generateAmazonMerchLink } from '@/lib/utils/affiliateLinks';
+import { hasTeamHistory } from '@/lib/data/teamHistory';
 import { ShoppingBag } from 'lucide-react';
 
 export interface JourneyGame {
@@ -200,6 +201,10 @@ function SeriesCard({
   // Round title in display-type form (e.g., "1ST ROUND", "CONFERENCE FINAL", "STANLEY CUP FINAL")
   const titleText = s.roundLabel.replace(/-/g, ' ').toUpperCase();
 
+  // Team slug lookup for the optional "Playoff History" link shown in the top-right corner
+  const teamSlugForHistory = Object.entries(TEAMS).find(([, t]) => t.abbreviation === s.teamAbbrev)?.[0];
+  const showHistoryLink = !!teamSlugForHistory && hasTeamHistory(teamSlugForHistory);
+
   return (
     <div
       className="relative overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-4 sm:p-5"
@@ -215,6 +220,22 @@ function SeriesCard({
       >
         {titleText}
       </Link>
+
+      {/* Top-right: optional link to the team's historical playoff archive */}
+      {showHistoryLink && (
+        <Link
+          href={`/nhl/${teamSlugForHistory}/history`}
+          className={`absolute top-3 md:top-4 right-3 md:right-4 z-10 text-xs md:text-sm font-semibold transition-colors focus:outline-none ${
+            isGoatMode
+              ? 'text-zinc-500 hover:text-zinc-400'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+          title="View full playoff history"
+        >
+          <span className="sm:hidden">History</span>
+          <span className="hidden sm:inline">Playoff History</span>
+        </Link>
+      )}
 
       {/* Mobile: round badge centered above the matchup row (normal flow) */}
       <div className="sm:hidden relative flex justify-center mb-3">
