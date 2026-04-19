@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ChevronDown } from 'lucide-react';
 import type { ConferenceBracket, PlayoffGame, BracketMatchup } from '@/lib/types/playoffs';
 import { TEAMS } from '@/lib/teamConfig';
 
@@ -159,6 +160,10 @@ function GameRow({ row }: { row: ScheduleRow }) {
   );
 }
 
+function getTodayET(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+}
+
 // Extract a YYYY-MM-DD date (ET) from the best available field — explicit gameDate, or converted from startTimeUTC.
 function deriveDateKey(game: PlayoffGame): string | null {
   if (game.gameDate && game.gameDate.length >= 10) return game.gameDate.slice(0, 10);
@@ -218,38 +223,68 @@ export default function PlayoffScheduleList({ eastern, western }: PlayoffSchedul
     );
   }
 
+  const todayET = getTodayET();
+  const pastDates = sortedDates.filter((d) => d < todayET);
+  const currentDates = sortedDates.filter((d) => d >= todayET);
+  const pastGameCount = pastDates.reduce((sum, d) => sum + byDate.get(d)!.length, 0);
+  const hasLiveInPast = pastDates.some((d) =>
+    byDate.get(d)!.some((r) => r.game.gameState === 'LIVE' || r.game.gameState === 'CRIT')
+  );
+
+  const renderDateSection = (date: string) => {
+    const rows = byDate.get(date)!;
+    return (
+      <section key={date}>
+        <div className="flex items-baseline justify-between mb-3 pb-2 border-b border-gray-200">
+          <h3 className="text-lg sm:text-xl font-bold text-gray-900">
+            {formatDateHeader(date)}
+          </h3>
+          <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+            {rows.length} {rows.length === 1 ? 'Game' : 'Games'}
+          </span>
+        </div>
+        <div className="space-y-2">
+          {rows.map((r) => (
+            <GameRow key={r.game.gameId} row={r} />
+          ))}
+        </div>
+      </section>
+    );
+  };
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      {sortedDates.map((date) => {
-        const rows = byDate.get(date)!;
-        return (
-          <section key={date}>
-            <div className="flex items-baseline justify-between mb-3 pb-2 border-b border-gray-200">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900">
-                {formatDateHeader(date)}
-              </h3>
-              <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                {rows.length} {rows.length === 1 ? 'Game' : 'Games'}
-              </span>
-            </div>
-            <div className="space-y-2">
-              {rows.map((r) => (
-                <GameRow key={r.game.gameId} row={r} />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+      {pastDates.length > 0 && (
+        <details className="group" open={hasLiveInPast}>
+          <summary className="cursor-pointer list-none flex items-center justify-between py-1.5 border-b border-gray-100 hover:border-gray-200 transition-colors">
+            <span className="text-xs font-medium uppercase tracking-wider text-gray-400 group-hover:text-gray-500">
+              Completed Games
+            </span>
+            <ChevronDown
+              size={20}
+              className="text-gray-500 transition-transform duration-200 group-open:rotate-180"
+            />
+          </summary>
+          <div className="space-y-6 mt-4">
+            {pastDates.map(renderDateSection)}
+          </div>
+        </details>
+      )}
+
+      {currentDates.map(renderDateSection)}
 
       {tbd.length > 0 && (
-        <details className="group" open={!hasDated}>
+        <details className="group" open={currentDates.length === 0}>
           <summary className="cursor-pointer list-none flex items-center justify-between mb-3 pb-2 border-b border-gray-200 hover:border-gray-300 transition-colors">
             <h3 className="text-lg sm:text-xl font-bold text-gray-700">
               Schedule TBD
             </h3>
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 inline-flex items-center gap-1.5">
               {tbd.length} {tbd.length === 1 ? 'Game' : 'Games'}
-              <span className="transition-transform group-open:rotate-180">▾</span>
+              <ChevronDown
+                size={20}
+                className="text-gray-500 transition-transform duration-200 group-open:rotate-180"
+              />
             </span>
           </summary>
           <div className="space-y-2">
