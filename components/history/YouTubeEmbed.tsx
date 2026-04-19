@@ -3,10 +3,13 @@
 interface YouTubeEmbedProps {
   videoId: string;
   title: string;
+  playlistId?: string;
 }
 
-export default function YouTubeEmbed({ videoId, title }: YouTubeEmbedProps) {
-  const src = `https://www.youtube-nocookie.com/embed/${videoId}`;
+export default function YouTubeEmbed({ videoId, title, playlistId }: YouTubeEmbedProps) {
+  const src = playlistId
+    ? `https://www.youtube-nocookie.com/embed/${videoId}?list=${encodeURIComponent(playlistId)}`
+    : `https://www.youtube-nocookie.com/embed/${videoId}`;
 
   return (
     <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black">

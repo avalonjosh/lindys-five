@@ -86,6 +86,7 @@ export default function PlayoffGameRow({
         <div className="mt-3">
           <YouTubeEmbed
             videoId={game.youtubeId}
+            playlistId={game.youtubePlaylistId}
             title={`Game ${game.gameNumber} highlights — ${formatGameDate(game.date)}`}
           />
         </div>

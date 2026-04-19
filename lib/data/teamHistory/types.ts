@@ -11,6 +11,7 @@ export interface PlayoffGame {
   overtime?: boolean;
   notes?: string;
   youtubeId?: string;
+  youtubePlaylistId?: string;
   gameId?: string;
 }
 
