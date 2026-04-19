@@ -221,19 +221,18 @@ function SeriesCard({
         {titleText}
       </Link>
 
-      {/* Top-right: optional link to the team's historical playoff archive */}
+      {/* Top-right: optional link to the team's historical playoff archive (desktop only; mobile shows this link in the team header instead) */}
       {showHistoryLink && (
         <Link
           href={`/nhl/${teamSlugForHistory}/history`}
-          className={`absolute top-3 md:top-4 right-3 md:right-4 z-10 text-xs md:text-sm font-semibold transition-colors focus:outline-none ${
+          className={`hidden sm:block absolute top-3 md:top-4 right-3 md:right-4 z-10 text-xs md:text-sm font-semibold transition-colors focus:outline-none ${
             isGoatMode
               ? 'text-zinc-500 hover:text-zinc-400'
               : 'text-gray-500 hover:text-gray-700'
           }`}
           title="View full playoff history"
         >
-          <span className="sm:hidden">History</span>
-          <span className="hidden sm:inline">Playoff History</span>
+          Playoff History
         </Link>
       )}
 

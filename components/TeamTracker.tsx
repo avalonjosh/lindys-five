@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { GameChunk, SeasonStats, ChunkStats, GameResult } from '@/lib/types';
 import { fetchSabresSchedule, fetchLastSeasonComparison, isRateLimitError } from '@/lib/services/nhlApi';
@@ -15,6 +16,7 @@ import ClinchCelebration from '@/components/ClinchCelebration';
 import SteamEffect from '@/components/SteamEffect';
 import MerchCTA from '@/components/affiliate/MerchCTA';
 import PlayoffJourney, { type JourneySeries } from '@/components/playoffs/PlayoffJourney';
+import { hasTeamHistory } from '@/lib/data/teamHistory';
 import {
   saveChunkStatsToCache,
   loadChunkStatsFromCache
@@ -860,6 +862,16 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
           >
             5-Game Set Analysis &bull; Target: 6+ points per set
           </p>
+          {hasTeamHistory(team.id) && (
+            <div className="sm:hidden mt-2">
+              <Link
+                href={`/nhl/${team.id}/history`}
+                className="inline-block text-xs font-medium text-white/70 hover:text-white underline underline-offset-4 transition-colors"
+              >
+                Playoff History →
+              </Link>
+            </div>
+          )}
           <div className="mt-2">
             <MerchCTA
               teamCity={team.city}
