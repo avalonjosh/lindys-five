@@ -28,11 +28,17 @@ interface ParsedGoalie extends BoxscoreGoalie {
   shShots: number;
 }
 
-function parseSavesShots(field: string): { saves: number; shots: number } {
-  // Format is "SV-SA" like "25-28"
-  const parts = field.split('-');
+function parseSavesShots(field: string | undefined | null): { saves: number; shots: number } {
+  // NHL API uses "SV-SA" (e.g., "25-28") on modern games and "SV/SA" on some historical games.
+  // Per-situation fields (even/PP/SH) can also be missing entirely on older playoff games.
+  if (!field) return { saves: 0, shots: 0 };
+  const parts = field.split(/[-/]/);
   if (parts.length === 2) {
-    return { saves: parseInt(parts[0], 10), shots: parseInt(parts[1], 10) };
+    const saves = parseInt(parts[0], 10);
+    const shots = parseInt(parts[1], 10);
+    if (!Number.isNaN(saves) && !Number.isNaN(shots)) {
+      return { saves, shots };
+    }
   }
   return { saves: 0, shots: 0 };
 }

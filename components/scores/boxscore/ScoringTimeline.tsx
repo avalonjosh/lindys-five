@@ -11,8 +11,10 @@ interface ScoringTimelineProps {
   awayTeamAbbrev: string;
 }
 
-function timeToSeconds(time: string): number {
+function timeToSeconds(time: string | undefined | null): number {
+  if (!time) return 0;
   const [minutes, seconds] = time.split(':').map(Number);
+  if (Number.isNaN(minutes) || Number.isNaN(seconds)) return 0;
   return minutes * 60 + seconds;
 }
 

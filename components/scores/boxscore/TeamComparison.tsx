@@ -43,7 +43,8 @@ const STAT_ORDER = [
  * - "52.3" (faceoff %) -> 52.3
  * - "14" -> 14
  */
-function parseStatValue(value: string): number {
+function parseStatValue(value: string | undefined | null): number {
+  if (!value) return 0;
   if (value.includes('/')) {
     const parts = value.split('/');
     return parseFloat(parts[0]) || 0;

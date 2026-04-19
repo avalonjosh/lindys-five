@@ -30,9 +30,14 @@ const columns: { key: SortColumn; label: string; abbr: string }[] = [
   { key: 'toi', label: 'TOI', abbr: 'TOI' },
 ];
 
-function toiToSeconds(toi: string): number {
+function toiToSeconds(toi: string | undefined | null): number {
+  if (!toi) return 0;
   const parts = toi.split(':');
-  return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+  if (parts.length !== 2) return 0;
+  const mins = parseInt(parts[0], 10);
+  const secs = parseInt(parts[1], 10);
+  if (Number.isNaN(mins) || Number.isNaN(secs)) return 0;
+  return mins * 60 + secs;
 }
 
 function getSortValue(player: BoxscorePlayer, col: SortColumn): string | number {
