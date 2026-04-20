@@ -8,6 +8,7 @@ interface PlayoffGameRowProps {
   game: PlayoffGame;
   teamAbbreviation: string;
   opponentAbbreviation: string;
+  defaultBoxscoreOpen?: boolean;
 }
 
 function formatGameDate(iso: string): string {
@@ -31,6 +32,7 @@ export default function PlayoffGameRow({
   game,
   teamAbbreviation,
   opponentAbbreviation,
+  defaultBoxscoreOpen,
 }: PlayoffGameRowProps) {
   const won = game.teamScore > game.opponentScore;
 
@@ -49,7 +51,7 @@ export default function PlayoffGameRow({
           </p>
           {game.overtime && (
             <span className="inline-flex items-center text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
-              OT
+              {game.overtimePeriods && game.overtimePeriods > 1 ? `${game.overtimePeriods}OT` : 'OT'}
             </span>
           )}
         </div>
@@ -93,7 +95,10 @@ export default function PlayoffGameRow({
       )}
 
       {game.gameId && (
-        <InlineBoxscore gameId={game.gameId} defaultOpen={!game.youtubeId} />
+        <InlineBoxscore
+          gameId={game.gameId}
+          defaultOpen={defaultBoxscoreOpen ?? !game.youtubeId}
+        />
       )}
     </div>
   );

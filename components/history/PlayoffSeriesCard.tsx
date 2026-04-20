@@ -91,16 +91,29 @@ export default function PlayoffSeriesCard({
               Game-by-game details coming soon.
             </p>
           ) : (
-            <div className="space-y-3">
-              {series.games.map((game) => (
-                <PlayoffGameRow
-                  key={game.gameNumber}
-                  game={game}
-                  teamAbbreviation={teamAbbreviation}
-                  opponentAbbreviation={series.opponent.abbreviation}
-                />
-              ))}
-            </div>
+            (() => {
+              // If the whole series has no video highlights, keep only Game 1's box score
+              // expanded by default so users aren't flooded with stacked box scores.
+              const seriesHasAnyVideo = series.games.some((g) => g.youtubeId || g.youtubePlaylistId);
+              return (
+                <div className="space-y-3">
+                  {series.games.map((game, idx) => {
+                    const defaultBoxscoreOpen = seriesHasAnyVideo
+                      ? !game.youtubeId
+                      : idx === 0;
+                    return (
+                      <PlayoffGameRow
+                        key={game.gameNumber}
+                        game={game}
+                        teamAbbreviation={teamAbbreviation}
+                        opponentAbbreviation={series.opponent.abbreviation}
+                        defaultBoxscoreOpen={defaultBoxscoreOpen}
+                      />
+                    );
+                  })}
+                </div>
+              );
+            })()
           )}
         </div>
       )}

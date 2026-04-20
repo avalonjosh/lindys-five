@@ -9,6 +9,8 @@ export interface PlayoffGame {
   opponentScore: number;
   location: GameLocation;
   overtime?: boolean;
+  /** Number of OT periods played (2 = 2OT, 3 = 3OT, 4 = 4OT). Omit or set to 1 for a single-OT game. */
+  overtimePeriods?: number;
   notes?: string;
   youtubeId?: string;
   youtubePlaylistId?: string;
