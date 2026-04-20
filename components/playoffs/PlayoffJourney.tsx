@@ -165,12 +165,12 @@ function CupWinsCard({ roundWins, activeSeries, teamColors, darkModeColors, isGo
   } else if (eliminated) {
     milestoneText = `Eliminated in the ${currentRoundLabel}`;
   } else if (cupOddsRank) {
-    const { rank, total } = cupOddsRank;
+    const { rank } = cupOddsRank;
     isRankMilestone = true;
     if (rank === 1) {
-      milestoneText = `Best Cup odds among ${total} remaining teams`;
+      milestoneText = 'Best Cup odds';
     } else {
-      milestoneText = `${ordinal(rank)}-best Cup odds among ${total} remaining teams`;
+      milestoneText = `${ordinal(rank)}-best Cup odds`;
     }
   } else if (advanced) {
     const next = ROUND_DISPLAY_NAME[activeRound + 1] || 'next round';
@@ -206,8 +206,13 @@ function CupWinsCard({ roundWins, activeSeries, teamColors, darkModeColors, isGo
         )}
       </div>
 
-      {/* Hero stat boxes — Playoff Wins + Cup Odds, side-by-side on every breakpoint */}
-      <div className="grid grid-cols-2 gap-2 md:gap-3 mb-3 md:mb-4">
+      {/* Hero stat boxes — mobile: 2 boxes (Playoff Wins, Cup Odds). Desktop: 3 boxes (adds Current Round). */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-3 mb-2 md:mb-4">
+        <div className={`${statBoxClass} hidden sm:block`} style={statBoxStyle}>
+          <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: labelColor }}>Current Round</div>
+          <div className="text-xl md:text-2xl font-bold leading-tight" style={{ color: strongText }}>{currentRoundLabel}</div>
+          <div className="text-xs mt-1" style={{ color: subText }}>best of 7</div>
+        </div>
         <div className={statBoxClass} style={statBoxStyle}>
           <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: labelColor }}>Playoff Wins</div>
           <div className="text-2xl md:text-3xl font-bold" style={{ color: strongText }}>{total}</div>
@@ -227,19 +232,15 @@ function CupWinsCard({ roundWins, activeSeries, teamColors, darkModeColors, isGo
         </Link>
       </div>
 
-      {/* Round labels above the segmented bar */}
-      <div className="flex justify-between mb-2 px-0.5">
+      {/* Round labels above the segmented bar — body font (matches stat-box labels) */}
+      <div className="flex justify-between mb-1 px-0.5">
         {[0, 1, 2, 3].map((roundIdx) => {
           const isActive = roundIdx + 1 === activeRound;
           return (
             <div key={roundIdx} className="flex-1 text-center">
               <span
-                className="text-[10px] md:text-xs font-bold uppercase tracking-wider"
-                style={{
-                  color: isActive ? activeLabelColor : mutedText,
-                  fontFamily: 'Bebas Neue, sans-serif',
-                  letterSpacing: '0.12em',
-                }}
+                className="text-xs font-bold uppercase tracking-wider"
+                style={{ color: isActive ? activeLabelColor : mutedText }}
               >
                 {CUP_GROUP_LABELS[roundIdx]}
               </span>
