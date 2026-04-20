@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { getPostBySlug } from '@/lib/kv';
-import { sendGameRecapNewsletter, sendSetRecapNewsletter, sendBoxscoreRecapForTeam, sendSetRecapForTeam, getVerifiedSubscribersForTeam } from '@/lib/email';
+import { sendGameRecapNewsletter, sendSetRecapNewsletter, sendBoxscoreRecapForTeam, sendSetRecapForTeam, getVerifiedSubscribersForTeam, sendAnnouncementEmail, getAllSubscribers, type AnnouncementSlug } from '@/lib/email';
 import { TEAMS } from '@/lib/teamConfig';
 import type { NewsletterSubscriber } from '@/lib/types';
 
@@ -29,7 +29,39 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { slug, team, type, testEmail } = body;
+    const { slug, team, type, testEmail, announcementSlug } = body;
+
+    // Announcement send — goes to all verified subscribers regardless of team
+    if (type === 'announcement') {
+      const KNOWN_SLUGS: AnnouncementSlug[] = ['road-to-cup-launch'];
+      const knownSlug: AnnouncementSlug = KNOWN_SLUGS.includes(announcementSlug) ? announcementSlug : 'road-to-cup-launch';
+
+      if (testEmail) {
+        if (!isAdmin) {
+          return NextResponse.json({ error: 'Test sends require admin auth' }, { status: 401 });
+        }
+        await sendAnnouncementEmail(knownSlug, [{
+          id: `test-${Date.now()}`,
+          email: testEmail,
+          teams: team ? [team] : [],
+          createdAt: new Date().toISOString(),
+          verified: true,
+          source: 'admin-test',
+        }]);
+        return NextResponse.json({ success: true, message: `Test announcement sent to ${testEmail}` });
+      }
+
+      const allSubs = await getAllSubscribers();
+      const recipients = allSubs.filter((s) => s.verified && !s.unsubscribedAt);
+      if (recipients.length === 0) {
+        return NextResponse.json({ error: 'No verified subscribers' }, { status: 400 });
+      }
+      await sendAnnouncementEmail(knownSlug, recipients);
+      return NextResponse.json({
+        success: true,
+        message: `Announcement sent to ${recipients.length} subscriber(s)`,
+      });
+    }
 
     // Team-based send
     if (team) {

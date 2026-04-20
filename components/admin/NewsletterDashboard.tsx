@@ -13,7 +13,8 @@ export default function NewsletterDashboard() {
   const [sends, setSends] = useState<EmailSendRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendTeam, setSendTeam] = useState('');
-  const [sendType, setSendType] = useState<'game-recap' | 'set-recap'>('game-recap');
+  const [sendType, setSendType] = useState<'game-recap' | 'set-recap' | 'announcement'>('game-recap');
+  const [announcementSlug, setAnnouncementSlug] = useState('road-to-cup-launch');
   const [sending, setSending] = useState(false);
   const [sendMessage, setSendMessage] = useState('');
   const [testMode, setTestMode] = useState(false);
@@ -83,19 +84,23 @@ export default function NewsletterDashboard() {
   }, [subscribers]);
 
   async function handleManualSend() {
-    if (!sendTeam) return;
+    // Announcements don't need a team; recaps do.
+    if (sendType !== 'announcement' && !sendTeam) return;
     setSending(true);
     setSendMessage('');
     try {
+      const payload: Record<string, unknown> = { type: sendType };
+      if (sendType === 'announcement') {
+        payload.announcementSlug = announcementSlug;
+      } else {
+        payload.team = sendTeam;
+      }
+      if (testMode) payload.testEmail = TEST_EMAIL;
       const res = await fetch('/api/newsletter/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          team: sendTeam,
-          type: sendType,
-          ...(testMode ? { testEmail: TEST_EMAIL } : {}),
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       setSendMessage(res.ok ? data.message : data.error);
@@ -206,11 +211,13 @@ export default function NewsletterDashboard() {
               <Send className="w-5 h-5" /> Manual Send
             </h2>
             <p className="text-gray-500 text-sm mb-3">
-              Send an email recap for a team's most recent game or completed set.
+              {sendType === 'announcement'
+                ? 'Send a product update to every verified subscriber.'
+                : "Send an email recap for a team's most recent game or completed set."}
             </p>
             <div className="flex gap-2 mb-2">
               <button
-                onClick={() => setSendType('game-recap')}
+                onClick={() => { setSendType('game-recap'); setSendMessage(''); }}
                 className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   sendType === 'game-recap' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
@@ -218,28 +225,46 @@ export default function NewsletterDashboard() {
                 Game Recap
               </button>
               <button
-                onClick={() => setSendType('set-recap')}
+                onClick={() => { setSendType('set-recap'); setSendMessage(''); }}
                 className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   sendType === 'set-recap' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
                 Set Recap
               </button>
+              <button
+                onClick={() => { setSendType('announcement'); setSendMessage(''); }}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  sendType === 'announcement' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Announcement
+              </button>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
-              <select
-                value={sendTeam}
-                onChange={(e) => { setSendTeam(e.target.value); setSendMessage(''); }}
-                className="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-blue-400 bg-white"
-              >
-                <option value="">Select a team...</option>
-                {allTeams.map((t) => (
-                  <option key={t} value={t}>{t} ({stats.teamCounts[t] || 0} subscribers)</option>
-                ))}
-              </select>
+              {sendType === 'announcement' ? (
+                <select
+                  value={announcementSlug}
+                  onChange={(e) => { setAnnouncementSlug(e.target.value); setSendMessage(''); }}
+                  className="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-blue-400 bg-white"
+                >
+                  <option value="road-to-cup-launch">Road to the Cup + Sabres History launch</option>
+                </select>
+              ) : (
+                <select
+                  value={sendTeam}
+                  onChange={(e) => { setSendTeam(e.target.value); setSendMessage(''); }}
+                  className="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-sm focus:outline-none focus:border-blue-400 bg-white"
+                >
+                  <option value="">Select a team...</option>
+                  {allTeams.map((t) => (
+                    <option key={t} value={t}>{t} ({stats.teamCounts[t] || 0} subscribers)</option>
+                  ))}
+                </select>
+              )}
               <button
                 onClick={handleManualSend}
-                disabled={sending || !sendTeam}
+                disabled={sending || (sendType !== 'announcement' && !sendTeam)}
                 className={`px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 ${
                   testMode
                     ? 'bg-amber-600 text-white hover:bg-amber-700'

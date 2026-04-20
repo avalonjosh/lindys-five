@@ -1091,6 +1091,199 @@ function allRoundNumber(abbrev: string): number {
   return abbrev === 'R1' ? 1 : abbrev === 'R2' ? 2 : abbrev === 'CF' ? 3 : abbrev === 'SCF' ? 4 : 0;
 }
 
+// ─── Announcements ───────────────────────────────────────────────
+
+// Announcements are one-off product updates (new features, milestones, changes).
+// Unlike recaps they're not team-specific — they go to every verified subscriber —
+// so the renderer personalizes by the subscriber's primary team color/link when
+// available, and falls back to the default brand blue.
+
+export type AnnouncementSlug = 'road-to-cup-launch';
+
+interface AnnouncementContent {
+  subject: string;
+  heroEyebrow: string;
+  heroTitle: string;
+  heroBody: string;
+}
+
+const ANNOUNCEMENTS: Record<AnnouncementSlug, AnnouncementContent> = {
+  'road-to-cup-launch': {
+    subject: "New on Lindy's Five: Road to the Cup tracker",
+    heroEyebrow: "What's New",
+    heroTitle: 'Two new playoff features',
+    heroBody: 'Just in time for the 2026 playoffs — a new way to follow your team\'s journey to 16 Cup-clinching wins, plus every Sabres playoff series since 1972.',
+  },
+};
+
+const DEFAULT_BRAND_COLOR = '#003087'; // Sabres blue — also the site brand color
+
+export async function sendAnnouncementEmail(
+  slug: AnnouncementSlug,
+  subscribers: NewsletterSubscriber[],
+) {
+  const content = ANNOUNCEMENTS[slug];
+  if (!content) throw new Error(`Unknown announcement slug: ${slug}`);
+  if (subscribers.length === 0) return;
+
+  const sendId = await recordEmailSend('announcement', subscribers.length, content.subject);
+
+  // Personalize per subscriber: primary team color + direct link to their tracker.
+  // sendBatchEmails uses a single htmlTemplate, so we build a batch-friendly default template;
+  // for announcements we instead send per-subscriber here so each email gets the right team.
+  const BATCH_SIZE = 50;
+  for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
+    const batch = subscribers.slice(i, i + BATCH_SIZE);
+    await Promise.all(batch.map(async (sub) => {
+      const primaryTeamSlug = sub.teams[0];
+      const primaryTeam = primaryTeamSlug ? TEAMS[primaryTeamSlug] : undefined;
+      const accent = primaryTeam?.colors.primary || DEFAULT_BRAND_COLOR;
+      const trackerUrl = primaryTeamSlug
+        ? `${SITE_URL}/nhl/${primaryTeamSlug}?utm_source=newsletter&utm_medium=email&utm_campaign=${slug}&utm_content=tracker`
+        : `${SITE_URL}/nhl-playoff-odds?utm_source=newsletter&utm_medium=email&utm_campaign=${slug}&utm_content=tracker`;
+      const unsubscribeUrl = `${SITE_URL}/api/newsletter/unsubscribe?id=${sub.id}`;
+      const html = renderAnnouncementEmail(slug, { accent, trackerUrl, unsubscribeUrl, primaryTeamName: primaryTeam?.name });
+      try {
+        const res = await getResend().emails.send({
+          from: FROM_EMAIL,
+          to: sub.email,
+          subject: content.subject,
+          html,
+          headers: {
+            'List-Unsubscribe': `<${unsubscribeUrl}>`,
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+          },
+        });
+        if (sendId && res.data?.id) {
+          await kv.set(`email:resend-map:${res.data.id}`, sendId, { ex: 60 * 60 * 24 * 30 });
+        }
+      } catch (err) {
+        console.error(`Failed to send announcement to ${sub.email}:`, err);
+      }
+    }));
+  }
+}
+
+function renderAnnouncementEmail(
+  slug: AnnouncementSlug,
+  opts: { accent: string; trackerUrl: string; unsubscribeUrl: string; primaryTeamName?: string }
+): string {
+  const content = ANNOUNCEMENTS[slug];
+  const { accent, trackerUrl, unsubscribeUrl } = opts;
+  const historyUrl = `${SITE_URL}/nhl/sabres/history?utm_source=newsletter&utm_medium=email&utm_campaign=${slug}&utm_content=sabres-history`;
+
+  // Road to the Cup mockup — 16 game cells in 4 round groups of 4, with 2 stat boxes.
+  // Illustrative numbers (2 wins, 19% cup odds) — not personalized to the subscriber's actual state.
+  const MOCK_WINS = 2;
+  const mockCells = [0, 1, 2, 3].map((roundIdx) => {
+    const isActive = roundIdx === 0; // R1 active in the mockup
+    const winsInRound = roundIdx === 0 ? MOCK_WINS : 0;
+    const cells = [0, 1, 2, 3].map((segIdx) => {
+      const filled = segIdx < winsInRound;
+      const bg = filled ? accent : '#ffffff';
+      const border = filled ? accent : (isActive ? `${accent}80` : '#e2e8f0');
+      return `<td width="14" height="20" style="padding:0 1px;"><div style="height:20px;background:${bg};border:1.5px solid ${border};border-radius:3px;"></div></td>`;
+    }).join('');
+    const groupBg = isActive ? `${accent}14` : 'transparent';
+    return `<td style="padding:0 3px;"><table cellpadding="0" cellspacing="0" style="background:${groupBg};border-radius:4px;padding:2px;"><tr>${cells}</tr></table></td>`;
+  }).join('');
+
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:20px;">
+    <tr><td align="center">
+      <table cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
+
+        <!-- Header -->
+        <tr><td style="background:${accent};padding:16px 20px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td><h1 style="margin:0;color:#ffffff;font-size:22px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;letter-spacing:2px;text-transform:uppercase;font-style:normal;">Lindy's Five</h1></td>
+              <td align="right"><span style="color:rgba(255,255,255,0.7);font-size:12px;text-transform:uppercase;letter-spacing:1px;">${content.heroEyebrow}</span></td>
+            </tr>
+          </table>
+        </td></tr>
+
+        <!-- Hero -->
+        <tr><td style="padding:28px 24px 12px;">
+          <h2 style="margin:0 0 12px;font-size:26px;font-weight:800;color:#0f172a;line-height:1.2;">${content.heroTitle}</h2>
+          <p style="margin:0;font-size:15px;line-height:1.6;color:#475569;">${content.heroBody}</p>
+        </td></tr>
+
+        <!-- Feature 1: Road to the Cup -->
+        <tr><td style="padding:20px 20px 0;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+            <tr><td style="padding:18px 18px 14px;">
+              <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Feature 1 &middot; Playoff Mode</span>
+              <h3 style="margin:8px 0 8px;font-size:20px;font-weight:800;color:#0f172a;">Road to the Cup</h3>
+              <p style="margin:0 0 16px;font-size:14px;line-height:1.55;color:#475569;">Track every win on the path to 16. See Cup odds, round-by-round progress, and where your team ranks among the teams still alive.</p>
+
+              <!-- Mockup card -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:14px;">
+                <tr><td style="padding:12px 14px 8px;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td><span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Playoff Wins</span><br/><span style="font-size:22px;font-weight:800;color:#0f172a;">${MOCK_WINS}<span style="font-size:13px;color:#94a3b8;font-weight:600;"> / 16</span></span></td>
+                      <td align="right"><span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Cup Odds</span><br/><span style="font-size:22px;font-weight:800;color:${accent};">19%</span></td>
+                    </tr>
+                  </table>
+                </td></tr>
+                <tr><td style="padding:0 14px 6px;">
+                  <table cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr>
+                    <td align="center" style="font-size:10px;font-weight:700;color:${accent};letter-spacing:1px;padding:2px 6px;">R1</td>
+                    <td align="center" style="font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:1px;padding:2px 10px;">R2</td>
+                    <td align="center" style="font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:1px;padding:2px 10px;">CF</td>
+                    <td align="center" style="font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:1px;padding:2px 6px;">SCF</td>
+                  </tr></table>
+                </td></tr>
+                <tr><td style="padding:0 14px 12px;">
+                  <table cellpadding="0" cellspacing="0" style="margin:0 auto;"><tr>${mockCells}</tr></table>
+                </td></tr>
+              </table>
+
+              <a href="${trackerUrl}" style="display:inline-block;background:${accent};color:#ffffff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;">See your team's road &rarr;</a>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        <!-- Feature 2: Sabres Playoff History -->
+        <tr><td style="padding:16px 20px 4px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
+            <tr><td style="padding:18px 18px 14px;">
+              <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Feature 2 &middot; Deep Dive</span>
+              <h3 style="margin:8px 0 8px;font-size:20px;font-weight:800;color:#0f172a;">50+ years of Sabres playoff history</h3>
+              <p style="margin:0 0 14px;font-size:14px;line-height:1.55;color:#475569;">Every Sabres playoff series since 1972, populated with game-by-game box scores and video highlights for the modern runs.</p>
+              <table cellpadding="0" cellspacing="0" style="margin-bottom:14px;">
+                <tr><td style="padding:2px 0;font-size:13px;color:#334155;">&middot; 25 playoff appearances, every series</td></tr>
+                <tr><td style="padding:2px 0;font-size:13px;color:#334155;">&middot; Tap any game for the full box score</td></tr>
+                <tr><td style="padding:2px 0;font-size:13px;color:#334155;">&middot; Classics: '75 Fog Game, Hašek's '94 4OT, May Day, No Goal</td></tr>
+              </table>
+              <a href="${historyUrl}" style="display:inline-block;background:#ffffff;color:${accent};padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;border:2px solid ${accent};">Browse Sabres history &rarr;</a>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td style="padding:24px 20px 0;"></td></tr>
+        <tr><td style="background:#f8fafc;padding:16px 20px;border-top:1px solid #e2e8f0;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td><p style="margin:0;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; NHL Playoff Odds &amp; Tracker</p></td>
+              <td align="right"><a href="${unsubscribeUrl}" style="color:#94a3b8;font-size:12px;text-decoration:none;">Unsubscribe</a></td>
+            </tr>
+          </table>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
 // ─── Email Section Renderers ─────────────────────────────────────
 
 function collectGoalScorers(
