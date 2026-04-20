@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { TEAMS } from '@/lib/teamConfig';
+import { buildCupOdds } from '@/lib/utils/cupOdds';
+import type { StandingsTeam } from '@/lib/types/boxscore';
+import type { PlayoffBracketResponse } from '@/lib/types/playoffs';
 
 const NHL_API = 'https://api-web.nhle.com/v1';
 const SEASON = '20252026';
@@ -192,10 +195,16 @@ export async function GET() {
       r.series.some((s) => s.games.some((g) => g.gameState === 'LIVE' || g.gameState === 'CRIT'))
     );
 
+    const bracketResponse: PlayoffBracketResponse = { rounds, seasonId: Number(SEASON) };
+    const standingsMap = new Map<string, StandingsTeam>();
+    (standings as StandingsTeam[]).forEach((t) => standingsMap.set(t.teamAbbrev.default, t));
+    const cupOdds = buildCupOdds(bracketResponse, standingsMap);
+
     return NextResponse.json({
-      bracket: { rounds, seasonId: Number(SEASON) },
+      bracket: bracketResponse,
       standings,
       hasLiveGames,
+      cupOdds,
     });
   } catch {
     return NextResponse.json({ error: 'Failed to fetch bracket' }, { status: 500 });

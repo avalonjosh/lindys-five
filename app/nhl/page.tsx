@@ -3,6 +3,26 @@ import Link from 'next/link';
 import FavoriteTeamsGrid from '@/components/landing/FavoriteTeamsGrid';
 import GameTicker from '@/components/landing/GameTicker';
 
+export const revalidate = 300;
+
+async function isPlayoffsActive(): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch('https://api-web.nhle.com/v1/playoff-series/carousel/20252026', {
+      next: { revalidate: 300 },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!res.ok) return false;
+    const data = await res.json();
+    const rounds = data?.rounds || [];
+    return rounds.some((r: { series?: unknown[] }) => r.series && r.series.length > 0);
+  } catch {
+    return false;
+  }
+}
+
 export const metadata: Metadata = {
   title: "NHL Playoff Odds & Standings 2025-26 — Projections for All 32 Teams",
   description:
@@ -26,7 +46,9 @@ export const metadata: Metadata = {
   },
 };
 
-export default function NHLLandingPage() {
+export default async function NHLLandingPage() {
+  const playoffsActive = await isPlayoffsActive();
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
@@ -172,7 +194,7 @@ export default function NHLLandingPage() {
             </p>
           </div>
 
-          <FavoriteTeamsGrid sport="nhl" />
+          <FavoriteTeamsGrid sport="nhl" playoffsActive={playoffsActive} />
 
           {/* Quick Links */}
           <div className="text-center mb-12">

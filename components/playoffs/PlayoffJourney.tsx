@@ -73,6 +73,8 @@ interface PlayoffJourneyProps {
   teamColors: TeamColors;
   darkModeColors: DarkModeColors;
   isGoatMode: boolean;
+  cupOdds?: number | null;
+  cupOddsRank?: { rank: number; total: number } | null;
 }
 
 const ROUND_ABBREV: Record<number, string> = { 1: 'R1', 2: 'R2', 3: 'CF', 4: 'SCF' };
@@ -99,28 +101,203 @@ function formatGameDateTime(utc: string | undefined, tbd: boolean): { date: stri
   return { date, time };
 }
 
-// --- Dot row (win/loss history) ---
-function DotRow({ total, outcomes, winColor, lossColor, unplayedColor }: {
-  total: number;
-  outcomes: Array<'W' | 'L'>;
-  winColor: string;
-  lossColor: string;
-  unplayedColor: string;
+// --- Cup wins card (Road to the Cup — mirrors the Regular Season Progress card) ---
+const CUP_GROUP_LABELS = ['R1', 'R2', 'CF', 'SCF'];
+const ROUND_DISPLAY_NAME: Record<number, string> = {
+  1: '1st Round',
+  2: '2nd Round',
+  3: 'Conference Final',
+  4: 'Stanley Cup Final',
+};
+
+function CupWinsCard({ roundWins, activeSeries, teamColors, darkModeColors, isGoatMode, cupOdds, cupOddsRank }: {
+  roundWins: number[]; // length 4: wins in R1, R2, CF, SCF
+  activeSeries: JourneySeries;
+  teamColors: TeamColors;
+  darkModeColors: DarkModeColors;
+  isGoatMode: boolean;
+  cupOdds?: number | null;
+  cupOddsRank?: { rank: number; total: number } | null;
 }) {
+  const accent = isGoatMode ? darkModeColors.accent : teamColors.primary;
+  const cardBg = isGoatMode ? darkModeColors.cardBackground || darkModeColors.background : '#ffffff';
+  const borderColor = isGoatMode ? darkModeColors.border : '#e5e7eb';
+  const emptyBorder = isGoatMode ? darkModeColors.border : '#e5e7eb';
+  const strongText = isGoatMode ? darkModeColors.text : '#111827';
+  const mutedText = isGoatMode ? `${darkModeColors.text}66` : '#6b7280';
+  const subText = isGoatMode ? `${darkModeColors.text}99` : '#6b7280';
+  const labelColor = isGoatMode ? `${darkModeColors.text}cc` : '#475569';
+  const activeLabelColor = isGoatMode ? darkModeColors.accent : teamColors.primary;
+
+  const total = roundWins.reduce((sum, w) => sum + Math.min(w, 4), 0);
+  const champion = total >= 16;
+  const percent = (total / 16) * 100;
+
+  const activeRound = activeSeries.roundNumber;
+  const advanced = activeSeries.didAdvance;
+  const eliminated = activeSeries.isComplete && !advanced;
+  const winsToClinch = Math.max(0, activeSeries.neededToWin - activeSeries.teamWins);
+  const currentRoundLabel = ROUND_DISPLAY_NAME[activeRound] || `Round ${activeRound}`;
+
+  // Optional Playoff History link (desktop only — mobile shows it in the team header)
+  const teamSlugForHistory = Object.entries(TEAMS).find(([, t]) => t.abbreviation === activeSeries.teamAbbrev)?.[0];
+  const showHistoryLink = !!teamSlugForHistory && hasTeamHistory(teamSlugForHistory);
+
+  // Stat box styling (mirrors ProgressBar's stat cards)
+  const statBoxClass = 'rounded-xl p-2 md:p-3 border';
+  const statBoxStyle: React.CSSProperties = isGoatMode
+    ? {
+        background: `linear-gradient(to bottom right, ${darkModeColors.cardBackground || darkModeColors.background}f0, ${darkModeColors.cardBackground || darkModeColors.background}e0)`,
+        borderColor: darkModeColors.border,
+      }
+    : { background: 'linear-gradient(to bottom right, #eff6ff, #dbeafe)', borderColor: '#bfdbfe' };
+
+  // Caption: rank among Cup contenders (falls back to milestone copy when rank unavailable)
+  const ordinal = (n: number): string => {
+    const s = ['th', 'st', 'nd', 'rd'];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  };
+  let milestoneText: string;
+  let isRankMilestone = false;
+  if (champion) {
+    milestoneText = 'Stanley Cup Champions';
+  } else if (eliminated) {
+    milestoneText = `Eliminated in the ${currentRoundLabel}`;
+  } else if (cupOddsRank) {
+    const { rank, total } = cupOddsRank;
+    isRankMilestone = true;
+    if (rank === 1) {
+      milestoneText = `Best Cup odds among ${total} remaining teams`;
+    } else {
+      milestoneText = `${ordinal(rank)}-best Cup odds among ${total} remaining teams`;
+    }
+  } else if (advanced) {
+    const next = ROUND_DISPLAY_NAME[activeRound + 1] || 'next round';
+    milestoneText = `Won the ${currentRoundLabel} — on to the ${next}`;
+  } else if (winsToClinch === 1) {
+    milestoneText = `1 win away from clinching the ${currentRoundLabel}`;
+  } else {
+    milestoneText = `Need ${winsToClinch} more wins to clinch the ${currentRoundLabel}`;
+  }
+
   return (
-    <div className="flex gap-1.5 justify-center">
-      {Array.from({ length: total }).map((_, i) => {
-        const o = outcomes[i];
-        const color = o === 'W' ? winColor : o === 'L' ? lossColor : 'transparent';
-        const borderColor = o ? 'transparent' : unplayedColor;
-        return (
-          <span
-            key={i}
-            className="w-2.5 h-2.5 rounded-full border-2"
-            style={{ backgroundColor: color, borderColor: o ? color : borderColor }}
-          />
-        );
-      })}
+    <div
+      className="rounded-2xl shadow-lg p-4 sm:p-5"
+      style={{ backgroundColor: cardBg, borderColor, borderStyle: 'solid', borderWidth: 2 }}
+    >
+      {/* Header row */}
+      <div className="flex items-center justify-between mb-3 md:mb-4">
+        <h3 className="text-xl md:text-2xl font-bold" style={{ color: strongText }}>
+          Road to the Cup
+        </h3>
+        {showHistoryLink && (
+          <Link
+            href={`/nhl/${teamSlugForHistory}/history`}
+            className={`text-xs md:text-sm font-semibold transition-colors focus:outline-none ${
+              isGoatMode
+                ? 'text-zinc-500 hover:text-zinc-400'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+            title="View full playoff history"
+          >
+            Playoff History
+          </Link>
+        )}
+      </div>
+
+      {/* Hero stat boxes — Playoff Wins + Cup Odds, side-by-side on every breakpoint */}
+      <div className="grid grid-cols-2 gap-2 md:gap-3 mb-3 md:mb-4">
+        <div className={statBoxClass} style={statBoxStyle}>
+          <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: labelColor }}>Playoff Wins</div>
+          <div className="text-2xl md:text-3xl font-bold" style={{ color: strongText }}>{total}</div>
+          <div className="text-xs mt-1" style={{ color: subText }}>of 16 needed</div>
+        </div>
+        <Link
+          href="/playoffs"
+          className={`${statBoxClass} block transition-shadow hover:shadow-md focus:outline-none`}
+          style={statBoxStyle}
+          title="View Stanley Cup odds for all remaining teams"
+        >
+          <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: labelColor }}>Cup Odds</div>
+          <div className="text-2xl md:text-3xl font-bold" style={{ color: strongText }}>
+            {cupOdds == null ? '—' : eliminated ? '0%' : `${cupOdds < 1 && cupOdds > 0 ? '<1' : Math.round(cupOdds)}%`}
+          </div>
+          <div className="text-xs mt-1" style={{ color: subText }}>chance to win it all</div>
+        </Link>
+      </div>
+
+      {/* Round labels above the segmented bar */}
+      <div className="flex justify-between mb-2 px-0.5">
+        {[0, 1, 2, 3].map((roundIdx) => {
+          const isActive = roundIdx + 1 === activeRound;
+          return (
+            <div key={roundIdx} className="flex-1 text-center">
+              <span
+                className="text-[10px] md:text-xs font-bold uppercase tracking-wider"
+                style={{
+                  color: isActive ? activeLabelColor : mutedText,
+                  fontFamily: 'Bebas Neue, sans-serif',
+                  letterSpacing: '0.12em',
+                }}
+              >
+                {CUP_GROUP_LABELS[roundIdx]}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Segmented bar — 4 round groups × 4 segments = 16 wins to the Cup */}
+      <div className="flex gap-1.5 sm:gap-2">
+        {[0, 1, 2, 3].map((roundIdx) => {
+          const wins = Math.min(roundWins[roundIdx] || 0, 4);
+          const isActive = roundIdx + 1 === activeRound;
+          // Active group uses accent-tinted borders so the 4 game cells stay legible
+          // against the tinted background, while keeping spacing consistent across rounds.
+          const segmentBorder = isActive ? `${accent}55` : emptyBorder;
+          return (
+            <div
+              key={roundIdx}
+              className="flex-1 flex gap-0.5 p-0.5 rounded-md"
+              style={{
+                backgroundColor: isActive ? `${accent}14` : 'transparent',
+                outline: isActive ? `1px solid ${accent}40` : 'none',
+              }}
+            >
+              {[0, 1, 2, 3].map((segIdx) => {
+                const filled = segIdx < wins;
+                const isFirst = segIdx === 0;
+                const isLast = segIdx === 3;
+                return (
+                  <div
+                    key={segIdx}
+                    className={`flex-1 h-6 sm:h-7 ${isFirst ? 'rounded-l-sm' : ''} ${isLast ? 'rounded-r-sm' : ''}`}
+                    style={{
+                      backgroundColor: filled ? accent : 'transparent',
+                      border: filled ? 'none' : `1.5px solid ${segmentBorder}`,
+                    }}
+                  />
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Caption: percent + next milestone — rank line is desktop-only (hidden on mobile to reduce clutter) */}
+      <div className="mt-3 flex items-baseline justify-center sm:justify-between gap-2 text-xs md:text-sm" style={{ color: subText }}>
+        <span>
+          <span className="font-bold" style={{ color: champion ? '#d4af37' : strongText }}>{percent.toFixed(0)}%</span> complete
+        </span>
+        <span
+          className={`font-semibold text-right ${isRankMilestone ? 'hidden sm:inline-block' : ''}`}
+          style={{ color: champion ? '#d4af37' : eliminated ? mutedText : activeLabelColor }}
+        >
+          {milestoneText}
+        </span>
+      </div>
+
     </div>
   );
 }
@@ -141,15 +318,6 @@ function SeriesCard({
   darkModeColors: DarkModeColors;
   isGoatMode: boolean;
 }) {
-  const totalDots = s.neededToWin * 2 - 1;
-  const orderedOutcomes: Array<'W' | 'L'> = [];
-  for (const g of s.games) {
-    const o = gameOutcomeForTeam(g, s.teamAbbrev);
-    if (o) orderedOutcomes.push(o);
-  }
-
-  const leading = s.teamWins > s.opponentWins;
-  const trailing = s.opponentWins > s.teamWins;
   const advanced = s.didAdvance;
   const eliminated = s.isComplete && !advanced;
 
@@ -184,15 +352,6 @@ function SeriesCard({
   } else if (eliminated) {
     pillText = `Eliminated ${s.teamWins}-${s.opponentWins}`;
     pillStyle = { backgroundColor: isGoatMode ? `${darkModeColors.border}40` : '#f3f4f6', color: subText, borderColor: isGoatMode ? darkModeColors.border : '#d1d5db' };
-  } else if (leading) {
-    pillText = `Leads ${s.teamWins}-${s.opponentWins}`;
-    pillStyle = { backgroundColor: `${accent}20`, color: accent, borderColor: `${accent}50` };
-  } else if (trailing) {
-    pillText = `Trails ${s.teamWins}-${s.opponentWins}`;
-    pillStyle = { backgroundColor: isGoatMode ? `${darkModeColors.border}40` : '#f3f4f6', color: subText, borderColor: isGoatMode ? darkModeColors.border : '#d1d5db' };
-  } else if (s.teamWins > 0 || s.opponentWins > 0) {
-    pillText = `Series tied ${s.teamWins}-${s.opponentWins}`;
-    pillStyle = { backgroundColor: isGoatMode ? `${darkModeColors.border}40` : '#f3f4f6', color: subText, borderColor: isGoatMode ? darkModeColors.border : '#e5e7eb' };
   }
   const showPill = pillText.length > 0;
 
@@ -200,10 +359,6 @@ function SeriesCard({
 
   // Round title in display-type form (e.g., "1ST ROUND", "CONFERENCE FINAL", "STANLEY CUP FINAL")
   const titleText = s.roundLabel.replace(/-/g, ' ').toUpperCase();
-
-  // Team slug lookup for the optional "Playoff History" link shown in the top-right corner
-  const teamSlugForHistory = Object.entries(TEAMS).find(([, t]) => t.abbreviation === s.teamAbbrev)?.[0];
-  const showHistoryLink = !!teamSlugForHistory && hasTeamHistory(teamSlugForHistory);
 
   return (
     <div
@@ -220,21 +375,6 @@ function SeriesCard({
       >
         {titleText}
       </Link>
-
-      {/* Top-right: optional link to the team's historical playoff archive (desktop only; mobile shows this link in the team header instead) */}
-      {showHistoryLink && (
-        <Link
-          href={`/nhl/${teamSlugForHistory}/history`}
-          className={`hidden sm:block absolute top-3 md:top-4 right-3 md:right-4 z-10 text-xs md:text-sm font-semibold transition-colors focus:outline-none ${
-            isGoatMode
-              ? 'text-zinc-500 hover:text-zinc-400'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-          title="View full playoff history"
-        >
-          Playoff History
-        </Link>
-      )}
 
       {/* Mobile: round badge centered above the matchup row (normal flow) */}
       <div className="sm:hidden relative flex justify-center mb-3">
@@ -293,18 +433,6 @@ function SeriesCard({
         })()}
       </div>
 
-      {/* Dot row — hidden pre-series (0-0) when all dots would be empty */}
-      {(s.teamWins > 0 || s.opponentWins > 0) && (
-        <div className="relative mb-5">
-          <DotRow
-            total={totalDots}
-            outcomes={orderedOutcomes}
-            winColor={accent}
-            lossColor={isGoatMode ? `${darkModeColors.text}66` : '#9ca3af'}
-            unplayedColor={isGoatMode ? darkModeColors.border : '#d1d5db'}
-          />
-        </div>
-      )}
 
       {/* Stat grid: Series Win Odds / To Clinch / Regular Season H2H */}
       {(() => {
@@ -820,13 +948,33 @@ export default function PlayoffJourney({
   teamColors,
   darkModeColors,
   isGoatMode,
+  cupOdds,
+  cupOddsRank,
 }: PlayoffJourneyProps) {
   if (series.length === 0) return null;
   const ordered = [...series].sort((a, b) => a.roundNumber - b.roundNumber);
 
+  // Cumulative wins per round (R1, R2, CF, SCF) — drives the Road to the Cup card.
+  const roundWins = [0, 0, 0, 0];
+  for (const s of ordered) {
+    if (s.roundNumber >= 1 && s.roundNumber <= 4) {
+      roundWins[s.roundNumber - 1] = s.teamWins;
+    }
+  }
+  const activeSeries = ordered[ordered.length - 1];
+
   return (
     <div className="mb-4 mt-4">
       <div className="grid grid-cols-1 gap-4">
+        <CupWinsCard
+          roundWins={roundWins}
+          activeSeries={activeSeries}
+          teamColors={teamColors}
+          darkModeColors={darkModeColors}
+          isGoatMode={isGoatMode}
+          cupOdds={cupOdds}
+          cupOddsRank={cupOddsRank}
+        />
         {ordered.map((s) => (
           <SeriesCard
             key={s.seriesLetter}

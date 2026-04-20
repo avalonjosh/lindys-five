@@ -62,6 +62,8 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
   const [hasMounted, setHasMounted] = useState(false);
   const [playoffSeries, setPlayoffSeries] = useState<JourneySeries[]>([]);
   const [playoffFetchLoaded, setPlayoffFetchLoaded] = useState(false);
+  const [teamCupOdds, setTeamCupOdds] = useState<number | null>(null);
+  const [cupOddsRank, setCupOddsRank] = useState<{ rank: number; total: number } | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem(`${team.id}-theme`);
@@ -102,6 +104,22 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
     ])
       .then(([bracketData, scheduleData]) => {
         if (cancelled || !bracketData?.bracket?.rounds) return;
+
+        // Cup odds for this team (computed server-side; mirrors the /playoffs Stanley Cup Odds tab)
+        const cupOddsArr = bracketData.cupOdds as Array<{ abbrev: string; cupOdds: number; isEliminated?: boolean }> | undefined;
+        const myCupOddsEntry = cupOddsArr?.find((e) => e.abbrev === myAbbrev);
+        if (myCupOddsEntry && !myCupOddsEntry.isEliminated) {
+          setTeamCupOdds(myCupOddsEntry.cupOdds);
+        } else if (myCupOddsEntry?.isEliminated) {
+          setTeamCupOdds(0);
+        }
+        // Rank this team's Cup odds among teams still alive (1 = best)
+        if (cupOddsArr && myCupOddsEntry && !myCupOddsEntry.isEliminated) {
+          const alive = cupOddsArr.filter((e) => !e.isEliminated);
+          const sorted = [...alive].sort((a, b) => b.cupOdds - a.cupOdds);
+          const rank = sorted.findIndex((e) => e.abbrev === myAbbrev) + 1;
+          if (rank > 0) setCupOddsRank({ rank, total: alive.length });
+        }
 
         // Regular-season H2H record (team's W-L-OTL vs each opponent)
         const h2hByOpponent = new Map<string, { wins: number; losses: number; otLosses: number; gamesPlayed: number }>();
@@ -862,7 +880,7 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
           >
             5-Game Set Analysis &bull; Target: 6+ points per set
           </p>
-          {hasTeamHistory(team.id) && (
+          {hasTeamHistory(team.id) && playoffSeries.length === 0 && (
             <div className="sm:hidden mt-2">
               <Link
                 href={`/nhl/${team.id}/history`}
@@ -981,6 +999,8 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
             teamColors={effectiveTeamColors}
             darkModeColors={darkModeColors}
             isGoatMode={!useClassicStyling}
+            cupOdds={teamCupOdds}
+            cupOddsRank={cupOddsRank}
           />
           {stats && (
             <ProgressBar

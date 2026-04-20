@@ -161,18 +161,24 @@ function TeamCard({ teamId }: { teamId: string }) {
   );
 }
 
-function PlayoffOddsCTA() {
+function PlayoffOddsCTA({ playoffsActive }: { playoffsActive?: boolean }) {
+  const href = playoffsActive ? '/playoffs' : '/nhl-playoff-odds';
+  const title = playoffsActive ? 'Stanley Cup Playoffs 2026' : 'NHL Playoff Odds 2025-26';
+  const subtitle = playoffsActive
+    ? 'Live bracket, series odds & Cup predictions →'
+    : 'Full standings & projections for all 32 teams →';
+
   return (
     <Link
-      href="/nhl-playoff-odds"
+      href={href}
       className="group relative rounded-2xl px-8 py-8 md:px-12 shadow-2xl border-4 transition-all duration-300 hover:scale-105 w-full max-w-md md:max-w-2xl"
       style={{ background: 'linear-gradient(to bottom right, #003087, #0A1128)', borderColor: '#ffffff' }}
     >
       <div className="flex flex-col items-center text-center md:flex-row md:text-left md:items-center gap-6 md:gap-8">
         <Image src="https://assets.nhle.com/logos/nhl/svg/NHL_light.svg" alt="NHL" width={120} height={120} className="w-24 h-24 md:w-28 md:h-28 flex-shrink-0 group-hover:scale-110 transition-transform duration-300" />
         <div>
-          <h2 className="text-3xl md:text-5xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>NHL Playoff Odds 2025-26</h2>
-          <p className="font-bold text-base md:text-lg text-white/70">Full standings & projections for all 32 teams →</p>
+          <h2 className="text-3xl md:text-5xl font-bold text-white mb-2" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>{title}</h2>
+          <p className="font-bold text-base md:text-lg text-white/70">{subtitle}</p>
         </div>
       </div>
     </Link>
@@ -181,9 +187,10 @@ function PlayoffOddsCTA() {
 
 interface FavoriteTeamsGridProps {
   sport: 'nhl' | 'mlb';
+  playoffsActive?: boolean;
 }
 
-export default function FavoriteTeamsGrid({ sport }: FavoriteTeamsGridProps) {
+export default function FavoriteTeamsGrid({ sport, playoffsActive }: FavoriteTeamsGridProps) {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -207,7 +214,7 @@ export default function FavoriteTeamsGrid({ sport }: FavoriteTeamsGridProps) {
       <>
         {sport === 'nhl' && (
           <div className="flex justify-center mb-16">
-            <PlayoffOddsCTA />
+            <PlayoffOddsCTA playoffsActive={playoffsActive} />
           </div>
         )}
         <h2 className="text-3xl md:text-4xl font-bold text-gray-400 text-center mb-12" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>All Teams</h2>
@@ -223,7 +230,7 @@ export default function FavoriteTeamsGrid({ sport }: FavoriteTeamsGridProps) {
       <>
         {sport === 'nhl' && (
           <div className="flex justify-center mb-16">
-            <PlayoffOddsCTA />
+            <PlayoffOddsCTA playoffsActive={playoffsActive} />
           </div>
         )}
         <h2 className="text-3xl md:text-4xl font-bold text-gray-400 text-center mb-12" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>All Teams</h2>
