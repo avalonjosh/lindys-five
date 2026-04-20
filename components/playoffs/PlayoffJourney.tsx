@@ -475,14 +475,19 @@ function SeriesCard({
 
         return (
           <div className="relative grid grid-cols-3 gap-2 mb-4">
-            <div className={boxClass} style={boxStyle}>
+            <Link
+              href="/playoffs"
+              className={`${boxClass} block transition-shadow hover:shadow-md focus:outline-none`}
+              style={boxStyle}
+              title="View Stanley Cup odds for all remaining teams"
+            >
               <div className={numClass} style={{ color: advanced ? accent : eliminated ? mutedText : accent }}>
                 {advanced ? '100%' : eliminated ? '0%' : oddsNum != null ? `${oddsNum}%` : '—'}
               </div>
               <div className={labelClass} style={{ color: subText }}>
                 Win Odds
               </div>
-            </div>
+            </Link>
             <div className={boxClass} style={boxStyle}>
               <div className={numClass} style={{ color: eliminated ? mutedText : accent }}>
                 {advanced || eliminated ? '—' : remainingToClinch}
