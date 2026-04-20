@@ -3,6 +3,7 @@ import { jwtVerify } from 'jose';
 import { getPostBySlug } from '@/lib/kv';
 import { sendGameRecapNewsletter, sendSetRecapNewsletter, sendBoxscoreRecapForTeam, sendSetRecapForTeam, getVerifiedSubscribersForTeam } from '@/lib/email';
 import { TEAMS } from '@/lib/teamConfig';
+import type { NewsletterSubscriber } from '@/lib/types';
 
 async function verifyAdmin(request: NextRequest): Promise<boolean> {
   const token = request.cookies.get('admin_token')?.value;
@@ -28,12 +29,33 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { slug, team, type } = body;
+    const { slug, team, type, testEmail } = body;
 
     // Team-based send
     if (team) {
       if (!TEAMS[team]) {
         return NextResponse.json({ error: 'Invalid team' }, { status: 400 });
+      }
+
+      // Test mode: admin only, sends to a single email instead of the subscriber list
+      if (testEmail) {
+        if (!isAdmin) {
+          return NextResponse.json({ error: 'Test sends require admin auth' }, { status: 401 });
+        }
+        const stubSubscriber: NewsletterSubscriber = {
+          id: `test-${Date.now()}`,
+          email: testEmail,
+          teams: [team],
+          createdAt: new Date().toISOString(),
+          verified: true,
+          source: 'admin-test',
+        };
+        if (type === 'set-recap') {
+          await sendSetRecapForTeam(team, [stubSubscriber]);
+          return NextResponse.json({ success: true, message: `Test set recap sent to ${testEmail}` });
+        }
+        await sendBoxscoreRecapForTeam(team, [stubSubscriber]);
+        return NextResponse.json({ success: true, message: `Test game recap sent to ${testEmail}` });
       }
 
       const subscribers = await getVerifiedSubscribersForTeam(team);

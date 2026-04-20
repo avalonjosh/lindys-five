@@ -183,6 +183,7 @@ export interface Linescore {
 
 export interface LandingResponse {
   id: number;
+  gameType?: number; // 1=preseason, 2=regular, 3=playoffs
   gameState: string;
   gameDate: string;
   startTimeUTC: string;

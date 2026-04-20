@@ -16,6 +16,8 @@ export default function NewsletterDashboard() {
   const [sendType, setSendType] = useState<'game-recap' | 'set-recap'>('game-recap');
   const [sending, setSending] = useState(false);
   const [sendMessage, setSendMessage] = useState('');
+  const [testMode, setTestMode] = useState(false);
+  const TEST_EMAIL = 'avalonjosh@gmail.com';
   const [filterTeam, setFilterTeam] = useState('all');
   const [error, setError] = useState<string | null>(null);
 
@@ -89,7 +91,11 @@ export default function NewsletterDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ team: sendTeam, type: sendType }),
+        body: JSON.stringify({
+          team: sendTeam,
+          type: sendType,
+          ...(testMode ? { testEmail: TEST_EMAIL } : {}),
+        }),
       });
       const data = await res.json();
       setSendMessage(res.ok ? data.message : data.error);
@@ -234,11 +240,24 @@ export default function NewsletterDashboard() {
               <button
                 onClick={handleManualSend}
                 disabled={sending || !sendTeam}
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                className={`px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 ${
+                  testMode
+                    ? 'bg-amber-600 text-white hover:bg-amber-700'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
               >
-                {sending ? 'Sending...' : 'Send'}
+                {sending ? 'Sending...' : testMode ? 'Send Test' : 'Send'}
               </button>
             </div>
+            <label className="flex items-center gap-2 mt-3 text-sm text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={testMode}
+                onChange={(e) => { setTestMode(e.target.checked); setSendMessage(''); }}
+                className="w-4 h-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+              />
+              <span>Test mode — send to <span className="font-mono text-gray-900">{TEST_EMAIL}</span> only</span>
+            </label>
             {sendMessage && (
               <p className={`text-sm mt-2 ${sendMessage.includes('error') || sendMessage.includes('Failed') ? 'text-red-500' : 'text-green-600'}`}>
                 {sendMessage}

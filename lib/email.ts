@@ -6,7 +6,9 @@ import { TEAMS } from './teamConfig';
 import { fetchJsonWithRetry } from './fetchWithRetry';
 import { generateGameTicketLink } from './utils/affiliateLinks';
 import { getProjectedPoints, getDivCutLine, getWcCutLine, isInPlayoffPosition, getPlayoffProbability } from './utils/standingsCalc';
-import { computePositionAwareProbability } from './utils/playoffProbability';
+import { computePositionAwareProbability, computeSeriesWinProbability } from './utils/playoffProbability';
+import { fetchPlayoffsSnapshot, type PlayoffsSnapshot } from './services/playoffsSnapshot';
+import type { PlayoffSeries, PlayoffGame } from './types/playoffs';
 
 let _resend: Resend | null = null;
 function getResend(): Resend {
@@ -208,6 +210,18 @@ async function sendBoxscoreRecapForTeam(
   // Fetch the most recent completed game for this team
   const landing = await fetchRecentGame(teamConfig.abbreviation);
   if (!landing) throw new Error(`No recent game found for ${teamSlug}`);
+
+  // Playoff games get a dedicated template (series state + Cup odds instead of regular-season standings)
+  if (landing.gameType === 3) {
+    try {
+      await sendPlayoffBoxscoreRecap(teamSlug, teamConfig, landing, subscribers, blogPost);
+      return;
+    } catch (err) {
+      // Fall through to regular-season template if the playoff data fetch fails —
+      // the email still goes out, just without the playoff-specific cards.
+      console.error('Playoff recap build failed, falling back to regular template:', err);
+    }
+  }
 
   // Fetch standings
   const standings = await fetchStandings();
@@ -620,6 +634,461 @@ function renderBoxscoreEmail(data: GameRecapData, blogPost?: BlogPost): string {
   </table>
 </body>
 </html>`;
+}
+
+// ─── Playoff Game Recap ──────────────────────────────────────────
+
+interface PlayoffSeriesGameChip {
+  gameNumber: number;
+  result: 'W' | 'L' | 'OTL' | 'UPCOMING';
+  teamScore?: number;
+  oppScore?: number;
+  overtime?: boolean;
+}
+
+interface PlayoffGameRecapData {
+  teamSlug: string;
+  teamConfig: typeof TEAMS[string];
+  landing: LandingResponse;
+  // Matchup
+  oppAbbrev: string;
+  oppConfig?: typeof TEAMS[string];
+  teamWon: boolean;
+  isOT: boolean;
+  // Series
+  roundLabel: string;           // "1st Round", "Conference Final", …
+  roundAbbrev: string;          // "R1", "CF", …
+  teamSeriesWins: number;
+  oppSeriesWins: number;
+  seriesState: 'leads' | 'trails' | 'tied' | 'won' | 'eliminated';
+  seriesChips: PlayoffSeriesGameChip[]; // one per played game in the series
+  // Odds
+  seriesWinOddsBefore: number;
+  seriesWinOddsAfter: number;
+  cupOdds: number | null;
+  cupOddsRank: { rank: number; total: number } | null;
+  totalPlayoffWins: number; // across all rounds
+  // Next game
+  nextGame: { opponent: string; date: string; time: string; ticketLink: string } | null;
+}
+
+const PLAYOFF_ROUND_LABELS: Record<number, string> = {
+  1: '1st Round',
+  2: '2nd Round',
+  3: 'Conference Final',
+  4: 'Stanley Cup Final',
+};
+const PLAYOFF_ROUND_ABBREVS: Record<number, string> = {
+  1: 'R1',
+  2: 'R2',
+  3: 'CF',
+  4: 'SCF',
+};
+
+async function sendPlayoffBoxscoreRecap(
+  teamSlug: string,
+  teamConfig: typeof TEAMS[string],
+  landing: LandingResponse,
+  subscribers: NewsletterSubscriber[],
+  blogPost?: BlogPost
+) {
+  const snapshot = await fetchPlayoffsSnapshot();
+  const data = buildPlayoffRecapData(teamSlug, teamConfig, landing, snapshot);
+  data.nextGame = await fetchNextGame(teamConfig);
+
+  // Subject line
+  const teamScore = landing.homeTeam.abbrev === teamConfig.abbreviation ? landing.homeTeam.score : landing.awayTeam.score;
+  const oppScore = landing.homeTeam.abbrev === teamConfig.abbreviation ? landing.awayTeam.score : landing.homeTeam.score;
+  const suffix = data.isOT ? (landing.gameOutcome?.lastPeriodType === 'SO' ? ' (SO)' : ' (OT)') : '';
+  const resultWord = data.teamWon ? 'defeat' : 'fall to';
+  let seriesTag: string;
+  if (data.seriesState === 'won') seriesTag = `Win series ${data.teamSeriesWins}-${data.oppSeriesWins}`;
+  else if (data.seriesState === 'eliminated') seriesTag = 'Season over';
+  else if (data.seriesState === 'leads') seriesTag = `Lead series ${data.teamSeriesWins}-${data.oppSeriesWins}`;
+  else if (data.seriesState === 'trails') seriesTag = `Trail series ${data.teamSeriesWins}-${data.oppSeriesWins}`;
+  else seriesTag = `Series tied ${data.teamSeriesWins}-${data.oppSeriesWins}`;
+  const subject = `${teamConfig.name} ${resultWord} ${data.oppAbbrev} ${teamScore}-${oppScore}${suffix} · ${seriesTag}`;
+
+  const html = renderPlayoffBoxscoreEmail(data, blogPost);
+  const sendId = await recordEmailSend(teamSlug, subscribers.length, subject);
+  await sendBatchEmails(subscribers, subject, html, sendId);
+}
+
+function buildPlayoffRecapData(
+  teamSlug: string,
+  teamConfig: typeof TEAMS[string],
+  landing: LandingResponse,
+  snapshot: PlayoffsSnapshot
+): PlayoffGameRecapData {
+  const isHome = landing.homeTeam.abbrev === teamConfig.abbreviation;
+  const oppAbbrev = isHome ? landing.awayTeam.abbrev : landing.homeTeam.abbrev;
+  const oppConfig = Object.values(TEAMS).find((t) => t.abbreviation === oppAbbrev);
+  const teamScore = isHome ? landing.homeTeam.score : landing.awayTeam.score;
+  const oppScore = isHome ? landing.awayTeam.score : landing.homeTeam.score;
+  const teamWon = teamScore > oppScore;
+  const isOT = landing.gameOutcome?.lastPeriodType === 'OT' || landing.gameOutcome?.lastPeriodType === 'SO';
+
+  // Locate the team's current series in the bracket (latest round they're in)
+  type SeriesHit = { round: { roundNumber: number; roundLabel: string }; series: PlayoffSeries };
+  const allSeries: SeriesHit[] = [];
+  for (const round of snapshot.bracket.rounds || []) {
+    for (const series of round.series || []) {
+      if (series.matchupTeams.some((t) => t.team.abbrev === teamConfig.abbreviation)) {
+        allSeries.push({ round: { roundNumber: round.roundNumber, roundLabel: round.roundLabel || '' }, series });
+      }
+    }
+  }
+  allSeries.sort((a, b) => a.round.roundNumber - b.round.roundNumber);
+  const current = allSeries[allSeries.length - 1];
+
+  const roundNumber = current?.round.roundNumber ?? 1;
+  const roundLabel = PLAYOFF_ROUND_LABELS[roundNumber] || current?.round.roundLabel || `Round ${roundNumber}`;
+  const roundAbbrev = PLAYOFF_ROUND_ABBREVS[roundNumber] || `R${roundNumber}`;
+
+  let teamSeriesWins = 0;
+  let oppSeriesWins = 0;
+  let teamIsTopSeed = true;
+  let seriesGames: PlayoffGame[] = [];
+  if (current) {
+    const me = current.series.matchupTeams.find((t) => t.team.abbrev === teamConfig.abbreviation);
+    teamIsTopSeed = !!me?.seed?.isTop;
+    teamSeriesWins = teamIsTopSeed ? current.series.topSeedWins : current.series.bottomSeedWins;
+    oppSeriesWins = teamIsTopSeed ? current.series.bottomSeedWins : current.series.topSeedWins;
+    seriesGames = current.series.games || [];
+  }
+
+  // Determine series state (post-this-game)
+  let seriesState: PlayoffGameRecapData['seriesState'];
+  if (teamSeriesWins >= 4) seriesState = 'won';
+  else if (oppSeriesWins >= 4) seriesState = 'eliminated';
+  else if (teamSeriesWins > oppSeriesWins) seriesState = 'leads';
+  else if (teamSeriesWins < oppSeriesWins) seriesState = 'trails';
+  else seriesState = 'tied';
+
+  // Build per-game chips (W/L/OTL) — only games that have finished
+  const seriesChips: PlayoffSeriesGameChip[] = [];
+  for (const g of seriesGames) {
+    const finished = g.gameState === 'FINAL' || g.gameState === 'OFF';
+    if (!finished || g.homeTeam.score == null || g.awayTeam.score == null) continue;
+    const gIsHome = g.homeTeam.abbrev === teamConfig.abbreviation;
+    const myScore = gIsHome ? g.homeTeam.score : g.awayTeam.score;
+    const oScore = gIsHome ? g.awayTeam.score : g.homeTeam.score;
+    const ot = g.gameOutcome?.lastPeriodType === 'OT' || g.gameOutcome?.lastPeriodType === 'SO';
+    let result: PlayoffSeriesGameChip['result'];
+    if (myScore > oScore) result = 'W';
+    else if (ot) result = 'OTL';
+    else result = 'L';
+    seriesChips.push({ gameNumber: g.gameNumber, result, teamScore: myScore, oppScore: oScore, overtime: ot });
+  }
+
+  // Series win odds — before (undo this game) + after (current)
+  const teamStanding = snapshot.standings.find((t) => t.teamAbbrev?.default === teamConfig.abbreviation);
+  const oppStanding = snapshot.standings.find((t) => t.teamAbbrev?.default === oppAbbrev);
+  const strengthFor = (st: StandingsTeam | undefined) => {
+    if (!st) return {};
+    const gp = st.gamesPlayed || 0;
+    const homeGP = (st.homeWins || 0) + (st.homeLosses || 0) + (st.homeOtLosses || 0);
+    const roadGP = (st.roadWins || 0) + (st.roadLosses || 0) + (st.roadOtLosses || 0);
+    return {
+      goalDiffPerGame: gp > 0 ? ((st.goalFor || 0) - (st.goalAgainst || 0)) / gp : undefined,
+      homeWinPct: homeGP > 0 ? (st.homeWins || 0) / homeGP : undefined,
+      roadWinPct: roadGP > 0 ? (st.roadWins || 0) / roadGP : undefined,
+    };
+  };
+  const teamS = strengthFor(teamStanding);
+  const oppS = strengthFor(oppStanding);
+  const teamPctg = teamStanding?.pointPctg ?? 0.5;
+  const oppPctg = oppStanding?.pointPctg ?? 0.5;
+
+  const computeTeamSeriesP = (myWins: number, theirWins: number) =>
+    computeSeriesWinProbability(teamPctg, oppPctg, myWins, theirWins, teamIsTopSeed, {
+      teamGoalDiffPerGame: teamS.goalDiffPerGame,
+      oppGoalDiffPerGame: oppS.goalDiffPerGame,
+      teamHomeWinPct: teamS.homeWinPct,
+      teamRoadWinPct: teamS.roadWinPct,
+      oppHomeWinPct: oppS.homeWinPct,
+      oppRoadWinPct: oppS.roadWinPct,
+    });
+
+  const seriesWinOddsAfter = Math.round(computeTeamSeriesP(teamSeriesWins, oppSeriesWins));
+  const beforeMyWins = teamWon ? Math.max(0, teamSeriesWins - 1) : teamSeriesWins;
+  const beforeOppWins = teamWon ? oppSeriesWins : Math.max(0, oppSeriesWins - 1);
+  const seriesWinOddsBefore = Math.round(computeTeamSeriesP(beforeMyWins, beforeOppWins));
+
+  // Cup odds for this team + rank among alive teams
+  const cupEntry = snapshot.cupOdds.find((e) => e.abbrev === teamConfig.abbreviation);
+  let cupOdds: number | null = null;
+  let cupOddsRank: { rank: number; total: number } | null = null;
+  if (cupEntry && !cupEntry.isEliminated) {
+    cupOdds = cupEntry.cupOdds;
+    const alive = snapshot.cupOdds.filter((e) => !e.isEliminated);
+    const sorted = [...alive].sort((a, b) => b.cupOdds - a.cupOdds);
+    const rank = sorted.findIndex((e) => e.abbrev === teamConfig.abbreviation) + 1;
+    if (rank > 0) cupOddsRank = { rank, total: alive.length };
+  }
+
+  // Total playoff wins across all series this postseason (the "N of 16")
+  const totalPlayoffWins = allSeries.reduce((sum, hit) => {
+    const me = hit.series.matchupTeams.find((t) => t.team.abbrev === teamConfig.abbreviation);
+    const isTop = !!me?.seed?.isTop;
+    const wins = isTop ? hit.series.topSeedWins : hit.series.bottomSeedWins;
+    return sum + Math.min(wins, 4);
+  }, 0);
+
+  return {
+    teamSlug,
+    teamConfig,
+    landing,
+    oppAbbrev,
+    oppConfig,
+    teamWon,
+    isOT,
+    roundLabel,
+    roundAbbrev,
+    teamSeriesWins,
+    oppSeriesWins,
+    seriesState,
+    seriesChips,
+    seriesWinOddsBefore,
+    seriesWinOddsAfter,
+    cupOdds,
+    cupOddsRank,
+    totalPlayoffWins,
+    nextGame: null, // filled in below
+  };
+}
+
+function ordinalSuffix(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+function renderPlayoffBoxscoreEmail(data: PlayoffGameRecapData, blogPost?: BlogPost): string {
+  const { teamConfig, landing, oppConfig, oppAbbrev, roundLabel, seriesState, teamSeriesWins, oppSeriesWins } = data;
+  const primaryColor = teamConfig.colors.primary;
+  const isHome = landing.homeTeam.abbrev === teamConfig.abbreviation;
+  const teamScore = isHome ? landing.homeTeam.score : landing.awayTeam.score;
+  const oppScore = isHome ? landing.awayTeam.score : landing.homeTeam.score;
+  const periodType = landing.gameOutcome?.lastPeriodType;
+  const finalLabel = periodType === 'OT' ? 'FINAL/OT' : periodType === 'SO' ? 'FINAL/SO' : 'FINAL';
+
+  const playoffsUrl = `${SITE_URL}/playoffs?utm_source=newsletter&utm_medium=email&utm_campaign=playoff-recap&utm_content=series`;
+  const trackerUrl = `${SITE_URL}/nhl/${data.teamSlug}?utm_source=newsletter&utm_medium=email&utm_campaign=playoff-recap&utm_content=tracker`;
+  const unsubscribeUrl = '{{UNSUBSCRIBE_URL}}';
+
+  // Goal scorers + three stars
+  const goalsByTeam = collectGoalScorers(landing, teamConfig.abbreviation);
+  const threeStars = landing.summary?.threeStars || [];
+
+  // Team logos
+  const teamLogo = `https://assets.nhle.com/logos/nhl/svg/${teamConfig.abbreviation}_light.svg`;
+  const oppLogo = `https://assets.nhle.com/logos/nhl/svg/${oppAbbrev}_light.svg`;
+  const awayAbbrev = isHome ? oppAbbrev : teamConfig.abbreviation;
+  const homeAbbrev = isHome ? teamConfig.abbreviation : oppAbbrev;
+  const awayLogo = isHome ? oppLogo : teamLogo;
+  const homeLogo = isHome ? teamLogo : oppLogo;
+  const awayScore = isHome ? oppScore : teamScore;
+  const homeScore = isHome ? teamScore : oppScore;
+  const awayWon = awayScore > homeScore;
+  const homeWon = homeScore > awayScore;
+
+  // Series tagline under the score block
+  let seriesLine: string;
+  const nextRound = PLAYOFF_ROUND_LABELS[(allRoundNumber(data.roundAbbrev) + 1)];
+  if (seriesState === 'won') seriesLine = `Win the series ${teamSeriesWins}-${oppSeriesWins}${nextRound ? ` — on to the ${nextRound}` : ' — on to the Cup Final'}`;
+  else if (seriesState === 'eliminated') seriesLine = `Eliminated ${teamSeriesWins}-${oppSeriesWins} — season over`;
+  else if (seriesState === 'leads') seriesLine = `${teamConfig.name} lead the series ${teamSeriesWins}-${oppSeriesWins}`;
+  else if (seriesState === 'trails') seriesLine = `${teamConfig.name} trail the series ${teamSeriesWins}-${oppSeriesWins}`;
+  else seriesLine = `Series tied ${teamSeriesWins}-${oppSeriesWins}`;
+
+  // Series win odds delta
+  const odDelta = data.seriesWinOddsAfter - data.seriesWinOddsBefore;
+  const odDeltaStr = odDelta >= 0 ? `+${odDelta}%` : `${odDelta}%`;
+  const odDeltaColor = odDelta >= 0 ? '#16a34a' : '#dc2626';
+  const odArrow = odDelta >= 0 ? '&#9652;' : '&#9662;';
+
+  const showSeriesOdds = seriesState !== 'won' && seriesState !== 'eliminated';
+  const showCupOdds = data.cupOdds != null && seriesState !== 'eliminated';
+
+  // Chip strip (most recent 7 games max)
+  const chipsHtml = data.seriesChips.slice(-7).map((c) => {
+    const bg = c.result === 'W' ? primaryColor : c.result === 'OTL' ? '#94a3b8' : '#cbd5e1';
+    const fg = '#ffffff';
+    const label = c.result === 'OTL' ? 'OTL' : c.result; // W/L/OTL
+    return `<td align="center" style="padding:2px;"><div style="display:inline-block;min-width:28px;padding:4px 6px;background:${bg};color:${fg};font-size:11px;font-weight:700;border-radius:4px;">${label}</div></td>`;
+  }).join('');
+  // Placeholder cells for games yet to play — hidden once the series is decided.
+  const seriesDecided = seriesState === 'won' || seriesState === 'eliminated';
+  const pendingGames = seriesDecided ? 0 : Math.max(0, 7 - data.seriesChips.length);
+  const pendingHtml = Array.from({ length: pendingGames }).map(() => (
+    `<td align="center" style="padding:2px;"><div style="display:inline-block;min-width:28px;padding:4px 6px;background:#f1f5f9;color:#cbd5e1;font-size:11px;font-weight:700;border-radius:4px;border:1px solid #e2e8f0;">·</div></td>`
+  )).join('');
+
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:20px;">
+    <tr><td align="center">
+      <table cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
+
+        <!-- Header -->
+        <tr><td style="background:${primaryColor};padding:16px 20px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td><h1 style="margin:0;color:#ffffff;font-size:22px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;letter-spacing:2px;text-transform:uppercase;font-style:normal;">Lindy's Five</h1></td>
+              <td align="right"><span style="color:rgba(255,255,255,0.7);font-size:12px;text-transform:uppercase;letter-spacing:1px;">Playoff Recap &middot; ${roundLabel}</span></td>
+            </tr>
+          </table>
+        </td></tr>
+
+        <!-- Score Block -->
+        <tr><td style="padding:24px 20px 8px;background:#ffffff;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td align="center" width="35%">
+                <img src="${awayLogo}" alt="${awayAbbrev}" width="48" style="display:block;margin:0 auto 8px;max-height:48px;" />
+                <span style="font-size:14px;font-weight:700;color:#1e293b;">${awayAbbrev}</span>
+              </td>
+              <td align="center" width="30%">
+                <table cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td align="right" style="font-size:32px;font-weight:800;color:${awayWon ? '#1e293b' : '#64748b'};padding-right:6px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;">${awayScore}</td>
+                    <td style="font-size:18px;color:#94a3b8;padding:0 2px;">-</td>
+                    <td align="left" style="font-size:32px;font-weight:800;color:${homeWon ? '#1e293b' : '#64748b'};padding-left:6px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;">${homeScore}</td>
+                  </tr>
+                </table>
+                <span style="display:block;margin-top:4px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">${finalLabel}</span>
+              </td>
+              <td align="center" width="35%">
+                <img src="${homeLogo}" alt="${homeAbbrev}" width="48" style="display:block;margin:0 auto 8px;max-height:48px;" />
+                <span style="font-size:14px;font-weight:700;color:#1e293b;">${homeAbbrev}</span>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+
+        <!-- Series tagline -->
+        <tr><td align="center" style="padding:0 20px 20px;">
+          <span style="display:inline-block;padding:4px 10px;background:${primaryColor}1a;color:${primaryColor};border-radius:999px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">${seriesLine}</span>
+        </td></tr>
+
+        <!-- Series Status card -->
+        <tr><td style="padding:0 20px 20px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+            <tr><td style="padding:12px 16px 4px;">
+              <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Series · ${roundLabel} vs ${oppConfig?.name || oppAbbrev}</span>
+            </td></tr>
+            <tr><td style="padding:6px 16px 12px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td valign="middle"><span style="font-size:18px;font-weight:800;color:#1e293b;">${teamSeriesWins}-${oppSeriesWins}</span><span style="font-size:12px;color:#64748b;margin-left:6px;">best of 7</span></td>
+                  <td align="right" valign="middle">
+                    <table cellpadding="0" cellspacing="0"><tr>${chipsHtml}${pendingHtml}</tr></table>
+                  </td>
+                </tr>
+              </table>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        ${showSeriesOdds ? `
+        <!-- Series Win Odds -->
+        <tr><td style="padding:0 20px 20px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+            <tr>
+              <td style="padding:14px 16px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td><span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Series Win Odds</span></td>
+                    <td align="right"><span style="font-size:12px;font-weight:700;color:${odDeltaColor};">${odArrow} ${odDeltaStr}</span></td>
+                  </tr>
+                  <tr>
+                    <td colspan="2" style="padding-top:8px;">
+                      <table width="100%" cellpadding="0" cellspacing="0" style="background:#e2e8f0;border-radius:4px;height:8px;">
+                        <tr><td style="width:${data.seriesWinOddsAfter}%;background:${primaryColor};border-radius:4px;height:8px;"></td><td></td></tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding-top:4px;"><span style="font-size:20px;font-weight:800;color:#1e293b;">${data.seriesWinOddsAfter}%</span><span style="font-size:12px;color:#64748b;margin-left:6px;">to advance</span></td>
+                    <td align="right" style="padding-top:4px;"><a href="${playoffsUrl}" style="font-size:12px;color:${primaryColor};text-decoration:none;font-weight:600;">View Series &rarr;</a></td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+        ` : ''}
+
+        <!-- Road to the Cup -->
+        <tr><td style="padding:0 20px 20px;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+            <tr><td style="padding:12px 16px 4px;">
+              <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Road to the Cup</span>
+            </td></tr>
+            <tr><td style="padding:4px 16px 12px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" width="50%" style="padding:6px 0;">
+                    <span style="display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;">Playoff Wins</span>
+                    <span style="display:block;font-size:22px;font-weight:800;color:#1e293b;">${data.totalPlayoffWins}<span style="font-size:13px;color:#94a3b8;font-weight:600;"> / 16</span></span>
+                  </td>
+                  <td align="center" width="50%" style="padding:6px 0;">
+                    <span style="display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;">Cup Odds</span>
+                    <span style="display:block;font-size:22px;font-weight:800;color:${showCupOdds ? primaryColor : '#94a3b8'};">${showCupOdds ? ((data.cupOdds! < 1 && data.cupOdds! > 0) ? '<1%' : Math.round(data.cupOdds!) + '%') : '—'}</span>
+                  </td>
+                </tr>
+                ${data.cupOddsRank ? `
+                <tr>
+                  <td colspan="2" align="center" style="padding:6px 0 2px;border-top:1px solid #e2e8f0;">
+                    <span style="font-size:12px;color:#64748b;">${data.cupOddsRank.rank === 1 ? 'Best' : ordinalSuffix(data.cupOddsRank.rank) + '-best'} Cup odds among ${data.cupOddsRank.total} remaining teams</span>
+                  </td>
+                </tr>
+                ` : ''}
+                <tr>
+                  <td colspan="2" align="center" style="padding:10px 0 0;">
+                    <a href="${trackerUrl}" style="font-size:12px;color:${primaryColor};text-decoration:none;font-weight:600;">View Team Tracker &rarr;</a>
+                  </td>
+                </tr>
+              </table>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        <!-- Goal Scorers -->
+        ${renderGoalScorersSection(goalsByTeam, teamConfig.abbreviation, oppAbbrev, primaryColor)}
+
+        <!-- Three Stars -->
+        ${renderThreeStarsSection(threeStars)}
+
+        <!-- Next Game CTA -->
+        ${data.nextGame ? renderNextGameCTA(data.nextGame, primaryColor) : ''}
+
+        <!-- Blog Recap Link -->
+        ${blogPost ? renderBlogLink(blogPost) : ''}
+
+        <!-- Footer -->
+        <tr><td style="background:#f8fafc;padding:16px 20px;border-top:1px solid #e2e8f0;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td><p style="margin:0;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; NHL Playoff Odds &amp; Bracket</p></td>
+              <td align="right"><a href="${unsubscribeUrl}" style="color:#94a3b8;font-size:12px;text-decoration:none;">Unsubscribe</a></td>
+            </tr>
+          </table>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+function allRoundNumber(abbrev: string): number {
+  return abbrev === 'R1' ? 1 : abbrev === 'R2' ? 2 : abbrev === 'CF' ? 3 : abbrev === 'SCF' ? 4 : 0;
 }
 
 // ─── Email Section Renderers ─────────────────────────────────────
