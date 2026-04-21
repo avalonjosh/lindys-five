@@ -297,7 +297,7 @@ export default function ScoreCard({ game, favoriteTeamAbbrev, standings }: Score
       />
 
       {/* Playoff Series Badge (gameType 3) */}
-      {game.gameType === 3 && game.seriesStatus && (
+      {game.gameType === 3 && typeof game.seriesStatus === 'string' && game.seriesStatus && (
         <div className="border-t border-gray-100 mt-1 pt-2">
           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">
             Playoff Series

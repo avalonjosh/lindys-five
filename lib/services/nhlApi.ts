@@ -760,6 +760,10 @@ export async function pollLiveGames(existingGames: NHLGame[]): Promise<NHLGame[]
         for (const freshGame of dayData.games) {
           const idx = updatedGames.findIndex((g: NHLGame) => g.id === freshGame.id);
           if (idx !== -1) {
+            // NHL returns seriesStatus as an object for playoff games; keep it a string
+            if (freshGame.gameType === 3) {
+              freshGame.seriesStatus = normalizeSeriesStatus((freshGame as unknown as { seriesStatus?: unknown }).seriesStatus);
+            }
             // Update game state and scores from schedule
             updatedGames[idx] = { ...updatedGames[idx], ...freshGame, homeTeam: { ...updatedGames[idx].homeTeam, ...freshGame.homeTeam }, awayTeam: { ...updatedGames[idx].awayTeam, ...freshGame.awayTeam } };
           }
