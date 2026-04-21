@@ -111,6 +111,13 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
     const { signal } = controller;
 
     setLoading(true);
+    setBoxscore(null);
+    setLanding(null);
+    setStandings([]);
+    setRightRail(null);
+    setSeriesStatus(null);
+    setPlayoffPreGame(null);
+    setSeriesHub(null);
     fetchData(signal).then((data) => {
       if (!data || signal.aborted) return;
       const gameDate = data.boxscore.gameDate;

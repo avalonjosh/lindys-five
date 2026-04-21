@@ -77,8 +77,8 @@ export default function PlayoffImpact({
 
   if (!isFinal && !isLive && !isFuture) return null;
 
-  const homeStanding = standings.find(t => t.teamAbbrev.default === homeTeam.abbrev);
-  const awayStanding = standings.find(t => t.teamAbbrev.default === awayTeam.abbrev);
+  const homeStanding = standings.find(t => t.teamAbbrev?.default === homeTeam.abbrev);
+  const awayStanding = standings.find(t => t.teamAbbrev?.default === awayTeam.abbrev);
 
   if (!homeStanding || !awayStanding) return null;
 

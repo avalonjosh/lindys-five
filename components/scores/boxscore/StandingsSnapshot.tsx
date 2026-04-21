@@ -124,7 +124,7 @@ export default function StandingsSnapshot({
   const raceData = useMemo(() => {
     if (!standings || standings.length === 0) return null;
 
-    const homeTeam = standings.find(t => t.teamAbbrev.default === homeAbbrev);
+    const homeTeam = standings.find(t => t.teamAbbrev?.default === homeAbbrev);
     if (!homeTeam) return null;
 
     const conference = homeTeam.conferenceName;
@@ -148,7 +148,7 @@ export default function StandingsSnapshot({
       .sort((a, b) => b.points - a.points || a.gamesPlayed - b.gamesPlayed);
 
     // Check if away team is in different conference
-    const awayTeam = standings.find(t => t.teamAbbrev.default === awayAbbrev);
+    const awayTeam = standings.find(t => t.teamAbbrev?.default === awayAbbrev);
     const awayInDifferentConf = awayTeam && awayTeam.conferenceName !== conference;
 
     return { divisions, getDivisionTop3, wildcardTeams, conference, awayInDifferentConf, awayTeam };
