@@ -121,7 +121,7 @@ function TeamRow({
 
       {showPct && (
         <span
-          className="-ml-1 text-sm sm:text-lg font-bold tabular-nums text-white rounded-md px-1.5 py-0.5 sm:px-2 sm:py-1 leading-none"
+          className="-ml-1 text-sm sm:text-lg font-bold tabular-nums text-white rounded-md px-1.5 py-0.5 sm:px-2 sm:py-1 leading-none text-center min-w-[44px] sm:min-w-[56px]"
           style={{ backgroundColor: pct >= 50 ? getTeamColor(abbrev) : '#9ca3af' }}
         >
           {pct}%
