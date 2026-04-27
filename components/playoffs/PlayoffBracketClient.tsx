@@ -219,12 +219,12 @@ function MobileBracket({ eastern, western }: { eastern: ConferenceBracket; weste
         {/* R2 boxes */}
         <div className="flex items-center px-1">
           <div className="w-12">
-            <BracketCell matchup={westR2[0]} />
+            <BracketCell matchup={westR2[0]} hidePct />
           </div>
         </div>
         <div className="flex items-center px-1">
           <div className="w-12">
-            <BracketCell matchup={eastR2[0]} />
+            <BracketCell matchup={eastR2[0]} hidePct />
           </div>
         </div>
         {/* East R1 div A */}
@@ -259,12 +259,12 @@ function MobileBracket({ eastern, western }: { eastern: ConferenceBracket; weste
         {/* R2 boxes */}
         <div className="flex items-center px-1">
           <div className="w-12">
-            <BracketCell matchup={westR2[1]} />
+            <BracketCell matchup={westR2[1]} hidePct />
           </div>
         </div>
         <div className="flex items-center px-1">
           <div className="w-12">
-            <BracketCell matchup={eastR2[1]} />
+            <BracketCell matchup={eastR2[1]} hidePct />
           </div>
         </div>
         {/* East R1 div B */}

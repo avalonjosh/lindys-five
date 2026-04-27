@@ -18,9 +18,10 @@ function getTeamColor(abbrev: string): string {
 interface BracketCellProps {
   matchup: BracketMatchup;
   cupFinal?: boolean;
+  hidePct?: boolean;
 }
 
-export default function BracketCell({ matchup, cupFinal }: BracketCellProps) {
+export default function BracketCell({ matchup, cupFinal, hidePct }: BracketCellProps) {
   const { topSeed, bottomSeed, topSeedWins, bottomSeedWins, isComplete, topSeedSeriesWinPct, bottomSeedSeriesWinPct } = matchup;
 
   if (!topSeed || !bottomSeed) {
@@ -66,7 +67,7 @@ export default function BracketCell({ matchup, cupFinal }: BracketCellProps) {
         pct={topPct}
         isWinner={isComplete && topSeedWins >= 4}
         isLoser={isComplete && topSeedWins < 4}
-        showPct={!isComplete}
+        showPct={!hidePct}
         slug={getTeamSlug(topSeed.abbrev)}
       />
 
@@ -80,7 +81,7 @@ export default function BracketCell({ matchup, cupFinal }: BracketCellProps) {
         pct={bottomPct}
         isWinner={isComplete && bottomSeedWins >= 4}
         isLoser={isComplete && bottomSeedWins < 4}
-        showPct={!isComplete}
+        showPct={!hidePct}
         slug={getTeamSlug(bottomSeed.abbrev)}
       />
     </div>
