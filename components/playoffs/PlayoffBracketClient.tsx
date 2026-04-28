@@ -197,80 +197,104 @@ function MobileBracket({ eastern, western }: { eastern: ConferenceBracket; weste
   const eastCF = [...getMatchups(eastern, 3)];
   while (eastCF.length < 1) eastCF.push(TBD_MATCHUP);
 
-  const westDivA = getDivisionLabel(westR1, 0, 'Western') || 'Central';
-  const westDivB = getDivisionLabel(westR1, 2, 'Western') || 'Pacific';
-  const eastDivA = getDivisionLabel(eastR1, 0, 'Eastern') || 'Atlantic';
-  const eastDivB = getDivisionLabel(eastR1, 2, 'Eastern') || 'Metro';
+  // Active round = lowest round where games are still being played (or about to be).
+  // Earlier rounds collapse to compact "history" cells; later rounds stay compact placeholders.
+  const allComplete = (matchups: BracketMatchup[]) =>
+    matchups.length > 0 && matchups.every(m => m.topSeed && m.bottomSeed && m.isComplete);
+  const r1Done = allComplete([...westR1, ...eastR1]);
+  const r2Done = r1Done && allComplete([...westR2, ...eastR2]);
+  const cfDone = r2Done && allComplete([...westCF, ...eastCF]);
+  let activeRound = 1;
+  if (r1Done) activeRound = 2;
+  if (r2Done) activeRound = 3;
+  if (cfDone) activeRound = 4;
+
+  const r1Compact = activeRound !== 1;
+  const r2Compact = activeRound !== 2;
+  const cfCompact = activeRound !== 3;
+
+  // When R2 (or later) is active, R1 collapses to natural width and R2 column gets the 1fr space.
+  // minmax(0, 1fr) lets columns shrink below their content's min-content (so live-strip whitespace-nowrap
+  // doesn't push the bracket past the viewport).
+  const halfGridCols = activeRound === 1
+    ? 'minmax(0, 1fr) auto auto minmax(0, 1fr)'
+    : 'auto minmax(0, 1fr) minmax(0, 1fr) auto';
 
   return (
     <div className="space-y-2">
       {/* ── Top half: Division A from each conference + R2 ── */}
-      <div className="grid gap-x-2" style={{ gridTemplateColumns: '1fr auto auto 1fr' }}>
+      <div className="grid gap-x-2" style={{ gridTemplateColumns: halfGridCols }}>
         {/* R1 labels */}
         <div className="text-center text-[10px] font-semibold text-gray-400 uppercase mb-1">R1</div>
         <div className="text-center text-[10px] font-semibold text-gray-400 uppercase mb-1 col-span-2">R2</div>
         <div className="text-center text-[10px] font-semibold text-gray-400 uppercase mb-1">R1</div>
 
         {/* West R1 div A */}
-        <div className="space-y-1.5">
-          <BracketCell matchup={westR1[0]} />
-          <BracketCell matchup={westR1[1]} />
+        <div className={`space-y-1.5 ${r1Compact ? 'w-12' : ''}`}>
+          <BracketCell matchup={westR1[0]} compact={r1Compact} />
+          <BracketCell matchup={westR1[1]} compact={r1Compact} />
         </div>
-        {/* R2 boxes */}
+        {/* West R2 */}
         <div className="flex items-center px-1">
-          <div className="w-12">
-            <BracketCell matchup={westR2[0]} hidePct />
+          <div className={r2Compact ? 'w-12' : 'w-full'}>
+            <BracketCell matchup={westR2[0]} compact={r2Compact} />
           </div>
         </div>
+        {/* East R2 */}
         <div className="flex items-center px-1">
-          <div className="w-12">
-            <BracketCell matchup={eastR2[0]} hidePct />
+          <div className={r2Compact ? 'w-12' : 'w-full'}>
+            <BracketCell matchup={eastR2[0]} compact={r2Compact} />
           </div>
         </div>
         {/* East R1 div A */}
-        <div className="space-y-1.5">
-          <BracketCell matchup={eastR1[0]} />
-          <BracketCell matchup={eastR1[1]} />
+        <div className={`space-y-1.5 ${r1Compact ? 'w-12 justify-self-end' : ''}`}>
+          <BracketCell matchup={eastR1[0]} compact={r1Compact} />
+          <BracketCell matchup={eastR1[1]} compact={r1Compact} />
         </div>
       </div>
 
       {/* Conference Finals + Cup */}
-      <div className="flex items-center justify-center gap-4 py-3">
-        <div className="bg-gray-50 rounded-lg border border-gray-200 shadow-sm px-3 py-2 text-center">
-          <span className="text-[10px] font-bold text-gray-500 uppercase">Western</span>
-          <div className="text-[9px] text-gray-400">Conference Final</div>
+      <div className="flex items-center justify-center gap-3 py-3">
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">WCF</span>
+          <div className={cfCompact ? 'w-12' : 'w-32'}>
+            <BracketCell matchup={westCF[0]} compact={cfCompact} />
+          </div>
         </div>
         <div className="w-28">
           <BracketCell matchup={finalMatchup || TBD_MATCHUP} cupFinal />
         </div>
-        <div className="bg-gray-50 rounded-lg border border-gray-200 shadow-sm px-3 py-2 text-center">
-          <span className="text-[10px] font-bold text-gray-500 uppercase">Eastern</span>
-          <div className="text-[9px] text-gray-400">Conference Final</div>
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">ECF</span>
+          <div className={cfCompact ? 'w-12' : 'w-32'}>
+            <BracketCell matchup={eastCF[0]} compact={cfCompact} />
+          </div>
         </div>
       </div>
 
       {/* ── Bottom half: Division B from each conference + R2 ── */}
-      <div className="grid gap-x-2" style={{ gridTemplateColumns: '1fr auto auto 1fr' }}>
+      <div className="grid gap-x-2" style={{ gridTemplateColumns: halfGridCols }}>
         {/* West R1 div B */}
-        <div className="space-y-1.5">
-          <BracketCell matchup={westR1[2]} />
-          <BracketCell matchup={westR1[3]} />
+        <div className={`space-y-1.5 ${r1Compact ? 'w-12' : ''}`}>
+          <BracketCell matchup={westR1[2]} compact={r1Compact} />
+          <BracketCell matchup={westR1[3]} compact={r1Compact} />
         </div>
-        {/* R2 boxes */}
+        {/* West R2 */}
         <div className="flex items-center px-1">
-          <div className="w-12">
-            <BracketCell matchup={westR2[1]} hidePct />
+          <div className={r2Compact ? 'w-12' : 'w-full'}>
+            <BracketCell matchup={westR2[1]} compact={r2Compact} />
           </div>
         </div>
+        {/* East R2 */}
         <div className="flex items-center px-1">
-          <div className="w-12">
-            <BracketCell matchup={eastR2[1]} hidePct />
+          <div className={r2Compact ? 'w-12' : 'w-full'}>
+            <BracketCell matchup={eastR2[1]} compact={r2Compact} />
           </div>
         </div>
         {/* East R1 div B */}
-        <div className="space-y-1.5">
-          <BracketCell matchup={eastR1[2]} />
-          <BracketCell matchup={eastR1[3]} />
+        <div className={`space-y-1.5 ${r1Compact ? 'w-12 justify-self-end' : ''}`}>
+          <BracketCell matchup={eastR1[2]} compact={r1Compact} />
+          <BracketCell matchup={eastR1[3]} compact={r1Compact} />
         </div>
 
         {/* R2 + R1 labels at bottom */}
@@ -352,7 +376,7 @@ function DesktopBracket({ eastern, western }: { eastern: ConferenceBracket; west
       </div>
 
       {/* 13 cols × 4 rows bracket */}
-      <div className="grid" style={{ gridTemplateColumns: colTemplate, gridTemplateRows: 'repeat(4, 140px)' }}>
+      <div className="grid" style={{ gridTemplateColumns: colTemplate, gridTemplateRows: 'repeat(4, minmax(140px, auto))' }}>
 
         {/* ── West R1 (col 1, rows 1-4) ── */}
         <Cell col={1} row="1" matchup={westR1[0]} />

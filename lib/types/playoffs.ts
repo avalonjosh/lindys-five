@@ -58,6 +58,14 @@ export interface PlayoffGame {
   gameOutcome?: {
     lastPeriodType: string; // REG, OT, 2OT, etc.
   };
+  periodDescriptor?: {
+    number: number; // 1-3 reg, 4+ OT
+    periodType?: string; // REG, OT, SO
+  };
+  clock?: {
+    timeRemaining?: string; // "12:34"
+    inIntermission?: boolean;
+  };
 }
 
 // Computed types used in the UI

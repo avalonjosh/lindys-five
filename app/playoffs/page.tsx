@@ -81,6 +81,8 @@ interface DetailGame {
   homeTeam: DetailTeam;
   awayTeam: DetailTeam;
   gameOutcome?: { lastPeriodType: string };
+  periodDescriptor?: { number: number; periodType?: string };
+  clock?: { timeRemaining?: string; inIntermission?: boolean };
 }
 
 function teamCfgByAbbrev(abbrev: string) {
@@ -142,6 +144,8 @@ async function fetchBracket(): Promise<PlayoffBracketResponse | null> {
               homeTeam: { id: g.homeTeam.id, abbrev: g.homeTeam.abbrev, score: g.homeTeam.score },
               awayTeam: { id: g.awayTeam.id, abbrev: g.awayTeam.abbrev, score: g.awayTeam.score },
               gameOutcome: g.gameOutcome,
+              periodDescriptor: g.periodDescriptor,
+              clock: g.clock,
             });
 
             return {

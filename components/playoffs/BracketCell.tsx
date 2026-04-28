@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { TEAMS } from '@/lib/teamConfig';
-import type { BracketMatchup } from '@/lib/types/playoffs';
+import type { BracketMatchup, PlayoffGame } from '@/lib/types/playoffs';
 
 function getTeamSlug(abbrev: string): string | null {
   const entry = Object.entries(TEAMS).find(([, t]) => t.abbreviation === abbrev);
@@ -15,13 +15,27 @@ function getTeamColor(abbrev: string): string {
   return entry?.colors.primary || '#003087';
 }
 
+function getPeriodLabel(g: PlayoffGame): string {
+  const period = g.periodDescriptor;
+  const clock = g.clock;
+  if (!period) return 'LIVE';
+  if (clock?.inIntermission) return `INT P${period.number}`;
+  if (period.periodType === 'OT') {
+    const otNum = period.number - 3;
+    return otNum > 1 ? `${otNum}OT` : 'OT';
+  }
+  if (period.periodType === 'SO') return 'SO';
+  const time = clock?.timeRemaining;
+  return time ? `P${period.number} ${time}` : `P${period.number}`;
+}
+
 interface BracketCellProps {
   matchup: BracketMatchup;
   cupFinal?: boolean;
-  hidePct?: boolean;
+  compact?: boolean;
 }
 
-export default function BracketCell({ matchup, cupFinal, hidePct }: BracketCellProps) {
+export default function BracketCell({ matchup, cupFinal, compact }: BracketCellProps) {
   const { topSeed, bottomSeed, topSeedWins, bottomSeedWins, isComplete, topSeedSeriesWinPct, bottomSeedSeriesWinPct } = matchup;
 
   if (!topSeed || !bottomSeed) {
@@ -34,6 +48,19 @@ export default function BracketCell({ matchup, cupFinal, hidePct }: BracketCellP
       );
     }
     // Standard TBD matchup — mirror the 2-row layout of a real matchup so the bracket reads consistently
+    if (compact) {
+      return (
+        <div className="bg-gray-50 rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+          <div className="flex items-center justify-center h-[40px] px-1">
+            <span className="text-[10px] font-semibold italic text-gray-400">TBD</span>
+          </div>
+          <div className="border-t border-gray-200" />
+          <div className="flex items-center justify-center h-[40px] px-1">
+            <span className="text-[10px] font-semibold italic text-gray-400">TBD</span>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="bg-gray-50 rounded-lg border border-gray-200 shadow-sm overflow-hidden">
         <div className="flex items-center justify-center px-2 py-2 sm:py-3">
@@ -55,7 +82,7 @@ export default function BracketCell({ matchup, cupFinal, hidePct }: BracketCellP
 
   return (
     <div
-      className={`bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden ${
+      className={`relative bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden ${
         liveGame ? 'ring-2 ring-green-400 cursor-pointer hover:shadow-md transition-shadow' : ''
       }`}
       onClick={liveGame ? () => router.push(`/scores/${liveGame.gameId}`) : undefined}
@@ -67,7 +94,8 @@ export default function BracketCell({ matchup, cupFinal, hidePct }: BracketCellP
         pct={topPct}
         isWinner={isComplete && topSeedWins >= 4}
         isLoser={isComplete && topSeedWins < 4}
-        showPct={!hidePct}
+        showPct={!compact}
+        compact={compact}
         slug={getTeamSlug(topSeed.abbrev)}
       />
 
@@ -81,9 +109,48 @@ export default function BracketCell({ matchup, cupFinal, hidePct }: BracketCellP
         pct={bottomPct}
         isWinner={isComplete && bottomSeedWins >= 4}
         isLoser={isComplete && bottomSeedWins < 4}
-        showPct={!hidePct}
+        showPct={!compact}
+        compact={compact}
         slug={getTeamSlug(bottomSeed.abbrev)}
       />
+
+      {liveGame && !compact && (() => {
+        const topIsHome = liveGame.homeTeam.abbrev === topSeed.abbrev;
+        const topScore = (topIsHome ? liveGame.homeTeam.score : liveGame.awayTeam.score) ?? 0;
+        const bottomScore = (topIsHome ? liveGame.awayTeam.score : liveGame.homeTeam.score) ?? 0;
+        const topLeads = topScore > bottomScore;
+        const bottomLeads = bottomScore > topScore;
+        return (
+          <>
+            <div className="border-t border-gray-100" />
+            <div className="flex flex-col items-center gap-0.5 sm:flex-row sm:gap-1.5 px-2 py-1 bg-gray-50 text-[9px] sm:text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="relative flex h-2 w-2 flex-shrink-0">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 animate-ping" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                </span>
+                <span className="font-bold text-red-600 whitespace-nowrap">{getPeriodLabel(liveGame)}</span>
+              </div>
+              <span className="tabular-nums text-gray-700 whitespace-nowrap sm:ml-auto">
+                <span className={topLeads ? 'font-bold text-gray-900' : 'font-semibold'}>
+                  {topSeed.abbrev} {topScore}
+                </span>
+                -
+                <span className={bottomLeads ? 'font-bold text-gray-900' : 'font-semibold'}>
+                  {bottomSeed.abbrev} {bottomScore}
+                </span>
+              </span>
+            </div>
+          </>
+        );
+      })()}
+
+      {liveGame && compact && (
+        <span className="absolute top-1 right-1 flex h-1.5 w-1.5">
+          <span className="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75 animate-ping" />
+          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
+        </span>
+      )}
     </div>
   );
 }
@@ -96,6 +163,7 @@ function TeamRow({
   isWinner,
   isLoser,
   showPct,
+  compact,
   slug,
 }: {
   logo: string;
@@ -105,12 +173,23 @@ function TeamRow({
   isWinner: boolean;
   isLoser: boolean;
   showPct: boolean;
+  compact?: boolean;
   slug: string | null;
 }) {
-  const logoEl = <img src={logo} alt={abbrev} className="w-10 h-10 sm:w-16 sm:h-16 object-contain flex-shrink-0" />;
+  const logoEl = (
+    <img
+      src={logo}
+      alt={abbrev}
+      className={`${compact ? 'w-8 h-8' : 'w-10 h-10 sm:w-16 sm:h-16'} object-contain flex-shrink-0`}
+    />
+  );
 
   return (
-    <div className={`flex items-center gap-0 pl-1 pr-1 sm:pr-2 h-[52px] sm:h-[68px] ${isLoser ? 'opacity-40' : ''}`}>
+    <div
+      className={`flex items-center gap-0 ${
+        compact ? 'px-0 h-[40px]' : 'pl-1 pr-1 sm:pr-2 h-[52px] sm:h-[68px]'
+      } ${isLoser ? 'opacity-40' : ''}`}
+    >
       {slug ? (
         <Link href={`/nhl/${slug}`} className="flex-shrink-0 hover:opacity-80 transition-opacity" onClick={(e) => e.stopPropagation()}>
           {logoEl}
@@ -128,7 +207,7 @@ function TeamRow({
         </span>
       )}
       <span
-        className={`ml-auto mr-0 sm:mr-1 text-base sm:text-2xl font-bold tabular-nums flex-shrink-0 min-w-[16px] sm:min-w-[20px] text-center ${
+        className={`ml-auto ${compact ? 'mr-0 text-sm min-w-[14px]' : 'mr-0 sm:mr-1 text-base sm:text-2xl min-w-[16px] sm:min-w-[20px]'} font-bold tabular-nums flex-shrink-0 text-center ${
           isWinner ? 'text-gray-900' : wins > 0 ? 'text-gray-700' : 'text-gray-300'
         }`}
       >
