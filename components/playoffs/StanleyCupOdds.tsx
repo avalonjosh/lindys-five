@@ -31,6 +31,8 @@ function oddsCellStyle(value: number | undefined | null): React.CSSProperties {
 
 function formatPct(value: number | undefined | null): string {
   if (value == null) return '—';
+  if (value >= 100) return '100%';
+  if (value <= 0) return '0%';
   if (value >= 99.5) return '>99%';
   if (value <= 0.1) return '<1%';
   return `${Math.round(value)}%`;

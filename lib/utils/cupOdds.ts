@@ -39,10 +39,19 @@ export function buildCupOdds(
     for (const series of round.series || []) {
       for (const mt of series.matchupTeams || []) {
         const abbrev = mt.team.abbrev;
-        if (teamsInBracket.has(abbrev)) continue;
         const standing = standingsMap.get(abbrev);
         const isTop = mt.seed?.isTop;
         const losses = isTop ? series.bottomSeedWins : series.topSeedWins;
+        const newRoundsToWin = 5 - round.roundNumber;
+        const existing = teamsInBracket.get(abbrev);
+        if (existing) {
+          // Team advanced — update to their current (latest) round.
+          if (newRoundsToWin < existing.roundsToWin) {
+            existing.roundsToWin = newRoundsToWin;
+            existing.isEliminated = losses >= 4;
+          }
+          continue;
+        }
         teamsInBracket.set(abbrev, {
           abbrev,
           name: mt.team.commonName?.default || mt.team.name?.default || abbrev,
@@ -52,7 +61,7 @@ export function buildCupOdds(
           conferenceName: standing?.conferenceName || '',
           isEliminated: losses >= 4,
           currentSeriesWinPct: 50,
-          roundsToWin: 5 - round.roundNumber,
+          roundsToWin: newRoundsToWin,
           strength: strengthFor(standing),
         });
       }
@@ -92,10 +101,16 @@ export function buildCupOdds(
 
   for (const [, team] of teamsInBracket) {
     if (team.isEliminated) {
+      // Team won every round before the one they lost — show 100% for those.
+      const eliminatedAtRound = 5 - team.roundsToWin;
+      const elimStageOdds = [0, 0, 0, 0];
+      for (let stage = 1; stage < eliminatedAtRound; stage++) {
+        elimStageOdds[stage - 1] = 100;
+      }
       entries.push({
         abbrev: team.abbrev, name: team.name, logo: team.logo, seed: team.seed,
         conferenceName: team.conferenceName, cupOdds: 0, currentSeriesOdds: 0, isEliminated: true,
-        oddsR1: 0, oddsR2: 0, oddsConf: 0, oddsCup: 0,
+        oddsR1: elimStageOdds[0], oddsR2: elimStageOdds[1], oddsConf: elimStageOdds[2], oddsCup: elimStageOdds[3],
       });
       continue;
     }
