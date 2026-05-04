@@ -981,7 +981,7 @@ export default function PlayoffJourney({
           cupOdds={cupOdds}
           cupOddsRank={cupOddsRank}
         />
-        {ordered.map((s) => (
+        {[...ordered].reverse().map((s) => (
           <SeriesCard
             key={s.seriesLetter}
             s={s}
