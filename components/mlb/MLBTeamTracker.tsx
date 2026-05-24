@@ -242,6 +242,8 @@ export default function MLBTeamTracker({ team }: MLBTeamTrackerProps) {
           <MLBProgressBar
             stats={whatIfMode && hypotheticalResults.size > 0 ? calculateMLBSeasonStats(getChunksWithHypotheticals()) : stats}
             teamColors={team.colors}
+            teamAbbrev={team.abbreviation}
+            teamName={fullName}
           />
         )}
 

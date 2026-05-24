@@ -66,11 +66,11 @@ export function isMLBInPlayoffPosition(team: MLBStandingsTeam): boolean {
   return team.wildCardRank !== undefined && team.wildCardRank >= 1 && team.wildCardRank <= 3;
 }
 
-function probabilityForFinalWins(
+export function probabilityForFinalWins(
   finalWins: number,
   gamesPlayed: number,
   cutLine: number,
-  pathType: 'division' | 'wildcard'
+  pathType: 'division' | 'wildcard' = 'wildcard'
 ): number {
   const diff = finalWins - cutLine;
   const confidenceFactor = Math.min(gamesPlayed / TOTAL_GAMES, 1);
