@@ -155,4 +155,8 @@ export interface MLBStandingsTeam {
   league: string;
   divisionRank: number;
   wildCardRank?: number;
+  clinched: boolean;
+  divisionChamp: boolean;
+  eliminationNumber: string;
+  wildCardEliminationNumber: string;
 }

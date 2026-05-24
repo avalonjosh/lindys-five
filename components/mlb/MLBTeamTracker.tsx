@@ -3,8 +3,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { MLBGameChunk, MLBSeasonStats, MLBGameResult } from '@/lib/types/mlb';
-import { fetchMLBSchedule } from '@/lib/services/mlbApi';
-import { calculateMLBChunks, calculateMLBSeasonStats } from '@/lib/utils/mlbChunkCalculator';
+import { fetchMLBSchedule, fetchMLBLastSeasonComparison } from '@/lib/services/mlbApi';
+import { calculateMLBChunks, calculateMLBSeasonStats, MLB_TOTAL_GAMES, MLB_PLAYOFF_TARGET_WINS } from '@/lib/utils/mlbChunkCalculator';
 import type { MLBTeamConfig } from '@/lib/teamConfig/mlbTeams';
 import MLBChunkCard from './MLBChunkCard';
 import MLBProgressBar from './MLBProgressBar';
@@ -28,6 +28,9 @@ export default function MLBTeamTracker({ team }: MLBTeamTrackerProps) {
   const [hideCompleted, setHideCompleted] = useState(true);
   const [whatIfMode, setWhatIfMode] = useState(false);
   const [hypotheticalResults, setHypotheticalResults] = useState<Map<number, MLBGameResult>>(new Map());
+  const [yearOverYearMode, setYearOverYearMode] = useState(false);
+  const [yearOverYearLoading, setYearOverYearLoading] = useState(false);
+  const [lastSeasonData, setLastSeasonData] = useState<{ winsLastYear: number; lossesLastYear: number; recordLastYear: string } | null>(null);
   const pollingIntervalRef = useRef(60000);
 
   const fullName = `${team.city} ${team.name}`;
@@ -139,6 +142,26 @@ export default function MLBTeamTracker({ team }: MLBTeamTrackerProps) {
     return () => clearTimeout(timer);
   }, [team.mlbId]);
 
+  // Reset year-over-year state when team changes
+  useEffect(() => {
+    setYearOverYearMode(false);
+    setLastSeasonData(null);
+  }, [team.mlbId]);
+
+  // Fetch prior-season comparison when YoY is enabled
+  useEffect(() => {
+    if (!yearOverYearMode || !stats || stats.gamesPlayed === 0) return;
+    if (lastSeasonData) return; // already loaded for this team
+
+    let cancelled = false;
+    setYearOverYearLoading(true);
+    fetchMLBLastSeasonComparison(stats.gamesPlayed, team.mlbId)
+      .then((data) => { if (!cancelled) setLastSeasonData(data); })
+      .catch(() => { if (!cancelled) setLastSeasonData(null); })
+      .finally(() => { if (!cancelled) setYearOverYearLoading(false); });
+    return () => { cancelled = true; };
+  }, [yearOverYearMode, stats?.gamesPlayed, team.mlbId, lastSeasonData, stats]);
+
   if (loading && chunks.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
@@ -244,6 +267,22 @@ export default function MLBTeamTracker({ team }: MLBTeamTrackerProps) {
             teamColors={team.colors}
             teamAbbrev={team.abbreviation}
             teamName={fullName}
+            teamSlug={team.slug}
+            yearOverYearMode={yearOverYearMode}
+            yearOverYearLoading={yearOverYearLoading}
+            onYearOverYearToggle={() => setYearOverYearMode((v) => !v)}
+            lastSeasonStats={yearOverYearMode && lastSeasonData && stats.gamesPlayed > 0 ? {
+              totalWins: lastSeasonData.winsLastYear,
+              totalLosses: lastSeasonData.lossesLastYear,
+              gamesPlayed: stats.gamesPlayed,
+              gamesRemaining: MLB_TOTAL_GAMES - stats.gamesPlayed,
+              totalGames: MLB_TOTAL_GAMES,
+              winPct: stats.gamesPlayed > 0 ? lastSeasonData.winsLastYear / stats.gamesPlayed : 0,
+              projectedWins: Math.round((lastSeasonData.winsLastYear / stats.gamesPlayed) * MLB_TOTAL_GAMES),
+              playoffTarget: MLB_PLAYOFF_TARGET_WINS,
+              winsAboveBelow: Math.round((lastSeasonData.winsLastYear / stats.gamesPlayed) * MLB_TOTAL_GAMES) - MLB_PLAYOFF_TARGET_WINS,
+            } : undefined}
+            showShareButton={true}
           />
         )}
 

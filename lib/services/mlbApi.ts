@@ -172,6 +172,10 @@ export async function fetchMLBStandings(season?: number): Promise<MLBStandingsTe
         league,
         divisionRank: teamRecord.divisionRank ? parseInt(teamRecord.divisionRank) : 0,
         wildCardRank: teamRecord.wildCardRank ? parseInt(teamRecord.wildCardRank) : undefined,
+        clinched: !!teamRecord.clinched,
+        divisionChamp: !!teamRecord.divisionChamp,
+        eliminationNumber: teamRecord.eliminationNumber || '',
+        wildCardEliminationNumber: teamRecord.wildCardEliminationNumber || '',
       });
     }
   }
@@ -516,5 +520,27 @@ export async function fetchSeasonSeries(teamId1: number, teamId2: number, season
     return result;
   } catch {
     return { wins: 0, losses: 0, games: [] };
+  }
+}
+
+export async function fetchMLBLastSeasonComparison(
+  currentGamesPlayed: number,
+  teamMlbId: number,
+): Promise<{ winsLastYear: number; lossesLastYear: number; recordLastYear: string } | null> {
+  try {
+    const lastSeason = new Date().getFullYear() - 1;
+    const lastSeasonGames = await fetchMLBSchedule(teamMlbId, lastSeason);
+
+    const completed = lastSeasonGames.filter(g => g.outcome === 'W' || g.outcome === 'L');
+    const sample = completed.slice(0, currentGamesPlayed);
+
+    const winsLastYear = sample.filter(g => g.outcome === 'W').length;
+    const lossesLastYear = sample.filter(g => g.outcome === 'L').length;
+    const recordLastYear = `${winsLastYear}-${lossesLastYear}`;
+
+    return { winsLastYear, lossesLastYear, recordLastYear };
+  } catch (err) {
+    console.error('Error fetching MLB last season comparison:', err);
+    return null;
   }
 }

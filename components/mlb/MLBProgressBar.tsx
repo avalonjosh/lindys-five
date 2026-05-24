@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, X as XIcon, Link as LinkIcon, Check } from 'lucide-react';
 import type { MLBSeasonStats, MLBStandingsTeam } from '@/lib/types/mlb';
 import { fetchMLBStandings } from '@/lib/services/mlbApi';
 import {
   getMLBPlayoffProbability,
   probabilityForFinalWins,
 } from '@/lib/utils/mlbStandingsCalc';
+import { trackClick } from '@/lib/analytics';
 
 interface MLBProgressBarProps {
   stats: MLBSeasonStats;
@@ -18,6 +19,12 @@ interface MLBProgressBarProps {
   };
   teamAbbrev?: string;
   teamName?: string;
+  teamSlug?: string;
+  yearOverYearMode?: boolean;
+  yearOverYearLoading?: boolean;
+  onYearOverYearToggle?: () => void;
+  lastSeasonStats?: MLBSeasonStats;
+  showShareButton?: boolean;
 }
 
 interface CutLineState {
@@ -30,17 +37,20 @@ interface CutLineState {
   wcBubbleAbbrev: string;
 }
 
+interface ClinchState {
+  kind: 'division' | 'playoff' | 'eliminated';
+  label: string;
+}
+
 function deriveCutLineState(team: MLBStandingsTeam, standings: MLBStandingsTeam[]): CutLineState {
   const { probability, divCutLine, wcCutLine, activePath } = getMLBPlayoffProbability(team, standings);
 
-  // Division bubble: if team is the leader, bubble is 2nd; else bubble is the leader they're chasing
   const divTeams = standings
     .filter(t => t.division === team.division)
     .sort((a, b) => b.wins - a.wins);
   const isLeader = divTeams[0]?.teamAbbrev === team.teamAbbrev;
   const divBubble = isLeader ? divTeams[1] : divTeams[0];
 
-  // Wild card bubble: first team out of WC (the 4th non-division-winner in the league)
   const leagueTeams = standings.filter(t => t.league === team.league);
   const divisions = Array.from(new Set(leagueTeams.map(t => t.division)));
   const divWinners = new Set(
@@ -52,7 +62,6 @@ function deriveCutLineState(team: MLBStandingsTeam, standings: MLBStandingsTeam[
   const wcContenders = leagueTeams
     .filter(t => !divWinners.has(t.teamAbbrev))
     .sort((a, b) => b.wins - a.wins);
-  // If team is already in the top 3, bubble is WC4 (first team out). Otherwise bubble is WC3 (last team in).
   const teamWcIdx = wcContenders.findIndex(t => t.teamAbbrev === team.teamAbbrev);
   const wcBubble = teamWcIdx >= 0 && teamWcIdx < 3 ? wcContenders[3] : wcContenders[2];
 
@@ -67,7 +76,70 @@ function deriveCutLineState(team: MLBStandingsTeam, standings: MLBStandingsTeam[
   };
 }
 
-export default function MLBProgressBar({ stats, teamColors, teamAbbrev, teamName }: MLBProgressBarProps) {
+function deriveClinchState(team: MLBStandingsTeam): ClinchState | null {
+  if (team.divisionChamp) return { kind: 'division', label: 'Clinched Division' };
+  if (team.clinched) return { kind: 'playoff', label: 'Clinched Playoff Spot' };
+  if (team.eliminationNumber === 'E' && team.wildCardEliminationNumber === 'E') {
+    return { kind: 'eliminated', label: 'Eliminated from Playoff Contention' };
+  }
+  return null;
+}
+
+function StatCard({
+  label,
+  value,
+  hint,
+  teamColors,
+  delta,
+  deltaPositiveColor = 'text-green-600',
+  deltaNegativeColor = 'text-red-600',
+  faded = false,
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+  teamColors: { primary: string };
+  delta?: { value: number; format: (n: number) => string };
+  deltaPositiveColor?: string;
+  deltaNegativeColor?: string;
+  faded?: boolean;
+}) {
+  const containerClass = faded
+    ? 'bg-gradient-to-br from-slate-100 to-slate-200 rounded-xl p-2 md:p-3 border border-slate-300'
+    : 'bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-2 md:p-3 border border-blue-200';
+  const labelColor = faded ? '#475569' : teamColors.primary;
+  const valueColor = faded ? 'text-slate-700' : 'text-gray-900';
+  const hintColor = faded ? 'text-slate-500' : 'text-gray-600';
+  return (
+    <div className={containerClass}>
+      <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: labelColor }}>
+        {label}
+      </div>
+      <div className={`text-2xl md:text-3xl font-bold flex items-center gap-2 ${valueColor}`}>
+        {value}
+        {delta && delta.value !== 0 && (
+          <span className={`text-sm font-semibold ${delta.value > 0 ? deltaPositiveColor : deltaNegativeColor}`}>
+            {delta.value > 0 ? '+' : ''}{delta.format(delta.value)}
+          </span>
+        )}
+      </div>
+      {hint && <div className={`text-xs mt-1 ${hintColor}`}>{hint}</div>}
+    </div>
+  );
+}
+
+export default function MLBProgressBar({
+  stats,
+  teamColors,
+  teamAbbrev,
+  teamName,
+  teamSlug,
+  yearOverYearMode,
+  yearOverYearLoading,
+  onYearOverYearToggle,
+  lastSeasonStats,
+  showShareButton,
+}: MLBProgressBarProps) {
   const { totalWins, totalLosses, gamesPlayed, gamesRemaining, winPct, projectedWins, playoffTarget, totalGames } = stats;
 
   const currentProgress = playoffTarget > 0 ? (totalWins / playoffTarget) * 100 : 0;
@@ -84,8 +156,9 @@ export default function MLBProgressBar({ stats, teamColors, teamAbbrev, teamName
   const [standings, setStandings] = useState<MLBStandingsTeam[]>([]);
   const [standingsLoading, setStandingsLoading] = useState(false);
   const [standingsError, setStandingsError] = useState(false);
+  const [shareMenuOpen, setShareMenuOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  // Fetch standings client-side when team has played at least 10 games (avoids noisy projections too early)
   useEffect(() => {
     if (!teamAbbrev || standings.length > 0 || standingsLoading || standingsError) return;
     if (gamesPlayed < 10) return;
@@ -98,6 +171,7 @@ export default function MLBProgressBar({ stats, teamColors, teamAbbrev, teamName
 
   const userTeam = teamAbbrev ? standings.find(t => t.teamAbbrev === teamAbbrev) : undefined;
   const cutLineData: CutLineState | null = userTeam ? deriveCutLineState(userTeam, standings) : null;
+  const clinchState: ClinchState | null = userTeam ? deriveClinchState(userTeam) : null;
   const probability = cutLineData?.probability;
   const showProbabilityRow = teamAbbrev && gamesPlayed >= 10;
   const probabilityLabel = standingsLoading
@@ -109,15 +183,80 @@ export default function MLBProgressBar({ stats, teamColors, teamAbbrev, teamName
   const probabilityColor = teamColors.primary;
   const shortName = teamName ? teamName.split(' ').pop() : 'Team';
 
+  // Last season label (e.g., "2025")
+  const lastSeasonLabel = String(new Date().getFullYear() - 1);
+
+  // Last season computed values for deltas
+  const lastYearWins = lastSeasonStats?.totalWins ?? 0;
+  const lastYearLosses = lastSeasonStats?.totalLosses ?? 0;
+  const lastYearPace = lastSeasonStats && lastSeasonStats.gamesPlayed > 0
+    ? lastYearWins / lastSeasonStats.gamesPlayed
+    : 0;
+  const lastYearProjected = lastSeasonStats?.projectedWins ?? 0;
+
+  // Share URL/text
+  const teamUrl = typeof window !== 'undefined' && teamSlug
+    ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? `${window.location.origin}/mlb/${teamSlug}`
+      : `https://www.lindysfive.com/mlb/${teamSlug}`)
+    : '';
+  const tweetText = `Track the ${teamName ?? ''} road to the playoffs! ⚾\n${teamUrl}\n@lindysfive #LindysFive`;
+
+  const handleTwitterShare = () => {
+    if (!teamUrl) return;
+    trackClick('share-x', 'mlb-progress-bar');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank', 'noopener,noreferrer');
+    setShareMenuOpen(false);
+  };
+
+  const handleCopyLink = async () => {
+    if (!teamUrl) return;
+    try {
+      await navigator.clipboard.writeText(teamUrl);
+      setCopied(true);
+      trackClick('share-copy', 'mlb-progress-bar');
+      setTimeout(() => {
+        setCopied(false);
+        setShareMenuOpen(false);
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
   return (
     <div className="rounded-2xl p-3 md:p-4 shadow-xl mb-4 border-2 relative bg-white" style={{ borderColor: '#e5e7eb' }}>
-      {/* Header row with title + centered playoff probability link (desktop) */}
+      {/* Year-over-Year Toggle */}
+      {onYearOverYearToggle && (
+        <button
+          onClick={onYearOverYearToggle}
+          disabled={yearOverYearLoading}
+          className={`absolute top-3 md:top-4 right-3 md:right-4 flex items-center gap-1 text-xs md:text-sm font-semibold transition-all focus:outline-none z-10 ${
+            yearOverYearMode ? '' : 'text-gray-500 hover:text-gray-700'
+          } ${yearOverYearLoading ? 'opacity-70 cursor-wait' : ''}`}
+          style={yearOverYearMode ? { color: teamColors.primary } : undefined}
+          title={yearOverYearLoading ? 'Loading…' : yearOverYearMode ? `Hide ${lastSeasonLabel} comparison` : `Compare to ${lastSeasonLabel}`}
+        >
+          <span className={yearOverYearMode ? 'underline decoration-2 underline-offset-2' : ''}>
+            vs Last Year
+          </span>
+          {yearOverYearLoading ? (
+            <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+          ) : (
+            <ChevronDown size={12} className={`transition-transform ${yearOverYearMode ? 'rotate-180' : ''}`} />
+          )}
+        </button>
+      )}
+
+      {/* Header */}
       <div className="relative flex items-center justify-between gap-2 mb-2 md:mb-3">
         <h3 className="text-xl md:text-2xl font-bold text-gray-900">
           Season Progress
         </h3>
 
-        {/* Desktop centered probability link */}
         {showProbabilityRow && (
           <div className="hidden md:flex absolute inset-0 justify-center items-center pointer-events-none">
             <button
@@ -138,45 +277,43 @@ export default function MLBProgressBar({ stats, teamColors, teamAbbrev, teamName
         )}
       </div>
 
+      {/* Clinch / Elimination banner */}
+      {clinchState && (
+        <div className={`mb-3 px-3 py-2 rounded-lg text-center text-sm font-bold ${
+          clinchState.kind === 'eliminated'
+            ? 'bg-red-50 text-red-700 border border-red-200'
+            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+        }`}>
+          {clinchState.label}
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-3 md:mb-4">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-2 md:p-3 border border-blue-200">
-          <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: teamColors.primary }}>
-            Games Played
-          </div>
-          <div className="text-2xl md:text-3xl font-bold text-gray-900">{gamesPlayed}</div>
-          <div className="text-xs text-gray-600 mt-1">{gamesRemaining} remaining</div>
-        </div>
-
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-2 md:p-3 border border-blue-200">
-          <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: teamColors.primary }}>
-            Current Wins
-          </div>
-          <div className="text-2xl md:text-3xl font-bold text-gray-900">{totalWins}</div>
-          <div className="text-xs text-gray-600 mt-1">
-            {totalWins}-{totalLosses} ({gamesPlayed > 0 ? `${(winPct * 100).toFixed(1)}%` : '—'})
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-2 md:p-3 border border-blue-200">
-          <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: teamColors.primary }}>
-            Win Pace
-          </div>
-          <div className="text-2xl md:text-3xl font-bold text-gray-900">{currentPace}</div>
-          <div className="text-xs text-gray-600 mt-1">wins/game (need {neededPace})</div>
-        </div>
-
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-2 md:p-3 border border-blue-200">
-          <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: teamColors.primary }}>
-            Projected
-          </div>
-          <div className="text-2xl md:text-3xl font-bold text-gray-900">
-            {gamesPlayed > 0 ? projectedWins : '—'}
-          </div>
-          <div className="text-xs text-gray-600 mt-1">
-            {gamesPlayed > 0 ? `season total (need ${playoffTarget})` : '—'}
-          </div>
-        </div>
+        <StatCard
+          label="Games Played"
+          value={gamesPlayed}
+          hint={`${gamesRemaining} remaining`}
+          teamColors={teamColors}
+        />
+        <StatCard
+          label="Current Wins"
+          value={totalWins}
+          hint={`${totalWins}-${totalLosses} (${gamesPlayed > 0 ? `${(winPct * 100).toFixed(1)}%` : '—'})`}
+          teamColors={teamColors}
+        />
+        <StatCard
+          label="Win Pace"
+          value={currentPace}
+          hint={`wins/game (need ${neededPace})`}
+          teamColors={teamColors}
+        />
+        <StatCard
+          label="Projected"
+          value={gamesPlayed > 0 ? projectedWins : '—'}
+          hint={gamesPlayed > 0 ? `season total (need ${playoffTarget})` : '—'}
+          teamColors={teamColors}
+        />
       </div>
 
       {/* Progress Bar */}
@@ -217,7 +354,7 @@ export default function MLBProgressBar({ stats, teamColors, teamAbbrev, teamName
         </div>
       )}
 
-      {/* Mobile: probability link at bottom */}
+      {/* Mobile probability link */}
       {showProbabilityRow && (
         <div className="flex md:hidden justify-center mt-3">
           <button
@@ -254,9 +391,7 @@ export default function MLBProgressBar({ stats, teamColors, teamAbbrev, teamName
             </p>
           ) : (
             <>
-              {/* Two-column layout: Active cut line + Lindy's Five target */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* Active Cut Line card */}
                 <div className="rounded-lg p-3 border border-gray-200 bg-gray-50">
                   <div className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
@@ -295,7 +430,6 @@ export default function MLBProgressBar({ stats, teamColors, teamAbbrev, teamName
                   </div>
                 </div>
 
-                {/* Lindy's Five Target card (fixed 90-win target) */}
                 <div className="rounded-lg p-3 border border-gray-200 bg-gray-50">
                   <div className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
@@ -331,7 +465,6 @@ export default function MLBProgressBar({ stats, teamColors, teamAbbrev, teamName
                 </div>
               </div>
 
-              {/* Probability Breakdown Table */}
               <div className="mt-4 pt-4 border-t border-dashed border-gray-300">
                 <p className="text-xs font-bold uppercase tracking-wide mb-2 text-gray-500">
                   If the {shortName} Finish With...
@@ -378,6 +511,139 @@ export default function MLBProgressBar({ stats, teamColors, teamAbbrev, teamName
             </>
           )}
         </div>
+      )}
+
+      {/* Share Button (hidden when playoff section is open to avoid overlap) */}
+      {showShareButton && teamSlug && !playoffExpanded && (
+        <div className="relative">
+          {shareMenuOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShareMenuOpen(false)} />
+              <div
+                className="absolute bottom-12 right-0 rounded-lg shadow-2xl p-2 border-2 z-50 min-w-[240px] bg-white"
+                style={{ borderColor: teamColors.primary }}
+              >
+                <div
+                  className="absolute -bottom-2 right-4 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent"
+                  style={{ borderTopColor: teamColors.primary }}
+                />
+                <button
+                  onClick={handleTwitterShare}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-lg transition-colors text-left hover:bg-gray-100"
+                >
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center bg-black">
+                    <XIcon size={16} color="#FFFFFF" />
+                  </div>
+                  <span className="font-semibold text-sm text-gray-800">Share on X</span>
+                </button>
+                <button
+                  onClick={handleCopyLink}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-lg transition-colors text-left hover:bg-gray-100"
+                >
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: teamColors.primary }}
+                  >
+                    {copied ? <Check size={16} color="#FFFFFF" /> : <LinkIcon size={16} color="#FFFFFF" />}
+                  </div>
+                  <span className="font-semibold text-sm text-gray-800">
+                    {copied ? 'Link Copied!' : 'Copy Link'}
+                  </span>
+                </button>
+              </div>
+            </>
+          )}
+          <button
+            onClick={() => setShareMenuOpen(!shareMenuOpen)}
+            className="absolute -bottom-1 md:-bottom-2 right-2 md:right-3 p-2 rounded-full hover:bg-gray-200 transition-colors group"
+            aria-label="Share team page"
+            title="Share this page"
+          >
+            <MoreHorizontal size={18} className="text-gray-500 group-hover:text-gray-700" />
+          </button>
+        </div>
+      )}
+
+      {/* Last Year Section */}
+      {lastSeasonStats && (
+        <>
+          <div className="my-6 border-t-2 border-dashed border-gray-300" />
+
+          <div className="mb-2 md:mb-3">
+            <h3 className="text-xl md:text-2xl font-bold text-slate-700">
+              Last Year ({lastSeasonLabel})
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-3 md:mb-4">
+            <StatCard
+              label="Games Played"
+              value={lastSeasonStats.gamesPlayed}
+              hint={`Same point last year`}
+              teamColors={teamColors}
+              faded
+            />
+            <StatCard
+              label="Wins"
+              value={lastYearWins}
+              hint={`${lastYearWins}-${lastYearLosses}`}
+              teamColors={teamColors}
+              faded
+              delta={{
+                value: lastYearWins - totalWins,
+                format: (n) => `${Math.abs(n)}`,
+              }}
+              deltaPositiveColor="text-red-600"
+              deltaNegativeColor="text-green-600"
+            />
+            <StatCard
+              label="Win Pace"
+              value={lastYearPace.toFixed(3)}
+              hint="wins/game"
+              teamColors={teamColors}
+              faded
+              delta={{
+                value: parseFloat((lastYearPace - parseFloat(currentPace)).toFixed(3)),
+                format: (n) => Math.abs(n).toFixed(3),
+              }}
+              deltaPositiveColor="text-red-600"
+              deltaNegativeColor="text-green-600"
+            />
+            <StatCard
+              label="Projected"
+              value={lastYearProjected}
+              hint="season total"
+              teamColors={teamColors}
+              faded
+              delta={{
+                value: lastYearProjected - projectedWins,
+                format: (n) => `${Math.abs(n)}`,
+              }}
+              deltaPositiveColor="text-red-600"
+              deltaNegativeColor="text-green-600"
+            />
+          </div>
+
+          {lastSeasonStats.gamesPlayed > 0 && (
+            <div>
+              <div className="flex justify-end text-sm font-semibold mb-2 text-slate-600">
+                <span>{((lastYearWins / playoffTarget) * 100).toFixed(1)}%</span>
+              </div>
+              <div className="w-full rounded-full h-8 relative shadow-inner bg-slate-200">
+                <div
+                  className="h-8 rounded-l-full transition-all duration-500 relative shadow-md flex items-center justify-end bg-slate-500"
+                  style={{ width: `${Math.max(Math.min((lastYearWins / playoffTarget) * 100, 100), 5)}%` }}
+                >
+                  {lastYearWins > 0 && (
+                    <span className="pr-1.5 md:pr-3 text-[10px] md:text-sm font-bold text-white whitespace-nowrap">
+                      {lastYearWins}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
