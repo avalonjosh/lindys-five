@@ -1,0 +1,108 @@
+# Lindy's Five
+
+> Independent NHL and MLB playoff tracker covering all 32 NHL teams and all 30 MLB teams. Daily-refreshed playoff odds, standings, projections, 5-game-set analysis, live scores, and box scores. Data sourced from the official NHL API and MLB Stats API; updated every 5 minutes.
+
+Lindy's Five focuses on playoff probability and 5-game-set analysis. For each team we project win pace over the full season (82 games for NHL, 162 for MLB), compare the projection to current division and wild card cut lines, and convert the gap into a playoff probability using a logistic model. Cut lines are computed daily from live standings.
+
+The site is operated by JRR Apps. Methodology and definitions are stated on each page; no betting affiliate content.
+
+## NHL — National Hockey League
+
+- [NHL Playoff Odds 2025-26](https://www.lindysfive.com/nhl-playoff-odds): Full standings table for all 32 teams with playoff probability, projected points, division and wild card position, and Stanley Cup odds. Updated every 5 minutes.
+- [NHL Hub](https://www.lindysfive.com/nhl): Landing page with all 32 NHL team trackers and the current playoff bracket status.
+- [NHL Scores Today](https://www.lindysfive.com/nhl/scores): Live NHL scores, box scores, and playoff-impact summaries for the current day's games.
+- [NHL Playoff Bracket](https://www.lindysfive.com/playoffs): Live Stanley Cup playoff bracket with series-win probabilities, Stanley Cup odds, and per-series game results.
+
+## NHL Team Trackers
+
+Each NHL team page shows current record, division and conference rank, projected final points, playoff probability, current 5-game set, last game, next game, and a full schedule with 5-game set color coding.
+
+- [Anaheim Ducks](https://www.lindysfive.com/nhl/ducks)
+- [Boston Bruins](https://www.lindysfive.com/nhl/bruins)
+- [Buffalo Sabres](https://www.lindysfive.com/nhl/sabres)
+- [Calgary Flames](https://www.lindysfive.com/nhl/flames)
+- [Carolina Hurricanes](https://www.lindysfive.com/nhl/hurricanes)
+- [Chicago Blackhawks](https://www.lindysfive.com/nhl/blackhawks)
+- [Colorado Avalanche](https://www.lindysfive.com/nhl/avalanche)
+- [Columbus Blue Jackets](https://www.lindysfive.com/nhl/bluejackets)
+- [Dallas Stars](https://www.lindysfive.com/nhl/stars)
+- [Detroit Red Wings](https://www.lindysfive.com/nhl/redwings)
+- [Edmonton Oilers](https://www.lindysfive.com/nhl/oilers)
+- [Florida Panthers](https://www.lindysfive.com/nhl/panthers)
+- [Los Angeles Kings](https://www.lindysfive.com/nhl/kings)
+- [Minnesota Wild](https://www.lindysfive.com/nhl/wild)
+- [Montreal Canadiens](https://www.lindysfive.com/nhl/canadiens)
+- [Nashville Predators](https://www.lindysfive.com/nhl/predators)
+- [New Jersey Devils](https://www.lindysfive.com/nhl/devils)
+- [New York Islanders](https://www.lindysfive.com/nhl/islanders)
+- [New York Rangers](https://www.lindysfive.com/nhl/rangers)
+- [Ottawa Senators](https://www.lindysfive.com/nhl/senators)
+- [Philadelphia Flyers](https://www.lindysfive.com/nhl/flyers)
+- [Pittsburgh Penguins](https://www.lindysfive.com/nhl/penguins)
+- [San Jose Sharks](https://www.lindysfive.com/nhl/sharks)
+- [Seattle Kraken](https://www.lindysfive.com/nhl/kraken)
+- [St. Louis Blues](https://www.lindysfive.com/nhl/blues)
+- [Tampa Bay Lightning](https://www.lindysfive.com/nhl/lightning)
+- [Toronto Maple Leafs](https://www.lindysfive.com/nhl/mapleleafs)
+- [Utah Mammoth](https://www.lindysfive.com/nhl/utah)
+- [Vancouver Canucks](https://www.lindysfive.com/nhl/canucks)
+- [Vegas Golden Knights](https://www.lindysfive.com/nhl/goldenknights)
+- [Washington Capitals](https://www.lindysfive.com/nhl/capitals)
+- [Winnipeg Jets](https://www.lindysfive.com/nhl/jets)
+
+## MLB — Major League Baseball
+
+- [MLB Playoff Odds 2026](https://www.lindysfive.com/mlb/playoff-odds): Full standings table for all 30 teams with playoff probability, projected wins, division and wild card position, and World Series contender ranking. Updated every 5 minutes.
+- [MLB Hub](https://www.lindysfive.com/mlb): Landing page with all 30 MLB team trackers.
+- [MLB Scores Today](https://www.lindysfive.com/mlb/scores): Live MLB scores and box scores for the current day's games.
+
+## MLB Team Trackers
+
+Each MLB team page shows current record, division and wild card rank, projected wins at current pace, games back, run differential, current 5-game set, last game, next game, and a full schedule with 5-game set color coding.
+
+- [Arizona Diamondbacks](https://www.lindysfive.com/mlb/diamondbacks)
+- [Atlanta Braves](https://www.lindysfive.com/mlb/braves)
+- [Baltimore Orioles](https://www.lindysfive.com/mlb/orioles)
+- [Boston Red Sox](https://www.lindysfive.com/mlb/redsox)
+- [Chicago Cubs](https://www.lindysfive.com/mlb/cubs)
+- [Chicago White Sox](https://www.lindysfive.com/mlb/whitesox)
+- [Cincinnati Reds](https://www.lindysfive.com/mlb/reds)
+- [Cleveland Guardians](https://www.lindysfive.com/mlb/guardians)
+- [Colorado Rockies](https://www.lindysfive.com/mlb/rockies)
+- [Detroit Tigers](https://www.lindysfive.com/mlb/tigers)
+- [Houston Astros](https://www.lindysfive.com/mlb/astros)
+- [Kansas City Royals](https://www.lindysfive.com/mlb/royals)
+- [Los Angeles Angels](https://www.lindysfive.com/mlb/angels)
+- [Los Angeles Dodgers](https://www.lindysfive.com/mlb/dodgers)
+- [Miami Marlins](https://www.lindysfive.com/mlb/marlins)
+- [Milwaukee Brewers](https://www.lindysfive.com/mlb/brewers)
+- [Minnesota Twins](https://www.lindysfive.com/mlb/twins)
+- [New York Mets](https://www.lindysfive.com/mlb/mets)
+- [New York Yankees](https://www.lindysfive.com/mlb/yankees)
+- [Oakland Athletics](https://www.lindysfive.com/mlb/athletics)
+- [Philadelphia Phillies](https://www.lindysfive.com/mlb/phillies)
+- [Pittsburgh Pirates](https://www.lindysfive.com/mlb/pirates)
+- [San Diego Padres](https://www.lindysfive.com/mlb/padres)
+- [San Francisco Giants](https://www.lindysfive.com/mlb/giants)
+- [Seattle Mariners](https://www.lindysfive.com/mlb/mariners)
+- [St. Louis Cardinals](https://www.lindysfive.com/mlb/cardinals)
+- [Tampa Bay Rays](https://www.lindysfive.com/mlb/rays)
+- [Texas Rangers](https://www.lindysfive.com/mlb/txrangers)
+- [Toronto Blue Jays](https://www.lindysfive.com/mlb/bluejays)
+- [Washington Nationals](https://www.lindysfive.com/mlb/nationals)
+
+## Blog
+
+- [Sabres Blog](https://www.lindysfive.com/blog/sabres): Buffalo Sabres game recaps, 5-game set recaps, news analysis, and weekly roundups.
+- [Bills Blog](https://www.lindysfive.com/blog/bills): Buffalo Bills coverage.
+- [RSS Feed](https://www.lindysfive.com/feed.xml): All published blog posts in RSS 2.0 format.
+
+## Methodology
+
+- **NHL projected points**: current points / games played × 82, rounded.
+- **MLB projected wins**: current wins / games played × 162, rounded.
+- **NHL playoff probability**: logistic curve over the gap between projected points and the higher of (division-3 cut line) or (wild card-2 cut line). Cut lines are computed daily from current standings.
+- **MLB playoff probability**: logistic curve over the gap between projected wins and the higher of (division-winner cut line) or (wild card-3 cut line). Cut lines are computed daily from current standings.
+- **5-game sets**: each team's schedule is divided into 16-17 sets of 5 games. Target is 3+ wins per set, which projects to a playoff pace.
+- **Data freshness**: scores and standings refresh every 5 minutes via ISR. Live game pages poll every 15-30 seconds.
+- **Data sources**: api-web.nhle.com (NHL), statsapi.mlb.com (MLB).

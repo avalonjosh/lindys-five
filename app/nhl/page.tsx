@@ -34,12 +34,21 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.lindysfive.com/nhl',
     siteName: "Lindy's Five",
+    images: [
+      {
+        url: '/api/og?type=sport-hub&sport=nhl&title=NHL%20Playoff%20Odds%202025-26&subtitle=Standings%20%26%20Projections%20for%20All%2032%20Teams',
+        width: 1200,
+        height: 630,
+        alt: "NHL Playoff Odds 2025-26 — Lindy's Five",
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: "NHL Playoff Odds & Standings 2025-26 — All 32 Teams",
     description:
       "NHL playoff odds, standings, and projections for all 32 teams. Playoff picture, Stanley Cup odds, and wild card race updated daily.",
+    images: ['/api/og?type=sport-hub&sport=nhl&title=NHL%20Playoff%20Odds%202025-26&subtitle=Standings%20%26%20Projections%20for%20All%2032%20Teams'],
   },
   alternates: {
     canonical: 'https://www.lindysfive.com/nhl',
@@ -202,6 +211,8 @@ export default async function NHLLandingPage() {
               <Link href="/playoffs" className="text-gray-400 hover:text-white transition-colors">Playoff Bracket</Link>
               <span className="text-gray-600">|</span>
               <Link href="/nhl/scores" className="text-gray-400 hover:text-white transition-colors">NHL Scores Today</Link>
+              <span className="text-gray-600">|</span>
+              <Link href="/mlb/playoff-odds" className="text-gray-400 hover:text-white transition-colors">MLB Playoff Odds</Link>
               <span className="text-gray-600">|</span>
               <Link href="/blog/sabres" className="text-gray-400 hover:text-white transition-colors">Sabres Blog</Link>
               <span className="text-gray-600">|</span>

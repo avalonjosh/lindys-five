@@ -21,25 +21,26 @@ const permanentMarker = Permanent_Marker({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.lindysfive.com'),
   title: {
-    default: "NHL Playoff Odds, Standings & Projections 2025-26 | Lindy's Five",
+    default: "Lindy's Five — NHL & MLB Playoff Odds, Standings & Projections",
     template: "%s | Lindy's Five",
   },
   description:
-    "NHL playoff odds, standings, and projections for all 32 teams. Track playoff probability, Stanley Cup odds, points pace, and playoff picture updated daily.",
+    "NHL and MLB playoff odds, standings, and projections for all 32 NHL teams and all 30 MLB teams. Playoff probability, Stanley Cup and World Series odds, points pace, and win pace updated daily.",
   openGraph: {
     type: 'website',
     url: 'https://www.lindysfive.com/',
-    title: "NHL Playoff Odds, Standings & Projections 2025-26 | Lindy's Five",
+    title: "Lindy's Five — NHL & MLB Playoff Odds, Standings & Projections",
     description:
-      "NHL playoff odds, standings, and projections for all 32 teams. Track playoff probability, Stanley Cup odds, points pace, and playoff picture updated daily.",
+      "NHL and MLB playoff odds, standings, and projections for all 32 NHL teams and all 30 MLB teams. Updated daily.",
     siteName: "Lindy's Five",
   },
   twitter: {
     card: 'summary_large_image',
-    title: "NHL Playoff Odds, Standings & Projections 2025-26 | Lindy's Five",
+    title: "Lindy's Five — NHL & MLB Playoff Odds, Standings & Projections",
     description:
-      "NHL playoff odds, standings, and projections for all 32 teams. Playoff probability, Stanley Cup odds, and playoff picture updated daily.",
+      "NHL and MLB playoff odds, standings, and projections for all 32 NHL teams and all 30 MLB teams. Updated daily.",
   },
   icons: {
     icon: '/favicon.svg',

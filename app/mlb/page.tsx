@@ -13,12 +13,21 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.lindysfive.com/mlb',
     siteName: "Lindy's Five",
+    images: [
+      {
+        url: '/api/og?type=sport-hub&sport=mlb&title=MLB%20Playoff%20Odds%202026&subtitle=Standings%20%26%20Projections%20for%20All%2030%20Teams',
+        width: 1200,
+        height: 630,
+        alt: 'MLB Playoff Odds 2026 — Lindy\'s Five',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: "MLB Playoff Odds & Standings 2026 — All 30 Teams",
     description:
       "MLB playoff odds, standings, and projections for all 30 teams. Win pace, playoff picture, and World Series odds updated daily.",
+    images: ['/api/og?type=sport-hub&sport=mlb&title=MLB%20Playoff%20Odds%202026&subtitle=Standings%20%26%20Projections%20for%20All%2030%20Teams'],
   },
   alternates: {
     canonical: 'https://www.lindysfive.com/mlb',

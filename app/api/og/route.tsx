@@ -53,6 +53,17 @@ export async function GET(request: NextRequest) {
           weekEnd: searchParams.get('weekEnd') || '2026-03-23',
         };
         break;
+      case 'sport-hub': {
+        const sportParam = searchParams.get('sport');
+        const sport: 'nhl' | 'mlb' = sportParam === 'mlb' ? 'mlb' : 'nhl';
+        params = {
+          type: 'sport-hub',
+          sport,
+          title: searchParams.get('title') || (sport === 'mlb' ? 'MLB Playoff Odds 2026' : 'NHL Playoff Odds 2025-26'),
+          subtitle: searchParams.get('subtitle') || (sport === 'mlb' ? 'Standings & Projections for All 30 Teams' : 'Standings & Projections for All 32 Teams'),
+        };
+        break;
+      }
       default:
         return new Response(`Unknown type: ${type}`, { status: 400 });
     }

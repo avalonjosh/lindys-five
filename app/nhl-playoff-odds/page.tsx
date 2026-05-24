@@ -24,12 +24,21 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.lindysfive.com/nhl-playoff-odds',
     siteName: "Lindy's Five",
+    images: [
+      {
+        url: '/api/og?type=sport-hub&sport=nhl&title=NHL%20Playoff%20Odds%202025-26&subtitle=Live%20Standings%2C%20Projections%20%26%20Wild%20Card%20Race',
+        width: 1200,
+        height: 630,
+        alt: "NHL Playoff Odds 2025-26 — Lindy's Five",
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'NHL Playoff Odds 2025-26 — Standings & Playoff Picture',
     description:
       'NHL playoff odds, standings, and projections for all 32 teams. Playoff picture and Stanley Cup odds updated daily.',
+    images: ['/api/og?type=sport-hub&sport=nhl&title=NHL%20Playoff%20Odds%202025-26&subtitle=Live%20Standings%2C%20Projections%20%26%20Wild%20Card%20Race'],
   },
   alternates: {
     canonical: 'https://www.lindysfive.com/nhl-playoff-odds',
@@ -415,19 +424,33 @@ export default async function NHLPlayoffOddsPage() {
                 >
                   home page
                 </Link>{' '}
-                to dive deeper.
+                to dive deeper. Tracking baseball too? See{' '}
+                <Link
+                  href="/mlb/playoff-odds"
+                  className="text-blue-600 hover:text-blue-500 underline"
+                >
+                  MLB playoff odds for all 30 teams
+                </Link>
+                .
               </p>
             </div>
           </section>
 
           {/* Back to Home */}
-          <div className="mt-12 text-center">
+          <div className="mt-12 text-center flex flex-wrap items-center justify-center gap-4">
             <Link
               href="/"
               className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
             >
               <span>&larr;</span>
               <span>Back to All Teams</span>
+            </Link>
+            <Link
+              href="/mlb/playoff-odds"
+              className="inline-flex items-center gap-2 bg-slate-700 hover:bg-slate-800 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+            >
+              <span>MLB Playoff Odds 2026</span>
+              <span>&rarr;</span>
             </Link>
           </div>
         </main>

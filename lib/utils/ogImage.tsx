@@ -505,7 +505,117 @@ function weeklyRoundupTemplate({
   );
 }
 
-export type OgImageType = 'game-recap' | 'set-recap' | 'news-analysis' | 'weekly-roundup';
+function sportHubTemplate({
+  sport,
+  title,
+  subtitle,
+}: {
+  sport: 'nhl' | 'mlb';
+  title: string;
+  subtitle: string;
+}) {
+  const isNHL = sport === 'nhl';
+  const accentLeft = isNHL ? '#003087' : '#002D72';
+  const accentRight = isNHL ? '#0A1128' : '#E81828';
+  const sportLabel = isNHL ? 'NHL' : 'MLB';
+
+  return (
+    <div
+      style={{
+        width: OG_WIDTH,
+        height: OG_HEIGHT,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%)',
+        position: 'relative',
+        padding: 64,
+      }}
+    >
+      {/* Top accent bar */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 8,
+          display: 'flex',
+        }}
+      >
+        <div style={{ flex: 1, background: accentLeft, display: 'flex' }} />
+        <div style={{ flex: 1, background: accentRight, display: 'flex' }} />
+      </div>
+
+      {/* Sport label */}
+      <div
+        style={{
+          display: 'flex',
+          fontSize: 22,
+          fontWeight: 800,
+          color: '#8FBCE6',
+          letterSpacing: 10,
+          textTransform: 'uppercase',
+          marginBottom: 28,
+        }}
+      >
+        {sportLabel} Playoff Tracker
+      </div>
+
+      {/* Title */}
+      <div
+        style={{
+          display: 'flex',
+          fontSize: 88,
+          fontWeight: 900,
+          color: '#ffffff',
+          textAlign: 'center',
+          lineHeight: 1.05,
+          marginBottom: 24,
+          letterSpacing: -1,
+        }}
+      >
+        {title}
+      </div>
+
+      {/* Subtitle */}
+      <div
+        style={{
+          display: 'flex',
+          fontSize: 36,
+          fontWeight: 600,
+          color: '#cbd5e1',
+          textAlign: 'center',
+          lineHeight: 1.2,
+          maxWidth: 1000,
+        }}
+      >
+        {subtitle}
+      </div>
+
+      {/* Site brand */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 36,
+          left: 0,
+          right: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          fontSize: 28,
+          fontWeight: 700,
+          color: '#94a3b8',
+          letterSpacing: 2,
+        }}
+      >
+        Lindy&apos;s Five &nbsp;&bull;&nbsp; lindysfive.com
+      </div>
+    </div>
+  );
+}
+
+export type OgImageType = 'game-recap' | 'set-recap' | 'news-analysis' | 'weekly-roundup' | 'sport-hub';
 
 export interface GameRecapImageParams {
   type: 'game-recap';
@@ -541,7 +651,14 @@ export interface WeeklyRoundupImageParams {
   weekEnd: string;
 }
 
-export type OgImageParams = GameRecapImageParams | SetRecapImageParams | NewsImageParams | WeeklyRoundupImageParams;
+export interface SportHubImageParams {
+  type: 'sport-hub';
+  sport: 'nhl' | 'mlb';
+  title: string;
+  subtitle: string;
+}
+
+export type OgImageParams = GameRecapImageParams | SetRecapImageParams | NewsImageParams | WeeklyRoundupImageParams | SportHubImageParams;
 
 export function generateOgImageResponse(params: OgImageParams): ImageResponse {
   let element: React.JSX.Element;
@@ -558,6 +675,9 @@ export function generateOgImageResponse(params: OgImageParams): ImageResponse {
       break;
     case 'weekly-roundup':
       element = weeklyRoundupTemplate(params);
+      break;
+    case 'sport-hub':
+      element = sportHubTemplate(params);
       break;
   }
 

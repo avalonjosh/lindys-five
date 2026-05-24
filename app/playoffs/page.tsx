@@ -638,6 +638,13 @@ export default async function PlayoffsPage() {
 
         {/* Footer */}
         <footer className="mt-auto py-6 text-center text-sm text-gray-500">
+          <div className="flex flex-wrap justify-center gap-3 mb-3 text-xs">
+            <Link href="/nhl-playoff-odds" className="hover:text-gray-700 transition-colors">NHL Playoff Odds</Link>
+            <span className="text-gray-300">|</span>
+            <Link href="/mlb/playoff-odds" className="hover:text-gray-700 transition-colors">MLB Playoff Odds</Link>
+            <span className="text-gray-300">|</span>
+            <Link href="/" className="hover:text-gray-700 transition-colors">Home</Link>
+          </div>
           <p>Lindy&apos;s Five &bull; {new Date().getFullYear()}</p>
           <p className="mt-1">
             {playoffsActive
