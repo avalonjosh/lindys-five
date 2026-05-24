@@ -5,13 +5,19 @@ export const MLB_TOTAL_GAMES = 162;
 export const MLB_PLAYOFF_TARGET_WINS = 90;
 
 export function calculateMLBChunks(games: MLBGameResult[]): MLBGameChunk[] {
+  // Drop postponed games before chunking. The MLB API serves a separate entry
+  // for the makeup on its rescheduled date, which gets included naturally —
+  // including the original Postponed entry would prevent its chunk from ever
+  // being marked complete and would visually orphan old sets all season.
+  const playedGames = games.filter(g => g.gameState !== 'Postponed');
+
   const chunks: MLBGameChunk[] = [];
   const totalChunks = Math.ceil(MLB_TOTAL_GAMES / MLB_GAMES_PER_CHUNK);
 
   for (let i = 0; i < totalChunks; i++) {
     const startIndex = i * MLB_GAMES_PER_CHUNK;
     const endIndex = Math.min(startIndex + MLB_GAMES_PER_CHUNK, MLB_TOTAL_GAMES);
-    const chunkGames = games.slice(startIndex, endIndex);
+    const chunkGames = playedGames.slice(startIndex, endIndex);
     const gamesInChunk = endIndex - startIndex;
 
     const wins = chunkGames.filter(g => g.outcome === 'W').length;
