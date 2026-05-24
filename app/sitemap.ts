@@ -61,6 +61,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
+      url: `${BASE_URL}/mlb/playoff-odds`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.95,
+    },
+    {
       url: `${BASE_URL}/mlb/scores`,
       lastModified: now,
       changeFrequency: 'daily',
