@@ -7,6 +7,7 @@ import { fetchMLBStandings } from '@/lib/services/mlbApi';
 import {
   getMLBPlayoffProbability,
   probabilityForFinalWins,
+  probabilityOfReachingTotal,
 } from '@/lib/utils/mlbStandingsCalc';
 import { trackClick } from '@/lib/analytics';
 
@@ -444,7 +445,10 @@ export default function MLBProgressBar({
                       </p>
                     </div>
                     {(() => {
-                      const lindysProb = probabilityForFinalWins(projectedWins, gamesPlayed, playoffTarget);
+                      // "Lindy's Five Target" asks: what's the probability the team actually
+                      // reaches 90 wins given their current pace + variance over remaining games.
+                      // This is a different question than the breakdown table's conditional cells.
+                      const lindysProb = userTeam ? probabilityOfReachingTotal(playoffTarget, userTeam) : 50;
                       return (
                         <div
                           className="flex-shrink-0 w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center"
