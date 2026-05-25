@@ -317,7 +317,7 @@ function WildCardView({ standings, teamAbbrev, accentColor, userLeague, gamesByT
 
 function StandingsHeader({ showScoresView }: { showScoresView: boolean }) {
   return (
-    <div className="flex items-center gap-2 px-2 pb-1 text-[10px] md:text-xs font-medium text-gray-400 uppercase tracking-wide">
+    <div className="flex items-center gap-2 lg:justify-between px-2 pb-1 text-[10px] md:text-xs font-medium text-gray-400 uppercase tracking-wide">
       <span className="w-5 text-center">#</span>
       <span className="w-6" />
       <span className="w-14 min-w-[3.5rem]">Team</span>
@@ -353,7 +353,7 @@ function TeamRow({ team, rank, isUserTeam, accentColor, isEven, badge, game, sho
 
   return (
     <div
-      className={`flex items-center gap-2 py-1.5 px-2 rounded-lg ${
+      className={`flex items-center gap-2 lg:justify-between py-1.5 px-2 rounded-lg ${
         isUserTeam ? 'bg-blue-50' : isEven ? 'bg-gray-50/50' : ''
       }`}
       style={isUserTeam ? {
