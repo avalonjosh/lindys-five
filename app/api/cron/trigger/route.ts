@@ -9,6 +9,7 @@ import { GET as setRecapHandler } from '@/app/api/cron/set-recap/route';
 import { GET as billsNewsScanHandler } from '@/app/api/cron/bills-news-scan/route';
 import { GET as billsWeeklyRoundupHandler } from '@/app/api/cron/bills-weekly-roundup/route';
 import { GET as billsGameRecapHandler } from '@/app/api/cron/bills-game-recap/route';
+import { GET as pickTheBillsHandler } from '@/app/api/cron/pickthebills/route';
 
 async function verifyAdmin(request: NextRequest): Promise<boolean> {
   const token = request.cookies.get('admin_token')?.value;
@@ -32,7 +33,9 @@ const handlers: Record<string, (request: NextRequest) => Promise<NextResponse>> 
   // Bills
   'bills-news': billsNewsScanHandler,
   'bills-weekly': billsWeeklyRoundupHandler,
-  'bills-game-recap': billsGameRecapHandler
+  'bills-game-recap': billsGameRecapHandler,
+  // Pick the Bills
+  'pickthebills': pickTheBillsHandler
 };
 
 const validTypes = Object.keys(handlers);
