@@ -6,7 +6,9 @@ import * as schema from './schema';
 // centralizes KV. The HTTP-based Neon driver suits Vercel's serverless
 // functions (no connection pool to exhaust across short-lived invocations).
 
-const connectionString = process.env.POSTGRES_URL;
+// Neon's Vercel integration injects DATABASE_URL (pooled). Accept POSTGRES_URL
+// too in case the env vars are provisioned under that name.
+const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
 
 if (!connectionString) {
   // Surfaced at call time rather than import time so non-DB routes are unaffected.
