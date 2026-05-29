@@ -6,7 +6,7 @@ import { LogOut, ExternalLink } from 'lucide-react';
 import { logout } from '@/lib/utils/auth';
 
 interface AdminNavProps {
-  activeTab: 'analytics' | 'posts' | 'outreach' | 'newsletter';
+  activeTab: 'analytics' | 'posts' | 'outreach' | 'newsletter' | 'pickthebills';
 }
 
 export default function AdminNav({ activeTab }: AdminNavProps) {
@@ -56,6 +56,7 @@ export default function AdminNav({ activeTab }: AdminNavProps) {
             { key: 'posts', label: 'Posts', href: '/admin/posts' },
             { key: 'outreach', label: 'Outreach', href: '/admin/outreach' },
             { key: 'newsletter', label: 'Newsletter', href: '/admin/newsletter' },
+            { key: 'pickthebills', label: 'Pick the Bills', href: '/admin/pickthebills' },
           ] as const).map(tab => (
             <Link
               key={tab.key}
