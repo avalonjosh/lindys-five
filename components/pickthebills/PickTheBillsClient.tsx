@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { Loader2, Trophy, ListChecks, Lock } from 'lucide-react';
@@ -63,7 +63,10 @@ export default function PickTheBillsClient() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  // When the server reports a 409 (picks already exist in this window), we stash
+  // the retry-with-confirm action here so one modal serves both save and claim.
+  const [pendingConfirm, setPendingConfirm] = useState<null | (() => void)>(null);
+  const claimedRef = useRef(false);
 
   const now = Date.now();
   const pickable = useMemo(
@@ -139,12 +142,12 @@ export default function PickTheBillsClient() {
         body: JSON.stringify({ picks: buildPicks(), confirmOverwrite }),
       });
       if (res.status === 409) {
-        setConfirmOpen(true);
+        setPendingConfirm(() => () => save(true));
         return;
       }
       const json = await res.json();
       if (res.ok) {
-        setConfirmOpen(false);
+        setPendingConfirm(null);
         setNotice(`Saved ${json.savedGameIds?.length ?? 0} pick(s).`);
         await load();
       } else {
@@ -154,6 +157,57 @@ export default function PickTheBillsClient() {
       setSaving(false);
     }
   }
+
+  // Claim-on-return: after OAuth bounces back with ?claim=1, the anonymous picks
+  // are still in sessionStorage. Write them to the now-authenticated account and
+  // clear the stash. An existing account with picks in this window hits the same
+  // 409 confirm path as a normal save.
+  const claim = useCallback(
+    async (confirmOverwrite = false) => {
+      let picks: { gameId: string; predicted: 'W' | 'L' }[] = [];
+      try {
+        const raw = sessionStorage.getItem(PENDING_STASH);
+        if (!raw) return;
+        picks = JSON.parse(raw)?.picks ?? [];
+      } catch {
+        return;
+      }
+      if (picks.length === 0) {
+        sessionStorage.removeItem(PENDING_STASH);
+        return;
+      }
+      setSaving(true);
+      try {
+        const res = await fetch('/api/pickthebills/picks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ picks, confirmOverwrite }),
+        });
+        if (res.status === 409) {
+          setPendingConfirm(() => () => claim(true));
+          return;
+        }
+        const json = await res.json();
+        sessionStorage.removeItem(PENDING_STASH);
+        setPendingConfirm(null);
+        setNotice(res.ok ? `Saved ${json.savedGameIds?.length ?? 0} pick(s).` : json.error || 'Could not save your picks');
+        if (res.ok) await load();
+      } finally {
+        setSaving(false);
+      }
+    },
+    [load],
+  );
+
+  useEffect(() => {
+    if (loading || !user || claimedRef.current) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('claim') !== '1') return;
+    claimedRef.current = true;
+    // Strip ?claim=1 so a refresh does not re-trigger the claim.
+    window.history.replaceState(null, '', '/pickthebills');
+    claim();
+  }, [loading, user, claim]);
 
   const locked = !data?.openWindow;
 
@@ -213,7 +267,7 @@ export default function PickTheBillsClient() {
         )}
       </div>
 
-      {confirmOpen && (
+      {pendingConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-2">Replace your picks?</h3>
@@ -221,11 +275,11 @@ export default function PickTheBillsClient() {
               You already made picks in this window. Saving will update them to your current selections.
             </p>
             <div className="flex gap-2 justify-end">
-              <button onClick={() => setConfirmOpen(false)} className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100">
+              <button onClick={() => setPendingConfirm(null)} className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-100">
                 Cancel
               </button>
               <button
-                onClick={() => save(true)}
+                onClick={() => pendingConfirm()}
                 disabled={saving}
                 className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-50"
                 style={{ background: BILLS_BLUE }}
