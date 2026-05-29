@@ -38,6 +38,18 @@ const NHL_TEAMS = [
   { slug: 'jets', name: 'Winnipeg Jets' },
 ];
 
+const DISMISS_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+function isSuppressed(): boolean {
+  try {
+    if (localStorage.getItem('newsletter-subscribed') === '1') return true;
+    const until = Number(localStorage.getItem('newsletter-dismissed-until') || 0);
+    return until > Date.now();
+  } catch {
+    return false;
+  }
+}
+
 interface NewsletterModalProps {
   team?: string;
   teamDisplayName?: string;
@@ -69,8 +81,8 @@ export default function NewsletterModal({
       sessionStorage.getItem('newsletterSubscribed') === '1' ||
       localStorage.getItem('newsletter-subscribed') === '1';
 
-    // Check if returning subscriber — never show modal
-    if (localStorage.getItem('newsletter-subscribed') === '1') return;
+    // Returning subscriber or within dismiss cooldown — never show modal
+    if (isSuppressed()) return;
 
     // For generic mode, load favorites from localStorage
     if (isGeneric && !timerShown()) {
@@ -96,6 +108,9 @@ export default function NewsletterModal({
     let timer: ReturnType<typeof setTimeout> | null = null;
     if (!timerShown()) {
       timer = setTimeout(() => {
+        // Re-check at fire time: the suppression flag may have been set after
+        // mount (e.g. NewsletterVerified writing it on ?newsletter=success).
+        if (isSuppressed()) return;
         setVisible(true);
       }, 2500);
     }
@@ -130,6 +145,14 @@ export default function NewsletterModal({
   function dismiss() {
     setVisible(false);
     sessionStorage.setItem('newsletterModalShown', '1');
+    try {
+      // Back off across sessions after a dismissal, unless they've subscribed.
+      if (localStorage.getItem('newsletter-subscribed') !== '1') {
+        localStorage.setItem('newsletter-dismissed-until', String(Date.now() + DISMISS_COOLDOWN_MS));
+      }
+    } catch {
+      // ignore
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {

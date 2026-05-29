@@ -59,6 +59,11 @@ export default function NewsletterSignup({
       if (res.ok) {
         setStatus('success');
         setMessage(data.message);
+        try {
+          localStorage.setItem('newsletter-subscribed', '1');
+        } catch {
+          // ignore
+        }
       } else {
         setStatus('error');
         setMessage(data.error || 'Something went wrong');
