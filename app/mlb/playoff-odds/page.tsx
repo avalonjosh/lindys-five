@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import Image from 'next/image';
 import MLBTeamNav from '@/components/mlb/MLBTeamNav';
+import MLBPlayoffOddsClient, { type MLBTeamRow } from '@/components/mlb/MLBPlayoffOddsClient';
 import { MLB_TEAMS } from '@/lib/teamConfig';
 import { fetchMLBStandings } from '@/lib/services/mlbApi';
 import type { MLBStandingsTeam } from '@/lib/types/mlb';
@@ -48,24 +48,7 @@ const abbrevToSlug = Object.fromEntries(
   Object.entries(MLB_TEAMS).map(([slug, team]) => [team.abbreviation, slug])
 );
 
-const DIVISION_ORDER = [
-  'American League East',
-  'American League Central',
-  'American League West',
-  'National League East',
-  'National League Central',
-  'National League West',
-];
-
-interface TeamRow {
-  team: MLBStandingsTeam;
-  slug: string;
-  probability: number;
-  projectedWins: number;
-  inPlayoffs: boolean;
-}
-
-function buildTeamRows(standings: MLBStandingsTeam[]): TeamRow[] {
+function buildTeamRows(standings: MLBStandingsTeam[]): MLBTeamRow[] {
   return standings.map(team => {
     const { probability, projectedWins } = getMLBPlayoffProbability(team, standings);
     return {
@@ -76,197 +59,6 @@ function buildTeamRows(standings: MLBStandingsTeam[]): TeamRow[] {
       inPlayoffs: isMLBInPlayoffPosition(team),
     };
   });
-}
-
-function formatGB(gb: number): string {
-  if (gb === 0) return '—';
-  if (Number.isInteger(gb)) return String(gb);
-  return gb.toFixed(1);
-}
-
-function probabilityColor(prob: number, inPlayoffs: boolean): string {
-  if (prob >= 95) return 'bg-emerald-100 text-emerald-900 border-emerald-300';
-  if (prob >= 70) return inPlayoffs
-    ? 'bg-green-100 text-green-900 border-green-300'
-    : 'bg-lime-100 text-lime-900 border-lime-300';
-  if (prob >= 40) return 'bg-amber-100 text-amber-900 border-amber-300';
-  if (prob >= 15) return 'bg-orange-100 text-orange-900 border-orange-300';
-  return 'bg-red-100 text-red-900 border-red-300';
-}
-
-function DivisionTable({ league, division, rows }: { league: 'AL' | 'NL'; division: string; rows: TeamRow[] }) {
-  const shortDivision = division
-    .replace('American League ', 'AL ')
-    .replace('National League ', 'NL ');
-
-  return (
-    <div className="bg-white rounded-2xl shadow-md border-2 border-gray-200 overflow-hidden mb-6">
-      <div
-        className="px-4 py-3 border-b-2"
-        style={{ background: league === 'AL' ? '#0C2340' : '#A6192E', borderBottomColor: '#000' }}
-      >
-        <h3
-          className="text-xl md:text-2xl font-bold text-white"
-          style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-        >
-          {shortDivision}
-        </h3>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-600 text-xs uppercase tracking-wide">
-            <tr>
-              <th className="text-left px-3 py-2">Team</th>
-              <th className="text-right px-2 py-2">W</th>
-              <th className="text-right px-2 py-2">L</th>
-              <th className="text-right px-2 py-2">PCT</th>
-              <th className="text-right px-2 py-2 hidden sm:table-cell">GB</th>
-              <th className="text-right px-2 py-2 hidden md:table-cell">Pace</th>
-              <th className="text-right px-3 py-2">Playoff %</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(({ team, slug, probability, projectedWins, inPlayoffs }, idx) => {
-              const isDivWinner = idx === 0;
-              return (
-                <tr key={team.teamAbbrev} className={`border-t border-gray-100 ${isDivWinner ? 'bg-blue-50/40' : ''}`}>
-                  <td className="px-3 py-2">
-                    {slug ? (
-                      <Link href={`/mlb/${slug}`} className="flex items-center gap-2 hover:text-blue-600 transition-colors">
-                        <Image
-                          src={team.teamLogo}
-                          alt={`${team.teamName} logo`}
-                          width={24}
-                          height={24}
-                          className="w-6 h-6 object-contain"
-                        />
-                        <span className="font-semibold text-gray-900">{team.teamName}</span>
-                        {inPlayoffs && <span className="text-xs text-emerald-600 font-bold">✓</span>}
-                      </Link>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Image
-                          src={team.teamLogo}
-                          alt={`${team.teamName} logo`}
-                          width={24}
-                          height={24}
-                          className="w-6 h-6 object-contain"
-                        />
-                        <span className="font-semibold text-gray-900">{team.teamName}</span>
-                      </div>
-                    )}
-                  </td>
-                  <td className="text-right px-2 py-2 font-semibold text-gray-900">{team.wins}</td>
-                  <td className="text-right px-2 py-2 text-gray-700">{team.losses}</td>
-                  <td className="text-right px-2 py-2 text-gray-700 tabular-nums">.{(team.winPct * 1000).toFixed(0).padStart(3, '0')}</td>
-                  <td className="text-right px-2 py-2 text-gray-600 hidden sm:table-cell tabular-nums">{formatGB(team.gamesBack)}</td>
-                  <td className="text-right px-2 py-2 text-gray-600 hidden md:table-cell tabular-nums">{projectedWins}</td>
-                  <td className="text-right px-3 py-2">
-                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold border tabular-nums ${probabilityColor(probability, inPlayoffs)}`}>
-                      {probability}%
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function WildCardSection({ league, rows }: { league: 'American League' | 'National League'; rows: TeamRow[] }) {
-  // Wild card contenders = non-division-winners in this league, sorted by wins
-  const divisionsInLeague = Array.from(new Set(rows.map(r => r.team.division)));
-  const winners = new Set<string>();
-  for (const div of divisionsInLeague) {
-    const top = rows.filter(r => r.team.division === div).sort((a, b) => b.team.wins - a.team.wins)[0];
-    if (top) winners.add(top.team.teamAbbrev);
-  }
-  const contenders = rows
-    .filter(r => !winners.has(r.team.teamAbbrev))
-    .sort((a, b) => b.team.wins - a.team.wins);
-
-  const shortLeague = league === 'American League' ? 'AL' : 'NL';
-
-  return (
-    <div className="bg-white rounded-2xl shadow-md border-2 border-gray-200 overflow-hidden mb-6">
-      <div
-        className="px-4 py-3 border-b-2"
-        style={{ background: league === 'American League' ? '#0C2340' : '#A6192E', borderBottomColor: '#000' }}
-      >
-        <h3
-          className="text-xl md:text-2xl font-bold text-white"
-          style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-        >
-          {shortLeague} Wild Card
-        </h3>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-600 text-xs uppercase tracking-wide">
-            <tr>
-              <th className="text-left px-3 py-2">Team</th>
-              <th className="text-right px-2 py-2">W</th>
-              <th className="text-right px-2 py-2">L</th>
-              <th className="text-right px-2 py-2 hidden sm:table-cell">WCGB</th>
-              <th className="text-right px-2 py-2 hidden md:table-cell">Pace</th>
-              <th className="text-right px-3 py-2">Playoff %</th>
-            </tr>
-          </thead>
-          <tbody>
-            {contenders.map(({ team, slug, probability, projectedWins }, idx) => {
-              const isAboveCut = idx < 3;
-              const isCutLine = idx === 2;
-              return (
-                <tr key={team.teamAbbrev} className={`border-t border-gray-100 ${isAboveCut ? 'bg-emerald-50/30' : ''} ${isCutLine ? 'border-b-2 border-b-emerald-400' : ''}`}>
-                  <td className="px-3 py-2">
-                    {slug ? (
-                      <Link href={`/mlb/${slug}`} className="flex items-center gap-2 hover:text-blue-600 transition-colors">
-                        <Image
-                          src={team.teamLogo}
-                          alt={`${team.teamName} logo`}
-                          width={24}
-                          height={24}
-                          className="w-6 h-6 object-contain"
-                        />
-                        <span className="font-semibold text-gray-900">{team.teamName}</span>
-                        {isAboveCut && <span className="text-xs text-emerald-600 font-bold">WC{idx + 1}</span>}
-                      </Link>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Image
-                          src={team.teamLogo}
-                          alt={`${team.teamName} logo`}
-                          width={24}
-                          height={24}
-                          className="w-6 h-6 object-contain"
-                        />
-                        <span className="font-semibold text-gray-900">{team.teamName}</span>
-                      </div>
-                    )}
-                  </td>
-                  <td className="text-right px-2 py-2 font-semibold text-gray-900">{team.wins}</td>
-                  <td className="text-right px-2 py-2 text-gray-700">{team.losses}</td>
-                  <td className="text-right px-2 py-2 text-gray-600 hidden sm:table-cell tabular-nums">{formatGB(team.wildCardGamesBack)}</td>
-                  <td className="text-right px-2 py-2 text-gray-600 hidden md:table-cell tabular-nums">{projectedWins}</td>
-                  <td className="text-right px-3 py-2">
-                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold border tabular-nums ${probabilityColor(probability, isAboveCut)}`}>
-                      {probability}%
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <div className="px-3 py-2 text-xs text-gray-500 bg-gray-50 border-t border-gray-100">
-          Top 3 wild card teams qualify. Cut line shown below WC3.
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default async function MLBPlayoffOddsPage() {
@@ -299,16 +91,6 @@ export default async function MLBPlayoffOddsPage() {
   }
 
   const rows = buildTeamRows(standings);
-  const rowsByDivision = new Map<string, TeamRow[]>();
-  for (const division of DIVISION_ORDER) {
-    rowsByDivision.set(
-      division,
-      rows.filter(r => r.team.division === division).sort((a, b) => b.team.wins - a.team.wins),
-    );
-  }
-
-  const alRows = rows.filter(r => r.team.league === 'American League');
-  const nlRows = rows.filter(r => r.team.league === 'National League');
 
   const totalGamesPlayed = standings.reduce((sum, t) => sum + t.wins + t.losses, 0);
   const seasonStarted = totalGamesPlayed > 0;
@@ -461,36 +243,9 @@ export default async function MLBPlayoffOddsPage() {
             </section>
           )}
 
-          {/* American League */}
+          {/* Tabbed standings views */}
           <section className="mb-10">
-            <h2
-              className="text-3xl md:text-4xl font-bold text-gray-900 mb-4"
-              style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-            >
-              American League Playoff Picture
-            </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <DivisionTable league="AL" division="American League East" rows={rowsByDivision.get('American League East') || []} />
-              <DivisionTable league="AL" division="American League Central" rows={rowsByDivision.get('American League Central') || []} />
-              <DivisionTable league="AL" division="American League West" rows={rowsByDivision.get('American League West') || []} />
-              <WildCardSection league="American League" rows={alRows} />
-            </div>
-          </section>
-
-          {/* National League */}
-          <section className="mb-10">
-            <h2
-              className="text-3xl md:text-4xl font-bold text-gray-900 mb-4"
-              style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-            >
-              National League Playoff Picture
-            </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <DivisionTable league="NL" division="National League East" rows={rowsByDivision.get('National League East') || []} />
-              <DivisionTable league="NL" division="National League Central" rows={rowsByDivision.get('National League Central') || []} />
-              <DivisionTable league="NL" division="National League West" rows={rowsByDivision.get('National League West') || []} />
-              <WildCardSection league="National League" rows={nlRows} />
-            </div>
+            <MLBPlayoffOddsClient rows={rows} />
           </section>
 
           {/* Narrative — keyword-rich, server-rendered */}
