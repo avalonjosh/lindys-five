@@ -18,9 +18,9 @@ interface PlayerListProps {
 // Stats highlighted as the headline (the quality signal) per player kind.
 const HEADLINE = new Set(['OPS', 'ERA']);
 
-const ROW_BASE = 'flex items-center gap-2.5 rounded-xl border-2 border-gray-200 bg-white p-2.5 shadow-sm transition-all';
+const ROW_BASE = 'flex items-center gap-2.5 rounded-xl border-2 border-blue-100 bg-blue-50 p-2.5 shadow-sm transition-all';
 const ASSIGN_BTN =
-  'min-h-[34px] min-w-[42px] rounded-lg border-2 border-sabres-blue bg-sabres-blue/5 px-2 text-xs font-bold uppercase tracking-wide text-sabres-blue transition-colors hover:bg-sabres-blue hover:text-white';
+  'min-h-[34px] min-w-[42px] rounded-lg border-2 border-sabres-blue bg-white px-2 text-xs font-bold uppercase tracking-wide text-sabres-blue transition-colors hover:bg-sabres-blue hover:text-white';
 
 /**
  * The sorted pick list with a search box and position filters. A single-position
@@ -152,7 +152,7 @@ export default function PlayerList({ players, config, blind, openCategories, get
                 className={`${ROW_BASE} cursor-pointer hover:border-sabres-blue hover:shadow-md active:scale-[0.99]`}
               >
                 {info}
-                <span className="shrink-0 rounded-lg bg-sabres-blue/10 px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-sabres-blue">
+                <span className="shrink-0 rounded-lg border border-blue-200 bg-white px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-sabres-blue">
                   {only.label}
                 </span>
               </div>
