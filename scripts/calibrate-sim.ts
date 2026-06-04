@@ -58,7 +58,7 @@ console.log('\n=== CEILING CHECK ===');
 const allMax = [100, 100, 100, 100, 100, 100];
 console.log(`  Perfect 100s roster -> ${simulate(allMax, STANDARD, mlbConfig).wins} wins`);
 console.log(`  Max possible win share (teamScore 100, gate 1.0): ${(curveShare(allMax) * 100).toFixed(1)}%`);
-console.log(`  => with literal spec constants the apex is ${simulate(allMax, STANDARD, mlbConfig).wins} wins, so 162-0 is unreachable.`);
+console.log(`  => the apex is ${simulate(allMax, STANDARD, mlbConfig).wins} wins: only the single best-possible roster reaches 162-0.`);
 
 console.log('\n=== TANK MODE (build the worst team, chase 0-162; fewer wins is better) ===\n');
 const TANK_CASES: Roster[] = [

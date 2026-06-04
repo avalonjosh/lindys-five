@@ -10,15 +10,24 @@
 
 import type { ModeDescriptor, SimResult, SportConfig, VerdictBand } from './types';
 
-// Win-curve constants (spec Section 8.2). Placeholders pending calibration.
+// Win-curve constants (spec Section 8.2), calibrated Phase 2.
+// baseFloor 0.22 lets the worst rosters bottom out near 37-40 wins, and
+// baseFloor + baseSpan = 1.0 lets the single best-possible roster reach 162-0,
+// so PERFECTION is a real but near-impossible apex rather than unreachable.
 export const CURVE = {
-  baseFloor: 0.3,
-  baseSpan: 0.62,
+  baseFloor: 0.22,
+  baseSpan: 0.78,
   baseExp: 1.6,
   gateDiv: 90,
   capFloor: 0.8,
   capSpan: 0.2,
 };
+
+// Average length of a losing slump, in games. Losses are placed in slumps of
+// roughly this length so strong teams still drop the occasional set and the
+// perfect-set count carries real signal (a purely even spread made every team
+// above .500 win all of its sets).
+const SLUMP_LEN = 3;
 
 function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
@@ -53,20 +62,39 @@ export function winsFor(scores: number[], type: ModeDescriptor['type'], games: n
 }
 
 /**
- * Spread a win total across sets with no randomness. Wins are distributed as
- * evenly as possible across the ordered games (a Bresenham line), then grouped
- * into sets. Even spreading means strong teams rack up perfect sets and weak
- * teams string together lost ones, which reads true to a real season.
+ * Spread a win total across sets with no randomness. Losses are placed in a
+ * handful of evenly spaced slumps (runs of consecutive losses) separated by
+ * winning stretches, then the season is grouped into sets. Clustering losses
+ * this way means a strong team still drops the occasional set and weak teams
+ * string lost sets together, which reads true to a real season and keeps the
+ * sets-won and perfect-set counts meaningful. Fully deterministic.
  */
 export function spreadSets(wins: number, setSizes: number[]): number[] {
   const games = setSizes.reduce((a, b) => a + b, 0);
+  const losses = games - wins;
+  const isLoss = new Array<boolean>(games).fill(false);
+
+  if (losses > 0) {
+    const slumps = Math.max(1, Math.round(losses / SLUMP_LEN));
+    const runBase = Math.floor(losses / slumps);
+    const runExtra = losses % slumps;
+    const gapBase = Math.floor(wins / (slumps + 1));
+    const gapExtra = wins % (slumps + 1);
+    let g = 0;
+    for (let k = 0; k < slumps; k++) {
+      g += gapBase + (k < gapExtra ? 1 : 0); // winning stretch before this slump
+      const runLen = runBase + (k < runExtra ? 1 : 0);
+      for (let r = 0; r < runLen && g < games; r++) isLoss[g++] = true;
+    }
+  }
+
   const out: number[] = [];
-  let g = 0;
+  let idx = 0;
   for (const size of setSizes) {
     let w = 0;
     for (let k = 0; k < size; k++) {
-      if (Math.floor(((g + 1) * wins) / games) > Math.floor((g * wins) / games)) w++;
-      g++;
+      if (idx < games && !isLoss[idx]) w++;
+      idx++;
     }
     out.push(w);
   }
