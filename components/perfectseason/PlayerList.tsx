@@ -121,15 +121,6 @@ export default function PlayerList({
                   )}
                 </div>
 
-                {!blind && (
-                  <span
-                    className="shrink-0 rounded-lg bg-sabres-navy px-2 py-1 text-sm font-bold text-white"
-                    style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-                  >
-                    {player.score.toFixed(0)}
-                  </span>
-                )}
-
                 {/* Single position: a label showing where the tap assigns. Multi: pick a spot. */}
                 {multi ? (
                   <div className="flex shrink-0 flex-col gap-1">
