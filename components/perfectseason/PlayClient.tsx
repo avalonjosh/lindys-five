@@ -123,6 +123,7 @@ export default function PlayClient() {
               data={data}
               spin={spin}
               rolling={phase === 'rolling'}
+              previousSpin={state.picks.length > 0 ? state.picks[state.picks.length - 1].spin : null}
               revealKey={spinKey}
               round={state.round}
               totalRounds={total}

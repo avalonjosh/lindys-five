@@ -35,7 +35,7 @@ export default function RosterList({ slots, picks, data, fillableSlotIds }: Rost
                   : 'bg-gray-50',
             ].join(' ')}
           >
-            <span className="flex h-7 w-9 shrink-0 items-center justify-center rounded-md bg-sabres-navy text-[11px] font-bold text-white">
+            <span className="flex h-7 w-9 shrink-0 items-center justify-center rounded-md bg-sabres-blue text-[11px] font-bold text-white">
               {slot.label}
             </span>
             {pick ? (
