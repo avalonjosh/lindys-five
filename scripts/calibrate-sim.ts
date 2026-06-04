@@ -20,23 +20,23 @@ interface Roster {
   scores: number[];
 }
 
-// Fifteen hand-built standard rosters, best to worst.
+// Fifteen hand-built standard rosters (nine players each), best to worst.
 const ROSTERS: Roster[] = [
-  { label: 'Six immortals', scores: [100, 99.9, 99.9, 99.8, 98.7, 98.6] },
-  { label: 'All-time legends', scores: [98, 97, 96, 96, 95, 95] },
-  { label: 'Stacked (all 90+)', scores: [94, 93, 92, 91, 90, 90] },
-  { label: 'Five legends + filler', scores: [99, 98, 97, 96, 95, 55] },
-  { label: 'Five legends + scrub', scores: [99, 98, 97, 96, 95, 30] },
-  { label: 'Four stars + two avg', scores: [95, 93, 90, 88, 70, 68] },
-  { label: 'Balanced good (~85)', scores: [88, 86, 85, 84, 83, 82] },
-  { label: 'Balanced solid (~78)', scores: [80, 79, 78, 78, 77, 76] },
-  { label: 'Top-heavy, weak tail', scores: [95, 92, 80, 70, 55, 45] },
-  { label: 'Average (~65)', scores: [68, 66, 65, 64, 63, 62] },
-  { label: 'Mediocre (~55)', scores: [58, 56, 55, 54, 53, 52] },
-  { label: 'Below average (~45)', scores: [48, 46, 45, 44, 43, 42] },
-  { label: 'Bad (~35)', scores: [38, 36, 35, 34, 33, 32] },
-  { label: 'Awful (~20)', scores: [22, 20, 19, 18, 17, 16] },
-  { label: 'Rock bottom (~5)', scores: [8, 6, 5, 4, 3, 2] },
+  { label: 'Nine immortals', scores: [100, 99.9, 99.9, 99.8, 99.6, 99.4, 99, 98.7, 98.6] },
+  { label: 'All-time legends', scores: [98, 97, 97, 96, 96, 95, 95, 95, 94] },
+  { label: 'Stacked (all 90+)', scores: [94, 93, 92, 92, 91, 91, 90, 90, 90] },
+  { label: 'Eight legends + filler', scores: [99, 98, 97, 96, 96, 95, 95, 94, 55] },
+  { label: 'Eight legends + scrub', scores: [99, 98, 97, 96, 96, 95, 95, 94, 30] },
+  { label: 'Six stars + three avg', scores: [95, 93, 91, 90, 88, 87, 70, 69, 68] },
+  { label: 'Balanced good (~85)', scores: [88, 87, 86, 85, 85, 84, 83, 83, 82] },
+  { label: 'Balanced solid (~78)', scores: [80, 79, 79, 78, 78, 77, 77, 76, 76] },
+  { label: 'Top-heavy, weak tail', scores: [95, 93, 90, 84, 78, 70, 60, 52, 45] },
+  { label: 'Average (~65)', scores: [68, 67, 66, 65, 65, 64, 63, 63, 62] },
+  { label: 'Mediocre (~55)', scores: [58, 57, 56, 55, 55, 54, 53, 53, 52] },
+  { label: 'Below average (~45)', scores: [48, 47, 46, 45, 45, 44, 43, 43, 42] },
+  { label: 'Bad (~35)', scores: [38, 37, 36, 35, 35, 34, 33, 33, 32] },
+  { label: 'Awful (~20)', scores: [22, 21, 20, 19, 19, 18, 17, 17, 16] },
+  { label: 'Rock bottom (~5)', scores: [8, 7, 6, 5, 5, 4, 3, 3, 2] },
 ];
 
 const STANDARD: ModeDescriptor = { type: 'standard', source: 'free' };
@@ -55,18 +55,18 @@ console.log('=== STANDARD MODE (build the best team, chase 162-0) ===\n');
 for (const ros of ROSTERS) console.log(row(ros.label, ros.scores, STANDARD));
 
 console.log('\n=== CEILING CHECK ===');
-const allMax = [100, 100, 100, 100, 100, 100];
+const allMax = [100, 100, 100, 100, 100, 100, 100, 100, 100];
 console.log(`  Perfect 100s roster -> ${simulate(allMax, STANDARD, mlbConfig).wins} wins`);
 console.log(`  Max possible win share (teamScore 100, gate 1.0): ${(curveShare(allMax) * 100).toFixed(1)}%`);
 console.log(`  => the apex is ${simulate(allMax, STANDARD, mlbConfig).wins} wins: only the single best-possible roster reaches 162-0.`);
 
 console.log('\n=== TANK MODE (build the worst team, chase 0-162; fewer wins is better) ===\n');
 const TANK_CASES: Roster[] = [
-  { label: 'Six scrubs', scores: [8, 6, 5, 4, 3, 2] },
-  { label: 'Five scrubs + one legend', scores: [8, 6, 5, 4, 3, 99] },
-  { label: 'Five scrubs + one average', scores: [8, 6, 5, 4, 3, 65] },
-  { label: 'All below-average (~40)', scores: [44, 42, 40, 39, 38, 37] },
-  { label: 'Accidentally good (all 90+)', scores: [94, 93, 92, 91, 90, 90] },
+  { label: 'Nine scrubs', scores: [8, 7, 6, 5, 5, 4, 3, 3, 2] },
+  { label: 'Eight scrubs + one legend', scores: [8, 7, 6, 5, 5, 4, 3, 3, 99] },
+  { label: 'Eight scrubs + one average', scores: [8, 7, 6, 5, 5, 4, 3, 3, 65] },
+  { label: 'All below-average (~40)', scores: [44, 43, 42, 41, 40, 39, 38, 38, 37] },
+  { label: 'Accidentally good (all 90+)', scores: [94, 93, 92, 92, 91, 91, 90, 90, 90] },
 ];
 for (const ros of TANK_CASES) console.log(row(ros.label, ros.scores, TANK));
 console.log('\n  Tank floor note: the lone legend should raise the win total versus six scrubs (strongest-link gate).');

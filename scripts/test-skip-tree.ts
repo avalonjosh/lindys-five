@@ -165,9 +165,10 @@ check('two players, same actions, identical record and verdict', () => {
   assert.deepEqual(a.final.result, b.final.result);
   assert.ok(a.final.done && a.final.result, 'greedy no-skip playthrough completes');
 });
-check('dedupe held: six distinct players rostered', () => {
-  assert.equal(new Set(a.final.usedPlayerIds).size, 6);
-  assert.equal(a.final.picks.length, 6);
+check('dedupe held: one distinct player per slot rostered', () => {
+  const n = mlbConfig.slots.length;
+  assert.equal(new Set(a.final.usedPlayerIds).size, n);
+  assert.equal(a.final.picks.length, n);
 });
 check('a team skip reroll changes the current spin', () => {
   let s = createGame(data, mlbConfig, rounds, { type: 'standard', source: 'daily' });

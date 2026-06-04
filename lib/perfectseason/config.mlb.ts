@@ -12,13 +12,18 @@ const FINALE = 2;
 export const mlbConfig: SportConfig = {
   sport: 'mlb',
   games: 162,
+  // Nine fielding positions: a starting pitcher plus the eight defensive spots,
+  // each a specific position (no infield/outfield buckets). Scorecard order.
   slots: [
-    { id: 'C', label: 'C', accepts: ['C'] },
-    { id: 'IF1', label: 'IF', accepts: ['1B', '2B', '3B', 'SS'] },
-    { id: 'IF2', label: 'IF', accepts: ['1B', '2B', '3B', 'SS'] },
-    { id: 'OF1', label: 'OF', accepts: ['LF', 'CF', 'RF'] },
-    { id: 'OF2', label: 'OF', accepts: ['LF', 'CF', 'RF'] },
     { id: 'SP', label: 'SP', accepts: ['SP'] },
+    { id: 'C', label: 'C', accepts: ['C'] },
+    { id: '1B', label: '1B', accepts: ['1B'] },
+    { id: '2B', label: '2B', accepts: ['2B'] },
+    { id: '3B', label: '3B', accepts: ['3B'] },
+    { id: 'SS', label: 'SS', accepts: ['SS'] },
+    { id: 'LF', label: 'LF', accepts: ['LF'] },
+    { id: 'CF', label: 'CF', accepts: ['CF'] },
+    { id: 'RF', label: 'RF', accepts: ['RF'] },
   ],
   setSizes: [...Array<number>(SETS_OF_FIVE).fill(5), FINALE],
   statColumns: {

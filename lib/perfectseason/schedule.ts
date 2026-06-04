@@ -29,8 +29,7 @@ import { dayNumber } from './seed';
 export const MIN_POOL = 4; // fail-state floor: at least 4 eligible players (3.6)
 export const STAR_SCORE = 75; // slot-quality floor (7.2.2)
 export const HEADLINER_SCORE = 85; // every day deserves a star (7.2.3)
-const ROUNDS = 6;
-const MAX_ATTEMPTS = 800;
+const MAX_ATTEMPTS = 2000;
 
 export function poolKey(spin: Spin): string {
   return `${spin.decade}|${spin.franchise}`;
@@ -125,7 +124,7 @@ export interface PathState {
 
 /** Every reachable full-game spin sequence given one-use Team and Decade skips. */
 export function enumeratePaths(rounds: RoundTree[]): PathState[] {
-  const opts = [-1, 0, 1, 2, 3, 4, 5];
+  const opts = [-1, ...Array.from({ length: rounds.length }, (_, i) => i)];
   const paths: PathState[] = [];
   const build = (team: number, decade: number, order: 'TD' | 'DT' | null): Spin[] | null => {
     const spins: Spin[] = [];
@@ -221,12 +220,13 @@ function pickPrimaries(data: GameData, config: SportConfig, rng: () => number): 
       if (poolValid(data, { decade: d, franchise: f.id }, config)) keys.push({ decade: d, franchise: f.id });
     }
   }
+  const need = config.slots.length;
   const shuffled = shuffle(keys, rng);
   const chosen: Spin[] = [];
   const usedFranchise = new Set<string>();
   const decadeCount = new Map<string, number>();
   for (const spin of shuffled) {
-    if (chosen.length === ROUNDS) break;
+    if (chosen.length === need) break;
     if (usedFranchise.has(spin.franchise)) continue;
     if ((decadeCount.get(spin.decade) ?? 0) >= 2) continue;
     // A Team skip must be possible: another valid franchise exists this decade.
@@ -236,7 +236,7 @@ function pickPrimaries(data: GameData, config: SportConfig, rng: () => number): 
     usedFranchise.add(spin.franchise);
     decadeCount.set(spin.decade, (decadeCount.get(spin.decade) ?? 0) + 1);
   }
-  return chosen.length === ROUNDS ? chosen : null;
+  return chosen.length === need ? chosen : null;
 }
 
 function buildRound(
