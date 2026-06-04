@@ -18,7 +18,8 @@ interface PlayerListProps {
 // Stats highlighted as the headline (the quality signal) per player kind.
 const HEADLINE = new Set(['OPS', 'ERA']);
 
-const ROW_BASE = 'flex items-center gap-2.5 rounded-xl border-2 border-blue-100 bg-blue-50 p-2.5 shadow-sm transition-all';
+const ROW_BASE =
+  'flex items-center gap-2.5 rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 shadow-sm transition-all';
 const ASSIGN_BTN =
   'min-h-[34px] min-w-[42px] rounded-lg border-2 border-sabres-blue bg-white px-2 text-xs font-bold uppercase tracking-wide text-sabres-blue transition-colors hover:bg-sabres-blue hover:text-white';
 
