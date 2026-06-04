@@ -43,7 +43,8 @@ export default function SpinReveal({ data, spin, revealed, revealKey, round, tot
     };
   }, [revealed, revealKey]);
 
-  const tile = 'rounded-2xl bg-sabres-navy text-center shadow-lg px-4 py-3 transition-all duration-300';
+  const tile = 'rounded-2xl text-center shadow-lg px-4 py-3 transition-all duration-300';
+  const tileBg = { background: '#002D72' }; // matches the header blue
 
   return (
     <div className="text-center">
@@ -52,7 +53,7 @@ export default function SpinReveal({ data, spin, revealed, revealKey, round, tot
         {Array.from({ length: totalRounds }).map((_, i) => (
           <span
             key={i}
-            className={`h-1.5 flex-1 rounded-full ${i < round ? 'bg-sabres-blue' : i === round ? 'bg-sabres-gold' : 'bg-gray-200'}`}
+            className={`h-1.5 flex-1 rounded-full ${i < round ? 'bg-sabres-blue/50' : i === round ? 'bg-sabres-blue' : 'bg-gray-200'}`}
           />
         ))}
       </div>
@@ -61,14 +62,14 @@ export default function SpinReveal({ data, spin, revealed, revealKey, round, tot
       </div>
 
       <div className="flex items-stretch justify-center gap-2">
-        <div className={`${tile} ${revealed && stage >= 1 ? 'opacity-100' : 'opacity-90'}`}>
-          <div className="text-[10px] font-bold uppercase tracking-wide text-sabres-gold/80">Decade</div>
+        <div className={`${tile} ${revealed && stage >= 1 ? 'opacity-100' : 'opacity-90'}`} style={tileBg}>
+          <div className="text-[10px] font-bold uppercase tracking-wide text-white/60">Decade</div>
           <div className="text-2xl font-bold text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
             {revealed && stage >= 1 ? shortDecade(spin.decade) : '-'}
           </div>
         </div>
-        <div className={`${tile} flex-1 max-w-[260px] ${revealed && stage >= 2 ? 'opacity-100' : 'opacity-90'}`}>
-          <div className="text-[10px] font-bold uppercase tracking-wide text-sabres-gold/80">Franchise</div>
+        <div className={`${tile} flex-1 max-w-[260px] ${revealed && stage >= 2 ? 'opacity-100' : 'opacity-90'}`} style={tileBg}>
+          <div className="text-[10px] font-bold uppercase tracking-wide text-white/60">Franchise</div>
           <div className="text-xl font-bold leading-tight text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
             {revealed && stage >= 2 ? franchiseName(data, spin) : '-'}
           </div>

@@ -122,7 +122,7 @@ export default function PlayClient() {
           <button
             type="button"
             onClick={() => setSpun(true)}
-            className="mt-4 w-full rounded-xl bg-sabres-gold py-4 text-lg font-bold uppercase tracking-widest text-sabres-navy shadow-md transition-transform hover:scale-[1.02] active:scale-100"
+            className="mt-4 w-full rounded-xl bg-sabres-blue py-4 text-lg font-bold uppercase tracking-widest text-white shadow-md transition-all hover:bg-sabres-light hover:scale-[1.02] active:scale-100"
             style={{ fontFamily: 'Bebas Neue, sans-serif' }}
           >
             Spin
