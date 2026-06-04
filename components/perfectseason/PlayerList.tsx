@@ -95,19 +95,19 @@ export default function PlayerList({ players, config, blind, openCategories, get
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-bold text-gray-900">{player.name}</div>
               {!blind && (
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {statCells(player, config).map((cell) => {
-                    const hi = HEADLINE.has(cell.label);
-                    return (
-                      <span
-                        key={cell.label}
-                        className={`rounded px-1.5 py-0.5 text-[10px] ${hi ? 'bg-sabres-blue text-white' : 'border border-blue-100 bg-white text-gray-700'}`}
-                      >
-                        <span className="font-bold">{cell.value}</span>{' '}
-                        <span className={`uppercase tracking-wide ${hi ? 'text-white/70' : 'text-gray-400'}`}>{cell.label}</span>
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-gray-400">
+                  {statCells(player, config).map((cell) =>
+                    HEADLINE.has(cell.label) ? (
+                      <span key={cell.label} className="rounded bg-sabres-blue px-1.5 py-0.5 text-[10px] font-bold text-white">
+                        {cell.value} <span className="text-white/70">{cell.label}</span>
                       </span>
-                    );
-                  })}
+                    ) : (
+                      <span key={cell.label}>
+                        <span className="font-semibold text-gray-700">{cell.value}</span>{' '}
+                        <span className="uppercase tracking-wide">{cell.label}</span>
+                      </span>
+                    ),
+                  )}
                 </div>
               )}
             </div>
