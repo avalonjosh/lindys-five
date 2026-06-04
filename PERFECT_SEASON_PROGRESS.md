@@ -80,8 +80,8 @@ want to rebuild the data.
 | 2 | Engine, sim, deterministic skip tree, calibration | DONE, approved 2026-06-04 |
 | 3 | Free Play Standard UI | DONE; nhl82.ca-style one-page board, logos, spin animation |
 | 4 | Daily plumbing and quiet ship | DONE; daily-first landing, lockout, streaks, share grid, OG card. Awaiting launch call |
-| 5 | Tank and Franchise (free play) | not started |
-| 6 | Blind mode (BallIQ) | not started |
+| 5 | Tank and Franchise (free play) | DONE; mode picker, red tank, decade-only franchise spins, franchise picker |
+| 6 | Blind mode (BallIQ) | DONE; live Classic/BallIQ daily toggle, hides stats, parallel streak/lockout |
 | 7 | NHL edition (82-0) | not started; needs Kaggle NHL dataset in `raw-data/nhl/` |
 
 **v1 definition of done = end of Phase 4** (MLB daily Classic + Free Play
