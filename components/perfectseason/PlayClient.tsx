@@ -28,7 +28,7 @@ import { franchiseName, shortDecade } from './ui';
 
 const data = mlbDataJson as unknown as GameData;
 const config = mlbConfig;
-const ROLL_TOTAL_MS = 1350; // matches SpinReveal's franchise-lands timing plus a buffer
+const ROLL_TOTAL_MS = 1750; // SpinReveal lands the franchise at ~1.25s, then rest 0.5s on the result
 
 type Phase = 'board' | 'rolling' | 'pick';
 
