@@ -209,14 +209,14 @@ export default function PlayClient() {
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <header className="border-b-4 border-sabres-gold bg-sabres-navy shadow-xl">
+      <header className="border-b-4 shadow-xl" style={{ background: '#002D72', borderBottomColor: '#041E42' }}>
         <div className="mx-auto max-w-[480px] px-4 py-3 text-center">
           <Link href="/162-0" className="block transition-opacity hover:opacity-90">
             <p className="text-4xl font-bold tracking-wider text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
               Lindy&apos;s Five
             </p>
           </Link>
-          <p className="text-sm font-semibold text-sabres-gold">162-0 ⚾ The Perfect Season</p>
+          <p className="text-sm font-semibold text-white/80">162-0 ⚾ The Perfect Season</p>
           <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-white/50">Free Play</p>
         </div>
       </header>

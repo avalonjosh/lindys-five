@@ -9,12 +9,12 @@ const HOW_TO = [
 export default function PerfectSeasonHub() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <header className="border-b-4 border-sabres-gold bg-sabres-navy shadow-xl">
+      <header className="border-b-4 shadow-xl" style={{ background: '#002D72', borderBottomColor: '#041E42' }}>
         <div className="mx-auto max-w-[480px] px-4 py-4 text-center">
           <p className="text-5xl font-bold tracking-wider text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
             Lindy&apos;s Five
           </p>
-          <p className="text-sm font-semibold text-sabres-gold">162-0 ⚾ The Perfect Season</p>
+          <p className="text-sm font-semibold text-white/80">162-0 ⚾ The Perfect Season</p>
         </div>
       </header>
 
