@@ -55,7 +55,7 @@ export default function PlayerList({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search players..."
-        className="w-full rounded-xl border-2 border-gray-200 bg-white px-3 py-2.5 text-sm shadow-sm outline-none focus:border-sabres-blue"
+        className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-sabres-blue focus:bg-white"
       />
       <div className="mt-2 flex flex-wrap gap-1.5">
         {categories.map((label) => (
@@ -85,7 +85,7 @@ export default function PlayerList({
             if (!buttons.some((b) => b.label === slot.label)) buttons.push({ label: slot.label, slotId: slot.id });
           }
           return (
-            <li key={player.id} className="rounded-2xl border-2 border-gray-200 bg-white p-2.5 shadow-sm">
+            <li key={player.id} className="rounded-lg bg-gray-50 p-2.5">
               <div className="flex items-start gap-2">
                 {!blind && <span className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${dot}`} aria-hidden />}
                 <div className="min-w-0 flex-1">

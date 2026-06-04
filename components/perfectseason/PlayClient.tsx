@@ -107,17 +107,7 @@ export default function PlayClient() {
 
   return (
     <Shell>
-      {/* Variant toggle, always on the board (Blind ships in a later phase). */}
-      <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl border-2 border-gray-200 bg-white p-1 shadow-sm">
-        <span className="rounded-lg bg-sabres-blue py-2 text-center text-xs font-bold uppercase tracking-wide text-white">
-          Classic
-        </span>
-        <span className="rounded-lg py-2 text-center text-xs font-bold uppercase tracking-wide text-gray-300">
-          Blind · soon
-        </span>
-      </div>
-
-      {/* Spin board. */}
+      {/* One board card holds the whole game (spin, toggle, roster, picks). */}
       <div className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-md">
         <SpinReveal
           data={data}
@@ -157,32 +147,43 @@ export default function PlayClient() {
             </button>
           </div>
         )}
-      </div>
 
-      {/* Roster. */}
-      <div className="mt-3 rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-md">
+        {/* Classic / Blind variant toggle, below the spin button. */}
+        <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
+          <span className="rounded-lg bg-white py-2 text-center text-xs font-bold uppercase tracking-wide text-sabres-blue shadow-sm">
+            Classic
+          </span>
+          <span className="py-2 text-center text-xs font-bold uppercase tracking-wide text-gray-400">
+            Blind · soon
+          </span>
+        </div>
+
+        <div className="my-4 border-t border-gray-100" />
+
         <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">Your Roster</p>
         <RosterList slots={config.slots} picks={state.picks} data={data} fillableSlotIds={fillableSlotIds} />
-      </div>
 
-      {/* Pick list (after the spin). */}
-      {spun && (
-        <div className="mt-3 pb-24">
-          <PlayerList
-            players={players}
-            config={config}
-            topScore={topScore}
-            top3Score={top3Score}
-            blind={false}
-            getLegalSlots={(p) => legalSlots(state, p)}
-            onAssign={commitAssign}
-          />
-        </div>
-      )}
+        {spun && (
+          <>
+            <div className="my-4 border-t border-gray-100" />
+            <PlayerList
+              players={players}
+              config={config}
+              topScore={topScore}
+              top3Score={top3Score}
+              blind={false}
+              getLegalSlots={(p) => legalSlots(state, p)}
+              onAssign={commitAssign}
+            />
+          </>
+        )}
+      </div>
 
       <div className="mt-3">
         <HowToPlay />
       </div>
+
+      <div className="h-20" />
 
       {undo && (
         <div className="fixed inset-x-0 bottom-4 z-20 flex justify-center px-4">

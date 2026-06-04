@@ -64,13 +64,13 @@ export default function SpinReveal({ data, spin, revealed, revealKey, round, tot
         <div className={`${tile} ${revealed && stage >= 1 ? 'opacity-100' : 'opacity-90'}`}>
           <div className="text-[10px] font-bold uppercase tracking-wide text-sabres-gold/80">Decade</div>
           <div className="text-2xl font-bold text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-            {revealed && stage >= 1 ? shortDecade(spin.decade) : '?'}
+            {revealed && stage >= 1 ? shortDecade(spin.decade) : '-'}
           </div>
         </div>
         <div className={`${tile} flex-1 max-w-[260px] ${revealed && stage >= 2 ? 'opacity-100' : 'opacity-90'}`}>
           <div className="text-[10px] font-bold uppercase tracking-wide text-sabres-gold/80">Franchise</div>
           <div className="text-xl font-bold leading-tight text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-            {revealed && stage >= 2 ? franchiseName(data, spin) : '?'}
+            {revealed && stage >= 2 ? franchiseName(data, spin) : '-'}
           </div>
         </div>
       </div>

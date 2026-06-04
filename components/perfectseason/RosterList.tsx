@@ -27,12 +27,12 @@ export default function RosterList({ slots, picks, data, fillableSlotIds }: Rost
           <li
             key={slot.id}
             className={[
-              'flex items-center gap-2.5 rounded-xl border-2 px-2.5 py-2 transition-colors',
+              'flex items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors',
               pick
-                ? 'border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100'
+                ? 'bg-gradient-to-br from-blue-50 to-blue-100'
                 : fillable
-                  ? 'border-sabres-gold/60 bg-sabres-gold/5'
-                  : 'border-dashed border-gray-200 bg-white',
+                  ? 'bg-sabres-gold/10 ring-1 ring-sabres-gold/40'
+                  : 'bg-gray-50',
             ].join(' ')}
           >
             <span className="flex h-7 w-9 shrink-0 items-center justify-center rounded-md bg-sabres-navy text-[11px] font-bold text-white">
