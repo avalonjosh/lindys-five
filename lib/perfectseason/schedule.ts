@@ -319,3 +319,56 @@ export function generateDay(
   }
   throw new Error(`generateDay: no valid schedule for ${date} after ${MAX_ATTEMPTS} attempts`);
 }
+
+// ---------------------------------------------------------------------------
+// Franchise mode (Section 5): one franchise, decade-only spins, no Team skip
+// ---------------------------------------------------------------------------
+
+/** Spread `count` rounds across the valid decades, repeating to fill (9 > 8). */
+function spreadDecades(valid: string[], count: number, rng: () => number): string[] {
+  const out: string[] = [];
+  while (out.length < count) {
+    for (const d of shuffle(valid, rng)) if (out.length < count) out.push(d);
+  }
+  return shuffle(out, rng);
+}
+
+/**
+ * Franchise validity is just the fail-state: enough players per spin and a full
+ * legal roster reachable on every path. No slot-quality or no-dup rules, since a
+ * single franchise repeats by design and young franchises are meant to cap low.
+ */
+function validateFranchiseSchedule(rounds: RoundTree[], data: GameData, config: SportConfig): boolean {
+  for (const path of enumeratePaths(rounds)) {
+    const pools = path.spins.map((s) => poolPlayers(data, s, config));
+    if (pools.some((p) => p.length < MIN_POOL)) return false;
+    if (!hasPerfectMatching(pools, config.slots)) return false;
+  }
+  return true;
+}
+
+export function franchiseDecades(data: GameData, franchiseId: string, config: SportConfig): string[] {
+  return data.decades.filter((d) => poolValid(data, { decade: d, franchise: franchiseId }, config));
+}
+
+export function generateFranchiseDay(
+  data: GameData,
+  config: SportConfig,
+  franchiseId: string,
+  rng: () => number,
+): DailySchedule {
+  const valid = franchiseDecades(data, franchiseId, config);
+  const need = config.slots.length;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const decades = spreadDecades(valid, need, rng);
+    const rounds: RoundTree[] = decades.map((decade) => {
+      const alts = valid.filter((d) => d !== decade);
+      const decadeSkip = alts.length ? { decade: shuffle(alts, rng)[0], franchise: franchiseId } : null;
+      return { primary: { decade, franchise: franchiseId }, teamSkip: null, decadeSkip, teamThenDecade: null, decadeThenTeam: null };
+    });
+    if (validateFranchiseSchedule(rounds, data, config)) {
+      return { sport: config.sport, date: '', dayNumber: 0, rounds };
+    }
+  }
+  throw new Error(`generateFranchiseDay: no valid schedule for ${franchiseId}`);
+}

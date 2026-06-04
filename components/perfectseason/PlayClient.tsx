@@ -4,9 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import mlbDataJson from '@/data/mlb-data.json';
 import scheduleJson from '@/data/mlb-daily-schedule.json';
-import type { GameData, ModeDescriptor, RoundTree } from '@/lib/perfectseason/types';
+import type { GameData, ModeDescriptor, ModeType, RoundTree } from '@/lib/perfectseason/types';
 import { mlbConfig } from '@/lib/perfectseason/config.mlb';
-import { generateDay, poolPlayers } from '@/lib/perfectseason/schedule';
+import { generateDay, generateFranchiseDay, poolPlayers } from '@/lib/perfectseason/schedule';
 import { mulberry32, easternDateString } from '@/lib/perfectseason/seed';
 import {
   canSkipDecade,
@@ -34,6 +34,7 @@ import SpinReveal from './SpinReveal';
 import PlayerList from './PlayerList';
 import ResultCard from './ResultCard';
 import DailyResult from './DailyResult';
+import FranchisePicker from './FranchisePicker';
 import HowToPlay from './HowToPlay';
 import { franchiseLogo, franchiseName } from './ui';
 import Decade from './Decade';
@@ -41,16 +42,23 @@ import Decade from './Decade';
 const data = mlbDataJson as unknown as GameData;
 const schedule = scheduleJson as unknown as { days: Record<string, { dayNumber: number; rounds: RoundTree[] }> };
 const config = mlbConfig;
-const ROLL_TOTAL_MS = 1750; // reels land the franchise at ~1.25s, then rest 0.5s
+const ROLL_TOTAL_MS = 1750;
 const DEFAULT_SPIN = { decade: '1950s', franchise: 'NYY' };
 
 type Phase = 'board' | 'rolling' | 'pick';
 type Source = 'daily' | 'free';
+type FreeType = 'standard' | 'tank' | 'franchise';
 
-function freeGame(): EngineState {
+function randomGame(type: 'standard' | 'tank'): EngineState {
   const seed = Math.floor(Math.random() * 0xffffffff);
   const sched = generateDay(data, config, easternDateString(), mulberry32(seed));
-  return createGame(data, config, sched.rounds, { type: 'standard', source: 'free' });
+  return createGame(data, config, sched.rounds, { type, source: 'free' });
+}
+
+function franchiseGame(franchiseId: string): EngineState {
+  const seed = Math.floor(Math.random() * 0xffffffff);
+  const sched = generateFranchiseDay(data, config, franchiseId, mulberry32(seed));
+  return createGame(data, config, sched.rounds, { type: 'franchise', source: 'free', franchiseId });
 }
 
 function dailyToday(): { state: EngineState; dayNumber: number; date: string } | null {
@@ -91,41 +99,52 @@ function buildDailyRecord(state: EngineState, dayNumber: number): DailyRecord {
 
 export default function PlayClient() {
   const [source, setSource] = useState<Source>('daily');
+  const [freeType, setFreeType] = useState<FreeType>('standard');
+  const [franchiseId, setFranchiseId] = useState<string | null>(null);
   const [state, setState] = useState<EngineState | null>(null);
   const [phase, setPhase] = useState<Phase>('board');
   const [undo, setUndo] = useState(false);
   const [day, setDay] = useState<{ dayNumber: number; date: string } | null>(null);
   const [record, setRecord] = useState<DailyRecord | null>(null);
 
-  const mode = useMemo<ModeDescriptor>(() => ({ type: 'standard', source }), [source]);
+  const type: ModeType = source === 'daily' ? 'standard' : freeType;
+  const mode = useMemo<ModeDescriptor>(
+    () => ({ type, source, franchiseId: type === 'franchise' ? franchiseId ?? undefined : undefined }),
+    [type, source, franchiseId],
+  );
 
-  // Initialize (and re-initialize when switching Daily / Free Play).
+  // Initialize / re-initialize when the mode changes.
   useEffect(() => {
     setUndo(false);
     setPhase('board');
-    if (source === 'free') {
+    if (source === 'daily') {
+      const date = easternDateString();
+      const existing = getDaily('mlb', date, 'classic');
+      if (existing) {
+        setRecord(existing);
+        setDay({ dayNumber: existing.dayNumber, date });
+        setState(null);
+        return;
+      }
+      const dg = dailyToday();
+      if (!dg) {
+        setSource('free');
+        return;
+      }
       setRecord(null);
-      setDay(null);
-      setState(freeGame());
+      setDay({ dayNumber: dg.dayNumber, date: dg.date });
+      setState(dg.state);
       return;
     }
-    const date = easternDateString();
-    const existing = getDaily('mlb', date, 'classic');
-    if (existing) {
-      setRecord(existing);
-      setDay({ dayNumber: existing.dayNumber, date });
-      setState(null);
-      return;
-    }
-    const dg = dailyToday();
-    if (!dg) {
-      setSource('free'); // out of scheduled range; fall back
-      return;
-    }
+    // Free Play
     setRecord(null);
-    setDay({ dayNumber: dg.dayNumber, date: dg.date });
-    setState(dg.state);
-  }, [source]);
+    setDay(null);
+    if (freeType === 'franchise') {
+      setState(franchiseId ? franchiseGame(franchiseId) : null);
+      return;
+    }
+    setState(randomGame(freeType));
+  }, [source, freeType, franchiseId]);
 
   // Lock and record a finished Daily once.
   useEffect(() => {
@@ -171,30 +190,46 @@ export default function PlayClient() {
   const newGame = useCallback(() => {
     setUndo(false);
     setPhase('board');
-    setState(freeGame());
-  }, []);
+    if (freeType === 'franchise' && franchiseId) setState(franchiseGame(franchiseId));
+    else if (freeType !== 'franchise') setState(randomGame(freeType));
+  }, [freeType, franchiseId]);
+
+  const chooseFreeType = (t: FreeType) => {
+    setSource('free');
+    setFreeType(t);
+    if (t === 'franchise') setFranchiseId(null);
+  };
+
+  const shellProps = { source, freeType, onSource: setSource, onFreeType: chooseFreeType };
 
   // --- Daily result / lockout ---
   if (source === 'daily' && record) {
     return (
-      <Shell source={source} onSource={setSource}>
+      <Shell {...shellProps}>
         <DailyResult
           record={record}
           config={config}
           streak={getStreak('mlb', 'classic')}
           played={getStats('mlb', 'classic').played}
-          onPlayFree={() => setSource('free')}
+          onPlayFree={() => chooseFreeType('standard')}
         />
+      </Shell>
+    );
+  }
+
+  // --- Franchise picker ---
+  if (source === 'free' && freeType === 'franchise' && !franchiseId) {
+    return (
+      <Shell {...shellProps}>
+        <FranchisePicker data={data} onPick={setFranchiseId} />
       </Shell>
     );
   }
 
   if (!state) {
     return (
-      <Shell source={source} onSource={setSource}>
-        <div className="py-20 text-center text-sm font-semibold uppercase tracking-widest text-gray-400">
-          Loading...
-        </div>
+      <Shell {...shellProps}>
+        <div className="py-20 text-center text-sm font-semibold uppercase tracking-widest text-gray-400">Loading...</div>
       </Shell>
     );
   }
@@ -202,13 +237,13 @@ export default function PlayClient() {
   if (state.done && state.result) {
     if (source === 'free') {
       return (
-        <Shell source={source} onSource={setSource}>
+        <Shell {...shellProps}>
           <ResultCard result={state.result} config={config} mode={mode} picks={state.picks} data={data} onPlayAgain={newGame} />
         </Shell>
       );
     }
     return (
-      <Shell source={source} onSource={setSource}>
+      <Shell {...shellProps}>
         <div className="py-20 text-center text-sm font-semibold uppercase tracking-widest text-gray-400">
           Scoring your season...
         </div>
@@ -222,9 +257,21 @@ export default function PlayClient() {
   const openCategories = new Set(openSlots(state).map((s) => s.label));
   const filled = state.picks.length;
   const total = config.slots.length;
+  const isFranchise = type === 'franchise';
+  const isTank = type === 'tank';
 
   return (
-    <Shell source={source} onSource={setSource}>
+    <Shell {...shellProps}>
+      {(isTank || isFranchise) && (
+        <div
+          className={`mb-3 rounded-xl px-3 py-2 text-center text-xs font-bold uppercase tracking-wide ${
+            isTank ? 'bg-sabres-red/10 text-sabres-red' : 'bg-sabres-blue/10 text-sabres-blue'
+          }`}
+        >
+          {isTank ? 'Tank · build the WORST team, chase 0-162' : `Franchise · best all-time ${franchiseName(data, spin)}`}
+        </div>
+      )}
+
       <div className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-md">
         {phase !== 'pick' ? (
           <>
@@ -233,7 +280,8 @@ export default function PlayClient() {
               spin={spin}
               rolling={phase === 'rolling'}
               previousSpin={state.picks.length > 0 ? state.picks[state.picks.length - 1].spin : null}
-              defaultSpin={DEFAULT_SPIN}
+              defaultSpin={isFranchise ? null : DEFAULT_SPIN}
+              decadeOnly={isFranchise}
               revealKey={spinKey}
               round={state.round}
               totalRounds={total}
@@ -244,18 +292,22 @@ export default function PlayClient() {
                 <button
                   type="button"
                   onClick={() => setPhase('rolling')}
-                  className="mt-4 w-full rounded-xl bg-sabres-blue py-4 text-lg font-bold uppercase tracking-widest text-white shadow-md transition-all hover:scale-[1.02] hover:bg-sabres-light active:scale-100"
+                  className={`mt-4 w-full rounded-xl py-4 text-lg font-bold uppercase tracking-widest text-white shadow-md transition-all hover:scale-[1.02] active:scale-100 ${
+                    isTank ? 'bg-sabres-red hover:brightness-110' : 'bg-sabres-blue hover:bg-sabres-light'
+                  }`}
                   style={{ fontFamily: 'Bebas Neue, sans-serif' }}
                 >
                   Spin
                 </button>
 
-                <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
-                  <span className="rounded-lg bg-white py-2 text-center text-xs font-bold uppercase tracking-wide text-sabres-blue shadow-sm">
-                    Classic
-                  </span>
-                  <span className="py-2 text-center text-xs font-bold uppercase tracking-wide text-gray-400">Blind · soon</span>
-                </div>
+                {!isTank && !isFranchise && (
+                  <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
+                    <span className="rounded-lg bg-white py-2 text-center text-xs font-bold uppercase tracking-wide text-sabres-blue shadow-sm">
+                      Classic
+                    </span>
+                    <span className="py-2 text-center text-xs font-bold uppercase tracking-wide text-gray-400">Blind · soon</span>
+                  </div>
+                )}
 
                 <div className="my-4 border-t border-gray-100" />
                 <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
@@ -277,7 +329,7 @@ export default function PlayClient() {
                 </p>
               </div>
               <p className="mt-1 text-xs text-gray-500">
-                {players.length} available · pick one to assign · {filled}/{total} filled
+                {players.length} available · {isTank ? 'pick a bad one' : 'pick one to assign'} · {filled}/{total} filled
               </p>
             </div>
 
@@ -342,7 +394,19 @@ export default function PlayClient() {
   );
 }
 
-function Shell({ source, onSource, children }: { source: Source; onSource: (s: Source) => void; children: React.ReactNode }) {
+function Shell({
+  source,
+  freeType,
+  onSource,
+  onFreeType,
+  children,
+}: {
+  source: Source;
+  freeType: FreeType;
+  onSource: (s: Source) => void;
+  onFreeType: (t: FreeType) => void;
+  children: React.ReactNode;
+}) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <header className="border-b-4 shadow-xl" style={{ background: '#002D72', borderBottomColor: '#041E42' }}>
@@ -359,20 +423,46 @@ function Shell({ source, onSource, children }: { source: Source; onSource: (s: S
         </div>
       </header>
       <main className="mx-auto max-w-[480px] px-3 py-4">
-        <div className="mb-3 grid grid-cols-2 gap-1 rounded-xl bg-white p-1 shadow-sm">
-          {(['daily', 'free'] as const).map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => onSource(s)}
-              className={`rounded-lg py-2 text-center text-xs font-bold uppercase tracking-wide transition-colors ${
-                source === s ? 'bg-sabres-blue text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {s === 'daily' ? 'Daily' : 'Free Play'}
-            </button>
-          ))}
+        <div className="mb-2 grid grid-cols-2 gap-1 rounded-xl bg-white p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={() => onSource('daily')}
+            className={`rounded-lg py-2 text-center text-xs font-bold uppercase tracking-wide transition-colors ${
+              source === 'daily' ? 'bg-sabres-blue text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Daily
+          </button>
+          <button
+            type="button"
+            onClick={() => onFreeType('standard')}
+            className={`rounded-lg py-2 text-center text-xs font-bold uppercase tracking-wide transition-colors ${
+              source === 'free' ? 'bg-sabres-blue text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Free Play
+          </button>
         </div>
+        {source === 'free' && (
+          <div className="mb-3 grid grid-cols-3 gap-1 rounded-xl bg-white p-1 shadow-sm">
+            {(['standard', 'tank', 'franchise'] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => onFreeType(t)}
+                className={`rounded-lg py-1.5 text-center text-[11px] font-bold uppercase tracking-wide transition-colors ${
+                  freeType === t
+                    ? t === 'tank'
+                      ? 'bg-sabres-red text-white shadow-sm'
+                      : 'bg-sabres-blue text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
         {children}
       </main>
     </div>

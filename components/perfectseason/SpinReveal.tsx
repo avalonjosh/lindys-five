@@ -14,6 +14,8 @@ interface SpinRevealProps {
   previousSpin: Spin | null;
   /** Shown muted on the very first board (no previous spin yet) as a preview. */
   defaultSpin: Spin | null;
+  /** Franchise mode: the franchise is fixed and shown vivid; only the decade rolls. */
+  decadeOnly?: boolean;
   /** Changes whenever a fresh roll should play (round, or a skip reroll). */
   revealKey: string;
   round: number;
@@ -29,7 +31,17 @@ const FRANCHISE_LANDS = 1250;
  * On spin both reels cycle through random values; the decade reel lands first,
  * then the franchise a beat later. prefers-reduced-motion lands instantly.
  */
-export default function SpinReveal({ data, spin, rolling, previousSpin, defaultSpin, revealKey, round, totalRounds }: SpinRevealProps) {
+export default function SpinReveal({
+  data,
+  spin,
+  rolling,
+  previousSpin,
+  defaultSpin,
+  decadeOnly = false,
+  revealKey,
+  round,
+  totalRounds,
+}: SpinRevealProps) {
   const [stage, setStage] = useState(0); // 0 spinning, 1 decade landed, 2 both landed
   const [tick, setTick] = useState(0);
 
@@ -73,21 +85,31 @@ export default function SpinReveal({ data, spin, rolling, previousSpin, defaultS
     : boardSpin
       ? boardSpin.decade
       : null;
-  const franchiseText = rolling
-    ? stage >= 2
-      ? franchiseName(data, spin)
-      : flashFranchises[tick % Math.max(1, flashFranchises.length)] ?? '...'
-    : boardSpin
-      ? franchiseName(data, boardSpin)
-      : null;
+  // Franchise mode: the franchise is fixed (always shown vivid), only decade rolls.
+  const franchiseText = decadeOnly
+    ? franchiseName(data, spin)
+    : rolling
+      ? stage >= 2
+        ? franchiseName(data, spin)
+        : flashFranchises[tick % Math.max(1, flashFranchises.length)] ?? '...'
+      : boardSpin
+        ? franchiseName(data, boardSpin)
+        : null;
 
   const decadeSpinning = rolling && stage < 1;
-  const franchiseSpinning = rolling && stage < 2;
+  const franchiseSpinning = !decadeOnly && rolling && stage < 2;
   // The board shows the resting spin muted; rolling and landed values are vivid.
   const valueColor = rolling ? 'text-sabres-blue' : 'text-gray-400';
+  const franchiseColor = decadeOnly ? 'text-sabres-blue' : valueColor;
 
   // Logo shows on the landed franchise (or the board's resting one).
-  const landedFranchiseId = rolling ? (stage >= 2 ? spin.franchise : null) : boardSpin?.franchise ?? null;
+  const landedFranchiseId = decadeOnly
+    ? spin.franchise
+    : rolling
+      ? stage >= 2
+        ? spin.franchise
+        : null
+      : boardSpin?.franchise ?? null;
   const logo = landedFranchiseId ? franchiseLogo(landedFranchiseId) : null;
 
   const tile =
@@ -107,9 +129,11 @@ export default function SpinReveal({ data, spin, rolling, previousSpin, defaultS
       <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">
         {rolling
           ? `Round ${round + 1} of ${totalRounds}`
-          : previousSpin
-            ? `Round ${round + 1} · last spin shown · tap spin for a new one`
-            : `Round ${round + 1} · spin to reveal your decade + franchise`}
+          : decadeOnly
+            ? `Round ${round + 1} · spin to reveal your decade`
+            : previousSpin
+              ? `Round ${round + 1} · last spin shown · tap spin for a new one`
+              : `Round ${round + 1} · spin to reveal your decade + franchise`}
       </div>
 
       <div className="flex items-stretch justify-center gap-2">
@@ -125,10 +149,10 @@ export default function SpinReveal({ data, spin, rolling, previousSpin, defaultS
         <div className={`${tile} flex-1 max-w-[260px] transition-transform ${franchiseSpinning ? 'scale-[0.97]' : 'scale-100'}`}>
           <div className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Franchise</div>
           <div
-            className={`flex items-center justify-center gap-1.5 text-xl font-bold leading-tight ${valueColor} ${franchiseSpinning ? 'blur-[1px] opacity-80' : ''}`}
+            className={`flex items-center justify-center gap-1.5 text-xl font-bold leading-tight ${franchiseColor} ${franchiseSpinning ? 'blur-[1px] opacity-80' : ''}`}
             style={{ fontFamily: 'Bebas Neue, sans-serif' }}
           >
-            {logo && <img src={logo} alt="" className={`h-5 w-auto shrink-0 ${rolling ? '' : 'opacity-60'}`} />}
+            {logo && <img src={logo} alt="" className={`h-5 w-auto shrink-0 ${rolling || decadeOnly ? '' : 'opacity-60'}`} />}
             <span className="truncate">{franchiseText ?? '-'}</span>
           </div>
         </div>

@@ -175,7 +175,8 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 
 function buildShareText(result: SimResult, config: SportConfig, mode: ModeDescriptor): string {
   const title = config.sport === 'mlb' ? '162-0' : '82-0';
-  const label = mode.type === 'tank' ? 'Tank (Free Play)' : 'Free Play';
+  const label =
+    mode.type === 'tank' ? 'Tank (Free Play)' : mode.type === 'franchise' ? 'Franchise (Free Play)' : 'Free Play';
   return [
     `${title} ${config.shareIcon} ${label}`,
     `${result.wins}-${result.losses} · ${result.setsWon}/${result.totalSets} sets`,
