@@ -1,5 +1,6 @@
-import PlayClient from '@/components/perfectseason/PlayClient';
+import { redirect } from 'next/navigation';
 
-export default function PlayPage() {
-  return <PlayClient />;
+// The board now lives on /162-0 itself; keep the old deep link working.
+export default function PlayRedirect() {
+  redirect('/162-0');
 }

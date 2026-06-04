@@ -7,21 +7,27 @@ import { franchiseName, shortDecade } from './ui';
 interface SpinRevealProps {
   data: GameData;
   spin: Spin;
-  /** Changes whenever a fresh reveal should play (round index, or skip count). */
+  /** True once the player has spun this round; tiles stay blank until then. */
+  revealed: boolean;
+  /** Changes whenever a fresh reveal should play (round, or a skip reroll). */
   revealKey: string;
   round: number;
   totalRounds: number;
 }
 
 /**
- * The slot-machine moment: the one accent treatment the game layer adds
- * (Section 11.3). The decade tile flips in first, then the franchise tile a
- * beat later. prefers-reduced-motion collapses both to an instant fade.
+ * The slot-machine moment, the one accent the game layer adds (Section 11.3).
+ * Before the spin the tiles read blank; on spin the decade tile flips in, then
+ * the franchise tile a beat later. prefers-reduced-motion collapses to instant.
  */
-export default function SpinReveal({ data, spin, revealKey, round, totalRounds }: SpinRevealProps) {
+export default function SpinReveal({ data, spin, revealed, revealKey, round, totalRounds }: SpinRevealProps) {
   const [stage, setStage] = useState(0); // 0 nothing, 1 decade in, 2 franchise in
 
   useEffect(() => {
+    if (!revealed) {
+      setStage(0);
+      return;
+    }
     const reduce =
       typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduce) {
@@ -35,31 +41,36 @@ export default function SpinReveal({ data, spin, revealKey, round, totalRounds }
       clearTimeout(t1);
       clearTimeout(t2);
     };
-  }, [revealKey]);
+  }, [revealed, revealKey]);
 
   const tile = 'rounded-2xl bg-sabres-navy text-center shadow-lg px-4 py-3 transition-all duration-300';
-  const hidden = 'opacity-0 -translate-y-2 scale-95';
-  const shown = 'opacity-100 translate-y-0 scale-100';
 
   return (
     <div className="text-center">
-      <div className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">
-        Round {round + 1} of {totalRounds}
+      {/* Segmented round progress. */}
+      <div className="mx-auto mb-2 flex max-w-[260px] items-center gap-1">
+        {Array.from({ length: totalRounds }).map((_, i) => (
+          <span
+            key={i}
+            className={`h-1.5 flex-1 rounded-full ${i < round ? 'bg-sabres-blue' : i === round ? 'bg-sabres-gold' : 'bg-gray-200'}`}
+          />
+        ))}
       </div>
+      <div className="mb-2 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+        {revealed ? `Round ${round + 1} of ${totalRounds}` : `Round ${round + 1} · spin to reveal your decade + franchise`}
+      </div>
+
       <div className="flex items-stretch justify-center gap-2">
-        <div className={`${tile} ${stage >= 1 ? shown : hidden}`}>
+        <div className={`${tile} ${revealed && stage >= 1 ? 'opacity-100' : 'opacity-90'}`}>
           <div className="text-[10px] font-bold uppercase tracking-wide text-sabres-gold/80">Decade</div>
           <div className="text-2xl font-bold text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-            {shortDecade(spin.decade)}
+            {revealed && stage >= 1 ? shortDecade(spin.decade) : '?'}
           </div>
         </div>
-        <div className={`${tile} ${stage >= 2 ? shown : hidden} flex-1 max-w-[260px]`}>
+        <div className={`${tile} flex-1 max-w-[260px] ${revealed && stage >= 2 ? 'opacity-100' : 'opacity-90'}`}>
           <div className="text-[10px] font-bold uppercase tracking-wide text-sabres-gold/80">Franchise</div>
-          <div
-            className="text-xl font-bold text-white leading-tight"
-            style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-          >
-            {franchiseName(data, spin)}
+          <div className="text-xl font-bold leading-tight text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+            {revealed && stage >= 2 ? franchiseName(data, spin) : '?'}
           </div>
         </div>
       </div>

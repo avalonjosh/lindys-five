@@ -18,18 +18,18 @@ import {
   type Action,
   type EngineState,
 } from '@/lib/perfectseason/engine';
-import RosterStrip from './RosterStrip';
+import RosterList from './RosterList';
 import SpinReveal from './SpinReveal';
 import PlayerList from './PlayerList';
 import ResultCard from './ResultCard';
+import HowToPlay from './HowToPlay';
 
 const data = mlbDataJson as unknown as GameData;
 const config = mlbConfig;
 
 function freshGame(mode: ModeDescriptor): EngineState {
   const seed = Math.floor(Math.random() * 0xffffffff);
-  const date = easternDateString();
-  const schedule = generateDay(data, config, date, mulberry32(seed));
+  const schedule = generateDay(data, config, easternDateString(), mulberry32(seed));
   return createGame(data, config, schedule.rounds, mode);
 }
 
@@ -38,7 +38,7 @@ export default function PlayClient() {
   // Generated on the client only: the schedule is random, so building it during
   // SSR would mismatch hydration. Null until mounted.
   const [state, setState] = useState<EngineState | null>(null);
-  const [revealed, setRevealed] = useState(false);
+  const [spun, setSpun] = useState(false);
   const [undo, setUndo] = useState(false);
 
   useEffect(() => {
@@ -47,23 +47,12 @@ export default function PlayClient() {
 
   const dispatch = useCallback((a: Action) => setState((s) => (s ? reduce(s, a) : s)), []);
 
-  const spinKey =
-    !state || state.done
-      ? 'idle'
-      : `${state.round}:${state.curTeamUsed ? 'T' : ''}${state.curDecadeUsed ? 'D' : ''}:${state.firstSkip ?? ''}`;
-
-  // Play the spin reveal, then surface the pick list a beat later. Keyed on the
-  // spin only, so selecting a player does not re-hide the list.
+  // A new round always starts unspun, so the SPIN button returns.
+  const roundKey = state && !state.done ? state.round : -1;
   useEffect(() => {
-    if (spinKey === 'idle') return;
-    setRevealed(false);
-    const reduceMotion =
-      typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const t = setTimeout(() => setRevealed(true), reduceMotion ? 0 : 700);
-    return () => clearTimeout(t);
-  }, [spinKey]);
+    setSpun(false);
+  }, [roundKey]);
 
-  // Auto-dismiss the undo toast after four seconds.
   useEffect(() => {
     if (!undo) return;
     const t = setTimeout(() => setUndo(false), 4000);
@@ -72,12 +61,14 @@ export default function PlayClient() {
 
   const commitAssign = useCallback((id: string, slotId: string) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+    setSpun(false);
     setState((s) => (s ? reduce(reduce(s, { type: 'SELECT_PLAYER', id }), { type: 'ASSIGN_SLOT', slotId }) : s));
     setUndo(true);
   }, []);
 
   const newGame = useCallback(() => {
     setUndo(false);
+    setSpun(false);
     setState(freshGame(mode));
   }, [mode]);
 
@@ -90,23 +81,6 @@ export default function PlayClient() {
       </Shell>
     );
   }
-
-  const players = state.done ? [] : availablePlayers(state);
-  const poolScores = players.map((p) => p.score).sort((a, b) => b - a);
-  const topScore = poolScores[0] ?? 100;
-  const top3Score = poolScores[2] ?? poolScores[poolScores.length - 1] ?? 0;
-
-  const selectedPlayer = state.selectedId ? players.find((p) => p.id === state.selectedId) ?? null : null;
-  const legals = selectedPlayer ? legalSlots(state, selectedPlayer) : [];
-  const legalIds = new Set(legals.map((s) => s.id));
-
-  const onSelect = (id: string) => {
-    const player = players.find((p) => p.id === id);
-    if (!player) return;
-    const ls = legalSlots(state, player);
-    if (ls.length === 1) commitAssign(id, ls[0].id);
-    else dispatch({ type: 'SELECT_PLAYER', id });
-  };
 
   if (state.done && state.result) {
     return (
@@ -124,29 +98,50 @@ export default function PlayClient() {
   }
 
   const spin = currentSpin(state);
-  const teamSkipOpen = canSkipTeam(state);
-  const decadeSkipOpen = canSkipDecade(state);
+  const players = spun ? availablePlayers(state) : [];
+  const poolScores = players.map((p) => p.score).sort((a, b) => b - a);
+  const topScore = poolScores[0] ?? 100;
+  const top3Score = poolScores[2] ?? poolScores[poolScores.length - 1] ?? 0;
+  const fillableSlotIds = new Set(players.flatMap((p) => legalSlots(state, p).map((s) => s.id)));
+  const spinKey = `${state.round}:${state.curTeamUsed ? 'T' : ''}${state.curDecadeUsed ? 'D' : ''}:${state.firstSkip ?? ''}`;
 
   return (
     <Shell>
-      <div className="sticky top-0 z-10 -mx-3 bg-gradient-to-br from-slate-50 to-blue-50 px-3 pb-2 pt-1">
-        <RosterStrip
-          slots={config.slots}
-          roster={state.roster}
-          legalSlotIds={legalIds}
-          selecting={!!selectedPlayer}
-          onAssign={(slotId) => state.selectedId && commitAssign(state.selectedId, slotId)}
-        />
+      {/* Variant toggle, always on the board (Blind ships in a later phase). */}
+      <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl border-2 border-gray-200 bg-white p-1 shadow-sm">
+        <span className="rounded-lg bg-sabres-blue py-2 text-center text-xs font-bold uppercase tracking-wide text-white">
+          Classic
+        </span>
+        <span className="rounded-lg py-2 text-center text-xs font-bold uppercase tracking-wide text-gray-300">
+          Blind · soon
+        </span>
       </div>
 
-      <div className="mt-3 rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-md">
-        <SpinReveal data={data} spin={spin} revealKey={spinKey} round={state.round} totalRounds={config.slots.length} />
+      {/* Spin board. */}
+      <div className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-md">
+        <SpinReveal
+          data={data}
+          spin={spin}
+          revealed={spun}
+          revealKey={spinKey}
+          round={state.round}
+          totalRounds={config.slots.length}
+        />
 
-        {revealed && (
+        {!spun ? (
+          <button
+            type="button"
+            onClick={() => setSpun(true)}
+            className="mt-4 w-full rounded-xl bg-sabres-gold py-4 text-lg font-bold uppercase tracking-widest text-sabres-navy shadow-md transition-transform hover:scale-[1.02] active:scale-100"
+            style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+          >
+            Spin
+          </button>
+        ) : (
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               type="button"
-              disabled={!teamSkipOpen}
+              disabled={!canSkipTeam(state)}
               onClick={() => dispatch({ type: 'SKIP_TEAM' })}
               className="rounded-xl border-2 border-gray-300 py-2 text-xs font-bold uppercase tracking-wide text-gray-700 transition-colors disabled:opacity-40 disabled:line-through enabled:hover:border-sabres-blue enabled:hover:text-sabres-blue"
             >
@@ -154,7 +149,7 @@ export default function PlayClient() {
             </button>
             <button
               type="button"
-              disabled={!decadeSkipOpen}
+              disabled={!canSkipDecade(state)}
               onClick={() => dispatch({ type: 'SKIP_DECADE' })}
               className="rounded-xl border-2 border-gray-300 py-2 text-xs font-bold uppercase tracking-wide text-gray-700 transition-colors disabled:opacity-40 disabled:line-through enabled:hover:border-sabres-blue enabled:hover:text-sabres-blue"
             >
@@ -164,26 +159,30 @@ export default function PlayClient() {
         )}
       </div>
 
-      {revealed && (
-        <>
-          {selectedPlayer && legals.length > 1 && (
-            <div className="mt-3 rounded-xl bg-sabres-gold/15 px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-sabres-navy">
-              Tap a highlighted slot above for {selectedPlayer.name.split(' ').slice(-1)[0]}
-            </div>
-          )}
+      {/* Roster. */}
+      <div className="mt-3 rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-md">
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">Your Roster</p>
+        <RosterList slots={config.slots} picks={state.picks} data={data} fillableSlotIds={fillableSlotIds} />
+      </div>
 
-          <div className="mt-3 pb-24">
-            <PlayerList
-              players={players}
-              config={config}
-              selectedId={state.selectedId}
-              topScore={topScore}
-              top3Score={top3Score}
-              onSelect={onSelect}
-            />
-          </div>
-        </>
+      {/* Pick list (after the spin). */}
+      {spun && (
+        <div className="mt-3 pb-24">
+          <PlayerList
+            players={players}
+            config={config}
+            topScore={topScore}
+            top3Score={top3Score}
+            blind={false}
+            getLegalSlots={(p) => legalSlots(state, p)}
+            onAssign={commitAssign}
+          />
+        </div>
       )}
+
+      <div className="mt-3">
+        <HowToPlay />
+      </div>
 
       {undo && (
         <div className="fixed inset-x-0 bottom-4 z-20 flex justify-center px-4">
