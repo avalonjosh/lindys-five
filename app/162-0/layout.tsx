@@ -19,8 +19,9 @@ export default function PerfectSeasonLayout({ children }: { children: React.Reac
       {children}
       <footer className="bg-slate-50 px-4 py-6 text-center">
         <p className="mx-auto max-w-[480px] text-[11px] leading-relaxed text-gray-400">
-          An independent fan game by Lindys Five. Not affiliated with Major League Baseball or the MLBPA.
-          MLB data: Lahman Baseball Database (CC BY-SA), sabr.org. Facts only, no league logos.
+          An independent fan game by Lindys Five. Not affiliated with or endorsed by Major League Baseball or the
+          MLBPA. MLB and the MLB shield are trademarks of their respective owners. MLB data: Lahman Baseball
+          Database (CC BY-SA), sabr.org.
         </p>
       </footer>
     </>

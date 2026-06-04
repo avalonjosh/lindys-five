@@ -14,7 +14,10 @@ export default function PerfectSeasonHub() {
           <p className="text-5xl font-bold tracking-wider text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
             Lindy&apos;s Five
           </p>
-          <p className="text-sm font-semibold text-white/80">162-0 ⚾ The Perfect Season</p>
+          <div className="flex items-center justify-center gap-1.5 text-sm font-semibold text-white/80">
+            <span>162-0</span>
+            <img src="https://www.mlbstatic.com/team-logos/league-on-dark/1.svg" alt="MLB" className="h-4 w-auto" />
+          </div>
         </div>
       </header>
 
