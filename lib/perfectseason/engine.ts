@@ -159,6 +159,18 @@ export function availablePlayers(s: EngineState): Player[] {
   return playersForSpin(s, currentSpin(s));
 }
 
+/**
+ * Every rosterable player in the current spin (minus already-used players),
+ * assignable or not, sorted by mode. The UI shows the whole pool and greys out
+ * the ones with no open slot rather than hiding them.
+ */
+export function spinPlayers(s: EngineState): Player[] {
+  const used = new Set(s.usedPlayerIds);
+  const pool = poolPlayers(s.data, currentSpin(s), s.config).filter((p) => !used.has(p.id));
+  if (s.mode.type === 'tank') return [...pool].sort((a, b) => a.name.localeCompare(b.name));
+  return [...pool].sort((a, b) => b.score - a.score);
+}
+
 function spinAfterTeamSkip(s: EngineState): Spin {
   const t = s.rounds[s.round];
   return (s.curDecadeUsed ? t.decadeThenTeam : t.teamSkip) ?? t.primary;

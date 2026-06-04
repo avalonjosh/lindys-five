@@ -8,6 +8,8 @@ interface PlayerListProps {
   players: Player[];
   config: SportConfig;
   blind: boolean;
+  /** Slot labels still open; filled-position filter chips grey out. */
+  openCategories: Set<string>;
   /** The legal, finishable slots for a player (drives the assign buttons). */
   getLegalSlots: (player: Player) => SlotDef[];
   onAssign: (playerId: string, slotId: string) => void;
@@ -26,7 +28,7 @@ const ASSIGN_BTN =
  * tap one of the position buttons so the slot is unambiguous. Blind mode hides
  * the stat line.
  */
-export default function PlayerList({ players, config, blind, getLegalSlots, onAssign }: PlayerListProps) {
+export default function PlayerList({ players, config, blind, openCategories, getLegalSlots, onAssign }: PlayerListProps) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('All');
 
@@ -55,21 +57,27 @@ export default function PlayerList({ players, config, blind, getLegalSlots, onAs
         className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-sabres-blue focus:bg-white"
       />
       <div className="mt-2 flex flex-wrap gap-1.5">
-        {categories.map((label) => (
-          <button
-            key={label}
-            type="button"
-            onClick={() => setFilter(label)}
-            className={[
-              'rounded-full border-2 px-3 py-1 text-xs font-bold transition-colors',
-              filter === label
-                ? 'border-sabres-blue bg-sabres-blue text-white'
-                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300',
-            ].join(' ')}
-          >
-            {label}
-          </button>
-        ))}
+        {categories.map((label) => {
+          const closed = label !== 'All' && !openCategories.has(label); // position already filled
+          return (
+            <button
+              key={label}
+              type="button"
+              disabled={closed}
+              onClick={() => !closed && setFilter(label)}
+              className={[
+                'rounded-full border-2 px-3 py-1 text-xs font-bold transition-colors',
+                closed
+                  ? 'cursor-not-allowed border-gray-100 bg-gray-50 text-gray-300'
+                  : filter === label
+                    ? 'border-sabres-blue bg-sabres-blue text-white'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300',
+              ].join(' ')}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       <ul className="mt-3 flex flex-col gap-2" role="listbox" aria-label="Available players">
@@ -80,7 +88,6 @@ export default function PlayerList({ players, config, blind, getLegalSlots, onAs
           for (const slot of legal) {
             if (!targets.some((b) => b.label === slot.label)) targets.push({ label: slot.label, slotId: slot.id });
           }
-          if (targets.length === 0) return null;
           const multi = targets.length > 1;
 
           const info = (
@@ -101,6 +108,16 @@ export default function PlayerList({ players, config, blind, getLegalSlots, onAs
               )}
             </div>
           );
+
+          // No open slot for any of this player's positions: shown greyed, not pickable.
+          if (targets.length === 0) {
+            return (
+              <li key={player.id} className={`${ROW_BASE} opacity-50`}>
+                {info}
+                <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-gray-400">No open slots</span>
+              </li>
+            );
+          }
 
           // Multi-position: the row is not tappable; the player must choose a spot.
           if (multi) {

@@ -8,13 +8,14 @@ import { mlbConfig } from '@/lib/perfectseason/config.mlb';
 import { generateDay } from '@/lib/perfectseason/schedule';
 import { mulberry32, easternDateString } from '@/lib/perfectseason/seed';
 import {
-  availablePlayers,
   canSkipDecade,
   canSkipTeam,
   createGame,
   currentSpin,
   legalSlots,
+  openSlots,
   reduce,
+  spinPlayers,
   type Action,
   type EngineState,
 } from '@/lib/perfectseason/engine';
@@ -108,7 +109,8 @@ export default function PlayClient() {
 
   const spin = currentSpin(state);
   const picking = phase === 'pick';
-  const players = picking ? availablePlayers(state) : [];
+  const players = picking ? spinPlayers(state) : [];
+  const openCategories = new Set(openSlots(state).map((s) => s.label));
   const filled = state.picks.length;
   const total = config.slots.length;
 
@@ -188,6 +190,7 @@ export default function PlayClient() {
                 players={players}
                 config={config}
                 blind={false}
+                openCategories={openCategories}
                 getLegalSlots={(p) => legalSlots(state, p)}
                 onAssign={commitAssign}
               />
