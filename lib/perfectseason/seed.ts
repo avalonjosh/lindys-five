@@ -9,7 +9,7 @@
  * epoch plus one ("Daily #47"). Defined once and never changed, since it is
  * baked into every shared grid. Placeholder until the public launch date locks.
  */
-export const DAILY_EPOCH = '2026-07-01';
+export const DAILY_EPOCH = '2026-06-01';
 
 /** xmur3-style string hash. Stable across runs and machines. */
 export function hashString(str: string): number {
