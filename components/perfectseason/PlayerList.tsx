@@ -83,6 +83,9 @@ export default function PlayerList({ players, config, blind, openCategories, get
 
       <ul className="mt-3 flex flex-col gap-2" role="listbox" aria-label="Available players">
         {shown.map((player) => {
+          // A two-way player can appear twice in a pool (as a hitter and a
+          // pitcher) with the same id, so the key also keys on the player kind.
+          const rowKey = `${player.id}-${'era' in player.line ? 'sp' : 'bat'}`;
           // One assign target per distinct slot label the player can fill.
           const legal = getLegalSlots(player);
           const targets: { label: string; slotId: string }[] = [];
@@ -116,7 +119,7 @@ export default function PlayerList({ players, config, blind, openCategories, get
           // No open slot for any of this player's positions: shown greyed, not pickable.
           if (targets.length === 0) {
             return (
-              <li key={player.id} className={`${ROW_BASE} opacity-50`}>
+              <li key={rowKey} className={`${ROW_BASE} opacity-50`}>
                 {info}
                 <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wide text-gray-400">No open slots</span>
               </li>
@@ -126,7 +129,7 @@ export default function PlayerList({ players, config, blind, openCategories, get
           // Multi-position: the row is not tappable; the player must choose a spot.
           if (multi) {
             return (
-              <li key={player.id} className={ROW_BASE}>
+              <li key={rowKey} className={ROW_BASE}>
                 {info}
                 <div className="flex shrink-0 gap-1">
                   {targets.map((b) => (
@@ -142,7 +145,7 @@ export default function PlayerList({ players, config, blind, openCategories, get
           // Single position: tapping the whole row assigns to it.
           const only = targets[0];
           return (
-            <li key={player.id}>
+            <li key={rowKey}>
               <div
                 role="button"
                 tabIndex={0}

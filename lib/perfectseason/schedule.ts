@@ -50,11 +50,19 @@ function poolFor(data: GameData, spin: Spin): Player[] {
 
 /** Players in a spin's pool that can fill at least one roster slot. */
 export function poolPlayers(data: GameData, spin: Spin, config: SportConfig): Player[] {
-  return rosterable(poolFor(data, spin), config);
+  // A two-way player can appear twice (as a hitter and a pitcher). Collapse to
+  // the higher-scored entry so each player id is offered once, which also drops
+  // spurious pitcher-as-fielder entries (their pitching always scores higher).
+  const byId = new Map<string, Player>();
+  for (const p of rosterable(poolFor(data, spin), config)) {
+    const cur = byId.get(p.id);
+    if (!cur || p.score > cur.score) byId.set(p.id, p);
+  }
+  return [...byId.values()];
 }
 
 function poolValid(data: GameData, spin: Spin, config: SportConfig): boolean {
-  return rosterable(poolFor(data, spin), config).length >= MIN_POOL;
+  return poolPlayers(data, spin, config).length >= MIN_POOL;
 }
 
 function canFill(pool: Player[], slot: SlotDef): boolean {
@@ -181,7 +189,7 @@ export function validateSchedule(
   const paths = enumeratePaths(rounds);
   let sawHeadliner = false;
   for (const path of paths) {
-    const pools = path.spins.map((s) => rosterable(poolFor(data, s), config));
+    const pools = path.spins.map((s) => poolPlayers(data, s, config));
     // Fail-state: every spin keeps at least MIN_POOL eligible players.
     for (let i = 0; i < pools.length; i++) {
       if (pools[i].length < MIN_POOL) {
