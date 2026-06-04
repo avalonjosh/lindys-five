@@ -36,3 +36,6 @@ tsconfig.tsbuildinfo
 .netlify
 .vercel
 .env*.local
+
+# Perfect Season raw datasets (re-downloadable, not committed)
+raw-data/
