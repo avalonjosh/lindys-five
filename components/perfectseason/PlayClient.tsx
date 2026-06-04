@@ -109,9 +109,6 @@ export default function PlayClient() {
   const spin = currentSpin(state);
   const picking = phase === 'pick';
   const players = picking ? availablePlayers(state) : [];
-  const poolScores = players.map((p) => p.score).sort((a, b) => b - a);
-  const topScore = poolScores[0] ?? 100;
-  const top3Score = poolScores[2] ?? poolScores[poolScores.length - 1] ?? 0;
   const filled = state.picks.length;
   const total = config.slots.length;
 
@@ -190,8 +187,6 @@ export default function PlayClient() {
               <PlayerList
                 players={players}
                 config={config}
-                topScore={topScore}
-                top3Score={top3Score}
                 blind={false}
                 getLegalSlots={(p) => legalSlots(state, p)}
                 onAssign={commitAssign}
