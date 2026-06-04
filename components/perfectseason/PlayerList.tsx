@@ -80,52 +80,78 @@ export default function PlayerList({
       <ul className="mt-3 flex flex-col gap-2" role="listbox" aria-label="Available players">
         {shown.map((player) => {
           const dot = player.score >= topScore ? 'bg-emerald-500' : player.score >= top3Score ? 'bg-amber-400' : 'bg-gray-300';
-          // One assign button per distinct slot label the player can fill.
+          // One assign target per distinct slot label the player can fill.
           const legal = getLegalSlots(player);
-          const buttons: { label: string; slotId: string }[] = [];
+          const targets: { label: string; slotId: string }[] = [];
           for (const slot of legal) {
-            if (!buttons.some((b) => b.label === slot.label)) buttons.push({ label: slot.label, slotId: slot.id });
+            if (!targets.some((b) => b.label === slot.label)) targets.push({ label: slot.label, slotId: slot.id });
           }
+          if (targets.length === 0) return null;
+          const primary = targets[0];
+          const multi = targets.length > 1;
           return (
-            <li key={player.id} className="flex items-center gap-2.5 rounded-xl border border-gray-200 bg-white p-2.5 shadow-sm">
-              {!blind && <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dot}`} aria-hidden />}
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-bold text-gray-900">{player.name}</div>
+            <li key={player.id}>
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => onAssign(player.id, primary.slotId)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onAssign(player.id, primary.slotId);
+                  }
+                }}
+                className="flex cursor-pointer items-center gap-2.5 rounded-xl border-2 border-gray-200 bg-white p-2.5 shadow-sm transition-all hover:border-sabres-blue hover:shadow-md active:scale-[0.99]"
+              >
+                {!blind && <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dot}`} aria-hidden />}
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-bold text-gray-900">{player.name}</div>
+                  {!blind && (
+                    <div className="mt-0.5 truncate text-[11px] text-gray-400">
+                      {statCells(player, config).map((cell, i) => (
+                        <span key={cell.label}>
+                          {i > 0 && <span className="text-gray-300"> · </span>}
+                          <span className={HEADLINE.has(cell.label) ? 'font-bold text-sabres-blue' : 'font-semibold text-gray-700'}>
+                            {cell.value}
+                          </span>{' '}
+                          <span className="uppercase tracking-wide">{cell.label}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {!blind && (
-                  <div className="mt-0.5 truncate text-[11px] text-gray-400">
-                    {statCells(player, config).map((cell, i) => (
-                      <span key={cell.label}>
-                        {i > 0 && <span className="text-gray-300"> · </span>}
-                        <span className={HEADLINE.has(cell.label) ? 'font-bold text-sabres-blue' : 'font-semibold text-gray-700'}>
-                          {cell.value}
-                        </span>{' '}
-                        <span className="uppercase tracking-wide">{cell.label}</span>
-                      </span>
+                  <span
+                    className="shrink-0 rounded-lg bg-sabres-navy px-2 py-1 text-sm font-bold text-white"
+                    style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+                  >
+                    {player.score.toFixed(0)}
+                  </span>
+                )}
+
+                {/* Single position: a label showing where the tap assigns. Multi: pick a spot. */}
+                {multi ? (
+                  <div className="flex shrink-0 flex-col gap-1">
+                    {targets.map((b) => (
+                      <button
+                        key={b.slotId}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAssign(player.id, b.slotId);
+                        }}
+                        className="min-h-[30px] min-w-[42px] rounded-lg border-2 border-sabres-blue bg-sabres-blue/5 px-2 text-xs font-bold uppercase tracking-wide text-sabres-blue transition-colors hover:bg-sabres-blue hover:text-white"
+                      >
+                        {b.label}
+                      </button>
                     ))}
                   </div>
+                ) : (
+                  <span className="shrink-0 rounded-lg bg-sabres-blue/10 px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-sabres-blue">
+                    {primary.label}
+                  </span>
                 )}
-              </div>
-
-              {!blind && (
-                <span
-                  className="shrink-0 rounded-lg bg-sabres-navy px-2 py-1 text-sm font-bold text-white"
-                  style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-                >
-                  {player.score.toFixed(0)}
-                </span>
-              )}
-
-              <div className="flex shrink-0 flex-col gap-1">
-                {buttons.map((b) => (
-                  <button
-                    key={b.slotId}
-                    type="button"
-                    onClick={() => onAssign(player.id, b.slotId)}
-                    className="min-h-[34px] min-w-[44px] rounded-lg border-2 border-sabres-blue bg-sabres-blue/5 px-3 text-xs font-bold uppercase tracking-wide text-sabres-blue transition-colors hover:bg-sabres-blue hover:text-white"
-                  >
-                    {b.label}
-                  </button>
-                ))}
               </div>
             </li>
           );
