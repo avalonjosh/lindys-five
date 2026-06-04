@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import mlbDataJson from '@/data/mlb-data.json';
-import type { GameData, ModeDescriptor } from '@/lib/perfectseason/types';
+import scheduleJson from '@/data/mlb-daily-schedule.json';
+import type { GameData, ModeDescriptor, RoundTree } from '@/lib/perfectseason/types';
 import { mlbConfig } from '@/lib/perfectseason/config.mlb';
-import { generateDay } from '@/lib/perfectseason/schedule';
+import { generateDay, poolPlayers } from '@/lib/perfectseason/schedule';
 import { mulberry32, easternDateString } from '@/lib/perfectseason/seed';
 import {
   canSkipDecade,
@@ -19,47 +20,126 @@ import {
   type Action,
   type EngineState,
 } from '@/lib/perfectseason/engine';
+import {
+  getDaily,
+  getStats,
+  getStreak,
+  recordDaily,
+  type DailyRecord,
+  type GridCell,
+  type GridTier,
+} from '@/lib/perfectseason/storage';
 import RosterList from './RosterList';
 import SpinReveal from './SpinReveal';
 import PlayerList from './PlayerList';
 import ResultCard from './ResultCard';
+import DailyResult from './DailyResult';
 import HowToPlay from './HowToPlay';
 import { franchiseLogo, franchiseName } from './ui';
 import Decade from './Decade';
 
 const data = mlbDataJson as unknown as GameData;
+const schedule = scheduleJson as unknown as { days: Record<string, { dayNumber: number; rounds: RoundTree[] }> };
 const config = mlbConfig;
-const ROLL_TOTAL_MS = 1750; // SpinReveal lands the franchise at ~1.25s, then rest 0.5s on the result
-// Resting preview on the first board so it is not empty dashes. Iconic and on-brand.
+const ROLL_TOTAL_MS = 1750; // reels land the franchise at ~1.25s, then rest 0.5s
 const DEFAULT_SPIN = { decade: '1950s', franchise: 'NYY' };
 
 type Phase = 'board' | 'rolling' | 'pick';
+type Source = 'daily' | 'free';
 
-function freshGame(mode: ModeDescriptor): EngineState {
+function freeGame(): EngineState {
   const seed = Math.floor(Math.random() * 0xffffffff);
-  const schedule = generateDay(data, config, easternDateString(), mulberry32(seed));
-  return createGame(data, config, schedule.rounds, mode);
+  const sched = generateDay(data, config, easternDateString(), mulberry32(seed));
+  return createGame(data, config, sched.rounds, { type: 'standard', source: 'free' });
+}
+
+function dailyToday(): { state: EngineState; dayNumber: number; date: string } | null {
+  const date = easternDateString();
+  const day = schedule.days[date];
+  if (!day) return null;
+  return { state: createGame(data, config, day.rounds, { type: 'standard', source: 'daily' }), dayNumber: day.dayNumber, date };
+}
+
+function buildDailyRecord(state: EngineState, dayNumber: number): DailyRecord {
+  const r = state.result!;
+  const grid: GridCell[] = state.picks.map((p) => {
+    const pool = poolPlayers(data, p.spin, config);
+    const higher = pool.filter((pl) => pl.score > p.score).length;
+    const tier: GridTier = higher === 0 ? 'green' : higher < 3 ? 'yellow' : 'gray';
+    const slot = config.slots.find((s) => s.id === p.slotId);
+    return {
+      slot: slot?.label ?? p.slotId,
+      decade: p.spin.decade,
+      franchise: franchiseName(data, p.spin),
+      tier,
+      skipped: p.skips.team || p.skips.decade,
+    };
+  });
+  return {
+    done: true,
+    dayNumber,
+    wins: r.wins,
+    losses: r.losses,
+    setsWon: r.setsWon,
+    totalSets: r.totalSets,
+    perfectSets: r.perfectSets,
+    verdict: r.verdict,
+    grid,
+    skips: { team: state.picks.some((p) => p.skips.team), decade: state.picks.some((p) => p.skips.decade) },
+  };
 }
 
 export default function PlayClient() {
-  const mode = useMemo<ModeDescriptor>(() => ({ type: 'standard', source: 'free' }), []);
-  // Generated on the client only: random schedule, so SSR would mismatch.
+  const [source, setSource] = useState<Source>('daily');
   const [state, setState] = useState<EngineState | null>(null);
   const [phase, setPhase] = useState<Phase>('board');
   const [undo, setUndo] = useState(false);
+  const [day, setDay] = useState<{ dayNumber: number; date: string } | null>(null);
+  const [record, setRecord] = useState<DailyRecord | null>(null);
 
+  const mode = useMemo<ModeDescriptor>(() => ({ type: 'standard', source }), [source]);
+
+  // Initialize (and re-initialize when switching Daily / Free Play).
   useEffect(() => {
-    setState(freshGame(mode));
-  }, [mode]);
+    setUndo(false);
+    setPhase('board');
+    if (source === 'free') {
+      setRecord(null);
+      setDay(null);
+      setState(freeGame());
+      return;
+    }
+    const date = easternDateString();
+    const existing = getDaily('mlb', date, 'classic');
+    if (existing) {
+      setRecord(existing);
+      setDay({ dayNumber: existing.dayNumber, date });
+      setState(null);
+      return;
+    }
+    const dg = dailyToday();
+    if (!dg) {
+      setSource('free'); // out of scheduled range; fall back
+      return;
+    }
+    setRecord(null);
+    setDay({ dayNumber: dg.dayNumber, date: dg.date });
+    setState(dg.state);
+  }, [source]);
 
-  const dispatch = useCallback((a: Action) => setState((s) => (s ? reduce(s, a) : s)), []);
+  // Lock and record a finished Daily once.
+  useEffect(() => {
+    if (source !== 'daily' || record || !state?.done || !state.result || !day) return;
+    const rec = buildDailyRecord(state, day.dayNumber);
+    recordDaily('mlb', day.date, 'classic', rec);
+    setRecord(rec);
+  }, [source, record, state, day]);
 
   const spinKey =
     !state || state.done
       ? 'idle'
       : `${state.round}:${state.curTeamUsed ? 'T' : ''}${state.curDecadeUsed ? 'D' : ''}:${state.firstSkip ?? ''}`;
 
-  // Once the reels finish, switch to the pick view. A skip mid-roll restarts it.
   useEffect(() => {
     if (phase !== 'rolling') return;
     const reduceMotion =
@@ -73,6 +153,8 @@ export default function PlayClient() {
     const t = setTimeout(() => setUndo(false), 4000);
     return () => clearTimeout(t);
   }, [undo]);
+
+  const dispatch = useCallback((a: Action) => setState((s) => (s ? reduce(s, a) : s)), []);
 
   const commitAssign = useCallback((id: string, slotId: string) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
@@ -89,23 +171,47 @@ export default function PlayClient() {
   const newGame = useCallback(() => {
     setUndo(false);
     setPhase('board');
-    setState(freshGame(mode));
-  }, [mode]);
+    setState(freeGame());
+  }, []);
+
+  // --- Daily result / lockout ---
+  if (source === 'daily' && record) {
+    return (
+      <Shell source={source} onSource={setSource}>
+        <DailyResult
+          record={record}
+          config={config}
+          streak={getStreak('mlb', 'classic')}
+          played={getStats('mlb', 'classic').played}
+          onPlayFree={() => setSource('free')}
+        />
+      </Shell>
+    );
+  }
 
   if (!state) {
     return (
-      <Shell>
+      <Shell source={source} onSource={setSource}>
         <div className="py-20 text-center text-sm font-semibold uppercase tracking-widest text-gray-400">
-          Shuffling the all-time pools...
+          Loading...
         </div>
       </Shell>
     );
   }
 
   if (state.done && state.result) {
+    if (source === 'free') {
+      return (
+        <Shell source={source} onSource={setSource}>
+          <ResultCard result={state.result} config={config} mode={mode} picks={state.picks} data={data} onPlayAgain={newGame} />
+        </Shell>
+      );
+    }
     return (
-      <Shell>
-        <ResultCard result={state.result} config={config} mode={mode} picks={state.picks} data={data} onPlayAgain={newGame} />
+      <Shell source={source} onSource={setSource}>
+        <div className="py-20 text-center text-sm font-semibold uppercase tracking-widest text-gray-400">
+          Scoring your season...
+        </div>
       </Shell>
     );
   }
@@ -118,7 +224,7 @@ export default function PlayClient() {
   const total = config.slots.length;
 
   return (
-    <Shell>
+    <Shell source={source} onSource={setSource}>
       <div className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-md">
         {phase !== 'pick' ? (
           <>
@@ -161,7 +267,6 @@ export default function PlayClient() {
           </>
         ) : (
           <>
-            {/* Focused pick view: roster hidden, only the available players. */}
             <div className="border-b border-gray-100 pb-3">
               <div className="flex items-center gap-2">
                 {franchiseLogo(spin.franchise) && (
@@ -237,7 +342,7 @@ export default function PlayClient() {
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ source, onSource, children }: { source: Source; onSource: (s: Source) => void; children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <header className="border-b-4 shadow-xl" style={{ background: '#002D72', borderBottomColor: '#041E42' }}>
@@ -251,10 +356,25 @@ function Shell({ children }: { children: React.ReactNode }) {
             <span>162-0</span>
             <img src="https://www.mlbstatic.com/team-logos/league-on-dark/1.svg" alt="MLB" className="h-4 w-auto" />
           </div>
-          <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-white/50">Free Play</p>
         </div>
       </header>
-      <main className="mx-auto max-w-[480px] px-3 py-4">{children}</main>
+      <main className="mx-auto max-w-[480px] px-3 py-4">
+        <div className="mb-3 grid grid-cols-2 gap-1 rounded-xl bg-white p-1 shadow-sm">
+          {(['daily', 'free'] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => onSource(s)}
+              className={`rounded-lg py-2 text-center text-xs font-bold uppercase tracking-wide transition-colors ${
+                source === s ? 'bg-sabres-blue text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {s === 'daily' ? 'Daily' : 'Free Play'}
+            </button>
+          ))}
+        </div>
+        {children}
+      </main>
     </div>
   );
 }
