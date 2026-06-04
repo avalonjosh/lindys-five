@@ -78,8 +78,8 @@ want to rebuild the data.
 |---|---|---|
 | 1 | MLB data pipeline | DONE, approved 2026-06-04 |
 | 2 | Engine, sim, deterministic skip tree, calibration | DONE, approved 2026-06-04 |
-| 3 | Free Play Standard UI | DONE; restyled + redesigned to nhl82.ca one-page board; awaiting phone walkthrough |
-| 4 | Daily plumbing and quiet ship | NOT STARTED (next) |
+| 3 | Free Play Standard UI | DONE; nhl82.ca-style one-page board, logos, spin animation |
+| 4 | Daily plumbing and quiet ship | DONE; daily-first landing, lockout, streaks, share grid, OG card. Awaiting launch call |
 | 5 | Tank and Franchise (free play) | not started |
 | 6 | Blind mode (BallIQ) | not started |
 | 7 | NHL edition (82-0) | not started; needs Kaggle NHL dataset in `raw-data/nhl/` |
