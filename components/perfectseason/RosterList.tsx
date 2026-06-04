@@ -2,7 +2,7 @@
 
 import type { GameData, SlotDef } from '@/lib/perfectseason/types';
 import type { PickRecord } from '@/lib/perfectseason/engine';
-import { franchiseName } from './ui';
+import { franchiseLogo, franchiseName } from './ui';
 import Decade from './Decade';
 
 interface RosterListProps {
@@ -43,8 +43,13 @@ export default function RosterList({ slots, picks, data, fillableSlotIds }: Rost
               <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
                 <div className="min-w-0">
                   <div className="truncate text-sm font-bold text-gray-900">{pick.playerName}</div>
-                  <div className="truncate text-[11px] text-gray-500">
-                    <Decade value={pick.spin.decade} /> {franchiseName(data, pick.spin)}
+                  <div className="flex items-center gap-1 text-[11px] text-gray-500">
+                    {franchiseLogo(pick.spin.franchise) && (
+                      <img src={franchiseLogo(pick.spin.franchise)!} alt="" className="h-4 w-auto shrink-0" />
+                    )}
+                    <span className="truncate">
+                      <Decade value={pick.spin.decade} /> {franchiseName(data, pick.spin)}
+                    </span>
                   </div>
                 </div>
                 <span
