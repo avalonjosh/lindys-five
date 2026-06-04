@@ -1,17 +1,27 @@
 import type { Metadata } from 'next';
+import { dayNumber, easternDateString } from '@/lib/perfectseason/seed';
 
-export const metadata: Metadata = {
-  title: '162-0 — The Perfect Season (MLB)',
-  description:
-    'Draft an all-time MLB roster from decade and franchise spins, then see if your team can go 162-0. A daily roster puzzle from Lindys Five.',
-  alternates: { canonical: 'https://www.lindysfive.com/162-0' },
-  openGraph: {
-    title: '162-0 — The Perfect Season',
-    description: 'Can you build a team that goes 162-0? A daily MLB roster puzzle from Lindys Five.',
-    url: 'https://www.lindysfive.com/162-0',
-    siteName: "Lindy's Five",
-  },
-};
+// Dynamic so the social unfurl carries today's day number (spec Section 10).
+export function generateMetadata(): Metadata {
+  const n = dayNumber(easternDateString());
+  const title = 'Can you go 162-0?';
+  const subtitle = `Daily #${n} · Draft an all-time MLB roster`;
+  const og = `/api/og?type=sport-hub&sport=mlb&title=${encodeURIComponent(title)}&subtitle=${encodeURIComponent(subtitle)}`;
+  return {
+    title: '162-0 — The Perfect Season (MLB)',
+    description:
+      'Draft an all-time MLB roster from decade and franchise spins, then see if your team can go 162-0. A daily roster puzzle from Lindys Five.',
+    alternates: { canonical: 'https://www.lindysfive.com/162-0' },
+    openGraph: {
+      title,
+      description: subtitle,
+      url: 'https://www.lindysfive.com/162-0',
+      siteName: "Lindy's Five",
+      images: [og],
+    },
+    twitter: { card: 'summary_large_image', title, description: subtitle, images: [og] },
+  };
+}
 
 export default function PerfectSeasonLayout({ children }: { children: React.ReactNode }) {
   return (
