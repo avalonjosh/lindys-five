@@ -2,12 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { signIn } from 'next-auth/react';
 import { Loader2, Trophy, ListChecks, Lock } from 'lucide-react';
+import { BILLS_LOGO, nflLogo } from '@/lib/pickthebills/nflTeams';
 
 const BILLS_BLUE = '#00338D';
 const BILLS_RED = '#C60C30';
 const PENDING_STASH = 'pickthebills:pendingPicks';
+const SET_SIZE = 5; // "Lindy's Five" — games are grouped into sets of five.
 
 interface Game {
   id: string;
@@ -15,8 +18,8 @@ interface Game {
   opponent: string;
   home: boolean;
   kickoffAt: string;
-  status: string;
-  result: string | null;
+  status: string; // 'scheduled' | 'final'
+  result: string | null; // 'W' | 'L' | 'T' | null (Bills perspective)
 }
 interface OpenWindow {
   id: string;
@@ -49,9 +52,48 @@ interface SessionUser {
   name?: string | null;
 }
 
-const ET = { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' } as const;
-function fmt(iso: string): string {
-  return new Date(iso).toLocaleString('en-US', ET) + ' ET';
+const ET_DATE = { timeZone: 'America/New_York', weekday: 'short', month: 'short', day: 'numeric' } as const;
+const ET_TIME = { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' } as const;
+function fmtShort(iso: string): string {
+  const d = new Date(iso);
+  return `${d.toLocaleDateString('en-US', ET_DATE)} · ${d.toLocaleTimeString('en-US', ET_TIME)}`;
+}
+const ET_DAY = { timeZone: 'America/New_York', month: 'numeric', day: 'numeric' } as const;
+function fmtDay(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', ET_DAY);
+}
+
+function weekNum(label: string): number | null {
+  const m = label.match(/\d+/);
+  return m ? parseInt(m[0], 10) : null;
+}
+function setRange(setGames: Game[]): string {
+  const nums = setGames.map((g) => weekNum(g.weekLabel)).filter((n): n is number => n !== null);
+  if (nums.length === 0) return `${setGames.length} game${setGames.length === 1 ? '' : 's'}`;
+  const a = Math.min(...nums);
+  const b = Math.max(...nums);
+  return a === b ? `Week ${a}` : `Weeks ${a}–${b}`;
+}
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+// A set's record: real results for final games, current selections for the rest.
+function setRecord(setGames: Game[], sel: Record<string, 'W' | 'L'>): { wins: number; losses: number; hasFinal: boolean } {
+  let wins = 0;
+  let losses = 0;
+  let hasFinal = false;
+  for (const g of setGames) {
+    if (g.status === 'final') {
+      hasFinal = true;
+      if (g.result === 'W') wins++;
+      else if (g.result === 'L') losses++;
+    } else if (sel[g.id] === 'W') wins++;
+    else if (sel[g.id] === 'L') losses++;
+  }
+  return { wins, losses, hasFinal };
 }
 
 export default function PickTheBillsClient() {
@@ -98,7 +140,7 @@ export default function PickTheBillsClient() {
     setBoard(lb);
     setUser(sessionUser);
 
-    let effective: Record<string, 'W' | 'L'> = {};
+    const effective: Record<string, 'W' | 'L'> = {};
     if (sessionUser) {
       const mine = await fetch('/api/pickthebills/picks');
       if (mine.ok) {
@@ -213,19 +255,20 @@ export default function PickTheBillsClient() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="px-4 py-8 text-white" style={{ background: `linear-gradient(135deg, ${BILLS_BLUE}, ${BILLS_RED})` }}>
-        <div className="max-w-3xl mx-auto">
-          <h1 className="text-4xl font-bold" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+      {/* Header — solid Bills blue, red underline, placeholder logo + wordmark. */}
+      <header className="text-white border-b-4" style={{ background: BILLS_BLUE, borderColor: BILLS_RED }}>
+        <div className="max-w-6xl mx-auto px-4 py-5 md:py-6 flex flex-col items-center text-center">
+          <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-white flex items-center justify-center shadow-inner p-1.5">
+            <Image src={BILLS_LOGO} alt="Buffalo Bills" width={56} height={56} className="w-full h-full object-contain" />
+          </div>
+          <h1 className="mt-2 text-4xl md:text-5xl tracking-wide" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
             Pick the Bills
           </h1>
-          <p className="text-white/80 mt-1 text-sm">
-            Call every game. Change your mind as the season turns. Climb the accuracy leaderboard.
-          </p>
+          <p className="text-white/80 text-xs md:text-sm">Call every game. Climb the accuracy leaderboard.</p>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-3xl mx-auto px-4 py-6">
+      <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Tabs */}
         <div className="flex gap-1 mb-6">
           {([
@@ -252,7 +295,7 @@ export default function PickTheBillsClient() {
           </div>
         ) : tab === 'picks' ? (
           <PicksTab
-            pickable={pickable}
+            games={data?.games ?? []}
             sel={sel}
             toggle={toggle}
             save={save}
@@ -295,9 +338,9 @@ export default function PickTheBillsClient() {
 }
 
 function PicksTab({
-  pickable, sel, toggle, save, saving, locked, openWindow, user, notice,
+  games, sel, toggle, save, saving, locked, openWindow, user, notice,
 }: {
-  pickable: Game[];
+  games: Game[];
   sel: Record<string, 'W' | 'L'>;
   toggle: (id: string, v: 'W' | 'L') => void;
   save: (confirm?: boolean) => void;
@@ -307,70 +350,215 @@ function PicksTab({
   user: SessionUser | null;
   notice: string | null;
 }) {
-  if (locked) {
-    return (
-      <div className="text-center py-12 text-gray-500">
-        <Lock className="w-8 h-8 mx-auto mb-3 text-gray-400" />
-        <p className="font-medium text-gray-700">Picks are locked right now.</p>
-        <p className="text-sm mt-1">There is no open pick window. Check back at the next checkpoint.</p>
-      </div>
-    );
+  const now = Date.now();
+  const sets = useMemo(() => chunk(games, SET_SIZE), [games]);
+
+  // The "current" set is the first one holding a still-pickable game; if the
+  // season is over, fall back to the last set. Drives the accent ring + autoscroll.
+  const currentSetIndex = useMemo(() => {
+    const idx = sets.findIndex((s) => s.some((g) => g.status === 'scheduled' && new Date(g.kickoffAt).getTime() > now));
+    return idx === -1 ? Math.max(0, sets.length - 1) : idx;
+  }, [sets, now]);
+
+  // Season record: real results for finals + current selections for the rest.
+  const { wins, losses } = useMemo(() => {
+    let w = 0;
+    let l = 0;
+    for (const g of games) {
+      if (g.status === 'final') {
+        if (g.result === 'W') w++;
+        else if (g.result === 'L') l++;
+      } else if (sel[g.id] === 'W') w++;
+      else if (sel[g.id] === 'L') l++;
+    }
+    return { wins: w, losses: l };
+  }, [games, sel]);
+
+  const currentRef = useRef<HTMLDivElement | null>(null);
+  const scrolledRef = useRef(false);
+  useEffect(() => {
+    if (scrolledRef.current || !currentRef.current) return;
+    scrolledRef.current = true;
+    currentRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }, [sets]);
+
+  if (games.length === 0) {
+    return <div className="text-center py-12 text-gray-500">No games scheduled yet.</div>;
   }
-  if (pickable.length === 0) {
-    return <div className="text-center py-12 text-gray-500">No upcoming games to pick.</div>;
-  }
+
   return (
     <>
-      <div className="bg-white rounded-xl border border-gray-200 mb-4">
-        <div className="px-4 py-3 border-b border-gray-100 text-sm text-gray-500">
-          {openWindow?.label} · locks {fmt(openWindow!.locksAt)}
-        </div>
-        <ul>
-          {pickable.map((g) => (
-            <li key={g.id} className="flex items-center justify-between px-4 py-3 border-b border-gray-50 last:border-0">
-              <div className="min-w-0">
-                <div className="text-xs text-gray-400">{g.weekLabel}</div>
-                <div className="font-semibold text-gray-900 truncate">
-                  Bills {g.home ? 'vs' : '@'} {g.opponent}
+      <HeroBar wins={wins} losses={losses} openWindow={openWindow} locked={locked} />
+
+      <div className="grid grid-cols-1 gap-4 mt-5">
+        {sets.map((setGames, i) => {
+          const isCurrent = i === currentSetIndex;
+          const rec = setRecord(setGames, sel);
+          return (
+            <div
+              key={i}
+              ref={isCurrent ? currentRef : undefined}
+              className={`rounded-2xl border-2 bg-white p-3 md:p-4 shadow-sm ${isCurrent ? 'shadow-md' : 'border-gray-200'}`}
+              style={isCurrent ? { borderColor: BILLS_BLUE } : undefined}
+            >
+              <div className="flex items-end justify-between mb-3 pb-3 border-b border-gray-100">
+                <div>
+                  <h3 className="text-xl md:text-2xl font-bold text-gray-900 leading-none" style={{ fontFamily: 'Bebas Neue, sans-serif', letterSpacing: '0.04em' }}>
+                    SET {i + 1}
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-1">{setRange(setGames)}</p>
                 </div>
-                <div className="text-xs text-gray-400">{fmt(g.kickoffAt)}</div>
+                <div className="text-right">
+                  <div className="text-2xl md:text-3xl font-bold leading-none" style={{ color: BILLS_BLUE, fontFamily: 'Bebas Neue, sans-serif' }}>
+                    {rec.wins}–{rec.losses}
+                  </div>
+                  <div className="text-[11px] uppercase tracking-wide text-gray-400 mt-1">
+                    {rec.hasFinal ? 'record' : 'projected'}
+                  </div>
+                </div>
               </div>
-              <div className="flex gap-1 shrink-0">
-                <button
-                  onClick={() => toggle(g.id, 'W')}
-                  className={`px-3 py-1.5 rounded-l-lg text-sm font-bold border ${
-                    sel[g.id] === 'W' ? 'text-white border-transparent' : 'bg-white text-gray-600 border-gray-300'
-                  }`}
-                  style={sel[g.id] === 'W' ? { background: BILLS_BLUE } : undefined}
-                >
-                  Win
-                </button>
-                <button
-                  onClick={() => toggle(g.id, 'L')}
-                  className={`px-3 py-1.5 rounded-r-lg text-sm font-bold border ${
-                    sel[g.id] === 'L' ? 'text-white border-transparent' : 'bg-white text-gray-600 border-gray-300'
-                  }`}
-                  style={sel[g.id] === 'L' ? { background: BILLS_RED } : undefined}
-                >
-                  Loss
-                </button>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                {setGames.map((g) => (
+                  <GameCell key={g.id} game={g} value={sel[g.id]} onPick={(v) => toggle(g.id, v)} editable={!locked && g.status === 'scheduled' && new Date(g.kickoffAt).getTime() > now} />
+                ))}
               </div>
-            </li>
-          ))}
-        </ul>
+            </div>
+          );
+        })}
       </div>
 
-      {notice && <p className="text-sm text-emerald-700 mb-3">{notice}</p>}
+      {notice && <p className="text-sm text-emerald-700 mt-4">{notice}</p>}
 
-      <button
-        onClick={() => save(false)}
-        disabled={saving}
-        className="w-full py-3 rounded-xl font-bold text-white transition-opacity disabled:opacity-50"
-        style={{ background: BILLS_BLUE }}
-      >
-        {saving ? 'Saving…' : user ? 'Save my picks' : 'Create a free account to save your picks'}
-      </button>
+      {locked ? (
+        <div className="mt-5 flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white py-4 text-sm text-gray-500">
+          <Lock className="w-4 h-4 text-gray-400" />
+          Picks are locked right now. Check back at the next checkpoint.
+        </div>
+      ) : (
+        <button
+          onClick={() => save(false)}
+          disabled={saving}
+          className="mt-5 w-full py-3 rounded-xl font-bold text-white transition-opacity disabled:opacity-50"
+          style={{ background: BILLS_BLUE }}
+        >
+          {saving ? 'Saving…' : user ? 'Save my picks' : 'Create a free account to save your picks'}
+        </button>
+      )}
     </>
+  );
+}
+
+function HeroBar({ wins, losses, openWindow, locked }: { wins: number; losses: number; openWindow: OpenWindow | null; locked: boolean }) {
+  const decided = wins + losses;
+  const pct = decided > 0 ? Math.round((wins / decided) * 100) : 0;
+  return (
+    <div className="rounded-xl border-2 border-gray-200 bg-white p-4">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Your call</span>
+        <span className="text-xs text-gray-500 flex items-center gap-1">
+          {locked ? (
+            <>
+              <Lock className="w-3 h-3" /> Picks locked
+            </>
+          ) : openWindow ? (
+            <>
+              {openWindow.label} · locks {fmtDay(openWindow.locksAt)}
+            </>
+          ) : null}
+        </span>
+      </div>
+      <div className="mt-1 flex items-baseline gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Projected record</span>
+        <span className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+          {wins}–{losses}
+        </span>
+      </div>
+      <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
+        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: BILLS_BLUE }} />
+      </div>
+    </div>
+  );
+}
+
+function GameCell({ game, value, onPick, editable }: { game: Game; value: 'W' | 'L' | undefined; onPick: (v: 'W' | 'L') => void; editable: boolean }) {
+  const logo = nflLogo(game.opponent);
+  const isFinal = game.status === 'final';
+
+  // Border encodes state: finals -> green if pick was right, red if wrong, gray
+  // if no pick; pre-game -> blue when picking Win, red when picking Loss.
+  let borderStyle: React.CSSProperties = { borderColor: '#e5e7eb' };
+  if (isFinal) {
+    if (value && game.result) borderStyle = { borderColor: value === game.result ? '#10b981' : '#ef4444' };
+  } else if (editable && value) {
+    borderStyle = { borderColor: value === 'W' ? BILLS_BLUE : BILLS_RED };
+  }
+
+  return (
+    <div className={`rounded-xl border-2 bg-gradient-to-br from-blue-50/60 to-slate-50 p-2.5 flex flex-col ${isFinal && value && game.result && value !== game.result ? 'opacity-75' : ''}`} style={borderStyle}>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-bold text-gray-500">{game.weekLabel}</span>
+        <span className="text-[10px] font-bold tracking-wide text-gray-400">{game.home ? 'HOME' : 'AWAY'}</span>
+      </div>
+
+      <div className="flex flex-col items-center text-center mt-1.5 mb-2">
+        <div className="text-[10px] font-semibold text-gray-400">{game.home ? 'vs' : '@'}</div>
+        {logo && (
+          <div className="my-1 rounded-lg bg-white border border-gray-200 shadow-sm p-1">
+            <Image src={logo} alt={game.opponent} width={40} height={40} className="w-10 h-10 object-contain" />
+          </div>
+        )}
+        <div className="text-xs font-bold text-gray-800 leading-tight">{game.opponent}</div>
+        <div className="text-[10px] text-gray-400 mt-0.5">{fmtShort(game.kickoffAt)}</div>
+      </div>
+
+      <div className="mt-auto">
+        {isFinal ? (
+          <FinalCell result={game.result} pick={value} />
+        ) : editable ? (
+          <SegmentedPick value={value} onPick={onPick} />
+        ) : (
+          <div className="flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold text-gray-400">
+            <Lock className="w-3 h-3" /> Locked
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SegmentedPick({ value, onPick }: { value: 'W' | 'L' | undefined; onPick: (v: 'W' | 'L') => void }) {
+  return (
+    <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-gray-300">
+      <button
+        onClick={() => onPick('W')}
+        className={`py-1.5 text-sm font-bold transition-colors ${value === 'W' ? 'text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+        style={value === 'W' ? { background: BILLS_BLUE } : undefined}
+      >
+        Win
+      </button>
+      <button
+        onClick={() => onPick('L')}
+        className={`py-1.5 text-sm font-bold border-l border-gray-300 transition-colors ${value === 'L' ? 'text-white border-transparent' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+        style={value === 'L' ? { background: BILLS_RED } : undefined}
+      >
+        Loss
+      </button>
+    </div>
+  );
+}
+
+function FinalCell({ result, pick }: { result: string | null; pick: 'W' | 'L' | undefined }) {
+  const label = result === 'W' ? 'Win' : result === 'L' ? 'Loss' : result === 'T' ? 'Tie' : 'Final';
+  const cls =
+    result === 'W' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : result === 'L' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-gray-50 text-gray-500 border-gray-200';
+  // Only W/L picks are gradable (ties are excluded from scoring).
+  const correct = pick && (result === 'W' || result === 'L') ? pick === result : null;
+  return (
+    <div className={`rounded-lg border py-1.5 px-2 text-center text-xs font-bold flex items-center justify-center gap-1 ${cls}`}>
+      <span>Final · {label}</span>
+      {correct === true && <span title="You called it">✓</span>}
+      {correct === false && <span title="Missed">✗</span>}
+    </div>
   );
 }
 
@@ -385,7 +573,7 @@ function LeaderboardTab({ board }: { board: Leaderboard | null }) {
     );
   }
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-2xl">
       <p className="text-xs text-gray-500">
         Ranked by accuracy. Need {board.threshold} graded game{board.threshold === 1 ? '' : 's'} to qualify
         ({board.finalGames} played so far).

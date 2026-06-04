@@ -36,3 +36,4 @@ tsconfig.tsbuildinfo
 .netlify
 .vercel
 .env*.local
+.env*
