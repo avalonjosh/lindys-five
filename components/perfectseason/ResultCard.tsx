@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import type { ModeDescriptor, SimResult, SportConfig } from '@/lib/perfectseason/types';
 import type { PickRecord } from '@/lib/perfectseason/engine';
-import { franchiseName, shortDecade } from './ui';
+import { franchiseLogo, franchiseName } from './ui';
+import Decade from './Decade';
 import type { GameData } from '@/lib/perfectseason/types';
 
 interface ResultCardProps {
@@ -128,10 +129,13 @@ export default function ResultCard({ result, config, mode, picks, data, onPlayAg
         </div>
         <ul className="grid grid-cols-1 gap-1.5">
           {picks.map((p) => (
-            <li key={p.slotId} className="flex items-center justify-between text-sm">
-              <span className="font-semibold text-gray-800">{p.playerName}</span>
-              <span className="text-xs text-gray-500">
-                {shortDecade(p.spin.decade)} {franchiseName(data, p.spin)}
+            <li key={p.slotId} className="flex items-center justify-between gap-2 text-sm">
+              <span className="truncate font-semibold text-gray-800">{p.playerName}</span>
+              <span className="flex shrink-0 items-center gap-1 text-xs text-gray-500">
+                {franchiseLogo(p.spin.franchise) && (
+                  <img src={franchiseLogo(p.spin.franchise)!} alt="" className="h-4 w-auto" />
+                )}
+                <Decade value={p.spin.decade} /> {franchiseName(data, p.spin)}
               </span>
             </li>
           ))}

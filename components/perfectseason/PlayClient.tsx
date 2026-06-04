@@ -24,7 +24,8 @@ import SpinReveal from './SpinReveal';
 import PlayerList from './PlayerList';
 import ResultCard from './ResultCard';
 import HowToPlay from './HowToPlay';
-import { franchiseName, shortDecade } from './ui';
+import { franchiseLogo, franchiseName } from './ui';
+import Decade from './Decade';
 
 const data = mlbDataJson as unknown as GameData;
 const config = mlbConfig;
@@ -159,10 +160,15 @@ export default function PlayClient() {
           <>
             {/* Focused pick view: roster hidden, only the available players. */}
             <div className="border-b border-gray-100 pb-3">
-              <p className="text-xl font-bold text-sabres-blue" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-                {shortDecade(spin.decade)} · {franchiseName(data, spin)}
-              </p>
-              <p className="text-xs text-gray-500">
+              <div className="flex items-center gap-2">
+                {franchiseLogo(spin.franchise) && (
+                  <img src={franchiseLogo(spin.franchise)!} alt="" className="h-7 w-auto shrink-0" />
+                )}
+                <p className="text-xl font-bold text-sabres-blue" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                  <Decade value={spin.decade} /> · {franchiseName(data, spin)}
+                </p>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
                 {players.length} available · pick one to assign · {filled}/{total} filled
               </p>
             </div>

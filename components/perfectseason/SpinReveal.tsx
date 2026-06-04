@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { GameData, Spin } from '@/lib/perfectseason/types';
-import { franchiseName, shortDecade } from './ui';
+import { franchiseLogo, franchiseName } from './ui';
+import Decade from './Decade';
 
 interface SpinRevealProps {
   data: GameData;
@@ -61,25 +62,29 @@ export default function SpinReveal({ data, spin, rolling, previousSpin, revealKe
     };
   }, [rolling, revealKey]);
 
-  const decadeText = rolling
+  const decadeValue = rolling
     ? stage >= 1
-      ? shortDecade(spin.decade)
-      : shortDecade(data.decades[tick % data.decades.length])
+      ? spin.decade
+      : data.decades[tick % data.decades.length]
     : previousSpin
-      ? shortDecade(previousSpin.decade)
-      : '-';
+      ? previousSpin.decade
+      : null;
   const franchiseText = rolling
     ? stage >= 2
       ? franchiseName(data, spin)
       : flashFranchises[tick % Math.max(1, flashFranchises.length)] ?? '...'
     : previousSpin
       ? franchiseName(data, previousSpin)
-      : '-';
+      : null;
 
   const decadeSpinning = rolling && stage < 1;
   const franchiseSpinning = rolling && stage < 2;
   // The board shows the previous spin muted; rolling and landed values are vivid.
   const valueColor = rolling ? 'text-sabres-blue' : 'text-gray-400';
+
+  // Logo shows only on the landed franchise (or the previous one on the board).
+  const landedFranchiseId = rolling ? (stage >= 2 ? spin.franchise : null) : previousSpin?.franchise ?? null;
+  const logo = landedFranchiseId ? franchiseLogo(landedFranchiseId) : null;
 
   const tile =
     'rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 text-center px-4 py-3 shadow-sm overflow-hidden';
@@ -110,16 +115,17 @@ export default function SpinReveal({ data, spin, rolling, previousSpin, revealKe
             className={`text-2xl font-bold ${valueColor} ${decadeSpinning ? 'blur-[1px] opacity-80' : ''}`}
             style={{ fontFamily: 'Bebas Neue, sans-serif' }}
           >
-            {decadeText}
+            {decadeValue ? <Decade value={decadeValue} /> : '-'}
           </div>
         </div>
         <div className={`${tile} flex-1 max-w-[260px] transition-transform ${franchiseSpinning ? 'scale-[0.97]' : 'scale-100'}`}>
           <div className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Franchise</div>
           <div
-            className={`text-xl font-bold leading-tight ${valueColor} ${franchiseSpinning ? 'blur-[1px] opacity-80' : ''}`}
+            className={`flex items-center justify-center gap-1.5 text-xl font-bold leading-tight ${valueColor} ${franchiseSpinning ? 'blur-[1px] opacity-80' : ''}`}
             style={{ fontFamily: 'Bebas Neue, sans-serif' }}
           >
-            {franchiseText}
+            {logo && <img src={logo} alt="" className={`h-5 w-auto shrink-0 ${rolling ? '' : 'opacity-60'}`} />}
+            <span className="truncate">{franchiseText ?? '-'}</span>
           </div>
         </div>
       </div>
