@@ -70,7 +70,7 @@ export default function SpinReveal({ data, spin, rolling, revealKey, round, tota
   const franchiseSpinning = rolling && stage < 2;
 
   const tile =
-    'rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 text-center px-4 py-3 shadow-sm overflow-hidden';
+    'rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 text-center px-4 py-3 shadow-sm overflow-hidden';
 
   return (
     <div className="text-center">
