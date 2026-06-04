@@ -30,6 +30,8 @@ import Decade from './Decade';
 const data = mlbDataJson as unknown as GameData;
 const config = mlbConfig;
 const ROLL_TOTAL_MS = 1750; // SpinReveal lands the franchise at ~1.25s, then rest 0.5s on the result
+// Resting preview on the first board so it is not empty dashes. Iconic and on-brand.
+const DEFAULT_SPIN = { decade: '1950s', franchise: 'NYY' };
 
 type Phase = 'board' | 'rolling' | 'pick';
 
@@ -125,6 +127,7 @@ export default function PlayClient() {
               spin={spin}
               rolling={phase === 'rolling'}
               previousSpin={state.picks.length > 0 ? state.picks[state.picks.length - 1].spin : null}
+              defaultSpin={DEFAULT_SPIN}
               revealKey={spinKey}
               round={state.round}
               totalRounds={total}

@@ -12,6 +12,8 @@ interface SpinRevealProps {
   rolling: boolean;
   /** The last round's spin, shown muted on the board until the next spin. */
   previousSpin: Spin | null;
+  /** Shown muted on the very first board (no previous spin yet) as a preview. */
+  defaultSpin: Spin | null;
   /** Changes whenever a fresh roll should play (round, or a skip reroll). */
   revealKey: string;
   round: number;
@@ -27,7 +29,7 @@ const FRANCHISE_LANDS = 1250;
  * On spin both reels cycle through random values; the decade reel lands first,
  * then the franchise a beat later. prefers-reduced-motion lands instantly.
  */
-export default function SpinReveal({ data, spin, rolling, previousSpin, revealKey, round, totalRounds }: SpinRevealProps) {
+export default function SpinReveal({ data, spin, rolling, previousSpin, defaultSpin, revealKey, round, totalRounds }: SpinRevealProps) {
   const [stage, setStage] = useState(0); // 0 spinning, 1 decade landed, 2 both landed
   const [tick, setTick] = useState(0);
 
@@ -62,28 +64,30 @@ export default function SpinReveal({ data, spin, rolling, previousSpin, revealKe
     };
   }, [rolling, revealKey]);
 
+  // On the board (not rolling) rest on the previous spin, or a default preview.
+  const boardSpin = previousSpin ?? defaultSpin;
   const decadeValue = rolling
     ? stage >= 1
       ? spin.decade
       : data.decades[tick % data.decades.length]
-    : previousSpin
-      ? previousSpin.decade
+    : boardSpin
+      ? boardSpin.decade
       : null;
   const franchiseText = rolling
     ? stage >= 2
       ? franchiseName(data, spin)
       : flashFranchises[tick % Math.max(1, flashFranchises.length)] ?? '...'
-    : previousSpin
-      ? franchiseName(data, previousSpin)
+    : boardSpin
+      ? franchiseName(data, boardSpin)
       : null;
 
   const decadeSpinning = rolling && stage < 1;
   const franchiseSpinning = rolling && stage < 2;
-  // The board shows the previous spin muted; rolling and landed values are vivid.
+  // The board shows the resting spin muted; rolling and landed values are vivid.
   const valueColor = rolling ? 'text-sabres-blue' : 'text-gray-400';
 
-  // Logo shows only on the landed franchise (or the previous one on the board).
-  const landedFranchiseId = rolling ? (stage >= 2 ? spin.franchise : null) : previousSpin?.franchise ?? null;
+  // Logo shows on the landed franchise (or the board's resting one).
+  const landedFranchiseId = rolling ? (stage >= 2 ? spin.franchise : null) : boardSpin?.franchise ?? null;
   const logo = landedFranchiseId ? franchiseLogo(landedFranchiseId) : null;
 
   const tile =
