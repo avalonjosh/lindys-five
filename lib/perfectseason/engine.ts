@@ -20,6 +20,7 @@ import type {
   SportConfig,
 } from './types';
 import { simulate } from './sim';
+import { hasPerfectMatching, poolPlayers } from './schedule';
 
 export interface PickRecord {
   round: number;
@@ -113,21 +114,72 @@ export function openSlots(s: EngineState): SlotDef[] {
   return s.config.slots.filter((slot) => s.roster[slot.id] === null);
 }
 
-/** Players available this spin: rosterable, not already used, sorted by mode. */
-export function availablePlayers(s: EngineState): Player[] {
-  const used = new Set(s.usedPlayerIds);
-  const open = openSlots(s);
-  const pool = (s.data.pools[`${currentSpin(s).decade}|${currentSpin(s).franchise}`] ?? []).filter(
-    (p) => !used.has(p.id) && open.some((slot) => eligible(p, slot)),
-  );
-  if (s.mode.type === 'tank') {
-    return [...pool].sort((a, b) => a.name.localeCompare(b.name));
+/**
+ * The pools for the remaining rounds taken as primaries, excluding already-used
+ * players and one more id. Future rounds always default to their primary (a
+ * skip only affects the round it is used on), so a completion via primaries is
+ * always an available strategy, which is what we keep feasible.
+ */
+function futurePrimaryPools(s: EngineState, excludeId: string): Player[][] {
+  const used = new Set([...s.usedPlayerIds, excludeId]);
+  const pools: Player[][] = [];
+  for (let r = s.round + 1; r < s.rounds.length; r++) {
+    pools.push(poolPlayers(s.data, s.rounds[r].primary, s.config).filter((p) => !used.has(p.id)));
   }
-  return [...pool].sort((a, b) => b.score - a.score);
+  return pools;
+}
+
+/**
+ * Would assigning this player to this slot still leave the season finishable?
+ * We require a full matching between the remaining primary pools and the slots
+ * left open, so a player can never paint themselves into a dead end.
+ */
+export function completableAfter(s: EngineState, player: Player, slotId: string): boolean {
+  const openAfter = openSlots(s).filter((sl) => sl.id !== slotId && s.roster[sl.id] === null);
+  if (openAfter.length === 0) return true;
+  return hasPerfectMatching(futurePrimaryPools(s, player.id), openAfter);
 }
 
 export function legalSlots(s: EngineState, player: Player): SlotDef[] {
-  return openSlots(s).filter((slot) => eligible(player, slot));
+  return openSlots(s).filter((slot) => eligible(player, slot) && completableAfter(s, player, slot.id));
+}
+
+/** Players from a given spin's pool that have at least one finishable slot. */
+function playersForSpin(s: EngineState, spin: Spin): Player[] {
+  const used = new Set(s.usedPlayerIds);
+  const pool = poolPlayers(s.data, spin, s.config).filter(
+    (p) => !used.has(p.id) && openSlots(s).some((slot) => eligible(p, slot) && completableAfter(s, p, slot.id)),
+  );
+  if (s.mode.type === 'tank') return pool.sort((a, b) => a.name.localeCompare(b.name));
+  return pool.sort((a, b) => b.score - a.score);
+}
+
+/** Players available this spin: rosterable, not used, finishable, sorted by mode. */
+export function availablePlayers(s: EngineState): Player[] {
+  return playersForSpin(s, currentSpin(s));
+}
+
+function spinAfterTeamSkip(s: EngineState): Spin {
+  const t = s.rounds[s.round];
+  return (s.curDecadeUsed ? t.decadeThenTeam : t.teamSkip) ?? t.primary;
+}
+
+function spinAfterDecadeSkip(s: EngineState): Spin {
+  const t = s.rounds[s.round];
+  return (s.curTeamUsed ? t.teamThenDecade : t.decadeSkip) ?? t.primary;
+}
+
+/** A skip is offered only if the rerolled spin still leaves a finishable pick. */
+export function canSkipTeam(s: EngineState): boolean {
+  if (s.mode.type === 'franchise' || !s.teamSkipAvail || s.curTeamUsed) return false;
+  if (!s.rounds[s.round].teamSkip) return false;
+  return playersForSpin(s, spinAfterTeamSkip(s)).length > 0;
+}
+
+export function canSkipDecade(s: EngineState): boolean {
+  if (!s.decadeSkipAvail || s.curDecadeUsed) return false;
+  if (!s.rounds[s.round].decadeSkip) return false;
+  return playersForSpin(s, spinAfterDecadeSkip(s)).length > 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -209,9 +261,7 @@ export function reduce(s: EngineState, action: Action): EngineState {
     }
 
     case 'SKIP_TEAM': {
-      if (s.mode.type === 'franchise') return s; // Skip Team disabled in Franchise
-      if (!s.teamSkipAvail || s.curTeamUsed) return s;
-      if (!s.rounds[s.round].teamSkip) return s;
+      if (!canSkipTeam(s)) return s;
       return {
         ...s,
         teamSkipAvail: false,
@@ -222,8 +272,7 @@ export function reduce(s: EngineState, action: Action): EngineState {
     }
 
     case 'SKIP_DECADE': {
-      if (!s.decadeSkipAvail || s.curDecadeUsed) return s;
-      if (!s.rounds[s.round].decadeSkip) return s;
+      if (!canSkipDecade(s)) return s;
       return {
         ...s,
         decadeSkipAvail: false,

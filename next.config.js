@@ -36,6 +36,16 @@ const nextConfig = {
         destination: '/nhl/scores/:gameId',
         permanent: true,
       },
+      {
+        source: '/162',
+        destination: '/162-0',
+        permanent: true,
+      },
+      {
+        source: '/82',
+        destination: '/82-0',
+        permanent: true,
+      },
     ];
   },
   images: {

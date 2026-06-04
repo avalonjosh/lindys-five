@@ -49,6 +49,11 @@ function poolFor(data: GameData, spin: Spin): Player[] {
   return data.pools[poolKey(spin)] ?? [];
 }
 
+/** Players in a spin's pool that can fill at least one roster slot. */
+export function poolPlayers(data: GameData, spin: Spin, config: SportConfig): Player[] {
+  return rosterable(poolFor(data, spin), config);
+}
+
 function poolValid(data: GameData, spin: Spin, config: SportConfig): boolean {
   return rosterable(poolFor(data, spin), config).length >= MIN_POOL;
 }
@@ -65,7 +70,7 @@ function canFillStar(pool: Player[], slot: SlotDef): boolean {
 // Bipartite perfect matching (fail-state: a full legal roster must be possible)
 // ---------------------------------------------------------------------------
 
-function hasPerfectMatching(pools: Player[][], slots: SlotDef[]): boolean {
+export function hasPerfectMatching(pools: Player[][], slots: SlotDef[]): boolean {
   const slotToSpin = new Array<number>(slots.length).fill(-1);
   const assign = (spin: number, seen: boolean[]): boolean => {
     for (let j = 0; j < slots.length; j++) {

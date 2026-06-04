@@ -26,12 +26,12 @@ import {
 } from '../lib/perfectseason/schedule';
 import {
   availablePlayers,
+  canSkipTeam,
   createGame,
   currentSpin,
   eligible,
   legalSlots,
   reduce,
-  type Action,
   type EngineState,
 } from '../lib/perfectseason/engine';
 
@@ -140,60 +140,59 @@ check('decade skip keeps the franchise, changes the decade', () => {
 
 console.log('\n(b) identical actions produce identical spins (determinism)');
 
-/** Build an action list that team-skips round 0, decade-skips round 1, fills all six. */
-function scriptedActions(): { actions: Action[]; expectedSpins: Spin[] } | null {
-  const path = enumeratePaths(rounds).find((p) => p.team === 0 && p.decade === 1 && p.order === null);
-  if (!path) return null;
-  const plan = autoComplete(path.spins);
-  if (!plan) return null;
-  const actions: Action[] = [];
-  for (let r = 0; r < rounds.length; r++) {
-    if (r === 0) actions.push({ type: 'SKIP_TEAM' });
-    if (r === 1) actions.push({ type: 'SKIP_DECADE' });
-    const step = plan.find((p) => p.round === r)!;
-    actions.push({ type: 'SELECT_PLAYER', id: step.playerId });
-    actions.push({ type: 'ASSIGN_SLOT', slotId: step.slotId });
-  }
-  return { actions, expectedSpins: path.spins };
-}
-
-function runRecordingSpins(actions: Action[]): { spins: Spin[]; final: EngineState } {
-  let s = createGame(data, mlbConfig, rounds, { type: 'standard', source: 'daily' });
+/** Drive the engine greedily: top available player into its first finishable slot. */
+function playGreedy(sched: RoundTree[]): { spins: Spin[]; final: EngineState } {
+  let s = createGame(data, mlbConfig, sched, { type: 'standard', source: 'daily' });
   const spins: Spin[] = [];
-  for (const a of actions) {
-    if (a.type === 'ASSIGN_SLOT') spins.push(currentSpin(s));
-    s = reduce(s, a);
+  let guard = 0;
+  while (!s.done && guard++ < 50) {
+    const players = availablePlayers(s);
+    if (players.length === 0) break;
+    const slot = legalSlots(s, players[0])[0];
+    if (!slot) break;
+    spins.push(currentSpin(s));
+    s = reduce(reduce(s, { type: 'SELECT_PLAYER', id: players[0].id }), { type: 'ASSIGN_SLOT', slotId: slot.id });
   }
   return { spins, final: s };
 }
 
-const scripted = scriptedActions();
-check('a deterministic full playthrough script exists', () => {
-  assert.ok(scripted, 'could not script a full playthrough on the sample schedule');
+const a = playGreedy(rounds);
+const b = playGreedy(rounds);
+check('two players, same actions, identical spin sequence', () => {
+  assert.deepEqual(a.spins, b.spins);
+});
+check('two players, same actions, identical record and verdict', () => {
+  assert.deepEqual(a.final.result, b.final.result);
+  assert.ok(a.final.done && a.final.result, 'greedy no-skip playthrough completes');
+});
+check('dedupe held: six distinct players rostered', () => {
+  assert.equal(new Set(a.final.usedPlayerIds).size, 6);
+  assert.equal(a.final.picks.length, 6);
+});
+check('a team skip reroll changes the current spin', () => {
+  let s = createGame(data, mlbConfig, rounds, { type: 'standard', source: 'daily' });
+  assert.ok(canSkipTeam(s), 'team skip should be offered at round 0');
+  s = reduce(s, { type: 'SKIP_TEAM' });
+  assert.deepEqual(currentSpin(s), rounds[0].teamSkip);
+  assert.notDeepEqual(currentSpin(s), rounds[0].primary);
 });
 
-if (scripted) {
-  const a = runRecordingSpins(scripted.actions);
-  const b = runRecordingSpins(scripted.actions);
-  check('two players, same actions, identical spin sequence', () => {
-    assert.deepEqual(a.spins, b.spins);
-  });
-  check('recorded spins match the intended skip path', () => {
-    assert.deepEqual(a.spins, scripted.expectedSpins);
-  });
-  check('two players, same actions, identical record and verdict', () => {
-    assert.deepEqual(a.final.result, b.final.result);
-    assert.ok(a.final.done && a.final.result);
-  });
-  check('dedupe held: six distinct players rostered', () => {
-    assert.equal(new Set(a.final.usedPlayerIds).size, 6);
-    assert.equal(a.final.picks.length, 6);
-  });
-  check('skipping changes the spin (round 0 is not the primary)', () => {
-    assert.notDeepEqual(a.spins[0], rounds[0].primary);
-    assert.deepEqual(a.spins[0], rounds[0].teamSkip);
-  });
-}
+console.log('\ncompletability: a player can never strand');
+check('30 sample days all complete via greedy no-skip play', () => {
+  let played = 0;
+  for (let i = 0; i < 30; i++) {
+    const date = `2026-08-${String(1 + i).padStart(2, '0')}`;
+    let sched: RoundTree[];
+    try {
+      sched = generateDay(data, mlbConfig, date, dailyRng('mlb', date)).rounds;
+    } catch {
+      continue;
+    }
+    played++;
+    assert.ok(playGreedy(sched).final.done, `greedy play stranded on ${date}`);
+  }
+  assert.ok(played >= 25, `expected most days to generate, only ${played} did`);
+});
 
 console.log('\nengine guards');
 check('illegal slot assignment is rejected', () => {
