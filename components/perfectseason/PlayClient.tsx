@@ -23,9 +23,13 @@ import SpinReveal from './SpinReveal';
 import PlayerList from './PlayerList';
 import ResultCard from './ResultCard';
 import HowToPlay from './HowToPlay';
+import { franchiseName, shortDecade } from './ui';
 
 const data = mlbDataJson as unknown as GameData;
 const config = mlbConfig;
+const ROLL_TOTAL_MS = 1350; // matches SpinReveal's franchise-lands timing plus a buffer
+
+type Phase = 'board' | 'rolling' | 'pick';
 
 function freshGame(mode: ModeDescriptor): EngineState {
   const seed = Math.floor(Math.random() * 0xffffffff);
@@ -35,10 +39,9 @@ function freshGame(mode: ModeDescriptor): EngineState {
 
 export default function PlayClient() {
   const mode = useMemo<ModeDescriptor>(() => ({ type: 'standard', source: 'free' }), []);
-  // Generated on the client only: the schedule is random, so building it during
-  // SSR would mismatch hydration. Null until mounted.
+  // Generated on the client only: random schedule, so SSR would mismatch.
   const [state, setState] = useState<EngineState | null>(null);
-  const [spun, setSpun] = useState(false);
+  const [phase, setPhase] = useState<Phase>('board');
   const [undo, setUndo] = useState(false);
 
   useEffect(() => {
@@ -47,11 +50,19 @@ export default function PlayClient() {
 
   const dispatch = useCallback((a: Action) => setState((s) => (s ? reduce(s, a) : s)), []);
 
-  // A new round always starts unspun, so the SPIN button returns.
-  const roundKey = state && !state.done ? state.round : -1;
+  const spinKey =
+    !state || state.done
+      ? 'idle'
+      : `${state.round}:${state.curTeamUsed ? 'T' : ''}${state.curDecadeUsed ? 'D' : ''}:${state.firstSkip ?? ''}`;
+
+  // Once the reels finish, switch to the pick view. A skip mid-roll restarts it.
   useEffect(() => {
-    setSpun(false);
-  }, [roundKey]);
+    if (phase !== 'rolling') return;
+    const reduceMotion =
+      typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const t = setTimeout(() => setPhase('pick'), reduceMotion ? 0 : ROLL_TOTAL_MS);
+    return () => clearTimeout(t);
+  }, [phase, spinKey]);
 
   useEffect(() => {
     if (!undo) return;
@@ -61,14 +72,19 @@ export default function PlayClient() {
 
   const commitAssign = useCallback((id: string, slotId: string) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
-    setSpun(false);
+    setPhase('board');
     setState((s) => (s ? reduce(reduce(s, { type: 'SELECT_PLAYER', id }), { type: 'ASSIGN_SLOT', slotId }) : s));
     setUndo(true);
   }, []);
 
+  const onSkip = (a: Action) => {
+    dispatch(a);
+    setPhase('rolling');
+  };
+
   const newGame = useCallback(() => {
     setUndo(false);
-    setSpun(false);
+    setPhase('board');
     setState(freshGame(mode));
   }, [mode]);
 
@@ -85,96 +101,102 @@ export default function PlayClient() {
   if (state.done && state.result) {
     return (
       <Shell>
-        <ResultCard
-          result={state.result}
-          config={config}
-          mode={mode}
-          picks={state.picks}
-          data={data}
-          onPlayAgain={newGame}
-        />
+        <ResultCard result={state.result} config={config} mode={mode} picks={state.picks} data={data} onPlayAgain={newGame} />
       </Shell>
     );
   }
 
   const spin = currentSpin(state);
-  const players = spun ? availablePlayers(state) : [];
+  const picking = phase === 'pick';
+  const players = picking ? availablePlayers(state) : [];
   const poolScores = players.map((p) => p.score).sort((a, b) => b - a);
   const topScore = poolScores[0] ?? 100;
   const top3Score = poolScores[2] ?? poolScores[poolScores.length - 1] ?? 0;
-  const fillableSlotIds = new Set(players.flatMap((p) => legalSlots(state, p).map((s) => s.id)));
-  const spinKey = `${state.round}:${state.curTeamUsed ? 'T' : ''}${state.curDecadeUsed ? 'D' : ''}:${state.firstSkip ?? ''}`;
+  const filled = state.picks.length;
+  const total = config.slots.length;
 
   return (
     <Shell>
-      {/* One board card holds the whole game (spin, toggle, roster, picks). */}
       <div className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-md">
-        <SpinReveal
-          data={data}
-          spin={spin}
-          revealed={spun}
-          revealKey={spinKey}
-          round={state.round}
-          totalRounds={config.slots.length}
-        />
-
-        {!spun ? (
-          <button
-            type="button"
-            onClick={() => setSpun(true)}
-            className="mt-4 w-full rounded-xl bg-sabres-blue py-4 text-lg font-bold uppercase tracking-widest text-white shadow-md transition-all hover:bg-sabres-light hover:scale-[1.02] active:scale-100"
-            style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-          >
-            Spin
-          </button>
-        ) : (
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              disabled={!canSkipTeam(state)}
-              onClick={() => dispatch({ type: 'SKIP_TEAM' })}
-              className="rounded-xl border-2 border-gray-300 py-2 text-xs font-bold uppercase tracking-wide text-gray-700 transition-colors disabled:opacity-40 disabled:line-through enabled:hover:border-sabres-blue enabled:hover:text-sabres-blue"
-            >
-              Skip Team {state.teamSkipAvail ? '· 1' : '· 0'}
-            </button>
-            <button
-              type="button"
-              disabled={!canSkipDecade(state)}
-              onClick={() => dispatch({ type: 'SKIP_DECADE' })}
-              className="rounded-xl border-2 border-gray-300 py-2 text-xs font-bold uppercase tracking-wide text-gray-700 transition-colors disabled:opacity-40 disabled:line-through enabled:hover:border-sabres-blue enabled:hover:text-sabres-blue"
-            >
-              Skip Decade {state.decadeSkipAvail ? '· 1' : '· 0'}
-            </button>
-          </div>
-        )}
-
-        {/* Classic / Blind variant toggle, below the spin button. */}
-        <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
-          <span className="rounded-lg bg-white py-2 text-center text-xs font-bold uppercase tracking-wide text-sabres-blue shadow-sm">
-            Classic
-          </span>
-          <span className="py-2 text-center text-xs font-bold uppercase tracking-wide text-gray-400">
-            Blind · soon
-          </span>
-        </div>
-
-        <div className="my-4 border-t border-gray-100" />
-
-        <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">Your Roster</p>
-        <RosterList slots={config.slots} picks={state.picks} data={data} fillableSlotIds={fillableSlotIds} />
-
-        {spun && (
+        {phase !== 'pick' ? (
           <>
-            <div className="my-4 border-t border-gray-100" />
-            <PlayerList
-              players={players}
-              config={config}
-              topScore={topScore}
-              top3Score={top3Score}
-              blind={false}
-              getLegalSlots={(p) => legalSlots(state, p)}
-              onAssign={commitAssign}
+            <SpinReveal
+              data={data}
+              spin={spin}
+              rolling={phase === 'rolling'}
+              revealKey={spinKey}
+              round={state.round}
+              totalRounds={total}
             />
+
+            {phase === 'board' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setPhase('rolling')}
+                  className="mt-4 w-full rounded-xl bg-sabres-blue py-4 text-lg font-bold uppercase tracking-widest text-white shadow-md transition-all hover:scale-[1.02] hover:bg-sabres-light active:scale-100"
+                  style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+                >
+                  Spin
+                </button>
+
+                <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
+                  <span className="rounded-lg bg-white py-2 text-center text-xs font-bold uppercase tracking-wide text-sabres-blue shadow-sm">
+                    Classic
+                  </span>
+                  <span className="py-2 text-center text-xs font-bold uppercase tracking-wide text-gray-400">Blind · soon</span>
+                </div>
+
+                <div className="my-4 border-t border-gray-100" />
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                  Your Roster · {filled}/{total}
+                </p>
+                <RosterList slots={config.slots} picks={state.picks} data={data} fillableSlotIds={new Set()} />
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            {/* Focused pick view: roster hidden, only the available players. */}
+            <div className="border-b border-gray-100 pb-3">
+              <p className="text-xl font-bold text-sabres-blue" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                {shortDecade(spin.decade)} · {franchiseName(data, spin)}
+              </p>
+              <p className="text-xs text-gray-500">
+                {players.length} available · pick one to assign · {filled}/{total} filled
+              </p>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={!canSkipTeam(state)}
+                onClick={() => onSkip({ type: 'SKIP_TEAM' })}
+                className="rounded-xl border-2 border-gray-300 py-2 text-xs font-bold uppercase tracking-wide text-gray-700 transition-colors disabled:opacity-40 disabled:line-through enabled:hover:border-sabres-blue enabled:hover:text-sabres-blue"
+              >
+                Skip Team {state.teamSkipAvail ? '· 1' : '· 0'}
+              </button>
+              <button
+                type="button"
+                disabled={!canSkipDecade(state)}
+                onClick={() => onSkip({ type: 'SKIP_DECADE' })}
+                className="rounded-xl border-2 border-gray-300 py-2 text-xs font-bold uppercase tracking-wide text-gray-700 transition-colors disabled:opacity-40 disabled:line-through enabled:hover:border-sabres-blue enabled:hover:text-sabres-blue"
+              >
+                Skip Decade {state.decadeSkipAvail ? '· 1' : '· 0'}
+              </button>
+            </div>
+
+            <div className="mt-3 pb-2">
+              <PlayerList
+                players={players}
+                config={config}
+                topScore={topScore}
+                top3Score={top3Score}
+                blind={false}
+                getLegalSlots={(p) => legalSlots(state, p)}
+                onAssign={commitAssign}
+              />
+            </div>
           </>
         )}
       </div>
@@ -194,6 +216,7 @@ export default function PlayClient() {
               onClick={() => {
                 dispatch({ type: 'UNDO' });
                 setUndo(false);
+                setPhase('pick');
               }}
               className="text-sm font-bold uppercase tracking-wide text-sabres-gold"
             >
