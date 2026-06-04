@@ -101,6 +101,7 @@ export default function PlayClient() {
   const [source, setSource] = useState<Source>('daily');
   const [freeType, setFreeType] = useState<FreeType>('standard');
   const [franchiseId, setFranchiseId] = useState<string | null>(null);
+  const [variant, setVariant] = useState<'classic' | 'blind'>('classic');
   const [state, setState] = useState<EngineState | null>(null);
   const [phase, setPhase] = useState<Phase>('board');
   const [undo, setUndo] = useState(false);
@@ -119,7 +120,7 @@ export default function PlayClient() {
     setPhase('board');
     if (source === 'daily') {
       const date = easternDateString();
-      const existing = getDaily('mlb', date, 'classic');
+      const existing = getDaily('mlb', date, variant);
       if (existing) {
         setRecord(existing);
         setDay({ dayNumber: existing.dayNumber, date });
@@ -144,15 +145,15 @@ export default function PlayClient() {
       return;
     }
     setState(randomGame(freeType));
-  }, [source, freeType, franchiseId]);
+  }, [source, freeType, franchiseId, variant]);
 
   // Lock and record a finished Daily once.
   useEffect(() => {
     if (source !== 'daily' || record || !state?.done || !state.result || !day) return;
     const rec = buildDailyRecord(state, day.dayNumber);
-    recordDaily('mlb', day.date, 'classic', rec);
+    recordDaily('mlb', day.date, variant, rec);
     setRecord(rec);
-  }, [source, record, state, day]);
+  }, [source, record, state, day, variant]);
 
   const spinKey =
     !state || state.done
@@ -209,8 +210,9 @@ export default function PlayClient() {
         <DailyResult
           record={record}
           config={config}
-          streak={getStreak('mlb', 'classic')}
-          played={getStats('mlb', 'classic').played}
+          variant={variant}
+          streak={getStreak('mlb', variant)}
+          played={getStats('mlb', variant).played}
           onPlayFree={() => chooseFreeType('standard')}
         />
       </Shell>
@@ -259,6 +261,7 @@ export default function PlayClient() {
   const total = config.slots.length;
   const isFranchise = type === 'franchise';
   const isTank = type === 'tank';
+  const blind = source === 'daily' && variant === 'blind';
 
   return (
     <Shell {...shellProps}>
@@ -269,6 +272,11 @@ export default function PlayClient() {
           }`}
         >
           {isTank ? 'Tank · build the WORST team, chase 0-162' : `Franchise · best all-time ${franchiseName(data, spin)}`}
+        </div>
+      )}
+      {blind && (
+        <div className="mb-3 rounded-xl bg-sabres-navy/5 px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-sabres-navy">
+          🧠 BallIQ · stats hidden, pick on reputation
         </div>
       )}
 
@@ -300,12 +308,21 @@ export default function PlayClient() {
                   Spin
                 </button>
 
-                {!isTank && !isFranchise && (
+                {source === 'daily' && (
                   <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
-                    <span className="rounded-lg bg-white py-2 text-center text-xs font-bold uppercase tracking-wide text-sabres-blue shadow-sm">
-                      Classic
-                    </span>
-                    <span className="py-2 text-center text-xs font-bold uppercase tracking-wide text-gray-400">Blind · soon</span>
+                    {(['classic', 'blind'] as const).map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        disabled={state.picks.length > 0}
+                        onClick={() => setVariant(v)}
+                        className={`rounded-lg py-2 text-center text-xs font-bold uppercase tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                          variant === v ? 'bg-white text-sabres-blue shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                        }`}
+                      >
+                        {v === 'classic' ? 'Classic' : 'BallIQ · Blind'}
+                      </button>
+                    ))}
                   </div>
                 )}
 
@@ -313,7 +330,7 @@ export default function PlayClient() {
                 <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">
                   Your Roster · {filled}/{total}
                 </p>
-                <RosterList slots={config.slots} picks={state.picks} data={data} fillableSlotIds={new Set()} />
+                <RosterList slots={config.slots} picks={state.picks} data={data} fillableSlotIds={new Set()} blind={blind} />
               </>
             )}
           </>
@@ -356,7 +373,7 @@ export default function PlayClient() {
               <PlayerList
                 players={players}
                 config={config}
-                blind={false}
+                blind={blind}
                 openCategories={openCategories}
                 getLegalSlots={(p) => legalSlots(state, p)}
                 onAssign={commitAssign}

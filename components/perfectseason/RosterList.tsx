@@ -11,13 +11,15 @@ interface RosterListProps {
   data: GameData;
   /** Slot ids that the current spin can legally fill, for a subtle highlight. */
   fillableSlotIds: Set<string>;
+  /** Blind mode hides the rostered player's score. */
+  blind?: boolean;
 }
 
 /**
- * The six roster slots as a vertical list (clearer than a cramped chip strip).
- * Display only: assignment now happens from buttons on each player row.
+ * The roster slots as a vertical list. Display only: assignment happens from the
+ * player rows. In blind mode the per-player score is hidden.
  */
-export default function RosterList({ slots, picks, data, fillableSlotIds }: RosterListProps) {
+export default function RosterList({ slots, picks, data, fillableSlotIds, blind = false }: RosterListProps) {
   const bySlot = new Map(picks.map((p) => [p.slotId, p]));
   return (
     <ul className="flex flex-col gap-1.5">
@@ -52,12 +54,14 @@ export default function RosterList({ slots, picks, data, fillableSlotIds }: Rost
                     </span>
                   </div>
                 </div>
-                <span
-                  className="shrink-0 rounded-lg bg-gradient-to-br from-sabres-navy to-sabres-blue px-2 py-0.5 text-sm font-bold text-white"
-                  style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-                >
-                  {pick.score.toFixed(0)}
-                </span>
+                {!blind && (
+                  <span
+                    className="shrink-0 rounded-lg bg-gradient-to-br from-sabres-navy to-sabres-blue px-2 py-0.5 text-sm font-bold text-white"
+                    style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+                  >
+                    {pick.score.toFixed(0)}
+                  </span>
+                )}
               </div>
             ) : (
               <span className={`text-sm italic ${fillable ? 'font-semibold text-sabres-navy not-italic' : 'text-gray-400'}`}>
