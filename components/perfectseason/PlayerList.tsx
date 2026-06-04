@@ -38,29 +38,33 @@ export default function PlayerList({
               aria-selected={selected}
               onClick={() => onSelect(player.id)}
               className={[
-                'flex w-full items-center gap-2 rounded-xl border-2 px-2.5 min-h-[56px] text-left transition-all',
+                'flex w-full items-center gap-2 rounded-2xl border-2 px-2.5 min-h-[56px] text-left transition-all',
                 selected
-                  ? 'border-sabres-blue bg-sabres-blue/5 shadow-md'
-                  : 'border-gray-200 bg-white hover:border-gray-300',
+                  ? 'border-sabres-blue bg-sabres-blue/5 shadow-lg'
+                  : 'border-gray-200 bg-white shadow-sm hover:border-gray-300 hover:shadow-md',
               ].join(' ')}
             >
               <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dot}`} aria-hidden />
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5">
                   <span className="truncate text-sm font-bold text-gray-900">{player.name}</span>
-                  <span className="shrink-0 text-[10px] font-bold uppercase text-gray-400">
+                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-gray-400">
                     {player.pos.join('/')}
                   </span>
                 </span>
                 <span className="mt-0.5 flex gap-2.5">
                   {statCells(player, config).map((cell) => (
                     <span key={cell.label} className="text-[11px] text-gray-500">
-                      <span className="font-semibold text-gray-700">{cell.value}</span> {cell.label}
+                      <span className="font-semibold text-gray-700">{cell.value}</span>{' '}
+                      <span className="uppercase tracking-wide">{cell.label}</span>
                     </span>
                   ))}
                 </span>
               </span>
-              <span className="shrink-0 rounded-lg bg-sabres-navy px-2 py-1 text-sm font-bold text-white">
+              <span
+                className="shrink-0 rounded-xl bg-gradient-to-br from-sabres-navy to-sabres-blue px-2.5 py-1.5 text-base font-bold text-white shadow-sm"
+                style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+              >
                 {player.score.toFixed(0)}
               </span>
             </button>

@@ -129,26 +129,26 @@ export default function PlayClient() {
 
   return (
     <Shell>
-      <RosterStrip
-        slots={config.slots}
-        roster={state.roster}
-        legalSlotIds={legalIds}
-        selecting={!!selectedPlayer}
-        onAssign={(slotId) => state.selectedId && commitAssign(state.selectedId, slotId)}
-      />
-
-      <div className="mt-4">
-        <SpinReveal data={data} spin={spin} revealKey={spinKey} round={state.round} totalRounds={config.slots.length} />
+      <div className="sticky top-0 z-10 -mx-3 bg-gradient-to-br from-slate-50 to-blue-50 px-3 pb-2 pt-1">
+        <RosterStrip
+          slots={config.slots}
+          roster={state.roster}
+          legalSlotIds={legalIds}
+          selecting={!!selectedPlayer}
+          onAssign={(slotId) => state.selectedId && commitAssign(state.selectedId, slotId)}
+        />
       </div>
 
-      {revealed && (
-        <>
+      <div className="mt-3 rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-md">
+        <SpinReveal data={data} spin={spin} revealKey={spinKey} round={state.round} totalRounds={config.slots.length} />
+
+        {revealed && (
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               type="button"
               disabled={!teamSkipOpen}
               onClick={() => dispatch({ type: 'SKIP_TEAM' })}
-              className="rounded-lg border-2 border-gray-300 py-2 text-xs font-bold uppercase tracking-wide text-gray-700 disabled:opacity-40 disabled:line-through enabled:hover:border-sabres-blue"
+              className="rounded-xl border-2 border-gray-300 py-2 text-xs font-bold uppercase tracking-wide text-gray-700 transition-colors disabled:opacity-40 disabled:line-through enabled:hover:border-sabres-blue enabled:hover:text-sabres-blue"
             >
               Skip Team {state.teamSkipAvail ? '· 1' : '· 0'}
             </button>
@@ -156,14 +156,18 @@ export default function PlayClient() {
               type="button"
               disabled={!decadeSkipOpen}
               onClick={() => dispatch({ type: 'SKIP_DECADE' })}
-              className="rounded-lg border-2 border-gray-300 py-2 text-xs font-bold uppercase tracking-wide text-gray-700 disabled:opacity-40 disabled:line-through enabled:hover:border-sabres-blue"
+              className="rounded-xl border-2 border-gray-300 py-2 text-xs font-bold uppercase tracking-wide text-gray-700 transition-colors disabled:opacity-40 disabled:line-through enabled:hover:border-sabres-blue enabled:hover:text-sabres-blue"
             >
               Skip Decade {state.decadeSkipAvail ? '· 1' : '· 0'}
             </button>
           </div>
+        )}
+      </div>
 
+      {revealed && (
+        <>
           {selectedPlayer && legals.length > 1 && (
-            <div className="mt-3 rounded-lg bg-sabres-gold/15 px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-sabres-navy">
+            <div className="mt-3 rounded-xl bg-sabres-gold/15 px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-sabres-navy">
               Tap a highlighted slot above for {selectedPlayer.name.split(' ').slice(-1)[0]}
             </div>
           )}
@@ -204,16 +208,19 @@ export default function PlayClient() {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-10 bg-sabres-navy px-4 py-3">
-        <div className="mx-auto flex max-w-[480px] items-center justify-between">
-          <Link href="/162-0" className="text-2xl font-bold text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-            162-0 <span className="text-sabres-gold">⚾</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <header className="border-b-4 border-sabres-gold bg-sabres-navy shadow-xl">
+        <div className="mx-auto max-w-[480px] px-4 py-3 text-center">
+          <Link href="/162-0" className="block transition-opacity hover:opacity-90">
+            <p className="text-4xl font-bold tracking-wider text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+              Lindy&apos;s Five
+            </p>
           </Link>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">Free Play</span>
+          <p className="text-sm font-semibold text-sabres-gold">162-0 ⚾ The Perfect Season</p>
+          <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-white/50">Free Play</p>
         </div>
       </header>
-      <main className="mx-auto max-w-[480px] px-3 pt-3">{children}</main>
+      <main className="mx-auto max-w-[480px] px-3 py-4">{children}</main>
     </div>
   );
 }

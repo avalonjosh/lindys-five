@@ -47,7 +47,6 @@ export default function ResultCard({ result, config, mode, picks, data, onPlayAg
     return () => cancelAnimationFrame(raf);
   }, [result.wins]);
 
-  const accent = tank ? 'text-sabres-red' : 'text-sabres-gold';
   const accentBorder = tank ? 'border-sabres-red' : 'border-sabres-gold';
 
   const shareText = buildShareText(result, config, mode);
@@ -61,50 +60,73 @@ export default function ResultCard({ result, config, mode, picks, data, onPlayAg
     setTimeout(() => setCopied(false), 1800);
   };
 
+  const barColor = tank ? 'bg-sabres-red' : 'bg-sabres-blue';
+  const heroColor = tank ? 'text-sabres-red' : 'text-sabres-navy';
+  const paceWidth = Math.max(6, (count / config.games) * 100);
+
   return (
-    <div className="flex flex-col items-center gap-5 py-4">
-      <div className="text-center">
-        <div className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
+    <div className="flex flex-col gap-4 py-2">
+      {/* Hero record with a win-pace bar, mirroring the tracker's projected-wins bar. */}
+      <div className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-xl">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
           {tank ? 'Final tank' : 'Final record'}
-        </div>
-        <div
-          className={`text-6xl font-bold ${tank ? 'text-sabres-red' : 'text-sabres-navy'}`}
-          style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-        >
+        </p>
+        <div className={`text-6xl font-bold leading-none ${heroColor}`} style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
           {count}-{config.games - count}
         </div>
-        <div className="text-sm font-semibold text-gray-500">
-          {result.setsWon} of {result.totalSets} sets won · {result.perfectSets} perfect
+        <div className="mt-3 h-7 w-full overflow-hidden rounded-full bg-gray-200 shadow-inner">
+          <div
+            className={`flex h-7 items-center justify-end rounded-full ${barColor} shadow-md transition-all duration-300`}
+            style={{ width: `${paceWidth}%` }}
+          >
+            <span className="whitespace-nowrap pr-2.5 text-[11px] font-bold text-white">
+              {count} of {config.games}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Set dots: same win/loss visual family as the tracker set chips. */}
-      <div className="flex flex-wrap justify-center gap-1 max-w-[320px]">
-        {result.setWins.map((w, i) => {
-          const size = config.setSizes[i];
-          const cls =
-            w === size ? 'bg-emerald-500' : w * 2 > size ? 'bg-emerald-300' : 'bg-gray-300';
-          return <span key={i} className={`h-3.5 w-3.5 rounded-sm ${cls}`} aria-hidden />;
-        })}
+      {/* Stat summary cards, the tracker's record-summary vocabulary. */}
+      <div className="grid grid-cols-2 gap-2">
+        <StatCard label="Wins" value={count} />
+        <StatCard label="Losses" value={config.games - count} />
+        <StatCard label="Sets Won" value={`${result.setsWon}/${result.totalSets}`} />
+        <StatCard label="Perfect Sets" value={result.perfectSets} />
       </div>
 
-      {/* Verdict stamp. */}
-      <div
-        className={`transition-all duration-500 ${stamped ? 'opacity-100 scale-100' : 'opacity-0 scale-110'}`}
-      >
-        <div
-          className={`rounded-xl border-2 ${accentBorder} bg-white px-4 py-2 text-center shadow-md`}
+      {/* Set chips: same win / loss family as the tracker set cards. */}
+      <div className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-md">
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">Your {result.totalSets} sets</p>
+        <div className="flex flex-wrap gap-1">
+          {result.setWins.map((w, i) => {
+            const size = config.setSizes[i];
+            const cls =
+              w === size
+                ? 'bg-sabres-blue'
+                : w * 2 > size
+                  ? 'bg-sabres-blue/40'
+                  : 'border border-dashed border-gray-300 bg-gray-100';
+            return <span key={i} className={`h-4 w-4 rounded-md ${cls}`} aria-hidden />;
+          })}
+        </div>
+      </div>
+
+      {/* Verdict as a status pill, like the tracker's Target Met badge. */}
+      <div className={`flex justify-center transition-all duration-500 ${stamped ? 'scale-100 opacity-100' : 'scale-110 opacity-0'}`}>
+        <span
+          className={`inline-flex items-center rounded-full border-2 px-4 py-2 text-center text-base font-bold ${accentBorder} ${tank ? 'bg-sabres-red/10 text-sabres-red' : 'bg-sabres-gold/15 text-sabres-navy'}`}
+          style={{ fontFamily: 'Bebas Neue, sans-serif' }}
         >
-          <span className={`text-base font-bold ${accent}`} style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-            {result.verdict}
-          </span>
-        </div>
+          {result.verdict}
+        </span>
       </div>
 
       {/* Roster recap, era-correct names as text only. */}
-      <div className="w-full rounded-xl border-2 border-gray-200 bg-white p-3">
-        <div className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-2">Your roster</div>
-        <ul className="grid grid-cols-1 gap-1">
+      <div className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-md">
+        <div className="mb-2 border-b-2 border-gray-100 pb-2">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Your roster</p>
+        </div>
+        <ul className="grid grid-cols-1 gap-1.5">
           {picks.map((p) => (
             <li key={p.slotId} className="flex items-center justify-between text-sm">
               <span className="font-semibold text-gray-800">{p.playerName}</span>
@@ -116,7 +138,7 @@ export default function ResultCard({ result, config, mode, picks, data, onPlayAg
         </ul>
       </div>
 
-      <div className="flex w-full flex-col gap-2">
+      <div className="flex flex-col gap-2">
         <button
           type="button"
           onClick={onCopy}
@@ -132,6 +154,17 @@ export default function ResultCard({ result, config, mode, picks, data, onPlayAg
           Play again
         </button>
       </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2 text-center">
+      <div className="text-2xl font-bold text-sabres-blue" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+        {value}
+      </div>
+      <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-600">{label}</div>
     </div>
   );
 }

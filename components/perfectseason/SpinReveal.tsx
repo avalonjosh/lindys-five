@@ -37,7 +37,7 @@ export default function SpinReveal({ data, spin, revealKey, round, totalRounds }
     };
   }, [revealKey]);
 
-  const tile = 'rounded-xl bg-sabres-navy text-center shadow-lg px-4 py-3 transition-all duration-300';
+  const tile = 'rounded-2xl bg-sabres-navy text-center shadow-lg px-4 py-3 transition-all duration-300';
   const hidden = 'opacity-0 -translate-y-2 scale-95';
   const shown = 'opacity-100 translate-y-0 scale-100';
 

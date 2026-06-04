@@ -8,14 +8,19 @@ const HOW_TO = [
 
 export default function PerfectSeasonHub() {
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto flex max-w-[480px] flex-col px-4 pt-12 pb-8">
-        <div className="text-center">
-          <p className="text-6xl font-bold text-sabres-navy" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-            162-0 <span className="text-sabres-gold">⚾</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <header className="border-b-4 border-sabres-gold bg-sabres-navy shadow-xl">
+        <div className="mx-auto max-w-[480px] px-4 py-4 text-center">
+          <p className="text-5xl font-bold tracking-wider text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+            Lindy&apos;s Five
           </p>
-          <p className="mt-1 text-base font-semibold text-gray-600">The Perfect Season</p>
-          <p className="mx-auto mt-3 max-w-[340px] text-sm text-gray-500">
+          <p className="text-sm font-semibold text-sabres-gold">162-0 ⚾ The Perfect Season</p>
+        </div>
+      </header>
+
+      <div className="mx-auto flex max-w-[480px] flex-col px-4 pt-8 pb-8">
+        <div className="text-center">
+          <p className="mx-auto max-w-[340px] text-sm text-gray-500">
             Draft an all-time roster from decade and franchise spins. Can you build a team that goes 162-0?
           </p>
         </div>
