@@ -17,7 +17,7 @@ export default function NhlBoard() {
       data={data}
       config={nhlConfig}
       schedule={schedule}
-      defaultSpin={{ decade: '1950s', franchise: 'MTL' }}
+      defaultSpin={{ decade: '1970s', franchise: 'BUF' }}
     />
   );
 }

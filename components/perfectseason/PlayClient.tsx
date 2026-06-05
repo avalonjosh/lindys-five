@@ -59,10 +59,14 @@ interface PlayClientProps {
 
 // Sport-specific header chrome (label, league shield, palette, home link). The
 // big data/config stay as props so route bundles do not include both sports.
-const SPORT_UI: Record<Sport, { label: string; logo: string; bg: string; border: string; home: string }> = {
+const SPORT_UI: Record<
+  Sport,
+  { label: string; logo: string; logoClass: string; bg: string; border: string; home: string }
+> = {
   mlb: {
     label: '162-0',
     logo: 'https://www.mlbstatic.com/team-logos/league-on-dark/1.svg',
+    logoClass: 'h-6 w-auto',
     bg: '#002D72',
     border: '#041E42',
     home: '/162-0',
@@ -70,8 +74,11 @@ const SPORT_UI: Record<Sport, { label: string; logo: string; bg: string; border:
   nhl: {
     label: '82-0',
     logo: 'https://assets.nhle.com/logos/nhl/svg/NHL_light.svg',
-    bg: '#041E42',
-    border: '#0A1128',
+    // NHL shield is narrower (1.5 vs 1.78 aspect), so a touch taller matches the
+    // MLB logo's rendered width.
+    logoClass: 'h-7 w-auto',
+    bg: '#002D72',
+    border: '#041E42',
     home: '/82-0',
   },
 };
@@ -482,9 +489,9 @@ function Shell({
               Lindy&apos;s Five
             </p>
           </Link>
-          <div className="flex items-center justify-center gap-1.5 text-sm font-semibold text-white/80">
+          <div className="flex flex-col items-center gap-1 text-sm font-semibold text-white/80">
+            <img src={ui.logo} alt={sport.toUpperCase()} className={ui.logoClass} />
             <span>{ui.label}</span>
-            <img src={ui.logo} alt={sport.toUpperCase()} className="h-4 w-auto" />
           </div>
         </div>
       </header>
