@@ -1,0 +1,150 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import type { Player, SlotDef, SportConfig } from '@/lib/perfectseason/types';
+import { statCells } from '../ui';
+
+interface RinkPlayerListProps {
+  players: Player[];
+  config: SportConfig;
+  blind: boolean;
+  selectedId: string | null;
+  getLegalSlots: (player: Player) => SlotDef[];
+  onSelect: (player: Player) => void;
+}
+
+// NHL position-group filters and a tint per group (forwards / defense / goalie).
+const GROUPS: { key: string; accepts: string[] | null }[] = [
+  { key: 'All', accepts: null },
+  { key: 'F', accepts: ['LW', 'C', 'RW'] },
+  { key: 'D', accepts: ['D'] },
+  { key: 'G', accepts: ['G'] },
+];
+
+function posTint(pos: string): string {
+  if (pos === 'D') return 'bg-emerald-100 text-emerald-700';
+  if (pos === 'G') return 'bg-amber-100 text-amber-700';
+  return 'bg-sabres-blue/10 text-sabres-blue';
+}
+
+export default function RinkPlayerList({ players, config, blind, selectedId, getLegalSlots, onSelect }: RinkPlayerListProps) {
+  const [query, setQuery] = useState('');
+  const [group, setGroup] = useState('All');
+  const [sortBy, setSortBy] = useState('Best'); // Best = engine order
+
+  const statKeys = useMemo(() => {
+    // Union of stat labels across player kinds, in first-seen order.
+    const seen: string[] = [];
+    for (const p of players.slice(0, 30)) for (const c of statCells(p, config)) if (!seen.includes(c.label)) seen.push(c.label);
+    return seen;
+  }, [players, config]);
+
+  const matchesGroup = (p: Player): boolean => {
+    const g = GROUPS.find((x) => x.key === group);
+    return !g?.accepts || p.pos.some((pos) => g.accepts!.includes(pos));
+  };
+
+  let shown = players.filter((p) => matchesGroup(p) && p.name.toLowerCase().includes(query.trim().toLowerCase()));
+  if (!blind && sortBy !== 'Best') {
+    shown = [...shown].sort((a, b) => {
+      const av = Number(String(statCells(a, config).find((c) => c.label === sortBy)?.value ?? 0).replace(/[^\d.-]/g, ''));
+      const bv = Number(String(statCells(b, config).find((c) => c.label === sortBy)?.value ?? 0).replace(/[^\d.-]/g, ''));
+      return bv - av;
+    });
+  }
+
+  return (
+    <div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search players..."
+          className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-sabres-blue focus:bg-white"
+        />
+        {!blind && (
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="rounded-xl border border-gray-200 bg-white px-2 py-2 text-xs font-bold uppercase text-gray-600 outline-none"
+          >
+            <option value="Best">Best</option>
+            {statKeys.map((k) => (
+              <option key={k} value={k}>
+                {k}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {GROUPS.map((gr) => (
+          <button
+            key={gr.key}
+            type="button"
+            onClick={() => setGroup(gr.key)}
+            className={[
+              'rounded-full border-2 px-3 py-1 text-xs font-bold transition-colors',
+              group === gr.key ? 'border-sabres-blue bg-sabres-blue text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300',
+            ].join(' ')}
+          >
+            {gr.key}
+          </button>
+        ))}
+      </div>
+
+      <p className="mt-2 text-xs text-gray-500">{shown.length} available</p>
+
+      <ul className="mt-1 flex flex-col gap-1.5" role="listbox" aria-label="Available players">
+        {shown.map((player) => {
+          const legal = getLegalSlots(player);
+          const blocked = legal.length === 0;
+          const selected = player.id === selectedId;
+          const cells = statCells(player, config);
+          return (
+            <li key={`${player.id}-${'era' in player.line ? 'p' : 'b'}`}>
+              <button
+                type="button"
+                disabled={blocked}
+                onClick={() => onSelect(player)}
+                className={[
+                  'flex w-full items-center gap-2 rounded-xl border-2 p-2.5 text-left transition-all',
+                  blocked
+                    ? 'cursor-not-allowed border-gray-200 bg-gray-50 opacity-50'
+                    : selected
+                      ? 'border-sabres-blue bg-sabres-blue/5 shadow-md'
+                      : 'border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 hover:border-sabres-blue hover:shadow-md',
+                ].join(' ')}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="truncate text-sm font-bold text-gray-900">{player.name}</span>
+                    {player.pos.map((p) => (
+                      <span key={p} className={`shrink-0 rounded px-1 text-[10px] font-bold uppercase ${posTint(p)}`}>
+                        {p}
+                      </span>
+                    ))}
+                  </div>
+                  {blocked && <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">No open slots</div>}
+                </div>
+                {!blind && (
+                  <div className="flex shrink-0 gap-2.5">
+                    {cells.map((cell) => (
+                      <div key={cell.label} className="w-9 text-center">
+                        <div className="text-sm font-bold text-gray-800">{cell.value}</div>
+                        <div className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">{cell.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </button>
+            </li>
+          );
+        })}
+        {shown.length === 0 && <li className="py-6 text-center text-sm text-gray-400">No players match.</li>}
+      </ul>
+    </div>
+  );
+}
