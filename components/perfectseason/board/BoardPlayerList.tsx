@@ -127,15 +127,15 @@ export default function BoardPlayerList({ players, config, blind, selectedId, ge
                 ].join(' ')}
               >
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="truncate text-sm font-bold text-gray-900">{player.name}</span>
+                  <div className="text-sm font-bold leading-tight text-gray-900">{player.name}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-1">
                     {player.pos.map((p) => (
-                      <span key={p} className={`shrink-0 rounded px-1 text-[10px] font-bold uppercase ${posTint(p)}`}>
+                      <span key={p} className={`rounded px-1 text-[10px] font-bold uppercase ${posTint(p)}`}>
                         {p}
                       </span>
                     ))}
+                    {blocked && <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">No open slots</span>}
                   </div>
-                  {blocked && <div className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">No open slots</div>}
                 </div>
                 {!blind && (
                   <div className="flex shrink-0 gap-2.5">
