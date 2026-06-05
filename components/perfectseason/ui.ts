@@ -5,6 +5,7 @@
  */
 
 import type { GameData, Player, Sport, Spin, SportConfig } from '@/lib/perfectseason/types';
+import { NHL_TEAMS, MLB_TEAMS } from '@/lib/teamConfig';
 
 /** Era-correct franchise name for a spin. */
 export function franchiseName(data: GameData, spin: Spin): string {
@@ -37,6 +38,13 @@ export function franchiseLogo(franchiseId: string, sport: Sport): string | null 
   }
   const id = MLB_FRANCHISE_ID[franchiseId];
   return id ? `https://www.mlbstatic.com/team-logos/${id}.svg` : null;
+}
+
+/** The franchise's primary brand color (for team pills), or null if unmatched. */
+export function franchiseColor(franchiseId: string, sport: Sport): string | null {
+  const teams = sport === 'nhl' ? NHL_TEAMS : MLB_TEAMS;
+  const team = Object.values(teams).find((t) => t.abbreviation === franchiseId);
+  return team?.colors.primary ?? null;
 }
 
 // Goalies (NHL) carry "gaa"; pitchers (MLB) carry "era". Either marks the

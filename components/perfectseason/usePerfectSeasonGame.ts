@@ -6,7 +6,8 @@ import { generateDay, generateFranchiseDay, poolPlayers } from '@/lib/perfectsea
 import { mulberry32, easternDateString } from '@/lib/perfectseason/seed';
 import { createGame, reduce, type Action, type EngineState } from '@/lib/perfectseason/engine';
 import { getDaily, recordDaily, type DailyRecord, type GridCell, type GridTier } from '@/lib/perfectseason/storage';
-import { franchiseName } from './ui';
+import { rosterRating } from '@/lib/perfectseason/rating';
+import { franchiseName, statCells } from './ui';
 
 const ROLL_TOTAL_MS = 1750;
 
@@ -64,14 +65,19 @@ export function buildDailyRecord(
     const higher = pool.filter((pl) => pl.score > p.score).length;
     const tier: GridTier = higher === 0 ? 'green' : higher < 3 ? 'yellow' : 'gray';
     const slot = config.slots.find((s) => s.id === p.slotId);
+    const player = pool.find((pl) => pl.id === p.playerId);
     return {
       slot: slot?.label ?? p.slotId,
       decade: p.spin.decade,
       franchise: franchiseName(data, p.spin),
+      franchiseId: p.spin.franchise,
+      playerName: p.playerName,
+      stats: player ? statCells(player, config) : [],
       tier,
       skipped: p.skips.team || p.skips.decade,
     };
   });
+  const { rating, grade, tier } = rosterRating(data, config, state.picks, state.mode.type);
   return {
     done: true,
     dayNumber,
@@ -81,6 +87,9 @@ export function buildDailyRecord(
     totalSets: r.totalSets,
     perfectSets: r.perfectSets,
     verdict: r.verdict,
+    rating,
+    grade,
+    tier,
     grid,
     skips: { team: state.picks.some((p) => p.skips.team), decade: state.picks.some((p) => p.skips.decade) },
   };

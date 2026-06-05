@@ -8,11 +8,10 @@ import type { FreeType, GameProps, Source } from './usePerfectSeasonGame';
 import { usePerfectSeasonGame } from './usePerfectSeasonGame';
 import { SPORT_UI } from './sportUi';
 import SpinReveal from './SpinReveal';
-import DailyResult from './DailyResult';
+import NhlDailyResult from './nhl/NhlDailyResult';
 import FranchisePicker from './FranchisePicker';
-import HowToPlay from './HowToPlay';
-import Decade from './Decade';
-import { franchiseLogo, franchiseName } from './ui';
+import HowToPlaySheet, { HelpButton } from './nhl/HowToPlaySheet';
+import { franchiseColor, franchiseLogo, franchiseName, shortDecade } from './ui';
 import Rink from './nhl/Rink';
 import RosterCircles from './nhl/RosterCircles';
 import PositionSheet from './nhl/PositionSheet';
@@ -52,13 +51,38 @@ export default function NhlBoardView(props: GameProps) {
     if (phase !== 'pick') setSelectedId(null);
   }, [phase]);
 
-  const shellProps = { sport, source, freeType, onSource: setSource, onFreeType: chooseFreeType };
+  // How To Play overlay; the "?" pulses once until the player first opens it.
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [helpSeen, setHelpSeen] = useState(true); // assume seen on SSR to avoid a pulse flash
+  useEffect(() => {
+    try {
+      setHelpSeen(localStorage.getItem('ps:nhl:help-seen') === '1');
+    } catch {
+      /* storage unavailable */
+    }
+  }, []);
+  const openHelp = () => {
+    setHelpOpen(true);
+    if (!helpSeen) {
+      setHelpSeen(true);
+      try {
+        localStorage.setItem('ps:nhl:help-seen', '1');
+      } catch {
+        /* storage unavailable */
+      }
+    }
+  };
+
+  // Hide the Daily/Free + mode toggles once a game is underway (spun or any picks
+  // down) so they can't switch mid-draft; they return on the opening board + results.
+  const inProgress = !!state && !state.done && (state.picks.length > 0 || phase !== 'board');
+  const shellProps = { sport, source, freeType, inProgress, onSource: setSource, onFreeType: chooseFreeType };
 
   if (source === 'daily' && record) {
     return (
       <Shell {...shellProps}>
         <div className="mx-auto max-w-[480px]">
-          <DailyResult
+          <NhlDailyResult
             record={record}
             config={config}
             variant={variant}
@@ -125,8 +149,31 @@ export default function NhlBoardView(props: GameProps) {
     setSelectedId(null);
   };
 
+  const controlsBar = picking ? (
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex shrink-0 items-center gap-1.5">
+        <span
+          className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold text-white shadow-sm"
+          style={{ background: franchiseColor(spin.franchise, sport) ?? '#003087' }}
+        >
+          {franchiseLogo(spin.franchise, sport) && (
+            <img src={franchiseLogo(spin.franchise, sport)!} alt="" className="h-4 w-auto shrink-0" />
+          )}
+          {spin.franchise}
+        </span>
+        <span className="rounded-full bg-sabres-gold/20 px-2.5 py-1 text-xs font-bold text-sabres-navy">
+          {`${shortDecade(spin.decade).replace(/s$/i, '')}'S`}
+        </span>
+      </div>
+      <div className="flex shrink-0 items-center gap-1.5">
+        <RerollAction label="Team" left={state.teamSkipAvail ? 1 : 0} disabled={!canSkipTeam(state)} onClick={() => onSkip({ type: 'SKIP_TEAM' })} />
+        <RerollAction label="Decade" left={state.decadeSkipAvail ? 1 : 0} disabled={!canSkipDecade(state)} onClick={() => onSkip({ type: 'SKIP_DECADE' })} />
+      </div>
+    </div>
+  ) : undefined;
+
   return (
-    <Shell {...shellProps}>
+    <Shell {...shellProps} roundLabel={`Round ${Math.min(state.round + 1, total)}/${total}`} subBar={controlsBar}>
       {(isTank || isFranchise || blind) && (
         <div
           className={`mx-auto mb-3 max-w-[820px] rounded-xl px-3 py-2 text-center text-xs font-bold uppercase tracking-wide ${
@@ -143,7 +190,7 @@ export default function NhlBoardView(props: GameProps) {
 
       <div className="mx-auto grid max-w-[820px] gap-4 md:grid-cols-2">
         {/* LEFT: spin controls / player list */}
-        <div className="pb-28 md:pb-0">
+        <div className="min-w-0 pb-28 md:pb-0">
           {phase !== 'pick' ? (
             <div className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-md">
               <SpinReveal
@@ -163,7 +210,7 @@ export default function NhlBoardView(props: GameProps) {
                   <button
                     type="button"
                     onClick={() => setPhase('rolling')}
-                    className={`mt-4 w-full rounded-xl py-4 text-lg font-bold uppercase tracking-widest text-white shadow-md transition-all hover:scale-[1.02] active:scale-100 ${
+                    className={`mt-4 w-full rounded-xl py-4 text-xl font-bold uppercase tracking-widest text-white shadow-md transition-all hover:scale-[1.02] active:scale-100 ${
                       isTank ? 'bg-sabres-red hover:brightness-110' : 'bg-sabres-blue hover:bg-sabres-light'
                     }`}
                     style={{ fontFamily: 'Bebas Neue, sans-serif' }}
@@ -182,7 +229,7 @@ export default function NhlBoardView(props: GameProps) {
                             variant === v ? 'bg-white text-sabres-blue shadow-sm' : 'text-gray-400 hover:text-gray-600'
                           }`}
                         >
-                          {v === 'classic' ? 'Classic' : `${config.blindLabel} · Blind`}
+                          {v === 'classic' ? 'Classic' : config.blindLabel}
                         </button>
                       ))}
                     </div>
@@ -192,37 +239,9 @@ export default function NhlBoardView(props: GameProps) {
             </div>
           ) : (
             <div className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-md">
-              <div className="border-b border-gray-100 pb-3">
-                <div className="flex items-center gap-2">
-                  {franchiseLogo(spin.franchise, sport) && (
-                    <img src={franchiseLogo(spin.franchise, sport)!} alt="" className="h-7 w-auto shrink-0" />
-                  )}
-                  <p className="text-xl font-bold text-sabres-blue" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-                    <Decade value={spin.decade} /> · {franchiseName(data, spin)}
-                  </p>
-                </div>
-                <p className="mt-1 text-xs text-gray-500">
-                  {players.length} available · {selectedPlayer ? 'choose a spot' : isTank ? 'pick a bad one' : 'pick one'} · {filled}/{total} filled
-                </p>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  disabled={!canSkipTeam(state)}
-                  onClick={() => onSkip({ type: 'SKIP_TEAM' })}
-                  className="rounded-xl border-2 border-gray-300 py-2 text-xs font-bold uppercase tracking-wide text-gray-700 transition-colors disabled:opacity-40 disabled:line-through enabled:hover:border-sabres-blue enabled:hover:text-sabres-blue"
-                >
-                  Skip Team {state.teamSkipAvail ? '· 1' : '· 0'}
-                </button>
-                <button
-                  type="button"
-                  disabled={!canSkipDecade(state)}
-                  onClick={() => onSkip({ type: 'SKIP_DECADE' })}
-                  className="rounded-xl border-2 border-gray-300 py-2 text-xs font-bold uppercase tracking-wide text-gray-700 transition-colors disabled:opacity-40 disabled:line-through enabled:hover:border-sabres-blue enabled:hover:text-sabres-blue"
-                >
-                  Skip Decade {state.decadeSkipAvail ? '· 1' : '· 0'}
-                </button>
-              </div>
+              <p className="text-xs text-gray-500">
+                {players.length} available · {selectedPlayer ? 'choose a spot' : isTank ? 'pick a bad one' : 'pick one'} · {filled}/{total} filled
+              </p>
               <div className="mt-3">
                 <RinkPlayerList
                   players={players}
@@ -235,14 +254,16 @@ export default function NhlBoardView(props: GameProps) {
               </div>
             </div>
           )}
-          <div className="mt-3">
-            <HowToPlay goal={`${config.games}-0`} />
-          </div>
         </div>
 
         {/* RIGHT: rink (desktop only) */}
-        <div className="hidden md:block">
+        <div className="hidden min-w-0 md:block">
           <div className="sticky top-4">
+            {!inProgress && (
+              <div className="mb-2 flex items-center justify-end">
+                <HelpButton onClick={openHelp} pulse={!helpSeen} />
+              </div>
+            )}
             <Rink
               slots={config.slots}
               picks={state.picks}
@@ -260,6 +281,11 @@ export default function NhlBoardView(props: GameProps) {
 
       {/* MOBILE: roster circles pinned at the bottom */}
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-gray-200 bg-white/95 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden">
+        {!inProgress && (
+          <div className="absolute -top-12 right-3">
+            <HelpButton onClick={openHelp} pulse={!helpSeen} />
+          </div>
+        )}
         <div className="mx-auto max-w-[480px]">
           <RosterCircles slots={config.slots} picks={state.picks} sport={sport} />
         </div>
@@ -279,6 +305,8 @@ export default function NhlBoardView(props: GameProps) {
         </div>
       )}
 
+      <HowToPlaySheet open={helpOpen} onClose={() => setHelpOpen(false)} goal={`${config.games}-0`} />
+
       {undo && (
         <div className="fixed inset-x-0 bottom-20 z-20 flex justify-center px-4 md:bottom-4">
           <div className="flex w-full max-w-[480px] items-center justify-between rounded-xl bg-sabres-navy px-4 py-3 text-white shadow-xl">
@@ -293,10 +321,28 @@ export default function NhlBoardView(props: GameProps) {
   );
 }
 
+/** Compact 82-0.com-style reroll action ("↻ Team · 1"); struck through when spent. */
+function RerollAction({ label, left, disabled, onClick }: { label: string; left: number; disabled: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-gray-200 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-sabres-blue transition-colors disabled:border-gray-100 disabled:text-gray-300 enabled:hover:bg-sabres-blue/10"
+    >
+      <span aria-hidden>↻</span>
+      {label} · {left}
+    </button>
+  );
+}
+
 function Shell({
   sport,
   source,
   freeType,
+  inProgress,
+  roundLabel,
+  subBar,
   onSource,
   onFreeType,
   children,
@@ -304,6 +350,9 @@ function Shell({
   sport: GameProps['sport'];
   source: Source;
   freeType: FreeType;
+  inProgress: boolean;
+  roundLabel?: string;
+  subBar?: React.ReactNode;
   onSource: (s: Source) => void;
   onFreeType: (t: FreeType) => void;
   children: React.ReactNode;
@@ -311,41 +360,56 @@ function Shell({
   const ui = SPORT_UI[sport];
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <header className="border-b-4 shadow-xl" style={{ background: ui.bg, borderBottomColor: ui.border }}>
-        <div className="mx-auto max-w-[480px] px-4 py-3 text-center">
-          <Link href={ui.home} className="block transition-opacity hover:opacity-90">
-            <p className="text-4xl font-bold tracking-wider text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+      {/* Compact 82-0.com-style top bar: brand + 82-0 badge left, round right. */}
+      <header className="border-b-4 shadow-lg" style={{ background: ui.bg, borderBottomColor: ui.border }}>
+        <div className="mx-auto flex max-w-[860px] items-center justify-between gap-3 px-4 py-2.5">
+          <Link href={ui.home} className="flex min-w-0 items-center gap-2.5 transition-opacity hover:opacity-90">
+            <span className="text-2xl font-bold tracking-wider text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
               Lindy&apos;s Five
-            </p>
+            </span>
+            <span
+              className="shrink-0 rounded-md bg-sabres-gold px-2 py-0.5 text-sm font-bold tracking-wide text-sabres-navy"
+              style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+            >
+              {ui.label}
+            </span>
           </Link>
-          <div className="flex flex-col items-center gap-1 text-sm font-semibold text-white/80">
-            <img src={ui.logo} alt={sport.toUpperCase()} className={ui.logoClass} />
-            <span>{ui.label}</span>
+          <div className="flex shrink-0 items-center gap-2.5">
+            {roundLabel && <span className="text-xs font-bold uppercase tracking-wide text-white/80">{roundLabel}</span>}
+            <img src={ui.logo} alt={sport.toUpperCase()} className="h-6 w-auto opacity-90" />
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-[860px] px-3 py-4">
-        <div className="mx-auto mb-2 grid max-w-[480px] grid-cols-2 gap-1 rounded-xl bg-white p-1 shadow-sm">
-          <button
-            type="button"
-            onClick={() => onSource('daily')}
-            className={`rounded-lg py-2 text-center text-xs font-bold uppercase tracking-wide transition-colors ${
-              source === 'daily' ? 'bg-sabres-blue text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Daily
-          </button>
-          <button
-            type="button"
-            onClick={() => onFreeType('standard')}
-            className={`rounded-lg py-2 text-center text-xs font-bold uppercase tracking-wide transition-colors ${
-              source === 'free' ? 'bg-sabres-blue text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Free Play
-          </button>
+      {/* Secondary band (team + decade + reroll), stacked under the header like 82-0.com. */}
+      {subBar && (
+        <div className="border-b border-gray-200 bg-white shadow-sm">
+          <div className="mx-auto max-w-[860px] px-4 py-2">{subBar}</div>
         </div>
-        {source === 'free' && (
+      )}
+      <main className="mx-auto max-w-[860px] px-3 py-4">
+        {!inProgress && (
+          <div className="mx-auto mb-2 grid max-w-[480px] grid-cols-2 gap-1 rounded-xl bg-white p-1 shadow-sm">
+            <button
+              type="button"
+              onClick={() => onSource('daily')}
+              className={`rounded-lg py-2 text-center text-xs font-bold uppercase tracking-wide transition-colors ${
+                source === 'daily' ? 'bg-sabres-blue text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Daily
+            </button>
+            <button
+              type="button"
+              onClick={() => onFreeType('standard')}
+              className={`rounded-lg py-2 text-center text-xs font-bold uppercase tracking-wide transition-colors ${
+                source === 'free' ? 'bg-sabres-blue text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Free Play
+            </button>
+          </div>
+        )}
+        {!inProgress && source === 'free' && (
           <div className="mx-auto mb-3 grid max-w-[480px] grid-cols-3 gap-1 rounded-xl bg-white p-1 shadow-sm">
             {(['standard', 'tank', 'franchise'] as const).map((t) => (
               <button

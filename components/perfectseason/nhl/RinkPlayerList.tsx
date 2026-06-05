@@ -13,10 +13,12 @@ interface RinkPlayerListProps {
   onSelect: (player: Player) => void;
 }
 
-// NHL position-group filters and a tint per group (forwards / defense / goalie).
+// NHL position filters: All plus each individual position.
 const GROUPS: { key: string; accepts: string[] | null }[] = [
   { key: 'All', accepts: null },
-  { key: 'F', accepts: ['LW', 'C', 'RW'] },
+  { key: 'C', accepts: ['C'] },
+  { key: 'LW', accepts: ['LW'] },
+  { key: 'RW', accepts: ['RW'] },
   { key: 'D', accepts: ['D'] },
   { key: 'G', accepts: ['G'] },
 ];
@@ -31,6 +33,7 @@ export default function RinkPlayerList({ players, config, blind, selectedId, get
   const [query, setQuery] = useState('');
   const [group, setGroup] = useState('All');
   const [sortBy, setSortBy] = useState('Best'); // Best = engine order
+  const [sortOpen, setSortOpen] = useState(false);
 
   const statKeys = useMemo(() => {
     // Union of stat labels across player kinds, in first-seen order.
@@ -64,18 +67,38 @@ export default function RinkPlayerList({ players, config, blind, selectedId, get
           className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none focus:border-sabres-blue focus:bg-white"
         />
         {!blind && (
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="rounded-xl border border-gray-200 bg-white px-2 py-2 text-xs font-bold uppercase text-gray-600 outline-none"
-          >
-            <option value="Best">Best</option>
-            {statKeys.map((k) => (
-              <option key={k} value={k}>
-                {k}
-              </option>
-            ))}
-          </select>
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setSortOpen((o) => !o)}
+              className="flex h-full items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-bold uppercase text-gray-600 outline-none"
+            >
+              {sortBy}
+              <span className={`text-[8px] transition-transform ${sortOpen ? 'rotate-180' : ''}`}>▼</span>
+            </button>
+            {sortOpen && (
+              <>
+                <button type="button" aria-label="Close sort menu" onClick={() => setSortOpen(false)} className="fixed inset-0 z-10 cursor-default" />
+                <div className="absolute right-0 top-full z-20 mt-1 w-28 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-xl">
+                  {['Best', ...statKeys].map((k) => (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => {
+                        setSortBy(k);
+                        setSortOpen(false);
+                      }}
+                      className={`block w-full px-3 py-2 text-left text-xs font-bold uppercase ${
+                        sortBy === k ? 'bg-sabres-blue/10 text-sabres-blue' : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {k}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         )}
       </div>
 

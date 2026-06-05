@@ -15,6 +15,11 @@ export interface GridCell {
   franchise: string;
   tier: GridTier;
   skipped: boolean;
+  // Optional richer fields for the 82-0.com-style roster cards (NHL result).
+  // Older saved records / the MLB share grid simply omit these.
+  playerName?: string;
+  franchiseId?: string;
+  stats?: { label: string; value: string }[];
 }
 
 export interface DailyRecord {
@@ -28,6 +33,10 @@ export interface DailyRecord {
   verdict: string;
   grid: GridCell[];
   skips: { team: boolean; decade: boolean };
+  // Roster rating (0-100) + derived letter grade / tier; optional for back-compat.
+  rating?: number;
+  grade?: string;
+  tier?: string;
 }
 
 export interface Streak {

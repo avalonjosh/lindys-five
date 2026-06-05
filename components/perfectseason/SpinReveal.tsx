@@ -103,9 +103,9 @@ export default function SpinReveal({
   const franchiseSpinning = !decadeOnly && rolling && stage < 2;
   // The board shows the resting spin muted; rolling and landed values are vivid.
   const nhl = tileVariant === 'nhl';
-  const labelColor = nhl ? 'text-white/60' : 'text-gray-500';
-  const valueColor = nhl ? (rolling ? 'text-white' : 'text-white/70') : rolling ? 'text-sabres-blue' : 'text-gray-400';
-  const franchiseColor = decadeOnly ? (nhl ? 'text-white' : 'text-sabres-blue') : valueColor;
+  const labelColor = nhl ? 'text-sabres-navy/50' : 'text-gray-500';
+  const valueColor = nhl ? (rolling ? 'text-sabres-blue' : 'text-sabres-navy/70') : rolling ? 'text-sabres-blue' : 'text-gray-400';
+  const franchiseColor = decadeOnly ? 'text-sabres-blue' : valueColor;
 
   // Logo shows on the landed franchise (or the board's resting one).
   const landedFranchiseId = decadeOnly
@@ -118,7 +118,7 @@ export default function SpinReveal({
   const logo = landedFranchiseId ? franchiseLogo(landedFranchiseId, data.sport) : null;
 
   const tile = nhl
-    ? 'rounded-2xl border-2 border-sabres-gold/40 bg-gradient-to-br from-sabres-navy to-sabres-blue text-center px-4 py-4 shadow-md overflow-hidden'
+    ? 'rounded-2xl border-2 border-sabres-gold bg-gradient-to-br from-amber-50 to-amber-100 text-center px-4 py-4 shadow-md overflow-hidden'
     : 'rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 text-center px-4 py-3 shadow-sm overflow-hidden';
 
   return (
