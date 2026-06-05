@@ -2,7 +2,7 @@
 
 This file is the durable "where we left off" record for the Perfect Season games.
 It is committed to git so it survives local file loss. Read this first when
-resuming. Last updated: 2026-06-04.
+resuming. Last updated: 2026-06-04 (Section 12: Phase 7 plan + NHL data sources).
 
 ---
 
@@ -198,3 +198,147 @@ c19eb74  Phase 1: MLB data pipeline
 
 Also tracked in Claude's memory at
 `~/.claude/projects/.../memory/perfect-season-project.md`.
+
+---
+
+## 12. Phase 7 plan (NHL edition, 82-0) — scoped 2026-06-04
+
+### 12.1 Owner decisions (locked)
+
+- **NHL data source (two-source plan, decided 2026-06-04)**: the originally
+  credited single Kaggle dump (flynn28) is career-aggregate only (no team, no
+  per-season rows) and is DROPPED entirely. Replaced by two sources stitched at
+  the 2010 decade boundary, never mixed within a decade:
+  1. **1950s-2000s**: Kaggle "Professional Hockey Database" by open-source-sports
+     (Hockey Databank; Lahman-style, one row per player per season per team;
+     1909-2011). Lands in `raw-data/nhl/databank/`. Josh downloads it locally
+     (gitignored). **Status: Josh will confirm when it is in place.**
+  2. **2010s-2020s**: NHL stats REST API (`api.nhle.com/stats/rest`), seasons
+     2010-11..2025-26, fetched by `scripts/fetch-nhl-api.ts` and cached to
+     `raw-data/nhl/nhlapi/{seasonId}/`. **DONE 2026-06-04**: all 16 seasons
+     cached (15,725 skater stint rows, 1,608 goalie rows, 8.1 MB). MoneyPuck was
+     the original choice but blocks scraping; dropped (see 12.5).
+  - Stitch is clean: databank owns start years <= 2009 (1950s-2000s), the API
+    owns start years >= 2010 (2010s-2020s), so each source owns whole decades.
+    Dedupe players spanning the 2000s/2010s boundary by normalized name match
+    with a logged review list. Credit both (Hockey Databank + NHL) in the footer.
+- **Logos**: mirror the MLB override. Add the NHL shield in the 82-0 header
+  (NHL-blue palette) and modern team logos on filled roster slots, parallel to
+  162-0. Footer carries the NHL/NHLPA + Kaggle attribution.
+- **Refactor approach**: parameterize one shared client (thin wrapper injects
+  config/data/schedule/sport) so 162-0 and 82-0 render the SAME client. Do NOT
+  fork a second copy.
+
+### 12.2 What is already sport-agnostic (no work needed)
+
+- `sim.ts` — win curve is dimensionless (0-100 scores) and scales by
+  `config.games`; no MLB constants baked in. Calibration still needs
+  re-verification for 82 games / 6 slots (see 12.3 step 7b).
+- `engine.ts`, `schedule.ts` — pure reducers driven entirely by `SportConfig` +
+  `GameData`. Untouched.
+- `seed.ts` (`dailyRng(sport, ...)`) and `storage.ts` (all keys take a `sport`
+  arg) — already parameterized; NHL gets its own daily/streak/stats keys free.
+- `share.ts` — reads slot labels from result cells; title already switches
+  162-0/82-0.
+- `ogImage.tsx` — `sportHubTemplate` already has an `isNHL` branch with NHL
+  colors. Just pass `sport=nhl`.
+- `next.config.js` — `/82 -> /82-0` redirect already exists.
+
+### 12.3 Build sequence (sub-checkpoints; one stop per checkpoint)
+
+**Prerequisite (Josh):** drop the Kaggle NHL CSVs into `raw-data/nhl/`. Inspect
+the real column names BEFORE writing the parser.
+
+- **7a — Data pipeline.** New `scripts/build-nhl-data.ts` + committed
+  `data/nhl-data.json`. Stints by (player, franchise, decade); per-82 skater
+  stats (>= 150 GP), era-normalized goalie SV%/GAA (>= 80 GP); >= 20% position
+  eligibility. Hand-maintained franchise lineage table in the script (Nordiques
+  to COL, Whalers to CAR, Thrashers to WPG, Jets 1.0 decision documented, etc.).
+  CHECKPOINT: print the 10 spec pools (80s Oilers, 70s Canadiens, 70s Bruins, 90s
+  Red Wings, 00s Avalanche, 80s Islanders, 90s Penguins, 00s Devils, 10s
+  Blackhawks, 70s Sabres) for eyeball check.
+
+- **7b — Config + calibration.** New `lib/perfectseason/config.nhl.ts`: slots
+  LW/C/RW/D1/D2/G (generic D pair, not LD/RD; sources record only "D" — spec
+  amended 2026-06-04, mirrors IF1/IF2), 82 games, 16x5 + 2 finale, NHL stat
+  columns, Presidents'
+  Trophy / lottery / play-in verdict bands (standard + tank), `blindLabel`
+  'IceIQ', `shareIcon` 🏒. Run `calibrate-sim` / `test-skip-tree` against NHL
+  config + data. Recalibrate for 6 slots / 82 games (confirm only the apex roster
+  reaches 82-0 and the floor is sane; promote `CURVE` in sim.ts to sport-aware
+  ONLY if constants must diverge). CHECKPOINT: calibration table + skip-tree
+  suite passing.
+
+- **7c — Parameterize the shared client.** Thin wrapper injects
+  `{config, data, schedule, sport}` so 162-0 and 82-0 render one client.
+  De-MLB-ify the goalie/pitcher discriminator (currently `'era' in player.line`
+  in `ui.ts` `playerKind` and `PlayerList.tsx`; NHL goalie uses `'gaa' in line`).
+  Reuse `statColumns.{bat,pitch}` keys semantically (bat = skater, pitch =
+  goalie) with a comment rather than a wider type rename. Extend `STAT_LABELS`
+  (G, A, P, +/-, SV%, GAA, W, SO). Add `NHL_FRANCHISE_ID` logo map + NHL shield +
+  NHL-blue header palette. Replace MLB-only `DEFAULT_SPIN` ({1950s, NYY}).
+  CHECKPOINT: `/162-0` regression-clean AND `/82-0` board renders. This is the
+  riskiest step (touches working MLB code); MLB regression is the gate.
+
+- **7d — NHL routes + daily schedule.** `app/82-0/{layout,page,play}.tsx`
+  mirroring 162-0 with NHL metadata, NHL/NHLPA + Kaggle footer attribution,
+  `sport=nhl` OG. Generate committed `data/nhl-daily-schedule.json` (extend
+  `build-daily-schedule.ts`). Cross-link result screens to the other sport's
+  daily. CHECKPOINT: phone walkthrough of `/82-0` daily Classic, free play, share
+  grid, OG unfurl.
+
+- **7e — Mode parity + ship.** Verify Tank, Franchise, and IceIQ blind mode work
+  for NHL (engine supports them via flags already). Final `npx tsc --noEmit`,
+  mark Phase 7 done here. CHECKPOINT: full mode walkthrough, then Josh's launch
+  call.
+
+### 12.4 Coupling points to fix (the spec under-budgets these)
+
+The engine/sim/schedule are clean, but the presentation layer is hardcoded to
+MLB. Files needing sport-parameterizing in 7c:
+
+- `components/perfectseason/PlayClient.tsx` — hardcoded `mlbDataJson`,
+  `scheduleJson`, `mlbConfig`, `config`, MLB-blue header + MLB shield,
+  `DEFAULT_SPIN = {1950s, NYY}`.
+- `components/perfectseason/ui.ts` — `playerKind` discriminator, `STAT_LABELS`,
+  `franchiseLogo` / `MLB_FRANCHISE_ID`.
+- `components/perfectseason/PlayerList.tsx:88` — same `'era' in line`
+  discriminator for the row key.
+- Scripts `calibrate-sim.ts`, `test-skip-tree.ts`, `build-daily-schedule.ts` all
+  import `mlbConfig` / read `mlb-data.json` directly; add NHL variants or
+  parameterize.
+
+### 12.5 2010s-2020s data: RESOLVED via NHL API (2026-06-04)
+
+MoneyPuck (the original choice) blocks automated fetching: every request
+returned a license-notice HTML page behind a Cloudflare challenge, then HTTP 429.
+We did NOT evade the bot protection; MoneyPuck was dropped and
+`scripts/fetch-moneypuck.sh` deleted.
+
+Replaced by the **NHL stats REST API** via `scripts/fetch-nhl-api.ts`:
+- Endpoints: `api.nhle.com/stats/rest/en/{skater,goalie}/summary`,
+  `cayenneExp=seasonId=YYYYYYYY and gameTypeId=2 and teamId=N`,
+  `isAggregate=false`. Note: this is the `api.nhle.com/stats/rest` host, NOT the
+  `api-web.nhle.com` the app proxies; the script is local, no proxy/CORS issue.
+- **Per-team loop is required**: with `isAggregate=false` a traded player returns
+  ONE combined row (`teamAbbrevs "PIT,CAR"`, merged totals). Filtering `teamId`
+  returns the split stint stats, so the script loops a curated list of ~36 modern
+  teamIds per season and tags each row with `queriedTri` / `queriedTeamId`. The
+  row's own `teamAbbrevs` is the cosmetic full-season label; DO NOT use it for
+  franchise attribution, use `queriedTri`.
+- Fields: skaters -> playerId, skaterFullName, positionCode (C/L/R/D), GP, G, A,
+  P, plusMinus. Goalies -> goalieFullName, GP, wins, savePct,
+  goalsAgainstAverage, shutouts, saves, shotsAgainst, goalsAgainst.
+- Verified: Guentzel 2023-24 splits to CAR 17GP + PIT 50GP; McDavid 2023-24 EDM
+  76GP/132P/+35. positionCode set is exactly {C,L,R,D} (confirms D1/D2).
+- Output cached to `raw-data/nhl/nhlapi/{seasonId}/{skaters,goalies}.json`
+  (gitignored). 16 seasons, 15,725 skater rows, 1,608 goalie rows, 8.1 MB.
+
+**7a is now gated only on the databank landing in `raw-data/nhl/databank/`** (Josh
+will confirm). Once it is there, write `build-nhl-data.ts` to read both sources.
+
+Position note for 7a: the NHL API gives one positionCode per player-season, not
+appearance splits, so the spec's "20% of appearances" eligibility rule does not
+apply to the API half. Map L->LW, R->RW, C->C, D->D1/D2; a player listed under
+different codes across seasons naturally becomes multi-position. Decide how the
+databank's position field maps to the same scheme during 7a.

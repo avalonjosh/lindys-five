@@ -84,9 +84,14 @@ Ours to improve (their gaps, our v1): shared daily, streaks, spoiler-safe share 
 | LW   | Left wing |
 | C    | Center |
 | RW   | Right wing |
-| LD   | Left defense |
-| RD   | Right defense |
+| D1   | Defense (generic pair, mirrors IF1/IF2) |
+| D2   | Defense (generic pair, mirrors IF1/IF2) |
 | G    | Goaltender |
+
+Amended 2026-06-04: the original LD/RD split is replaced by a generic D1/D2
+defense pair (like the IF1/IF2 buckets), because both data sources record only
+"D" without a left/right split. Two distinct defensemen fill the pair; the
+dedupe rule prevents the same player filling both.
 
 Eligibility: a player qualifies at any position making up 20 percent or more of appearances in that decade-franchise stint. Multi-position players (Banks, Coffey, Ohtani) are a feature.
 
@@ -156,14 +161,42 @@ Lahman CSVs -> join on playerID -> group by (player, franchise, decade)
 
 Per-162 math: sum counting stats across the stint, scale to 162 G; rate stats from summed components. 2020 weighted at 60/162 for thresholds. Pitchers normalized to 32 GS (W, IP, SO), ERA and WHIP from summed components.
 
-### 6.2 NHL: Kaggle NHL Database
+### 6.2 NHL: two-source plan (amended 2026-06-04)
 
-Source: the public Kaggle NHL player database nhl82.ca credits, supplemented from Hockey Reference exports if fields are missing; verify license on download and credit in footer. Script `scripts/build-nhl-data.ts`:
+The originally-credited single Kaggle dump (flynn28 "NHL player database") is
+career-aggregate only: no team and no per-season rows, so it cannot produce
+(player, franchise, decade) stints. It is dropped entirely. Replaced by two
+sources stitched at the 2010 decade boundary, never mixed within a decade:
 
-- Skaters: per-82 G, A, P (plus plus-minus where available); >= 150 GP per stint. Goalies: era-normalized SV% primary, GAA secondary; >= 80 GP per stint.
+1. **Decades 1950s-2000s: Kaggle "Professional Hockey Database"** by
+   open-source-sports (the Hockey Databank project; Lahman-style, one row per
+   player per season per team; covers 1909-2011). Downloaded to
+   `raw-data/nhl/databank/`. Owner supplies this locally (gitignored).
+2. **Decades 2010s-2020s: NHL stats REST API.** Per-(player, team, season)
+   regular-season summaries from `api.nhle.com/stats/rest/en/{skater,goalie}/
+   summary`, seasons 2010-11 through 2025-26, fetched by
+   `scripts/fetch-nhl-api.ts` and cached to `raw-data/nhl/nhlapi/{seasonId}/`.
+   (MoneyPuck was the original choice but blocks automated scraping; dropped.)
+   The API's summary report returns one combined row for a traded player, so the
+   fetch loops per team (filtering `teamId`) to get split per-stint stats and
+   tags each row with the queried team. Fields: skaters give playerId, name,
+   positionCode (C/L/R/D), GP, G, A, P, +/-; goalies give GP, wins, savePct,
+   GAA, shutouts.
+
+Clean stitch: the databank owns start years <= 2009 (1950s-2000s decades), the
+API owns start years >= 2010 (2010s-2020s), so each source owns whole decades.
+Players spanning the 2000s/2010s boundary are deduped by normalized name match,
+with a logged review list. Verify each source's license on download and credit
+both (Hockey Databank + the NHL) in the footer.
+
+Script `scripts/build-nhl-data.ts`:
+
+- Skaters: per-82 G, A, P (plus plus-minus where available); >= 150 GP per stint.
+  Goalies: era-normalized SV% primary, GAA secondary; >= 80 GP per stint.
 - Era normalization vs decade league scoring environment.
-- Franchise mapping via hand-maintained table (Nordiques to Avalanche, Whalers to Hurricanes, Jets 1.0 lineage decided once, documented in the script).
-- Output: `src/data/nhl-data.json`.
+- Franchise mapping via hand-maintained table (Nordiques to Avalanche, Whalers
+  to Hurricanes, Jets 1.0 lineage decided once, documented in the script).
+- Output: `data/nhl-data.json` (no `src/` in this repo; see progress Section 4).
 
 ### 6.3 Shared Output Schema
 
