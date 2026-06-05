@@ -290,12 +290,16 @@ the real column names BEFORE writing the parser.
   Engine/sim/schedule untouched. NOTE: NHL Daily falls back to Free Play until
   the committed schedule lands in 7d (NhlBoard passes an empty `{days:{}}`).
 
-- **7d — NHL routes + daily schedule.** `app/82-0/{layout,page,play}.tsx`
-  mirroring 162-0 with NHL metadata, NHL/NHLPA + Kaggle footer attribution,
-  `sport=nhl` OG. Generate committed `data/nhl-daily-schedule.json` (extend
-  `build-daily-schedule.ts`). Cross-link result screens to the other sport's
-  daily. CHECKPOINT: phone walkthrough of `/82-0` daily Classic, free play, share
-  grid, OG unfurl.
+- **7d — NHL routes + daily schedule. DONE, approved 2026-06-04.**
+  `app/82-0/layout.tsx` (NHL metadata, canonical, `sport=nhl` OG, NHL/NHLPA +
+  NHL-data footer attribution) and `page.tsx` (NhlBoard, added in 7c).
+  `build-daily-schedule.ts` parameterized by sport; committed
+  `data/nhl-daily-schedule.json` (150 days, ~230 KB). NhlBoard now imports the
+  real schedule so the Daily tab plays (no more Free Play fallback). Cross-link
+  added to DailyResult to the other sport's daily (spec 9). Verified: /82-0 200
+  with daily wired (today Daily #4), /162-0 regression clean, NHL OG card 200
+  image/png, tsc clean. (No `play/page.tsx` redirect for 82-0; 162-0 has one for
+  an old deep link, not needed for NHL.)
 
 - **7e — Mode parity + ship.** Verify Tank, Franchise, and IceIQ blind mode work
   for NHL (engine supports them via flags already). Final `npx tsc --noEmit`,

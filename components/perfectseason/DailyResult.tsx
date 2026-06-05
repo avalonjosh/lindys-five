@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import type { SportConfig } from '@/lib/perfectseason/types';
 import type { DailyRecord, GridTier, Streak } from '@/lib/perfectseason/storage';
 import { buildDailyShare } from '@/lib/perfectseason/share';
@@ -148,6 +149,14 @@ export default function DailyResult({ record, config, variant, streak, played, o
           Free Play
         </button>
       </div>
+
+      {/* Cross-promo to the other sport's daily (spec Section 9). */}
+      <Link
+        href={config.sport === 'mlb' ? '/82-0' : '/162-0'}
+        className="block text-center text-xs font-semibold text-sabres-blue underline-offset-2 hover:underline"
+      >
+        {config.sport === 'mlb' ? 'Now try the NHL daily · 82-0 🏒' : 'Now try the MLB daily · 162-0 ⚾'}
+      </Link>
     </div>
   );
 }
