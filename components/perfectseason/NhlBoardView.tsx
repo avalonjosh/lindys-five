@@ -137,7 +137,7 @@ export default function NhlBoardView(props: GameProps) {
   const total = config.slots.length;
   const isFranchise = type === 'franchise';
   const isTank = type === 'tank';
-  const blind = source === 'daily' && variant === 'blind';
+  const blind = variant === 'blind';
 
   const selectedPlayer = selectedId ? players.find((p) => p.id === selectedId) ?? null : null;
   const selectedLegal = selectedPlayer ? legalSlots(state, selectedPlayer) : [];
@@ -217,23 +217,21 @@ export default function NhlBoardView(props: GameProps) {
                   >
                     Spin
                   </button>
-                  {source === 'daily' && (
-                    <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
-                      {(['classic', 'blind'] as const).map((v) => (
-                        <button
-                          key={v}
-                          type="button"
-                          disabled={state.picks.length > 0}
-                          onClick={() => setVariant(v)}
-                          className={`rounded-lg py-2 text-center text-xs font-bold uppercase tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                            variant === v ? 'bg-white text-sabres-blue shadow-sm' : 'text-gray-400 hover:text-gray-600'
-                          }`}
-                        >
-                          {v === 'classic' ? 'Classic' : config.blindLabel}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl bg-gray-100 p-1">
+                    {(['classic', 'blind'] as const).map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        disabled={state.picks.length > 0}
+                        onClick={() => setVariant(v)}
+                        className={`rounded-lg py-2 text-center text-xs font-bold uppercase tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                          variant === v ? 'bg-white text-sabres-blue shadow-sm' : 'text-gray-400 hover:text-gray-600'
+                        }`}
+                      >
+                        {v === 'classic' ? 'Classic' : config.blindLabel}
+                      </button>
+                    ))}
+                  </div>
                 </>
               )}
             </div>

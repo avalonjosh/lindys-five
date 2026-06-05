@@ -50,10 +50,15 @@ export default function NhlDailyResult({ record, config, variant, streak, played
     slotLabel: c.slot,
     franchiseId: c.franchiseId ?? '',
     decade: c.decade,
-    playerName: c.playerName ?? '',
+    // Pre-fix records have no player name; fall back to the team name.
+    playerName: c.playerName || c.franchise,
     tier: c.tier,
     stats: c.stats ?? [],
   }));
+
+  const dayLabel = record.date
+    ? new Date(`${record.date}T12:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+    : `Daily #${record.dayNumber}`;
 
   const onShare = async () => {
     const shareText = buildDailyShare(record, config, variant);
@@ -74,7 +79,7 @@ export default function NhlDailyResult({ record, config, variant, streak, played
     <div className="flex flex-col gap-4 py-2">
       <div className="flex items-center justify-between px-1">
         <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
-          Daily #{record.dayNumber} · {variant === 'blind' ? `🧠 ${config.blindLabel}` : 'Classic'}
+          {dayLabel} · {variant === 'blind' ? `🧠 ${config.blindLabel}` : 'Classic'}
         </p>
         <span className="rounded-full bg-sabres-gold/15 px-2 py-0.5 text-[11px] font-bold text-sabres-navy">
           🔥 {streak.current} day{streak.current === 1 ? '' : 's'}

@@ -37,6 +37,8 @@ export interface DailyRecord {
   rating?: number;
   grade?: string;
   tier?: string;
+  // ET date the daily was for, e.g. "2026-06-05"; optional for back-compat.
+  date?: string;
 }
 
 export interface Streak {

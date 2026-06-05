@@ -58,6 +58,7 @@ export function buildDailyRecord(
   config: SportConfig,
   state: EngineState,
   dayNumber: number,
+  date: string,
 ): DailyRecord {
   const r = state.result!;
   const grid: GridCell[] = state.picks.map((p) => {
@@ -90,6 +91,7 @@ export function buildDailyRecord(
     rating,
     grade,
     tier,
+    date,
     grid,
     skips: { team: state.picks.some((p) => p.skips.team), decade: state.picks.some((p) => p.skips.decade) },
   };
@@ -153,7 +155,7 @@ export function usePerfectSeasonGame({ sport, data, config, schedule }: GameProp
   // Lock and record a finished Daily once.
   useEffect(() => {
     if (source !== 'daily' || record || !state?.done || !state.result || !day) return;
-    const rec = buildDailyRecord(data, config, state, day.dayNumber);
+    const rec = buildDailyRecord(data, config, state, day.dayNumber, day.date);
     recordDaily(sport, day.date, variant, rec);
     setRecord(rec);
   }, [sport, data, config, source, record, state, day, variant]);
