@@ -10,8 +10,8 @@ resuming. Last updated: 2026-06-04 (Section 12: Phase 7 plan + NHL data sources)
 
 Two daily roster-puzzle games living inside lindysfive.com, sharing one engine:
 
-- **162-0** (MLB) at `lindysfive.com/162-0` — being built now.
-- **82-0** (NHL) at `lindysfive.com/82-0` — later (Phase 7).
+- **162-0** (MLB) at `lindysfive.com/162-0` — built (Phases 1-6).
+- **82-0** (NHL) at `lindysfive.com/82-0` — built (Phase 7, done 2026-06-04).
 
 You draft an all-time roster from decade + franchise "spins," and a deterministic
 engine projects your season record, framed five games at a time (the Lindy's Five
@@ -82,7 +82,7 @@ want to rebuild the data.
 | 4 | Daily plumbing and quiet ship | DONE; daily-first landing, lockout, streaks, share grid, OG card. Awaiting launch call |
 | 5 | Tank and Franchise (free play) | DONE; mode picker, red tank, decade-only franchise spins, franchise picker |
 | 6 | Blind mode (BallIQ) | DONE; live Classic/BallIQ daily toggle, hides stats, parallel streak/lockout |
-| 7 | NHL edition (82-0) | not started; needs Kaggle NHL dataset in `raw-data/nhl/` |
+| 7 | NHL edition (82-0) | DONE, approved 2026-06-04; full game at `/82-0` (data, config, client, routes, daily schedule, all modes). Sub-phases 7a-7e in Section 12.3 |
 
 **v1 definition of done = end of Phase 4** (MLB daily Classic + Free Play
 Standard, deterministic skips, set result card, share grid + OG, streaks,
@@ -301,10 +301,14 @@ the real column names BEFORE writing the parser.
   image/png, tsc clean. (No `play/page.tsx` redirect for 82-0; 162-0 has one for
   an old deep link, not needed for NHL.)
 
-- **7e — Mode parity + ship.** Verify Tank, Franchise, and IceIQ blind mode work
-  for NHL (engine supports them via flags already). Final `npx tsc --noEmit`,
-  mark Phase 7 done here. CHECKPOINT: full mode walkthrough, then Josh's launch
-  call.
+- **7e — Mode parity + ship. DONE, approved 2026-06-04.** Mode-parity verified
+  programmatically: standard + tank complete on 10/10 daily seeds; franchise mode
+  generates and completes for ALL 32 NHL franchises (incl. young ones: SEA 1
+  decade, VGK 2, WPG/CBJ/MIN 3) so FranchisePicker needs no filtering; IceIQ blind
+  is a UI variant only (no engine path). Final gate: NHL skip-tree 12/12, MLB
+  skip-tree 12/12 (regression), tsc clean. Engine/sim/schedule confirmed
+  untouched across Phase 7. **Phase 7 complete.** Remaining before public launch:
+  Josh's combined MLB+NHL launch call (per Section 7 sequencing override).
 
 ### 12.4 Coupling points to fix (the spec under-budgets these)
 
