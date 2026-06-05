@@ -355,3 +355,63 @@ Position note for 7a: the NHL API gives one positionCode per player-season, not
 appearance splits, so the spec's "20% of appearances" eligibility rule does not
 apply. Map L->LW, R->RW, C->C, D->D1/D2; a player listed under different codes
 across seasons naturally becomes multi-position.
+
+### 12.6 NHL franchise lineage & era-correct names (finalized 2026-06-04)
+
+This is the hand-maintained mapping `build-nhl-data.ts` (7a) must implement. It
+maps each source triCode (`queriedTri`) to a canonical franchise ID, and gives
+the era-correct display name per decade. 32 franchises total (every current NHL
+franchise; no defunct ones).
+
+**Owner decisions (locked):**
+1. **Jets 1.0 / Coyotes / Utah = ONE franchise** (relocation continuity), era
+   names per decade. Canonical ID `UTA`.
+2. **Seals/Barons DROPPED entirely.** triCodes `OAK`, `CGS`, `CLE` are excluded
+   (folded 1978, thin pools, no modern successor).
+3. **"Winnipeg Jets" kept era-accurate under BOTH franchises** (original under the
+   `UTA` lineage in the 70s-90s; modern under the `WPG`/Thrashers lineage in the
+   2010s+). They never share a decade, so no in-game collision.
+
+**Mid-decade-rename rule:** when a relocation/rename splits a decade, name that
+decade by the identity held for MOST of it (verified against stint-row counts in
+the data). Exception: the current decade uses the current identity.
+
+**triCode -> canonical franchise ID** (drop OAK/CGS/CLE):
+- Stable (id = own triCode): BOS, CHI, DET, MTL, NYR, TOR, LAK, PHI, PIT, STL,
+  BUF, VAN, NYI, WSH, EDM, SJS, TBL, OTT, ANA, FLA, NSH, CBJ, MIN, VGK, SEA.
+- Merged lineages:
+  - MNS -> DAL
+  - AFM -> CGY
+  - KCS, CLR -> NJD
+  - HFD -> CAR
+  - QUE -> COL
+  - WIN, PHX, ARI, UTA -> UTA   (Jets 1.0 / Coyotes / Utah)
+  - ATL, WPG -> WPG             (Thrashers / Jets 2.0)
+
+**Era-correct name per decade** (only franchises whose name changes are listed;
+all others use their single modern name for every decade they were active):
+
+| Franchise | 1950s | 1960s | 1970s | 1980s | 1990s | 2000s | 2010s | 2020s |
+|---|---|---|---|---|---|---|---|---|
+| DAL | - | Minnesota North Stars | Minnesota North Stars | Minnesota North Stars | Dallas Stars | Dallas Stars | Dallas Stars | Dallas Stars |
+| CGY | - | - | Atlanta Flames | Calgary Flames | Calgary Flames | Calgary Flames | Calgary Flames | Calgary Flames |
+| NJD | - | - | Colorado Rockies | New Jersey Devils | New Jersey Devils | New Jersey Devils | New Jersey Devils | New Jersey Devils |
+| CAR | - | - | Hartford Whalers | Hartford Whalers | Hartford Whalers | Carolina Hurricanes | Carolina Hurricanes | Carolina Hurricanes |
+| COL | - | - | Quebec Nordiques | Quebec Nordiques | Quebec Nordiques | Colorado Avalanche | Colorado Avalanche | Colorado Avalanche |
+| UTA | - | - | Winnipeg Jets | Winnipeg Jets | Winnipeg Jets | Phoenix Coyotes | Arizona Coyotes | Utah |
+| WPG | - | - | - | - | Atlanta Thrashers | Atlanta Thrashers | Winnipeg Jets | Winnipeg Jets |
+| CHI | Chicago Black Hawks | Chicago Black Hawks | Chicago Black Hawks | Chicago Black Hawks | Blackhawks | Blackhawks | Blackhawks | Blackhawks |
+| ANA | - | - | - | - | Mighty Ducks of Anaheim | Mighty Ducks of Anaheim | Anaheim Ducks | Anaheim Ducks |
+
+Notes:
+- 1990s COL kept as "Quebec Nordiques" (177 vs 158 stint-rows; also keeps the
+  2000s pool distinct as the Avalanche). 1990s CAR "Hartford Whalers", 1990s UTA
+  "Winnipeg Jets", 1990s DAL "Dallas Stars" by majority.
+- 2020s UTA "Utah" overrides raw majority (ARI 138 vs UTA 54) to use the current
+  identity. Display string TBD in 7a ("Utah Hockey Club" vs "Utah Mammoth" vs
+  just "Utah"); the franchise spans both 2024-25 and 2025-26.
+- CHI "Black Hawks" (two words pre-1986) and ANA "Mighty Ducks" are minor
+  era-spellings, easy to change if undesired.
+- Thin partial-decade pools (e.g. 1970s EDM/HFD/QUE/WIN = a single 1979-80
+  season; 1990s NSH/ATL) are naturally excluded by the existing schedule
+  pool-size guard; no special handling needed.
