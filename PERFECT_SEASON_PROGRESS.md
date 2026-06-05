@@ -261,16 +261,18 @@ the real column names BEFORE writing the parser.
   just behind Jagr (100); 80s goalie GAAs read high but era-normalization keeps
   cross-decade scoring fair.
 
-- **7b — Config + calibration.** New `lib/perfectseason/config.nhl.ts`: slots
-  LW/C/RW/D1/D2/G (generic D pair, not LD/RD; sources record only "D" — spec
-  amended 2026-06-04, mirrors IF1/IF2), 82 games, 16x5 + 2 finale, NHL stat
-  columns, Presidents'
-  Trophy / lottery / play-in verdict bands (standard + tank), `blindLabel`
-  'IceIQ', `shareIcon` 🏒. Run `calibrate-sim` / `test-skip-tree` against NHL
-  config + data. Recalibrate for 6 slots / 82 games (confirm only the apex roster
-  reaches 82-0 and the floor is sane; promote `CURVE` in sim.ts to sport-aware
-  ONLY if constants must diverge). CHECKPOINT: calibration table + skip-tree
-  suite passing.
+- **7b — Config + calibration. DONE, approved 2026-06-04.**
+  `lib/perfectseason/config.nhl.ts`: slots LW/C/RW/D1/D2/G (generic D pair, both
+  accept "D"), 82 games, 16x5 + 2 finale, NHL stat columns (skater g/a/p/+-,
+  goalie svp/gaa/w/so), §12.7 verdict copy, `blindLabel` 'IceIQ', `shareIcon` 🏒.
+  `calibrate-sim.ts` and `test-skip-tree.ts` parameterized by a `sport` arg
+  (default mlb). Results: NHL skip-tree 12/12 pass, MLB regression 12/12 pass;
+  NHL calibration clean (perfect roster -> 82-0, real dream roster 81-1, .500 at
+  ~43-39, tank works). **CURVE left shared/unchanged** — it is dimensionless and
+  6 slots / 82 games produced a good curve with zero constant changes, so it was
+  NOT promoted to sport-aware. Engine/sim/schedule untouched. tsc clean. (Minor:
+  the standard min:0 "Historically bad" band is unreachable in standard play, win
+  floor ~18-19; harmless safety floor, matches MLB.)
 
 - **7c — Parameterize the shared client.** Thin wrapper injects
   `{config, data, schedule, sport}` so 162-0 and 82-0 render one client.

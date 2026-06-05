@@ -14,8 +14,9 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
 
-import type { GameData, Player, RoundTree, Spin } from '../lib/perfectseason/types';
+import type { GameData, Player, RoundTree, Spin, SportConfig } from '../lib/perfectseason/types';
 import { mlbConfig } from '../lib/perfectseason/config.mlb';
+import { nhlConfig } from '../lib/perfectseason/config.nhl';
 import { dailyRng } from '../lib/perfectseason/seed';
 import {
   enumeratePaths,
@@ -35,7 +36,13 @@ import {
   type EngineState,
 } from '../lib/perfectseason/engine';
 
-const data = JSON.parse(readFileSync(join(process.cwd(), 'data', 'mlb-data.json'), 'utf8')) as GameData;
+// Sport selector: `npx tsx scripts/test-skip-tree.ts [mlb|nhl]`, default mlb.
+const SPORT = process.argv[2] === 'nhl' ? 'nhl' : 'mlb';
+const config: SportConfig = SPORT === 'nhl' ? nhlConfig : mlbConfig;
+const data = JSON.parse(
+  readFileSync(join(process.cwd(), 'data', `${SPORT}-data.json`), 'utf8'),
+) as GameData;
+console.log(`sport: ${SPORT}  (${config.slots.length} slots, ${config.games} games)`);
 
 let passed = 0;
 function check(name: string, fn: () => void) {
@@ -51,7 +58,7 @@ function check(name: string, fn: () => void) {
 }
 
 function rosterable(pool: Player[]): Player[] {
-  return pool.filter((p) => mlbConfig.slots.some((s) => eligible(p, s)));
+  return pool.filter((p) => config.slots.some((s) => eligible(p, s)));
 }
 
 /** Backtracking full roster build for a fixed spin path, honoring dedupe. */
@@ -64,7 +71,7 @@ function autoComplete(spins: Spin[]): { round: number; playerId: string; slotId:
     if (round === spins.length) return true;
     for (const player of pools[round]) {
       if (used.has(player.id)) continue;
-      for (const slot of mlbConfig.slots) {
+      for (const slot of config.slots) {
         if (filledSlots.has(slot.id) || !eligible(player, slot)) continue;
         used.add(player.id);
         filledSlots.add(slot.id);
@@ -85,7 +92,7 @@ function sampleSchedule(): { date: string; rounds: RoundTree[] } {
   for (let i = 0; i < 40; i++) {
     const date = `2026-07-${String(10 + i).padStart(2, '0')}`;
     try {
-      const sched = generateDay(data, mlbConfig, date, dailyRng('mlb', date));
+      const sched = generateDay(data, config, date, dailyRng(SPORT, date));
       return { date, rounds: sched.rounds };
     } catch {
       // try the next date
@@ -100,7 +107,7 @@ const rounds = sample.rounds;
 
 console.log('\n(a) all reachable skip paths are valid');
 check('validateSchedule reports valid', () => {
-  const res = validateSchedule(rounds, data, mlbConfig);
+  const res = validateSchedule(rounds, data, config);
   assert.ok(res.valid, `invalid: ${res.reasons.join('; ')}`);
 });
 check('every enumerated path keeps >= MIN_POOL eligible per spin', () => {
@@ -142,7 +149,7 @@ console.log('\n(b) identical actions produce identical spins (determinism)');
 
 /** Drive the engine greedily: top available player into its first finishable slot. */
 function playGreedy(sched: RoundTree[]): { spins: Spin[]; final: EngineState } {
-  let s = createGame(data, mlbConfig, sched, { type: 'standard', source: 'daily' });
+  let s = createGame(data, config, sched, { type: 'standard', source: 'daily' });
   const spins: Spin[] = [];
   let guard = 0;
   while (!s.done && guard++ < 50) {
@@ -166,12 +173,12 @@ check('two players, same actions, identical record and verdict', () => {
   assert.ok(a.final.done && a.final.result, 'greedy no-skip playthrough completes');
 });
 check('dedupe held: one distinct player per slot rostered', () => {
-  const n = mlbConfig.slots.length;
+  const n = config.slots.length;
   assert.equal(new Set(a.final.usedPlayerIds).size, n);
   assert.equal(a.final.picks.length, n);
 });
 check('a team skip reroll changes the current spin', () => {
-  let s = createGame(data, mlbConfig, rounds, { type: 'standard', source: 'daily' });
+  let s = createGame(data, config, rounds, { type: 'standard', source: 'daily' });
   assert.ok(canSkipTeam(s), 'team skip should be offered at round 0');
   s = reduce(s, { type: 'SKIP_TEAM' });
   assert.deepEqual(currentSpin(s), rounds[0].teamSkip);
@@ -185,7 +192,7 @@ check('30 sample days all complete via greedy no-skip play', () => {
     const date = `2026-08-${String(1 + i).padStart(2, '0')}`;
     let sched: RoundTree[];
     try {
-      sched = generateDay(data, mlbConfig, date, dailyRng('mlb', date)).rounds;
+      sched = generateDay(data, config, date, dailyRng(SPORT, date)).rounds;
     } catch {
       continue;
     }
@@ -197,11 +204,11 @@ check('30 sample days all complete via greedy no-skip play', () => {
 
 console.log('\nengine guards');
 check('illegal slot assignment is rejected', () => {
-  let s = createGame(data, mlbConfig, rounds, { type: 'standard', source: 'daily' });
+  let s = createGame(data, config, rounds, { type: 'standard', source: 'daily' });
   const players = availablePlayers(s);
   const player = players[0];
   // Find a slot the player is NOT eligible for, if any.
-  const badSlot = mlbConfig.slots.find((sl) => !eligible(player, sl));
+  const badSlot = config.slots.find((sl) => !eligible(player, sl));
   s = reduce(s, { type: 'SELECT_PLAYER', id: player.id });
   if (badSlot) {
     const after = reduce(s, { type: 'ASSIGN_SLOT', slotId: badSlot.id });
@@ -212,7 +219,7 @@ check('illegal slot assignment is rejected', () => {
   assert.equal(ok.picks.length, 1);
 });
 check('undo reverts the last assignment', () => {
-  let s = createGame(data, mlbConfig, rounds, { type: 'standard', source: 'daily' });
+  let s = createGame(data, config, rounds, { type: 'standard', source: 'daily' });
   const p = availablePlayers(s)[0];
   s = reduce(s, { type: 'SELECT_PLAYER', id: p.id });
   s = reduce(s, { type: 'ASSIGN_SLOT', slotId: legalSlots(s, p)[0].id });
