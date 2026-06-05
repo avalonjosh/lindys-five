@@ -46,8 +46,8 @@ export default function RosterList({ slots, picks, data, fillableSlotIds, blind 
                 <div className="min-w-0">
                   <div className="truncate text-sm font-bold text-gray-900">{pick.playerName}</div>
                   <div className="flex items-center gap-1 text-[11px] text-gray-500">
-                    {franchiseLogo(pick.spin.franchise) && (
-                      <img src={franchiseLogo(pick.spin.franchise)!} alt="" className="h-4 w-auto shrink-0" />
+                    {franchiseLogo(pick.spin.franchise, data.sport) && (
+                      <img src={franchiseLogo(pick.spin.franchise, data.sport)!} alt="" className="h-4 w-auto shrink-0" />
                     )}
                     <span className="truncate">
                       <Decade value={pick.spin.decade} /> {franchiseName(data, pick.spin)}

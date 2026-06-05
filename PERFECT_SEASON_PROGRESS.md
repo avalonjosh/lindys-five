@@ -274,16 +274,21 @@ the real column names BEFORE writing the parser.
   the standard min:0 "Historically bad" band is unreachable in standard play, win
   floor ~18-19; harmless safety floor, matches MLB.)
 
-- **7c — Parameterize the shared client.** Thin wrapper injects
-  `{config, data, schedule, sport}` so 162-0 and 82-0 render one client.
-  De-MLB-ify the goalie/pitcher discriminator (currently `'era' in player.line`
-  in `ui.ts` `playerKind` and `PlayerList.tsx`; NHL goalie uses `'gaa' in line`).
-  Reuse `statColumns.{bat,pitch}` keys semantically (bat = skater, pitch =
-  goalie) with a comment rather than a wider type rename. Extend `STAT_LABELS`
-  (G, A, P, +/-, SV%, GAA, W, SO). Add `NHL_FRANCHISE_ID` logo map + NHL shield +
-  NHL-blue header palette. Replace MLB-only `DEFAULT_SPIN` ({1950s, NYY}).
-  CHECKPOINT: `/162-0` regression-clean AND `/82-0` board renders. This is the
-  riskiest step (touches working MLB code); MLB regression is the gate.
+- **7c — Parameterize the shared client. DONE, approved 2026-06-04.**
+  `PlayClient` is now props-driven (`{sport, data, config, schedule,
+  defaultSpin}`); thin per-sport wrappers `MlbBoard.tsx` / `NhlBoard.tsx` each
+  import only their own dataset so route bundles stay separate (no doubling the
+  ~575 KB). `ui.ts`: `playerKind` detects goalies via `'gaa' in line`,
+  `franchiseLogo(id, sport)` resolves NHL logos from
+  `assets.nhle.com/logos/nhl/svg/{id}_dark.svg`, `STAT_LABELS` gained
+  g/a/p/plusMinus/svp/gaa. Sport-aware header chrome via a `SPORT_UI` map (NHL
+  navy + `NHL_light.svg` shield), banners ("chase 0-82"), `config.blindLabel`
+  (IceIQ), HowToPlay goal, PlayerList HEADLINE (P, SV%). statColumns reuses the
+  shared {bat,pitch} keys (bat=skater, pitch=goalie). Routes: `/162-0` ->
+  MlbBoard, new `/82-0` -> NhlBoard. Verified: `/162-0` 200 MLB chrome
+  (regression clean), `/82-0` 200 NHL chrome, tsc clean, no dev-server errors.
+  Engine/sim/schedule untouched. NOTE: NHL Daily falls back to Free Play until
+  the committed schedule lands in 7d (NhlBoard passes an empty `{days:{}}`).
 
 - **7d — NHL routes + daily schedule.** `app/82-0/{layout,page,play}.tsx`
   mirroring 162-0 with NHL metadata, NHL/NHLPA + Kaggle footer attribution,

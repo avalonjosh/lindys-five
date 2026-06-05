@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { Player, SlotDef, SportConfig } from '@/lib/perfectseason/types';
-import { statCells } from './ui';
+import { playerKind, statCells } from './ui';
 
 interface PlayerListProps {
   players: Player[];
@@ -16,7 +16,8 @@ interface PlayerListProps {
 }
 
 // Stats highlighted as the headline (the quality signal) per player kind.
-const HEADLINE = new Set(['OPS', 'ERA']);
+// MLB: OPS / ERA. NHL: P (points) / SV%.
+const HEADLINE = new Set(['OPS', 'ERA', 'P', 'SV%']);
 
 const ROW_BASE =
   'flex items-center gap-2.5 rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 shadow-sm transition-all';
@@ -85,7 +86,7 @@ export default function PlayerList({ players, config, blind, openCategories, get
         {shown.map((player) => {
           // A two-way player can appear twice in a pool (as a hitter and a
           // pitcher) with the same id, so the key also keys on the player kind.
-          const rowKey = `${player.id}-${'era' in player.line ? 'sp' : 'bat'}`;
+          const rowKey = `${player.id}-${playerKind(player)}`;
           // One assign target per distinct slot label the player can fill.
           const legal = getLegalSlots(player);
           const targets: { label: string; slotId: string }[] = [];

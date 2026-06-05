@@ -4,7 +4,7 @@
  * the sport config and the era-correct names from the data file.
  */
 
-import type { GameData, Player, Spin, SportConfig } from '@/lib/perfectseason/types';
+import type { GameData, Player, Sport, Spin, SportConfig } from '@/lib/perfectseason/types';
 
 /** Era-correct franchise name for a spin. */
 export function franchiseName(data: GameData, spin: Spin): string {
@@ -26,24 +26,43 @@ const MLB_FRANCHISE_ID: Record<string, number> = {
   TEX: 140, TOR: 141, WSN: 120,
 };
 
-/** Modern franchise logo URL, or null if the franchise does not map cleanly. */
-export function franchiseLogo(franchiseId: string): string | null {
+/**
+ * Modern franchise logo URL, or null if the franchise does not map cleanly.
+ * NHL franchise ids are the current triCodes, so they resolve straight to the
+ * NHL asset CDN; MLB ids go through the Lahman -> MLB Stats id map.
+ */
+export function franchiseLogo(franchiseId: string, sport: Sport): string | null {
+  if (sport === 'nhl') {
+    return `https://assets.nhle.com/logos/nhl/svg/${franchiseId}_dark.svg`;
+  }
   const id = MLB_FRANCHISE_ID[franchiseId];
   return id ? `https://www.mlbstatic.com/team-logos/${id}.svg` : null;
 }
 
+// Goalies (NHL) carry "gaa"; pitchers (MLB) carry "era". Either marks the
+// "specialist" stat column group (statColumns.pitch); everyone else is a
+// skater/batter (statColumns.bat).
 export function playerKind(player: Player): 'bat' | 'pitch' {
-  return 'era' in player.line ? 'pitch' : 'bat';
+  return 'era' in player.line || 'gaa' in player.line ? 'pitch' : 'bat';
 }
 
 const STAT_LABELS: Record<string, string> = {
+  // MLB
   hr: 'HR',
   rbi: 'RBI',
   avg: 'AVG',
   ops: 'OPS',
-  w: 'W',
   era: 'ERA',
   whip: 'WHIP',
+  // NHL
+  g: 'G',
+  a: 'A',
+  p: 'P',
+  plusMinus: '+/-',
+  svp: 'SV%',
+  gaa: 'GAA',
+  // shared
+  w: 'W',
   so: 'SO',
 };
 

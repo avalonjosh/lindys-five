@@ -2,10 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import mlbDataJson from '@/data/mlb-data.json';
-import scheduleJson from '@/data/mlb-daily-schedule.json';
-import type { GameData, ModeDescriptor, ModeType, RoundTree } from '@/lib/perfectseason/types';
-import { mlbConfig } from '@/lib/perfectseason/config.mlb';
+import type {
+  GameData,
+  ModeDescriptor,
+  ModeType,
+  RoundTree,
+  Sport,
+  Spin,
+  SportConfig,
+} from '@/lib/perfectseason/types';
 import { generateDay, generateFranchiseDay, poolPlayers } from '@/lib/perfectseason/schedule';
 import { mulberry32, easternDateString } from '@/lib/perfectseason/seed';
 import {
@@ -39,36 +44,75 @@ import HowToPlay from './HowToPlay';
 import { franchiseLogo, franchiseName } from './ui';
 import Decade from './Decade';
 
-const data = mlbDataJson as unknown as GameData;
-const schedule = scheduleJson as unknown as { days: Record<string, { dayNumber: number; rounds: RoundTree[] }> };
-const config = mlbConfig;
 const ROLL_TOTAL_MS = 1750;
-const DEFAULT_SPIN = { decade: '1950s', franchise: 'NYY' };
+
+export type ScheduleJson = { days: Record<string, { dayNumber: number; rounds: RoundTree[] }> };
+
+interface PlayClientProps {
+  sport: Sport;
+  data: GameData;
+  config: SportConfig;
+  schedule: ScheduleJson;
+  /** The idle preview spin shown on the starting board (a real pool). */
+  defaultSpin: Spin;
+}
+
+// Sport-specific header chrome (label, league shield, palette, home link). The
+// big data/config stay as props so route bundles do not include both sports.
+const SPORT_UI: Record<Sport, { label: string; logo: string; bg: string; border: string; home: string }> = {
+  mlb: {
+    label: '162-0',
+    logo: 'https://www.mlbstatic.com/team-logos/league-on-dark/1.svg',
+    bg: '#002D72',
+    border: '#041E42',
+    home: '/162-0',
+  },
+  nhl: {
+    label: '82-0',
+    logo: 'https://assets.nhle.com/logos/nhl/svg/NHL_light.svg',
+    bg: '#041E42',
+    border: '#0A1128',
+    home: '/82-0',
+  },
+};
 
 type Phase = 'board' | 'rolling' | 'pick';
 type Source = 'daily' | 'free';
 type FreeType = 'standard' | 'tank' | 'franchise';
 
-function randomGame(type: 'standard' | 'tank'): EngineState {
+function randomGame(data: GameData, config: SportConfig, type: 'standard' | 'tank'): EngineState {
   const seed = Math.floor(Math.random() * 0xffffffff);
   const sched = generateDay(data, config, easternDateString(), mulberry32(seed));
   return createGame(data, config, sched.rounds, { type, source: 'free' });
 }
 
-function franchiseGame(franchiseId: string): EngineState {
+function franchiseGame(data: GameData, config: SportConfig, franchiseId: string): EngineState {
   const seed = Math.floor(Math.random() * 0xffffffff);
   const sched = generateFranchiseDay(data, config, franchiseId, mulberry32(seed));
   return createGame(data, config, sched.rounds, { type: 'franchise', source: 'free', franchiseId });
 }
 
-function dailyToday(): { state: EngineState; dayNumber: number; date: string } | null {
+function dailyToday(
+  data: GameData,
+  config: SportConfig,
+  schedule: ScheduleJson,
+): { state: EngineState; dayNumber: number; date: string } | null {
   const date = easternDateString();
   const day = schedule.days[date];
   if (!day) return null;
-  return { state: createGame(data, config, day.rounds, { type: 'standard', source: 'daily' }), dayNumber: day.dayNumber, date };
+  return {
+    state: createGame(data, config, day.rounds, { type: 'standard', source: 'daily' }),
+    dayNumber: day.dayNumber,
+    date,
+  };
 }
 
-function buildDailyRecord(state: EngineState, dayNumber: number): DailyRecord {
+function buildDailyRecord(
+  data: GameData,
+  config: SportConfig,
+  state: EngineState,
+  dayNumber: number,
+): DailyRecord {
   const r = state.result!;
   const grid: GridCell[] = state.picks.map((p) => {
     const pool = poolPlayers(data, p.spin, config);
@@ -97,7 +141,7 @@ function buildDailyRecord(state: EngineState, dayNumber: number): DailyRecord {
   };
 }
 
-export default function PlayClient() {
+export default function PlayClient({ sport, data, config, schedule, defaultSpin }: PlayClientProps) {
   const [source, setSource] = useState<Source>('daily');
   const [freeType, setFreeType] = useState<FreeType>('standard');
   const [franchiseId, setFranchiseId] = useState<string | null>(null);
@@ -120,14 +164,14 @@ export default function PlayClient() {
     setPhase('board');
     if (source === 'daily') {
       const date = easternDateString();
-      const existing = getDaily('mlb', date, variant);
+      const existing = getDaily(sport, date, variant);
       if (existing) {
         setRecord(existing);
         setDay({ dayNumber: existing.dayNumber, date });
         setState(null);
         return;
       }
-      const dg = dailyToday();
+      const dg = dailyToday(data, config, schedule);
       if (!dg) {
         setSource('free');
         return;
@@ -141,19 +185,19 @@ export default function PlayClient() {
     setRecord(null);
     setDay(null);
     if (freeType === 'franchise') {
-      setState(franchiseId ? franchiseGame(franchiseId) : null);
+      setState(franchiseId ? franchiseGame(data, config, franchiseId) : null);
       return;
     }
-    setState(randomGame(freeType));
-  }, [source, freeType, franchiseId, variant]);
+    setState(randomGame(data, config, freeType));
+  }, [sport, data, config, schedule, source, freeType, franchiseId, variant]);
 
   // Lock and record a finished Daily once.
   useEffect(() => {
     if (source !== 'daily' || record || !state?.done || !state.result || !day) return;
-    const rec = buildDailyRecord(state, day.dayNumber);
-    recordDaily('mlb', day.date, variant, rec);
+    const rec = buildDailyRecord(data, config, state, day.dayNumber);
+    recordDaily(sport, day.date, variant, rec);
     setRecord(rec);
-  }, [source, record, state, day, variant]);
+  }, [sport, data, config, source, record, state, day, variant]);
 
   const spinKey =
     !state || state.done
@@ -191,9 +235,9 @@ export default function PlayClient() {
   const newGame = useCallback(() => {
     setUndo(false);
     setPhase('board');
-    if (freeType === 'franchise' && franchiseId) setState(franchiseGame(franchiseId));
-    else if (freeType !== 'franchise') setState(randomGame(freeType));
-  }, [freeType, franchiseId]);
+    if (freeType === 'franchise' && franchiseId) setState(franchiseGame(data, config, franchiseId));
+    else if (freeType !== 'franchise') setState(randomGame(data, config, freeType));
+  }, [data, config, freeType, franchiseId]);
 
   const chooseFreeType = (t: FreeType) => {
     setSource('free');
@@ -201,7 +245,7 @@ export default function PlayClient() {
     if (t === 'franchise') setFranchiseId(null);
   };
 
-  const shellProps = { source, freeType, onSource: setSource, onFreeType: chooseFreeType };
+  const shellProps = { sport, source, freeType, onSource: setSource, onFreeType: chooseFreeType };
 
   // --- Daily result / lockout ---
   if (source === 'daily' && record) {
@@ -211,8 +255,8 @@ export default function PlayClient() {
           record={record}
           config={config}
           variant={variant}
-          streak={getStreak('mlb', variant)}
-          played={getStats('mlb', variant).played}
+          streak={getStreak(sport, variant)}
+          played={getStats(sport, variant).played}
           onPlayFree={() => chooseFreeType('standard')}
         />
       </Shell>
@@ -271,12 +315,14 @@ export default function PlayClient() {
             isTank ? 'bg-sabres-red/10 text-sabres-red' : 'bg-sabres-blue/10 text-sabres-blue'
           }`}
         >
-          {isTank ? 'Tank · build the WORST team, chase 0-162' : `Franchise · best all-time ${franchiseName(data, spin)}`}
+          {isTank
+            ? `Tank · build the WORST team, chase 0-${config.games}`
+            : `Franchise · best all-time ${franchiseName(data, spin)}`}
         </div>
       )}
       {blind && (
         <div className="mb-3 rounded-xl bg-sabres-navy/5 px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-sabres-navy">
-          🧠 BallIQ · stats hidden, pick on reputation
+          🧠 {config.blindLabel} · stats hidden, pick on reputation
         </div>
       )}
 
@@ -288,7 +334,7 @@ export default function PlayClient() {
               spin={spin}
               rolling={phase === 'rolling'}
               previousSpin={state.picks.length > 0 ? state.picks[state.picks.length - 1].spin : null}
-              defaultSpin={isFranchise ? null : DEFAULT_SPIN}
+              defaultSpin={isFranchise ? null : defaultSpin}
               decadeOnly={isFranchise}
               revealKey={spinKey}
               round={state.round}
@@ -320,7 +366,7 @@ export default function PlayClient() {
                           variant === v ? 'bg-white text-sabres-blue shadow-sm' : 'text-gray-400 hover:text-gray-600'
                         }`}
                       >
-                        {v === 'classic' ? 'Classic' : 'BallIQ · Blind'}
+                        {v === 'classic' ? 'Classic' : `${config.blindLabel} · Blind`}
                       </button>
                     ))}
                   </div>
@@ -338,8 +384,8 @@ export default function PlayClient() {
           <>
             <div className="border-b border-gray-100 pb-3">
               <div className="flex items-center gap-2">
-                {franchiseLogo(spin.franchise) && (
-                  <img src={franchiseLogo(spin.franchise)!} alt="" className="h-7 w-auto shrink-0" />
+                {franchiseLogo(spin.franchise, sport) && (
+                  <img src={franchiseLogo(spin.franchise, sport)!} alt="" className="h-7 w-auto shrink-0" />
                 )}
                 <p className="text-xl font-bold text-sabres-blue" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
                   <Decade value={spin.decade} /> · {franchiseName(data, spin)}
@@ -384,7 +430,7 @@ export default function PlayClient() {
       </div>
 
       <div className="mt-3">
-        <HowToPlay />
+        <HowToPlay goal={`${config.games}-0`} />
       </div>
 
       <div className="h-20" />
@@ -412,30 +458,33 @@ export default function PlayClient() {
 }
 
 function Shell({
+  sport,
   source,
   freeType,
   onSource,
   onFreeType,
   children,
 }: {
+  sport: Sport;
   source: Source;
   freeType: FreeType;
   onSource: (s: Source) => void;
   onFreeType: (t: FreeType) => void;
   children: React.ReactNode;
 }) {
+  const ui = SPORT_UI[sport];
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <header className="border-b-4 shadow-xl" style={{ background: '#002D72', borderBottomColor: '#041E42' }}>
+      <header className="border-b-4 shadow-xl" style={{ background: ui.bg, borderBottomColor: ui.border }}>
         <div className="mx-auto max-w-[480px] px-4 py-3 text-center">
-          <Link href="/162-0" className="block transition-opacity hover:opacity-90">
+          <Link href={ui.home} className="block transition-opacity hover:opacity-90">
             <p className="text-4xl font-bold tracking-wider text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
               Lindy&apos;s Five
             </p>
           </Link>
           <div className="flex items-center justify-center gap-1.5 text-sm font-semibold text-white/80">
-            <span>162-0</span>
-            <img src="https://www.mlbstatic.com/team-logos/league-on-dark/1.svg" alt="MLB" className="h-4 w-auto" />
+            <span>{ui.label}</span>
+            <img src={ui.logo} alt={sport.toUpperCase()} className="h-4 w-auto" />
           </div>
         </div>
       </header>

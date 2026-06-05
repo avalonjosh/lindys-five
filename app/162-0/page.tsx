@@ -1,5 +1,5 @@
-import PlayClient from '@/components/perfectseason/PlayClient';
+import MlbBoard from '@/components/perfectseason/MlbBoard';
 
 export default function PerfectSeasonPage() {
-  return <PlayClient />;
+  return <MlbBoard />;
 }

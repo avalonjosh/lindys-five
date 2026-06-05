@@ -110,7 +110,7 @@ export default function SpinReveal({
         ? spin.franchise
         : null
       : boardSpin?.franchise ?? null;
-  const logo = landedFranchiseId ? franchiseLogo(landedFranchiseId) : null;
+  const logo = landedFranchiseId ? franchiseLogo(landedFranchiseId, data.sport) : null;
 
   const tile =
     'rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 text-center px-4 py-3 shadow-sm overflow-hidden';

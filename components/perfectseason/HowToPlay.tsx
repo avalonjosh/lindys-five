@@ -2,16 +2,19 @@
 
 import { useState } from 'react';
 
-const STEPS = [
-  'Press SPIN to reveal a decade and a franchise for the round.',
-  'Pick a player from that pool and tap a slot button to roster them.',
-  'Skip the team or the decade once each if you want a different pool.',
-  'After six picks, your season plays out. Chase 162-0.',
-];
+function steps(goal: string): string[] {
+  return [
+    'Press SPIN to reveal a decade and a franchise for the round.',
+    'Pick a player from that pool and tap a slot button to roster them.',
+    'Skip the team or the decade once each if you want a different pool.',
+    `After six picks, your season plays out. Chase ${goal}.`,
+  ];
+}
 
 /** One-time How To Play, reopenable. Collapsed by default. */
-export default function HowToPlay() {
+export default function HowToPlay({ goal }: { goal: string }) {
   const [open, setOpen] = useState(false);
+  const STEPS = steps(goal);
   return (
     <div className="rounded-2xl border-2 border-gray-200 bg-white shadow-sm">
       <button

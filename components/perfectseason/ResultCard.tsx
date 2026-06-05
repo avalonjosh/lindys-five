@@ -132,8 +132,8 @@ export default function ResultCard({ result, config, mode, picks, data, onPlayAg
             <li key={p.slotId} className="flex items-center justify-between gap-2 text-sm">
               <span className="truncate font-semibold text-gray-800">{p.playerName}</span>
               <span className="flex shrink-0 items-center gap-1 text-xs text-gray-500">
-                {franchiseLogo(p.spin.franchise) && (
-                  <img src={franchiseLogo(p.spin.franchise)!} alt="" className="h-4 w-auto" />
+                {franchiseLogo(p.spin.franchise, data.sport) && (
+                  <img src={franchiseLogo(p.spin.franchise, data.sport)!} alt="" className="h-4 w-auto" />
                 )}
                 <Decade value={p.spin.decade} /> {franchiseName(data, p.spin)}
               </span>

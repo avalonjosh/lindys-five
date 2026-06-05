@@ -72,7 +72,7 @@ export default function DailyResult({ record, config, variant, streak, played, o
       <div className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-xl">
         <div className="flex items-center justify-between">
           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-            Daily #{record.dayNumber} · {variant === 'blind' ? '🧠 BallIQ' : 'Classic'}
+            Daily #{record.dayNumber} · {variant === 'blind' ? `🧠 ${config.blindLabel}` : 'Classic'}
           </p>
           <span className="rounded-full bg-sabres-gold/15 px-2 py-0.5 text-[11px] font-bold text-sabres-navy">
             🔥 {streak.current} day{streak.current === 1 ? '' : 's'}
