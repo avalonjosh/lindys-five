@@ -20,6 +20,8 @@ interface SpinRevealProps {
   revealKey: string;
   round: number;
   totalRounds: number;
+  /** Tile styling: 'mlb' keeps the light tiles; 'nhl' uses 82-0.com-style navy/gold panels. */
+  tileVariant?: 'mlb' | 'nhl';
 }
 
 const ROLL_MS = 70; // how fast the reels cycle
@@ -41,6 +43,7 @@ export default function SpinReveal({
   revealKey,
   round,
   totalRounds,
+  tileVariant = 'mlb',
 }: SpinRevealProps) {
   const [stage, setStage] = useState(0); // 0 spinning, 1 decade landed, 2 both landed
   const [tick, setTick] = useState(0);
@@ -99,8 +102,10 @@ export default function SpinReveal({
   const decadeSpinning = rolling && stage < 1;
   const franchiseSpinning = !decadeOnly && rolling && stage < 2;
   // The board shows the resting spin muted; rolling and landed values are vivid.
-  const valueColor = rolling ? 'text-sabres-blue' : 'text-gray-400';
-  const franchiseColor = decadeOnly ? 'text-sabres-blue' : valueColor;
+  const nhl = tileVariant === 'nhl';
+  const labelColor = nhl ? 'text-white/60' : 'text-gray-500';
+  const valueColor = nhl ? (rolling ? 'text-white' : 'text-white/70') : rolling ? 'text-sabres-blue' : 'text-gray-400';
+  const franchiseColor = decadeOnly ? (nhl ? 'text-white' : 'text-sabres-blue') : valueColor;
 
   // Logo shows on the landed franchise (or the board's resting one).
   const landedFranchiseId = decadeOnly
@@ -112,8 +117,9 @@ export default function SpinReveal({
       : boardSpin?.franchise ?? null;
   const logo = landedFranchiseId ? franchiseLogo(landedFranchiseId, data.sport) : null;
 
-  const tile =
-    'rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 text-center px-4 py-3 shadow-sm overflow-hidden';
+  const tile = nhl
+    ? 'rounded-2xl border-2 border-sabres-gold/40 bg-gradient-to-br from-sabres-navy to-sabres-blue text-center px-4 py-4 shadow-md overflow-hidden'
+    : 'rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 text-center px-4 py-3 shadow-sm overflow-hidden';
 
   return (
     <div className="text-center">
@@ -138,7 +144,7 @@ export default function SpinReveal({
 
       <div className="flex items-stretch justify-center gap-2">
         <div className={`${tile} transition-transform ${decadeSpinning ? 'scale-[0.97]' : 'scale-100'}`}>
-          <div className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Decade</div>
+          <div className={`text-[10px] font-bold uppercase tracking-wide ${labelColor}`}>Decade</div>
           <div
             className={`text-2xl font-bold ${valueColor} ${decadeSpinning ? 'blur-[1px] opacity-80' : ''}`}
             style={{ fontFamily: 'Bebas Neue, sans-serif' }}
@@ -147,7 +153,7 @@ export default function SpinReveal({
           </div>
         </div>
         <div className={`${tile} flex-1 max-w-[260px] transition-transform ${franchiseSpinning ? 'scale-[0.97]' : 'scale-100'}`}>
-          <div className="text-[10px] font-bold uppercase tracking-wide text-gray-500">Franchise</div>
+          <div className={`text-[10px] font-bold uppercase tracking-wide ${labelColor}`}>Franchise</div>
           <div
             className={`flex items-center justify-center gap-1.5 text-xl font-bold leading-tight ${franchiseColor} ${franchiseSpinning ? 'blur-[1px] opacity-80' : ''}`}
             style={{ fontFamily: 'Bebas Neue, sans-serif' }}

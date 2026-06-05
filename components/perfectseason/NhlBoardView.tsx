@@ -156,6 +156,7 @@ export default function NhlBoardView(props: GameProps) {
                 revealKey={spinKey}
                 round={state.round}
                 totalRounds={total}
+                tileVariant="nhl"
               />
               {phase === 'board' && (
                 <>
