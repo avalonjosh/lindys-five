@@ -9,7 +9,6 @@ import { usePerfectSeasonGame } from './usePerfectSeasonGame';
 import { SPORT_UI } from './sportUi';
 import SpinReveal from './SpinReveal';
 import DailyResult from './DailyResult';
-import ResultCard from './ResultCard';
 import FranchisePicker from './FranchisePicker';
 import HowToPlay from './HowToPlay';
 import Decade from './Decade';
@@ -18,6 +17,7 @@ import Rink from './nhl/Rink';
 import RosterCircles from './nhl/RosterCircles';
 import PositionSheet from './nhl/PositionSheet';
 import RinkPlayerList from './nhl/RinkPlayerList';
+import RinkResult from './nhl/RinkResult';
 
 /** 82-0.com-style NHL board: two columns on desktop (controls/list + rink),
  *  stacked on mobile (list + bottom position circles + a Choose Position sheet). */
@@ -93,8 +93,8 @@ export default function NhlBoardView(props: GameProps) {
     if (source === 'free') {
       return (
         <Shell {...shellProps}>
-          <div className="mx-auto max-w-[480px]">
-            <ResultCard result={state.result} config={config} mode={mode} picks={state.picks} data={data} onPlayAgain={newGame} />
+          <div className="mx-auto max-w-[560px]">
+            <RinkResult result={state.result} config={config} mode={mode} picks={state.picks} data={data} onPlayAgain={newGame} />
           </div>
         </Shell>
       );
