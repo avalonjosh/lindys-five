@@ -259,7 +259,7 @@ export default function NhlBoardView(props: GameProps) {
       </div>
 
       {/* MOBILE: roster circles pinned at the bottom */}
-      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-gray-200 bg-white/95 px-3 py-2 backdrop-blur md:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-gray-200 bg-white/95 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden">
         <div className="mx-auto max-w-[480px]">
           <RosterCircles slots={config.slots} picks={state.picks} sport={sport} />
         </div>

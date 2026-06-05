@@ -40,10 +40,16 @@ export default function PositionSheet({ player, config, picks, legal, onAssign, 
   return (
     <div className="fixed inset-0 z-30 flex items-end justify-center" role="dialog" aria-modal="true">
       <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 bg-black/30" />
-      <div className="relative w-full max-w-[480px] rounded-t-2xl bg-white p-4 pb-6 shadow-2xl">
+      <div className="animate-sheet-up relative w-full max-w-[480px] rounded-t-2xl bg-white p-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl">
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-300" aria-hidden />
         <div className="mb-3 flex items-center justify-between">
           <p className="text-base font-bold text-gray-900">{player.name} — Choose Position</p>
-          <button type="button" onClick={onClose} className="text-xl leading-none text-gray-400 hover:text-gray-600">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="flex h-11 w-11 items-center justify-center text-2xl leading-none text-gray-400 hover:text-gray-600"
+          >
             ×
           </button>
         </div>
