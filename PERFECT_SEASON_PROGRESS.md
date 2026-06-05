@@ -415,3 +415,34 @@ Notes:
 - Thin partial-decade pools (e.g. 1970s EDM/HFD/QUE/WIN = a single 1979-80
   season; 1990s NSH/ATL) are naturally excluded by the existing schedule
   pool-size guard; no special handling needed.
+
+### 12.7 NHL verdict copy (finalized 2026-06-04)
+
+Drop-in copy for `config.nhl.ts` `verdict.standard` / `verdict.tank`. Same band
+shape as MLB (11 standard, 7 tank). Rescaled to 82 games and anchored to NHL
+benchmarks: all-time wins record 62 (1995-96 DET, 2018-19 TBL), playoff cutline
+~44-46 wins, .500 = 41. Tank references kept timeless (the lottery, a
+generational prospect) so they do not age. No em dashes (project rule). Lower
+bands list higher `min` first; "first band whose min is met wins."
+
+Standard (higher wins better):
+- 82: "PERFECTION. 82-0. Nobody has ever done this."
+- 75: "Immortal. The greatest season ever assembled."
+- 67: "A dynasty. They will tell stories about this team."
+- 62: "A juggernaut. You matched the all-time wins record."
+- 55: "A powerhouse. The Presidents' Trophy is a formality."
+- 48: "A real contender. Home ice is locked up."
+- 42: "Right around .500. A playoff push that could go either way."
+- 36: "On the wrong side of the bubble. Golf in April."
+- 28: "Lottery-bound. The playoffs start without you."
+- 18: "A brutal winter. Bottom of the league."
+- 0: "Historically bad. Mercifully, it is over."
+
+Tank (fewer wins better):
+- 66: "You accidentally tried. This roster is too good to lose."
+- 50: "Too competitive. The veterans keep stealing two points."
+- 38: "Middling. The tank stalled in the standings."
+- 26: "Now we are tanking. The lottery is in sight."
+- 14: "A generational lottery position. Beautiful."
+- 1: "Historic futility. The front office is thrilled."
+- 0: "0-82. The Perfect Tank. This should be impossible."
