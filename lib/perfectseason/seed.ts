@@ -57,6 +57,11 @@ export function dayNumber(dateString: string): number {
   return daysBetween(DAILY_EPOCH, dateString) + 1;
 }
 
+/** Human label for a daily, e.g. "June 5". Noon-anchored so the day never shifts. */
+export function dailyDateLabel(dateString: string): string {
+  return new Date(`${dateString}T12:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+}
+
 /** Deterministic RNG for a given sport and date. */
 export function dailyRng(sport: string, dateString: string): () => number {
   return mulberry32(hashString(`L5-${sport}-${dateString}`));

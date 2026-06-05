@@ -194,7 +194,7 @@ export default function BoardView(props: BoardViewProps) {
 
   return (
     <Shell {...shellProps} roundLabel={`Round ${Math.min(state.round + 1, total)}/${total}`} subBar={controlsBar}>
-      {(isTank || isFranchise || blind) && (
+      {(isTank || isFranchise || (blind && !inProgress)) && (
         <div
           className={`mx-auto mb-3 max-w-[820px] rounded-xl px-3 py-2 text-center text-xs font-bold uppercase tracking-wide ${
             isTank ? 'bg-sabres-red/10 text-sabres-red' : blind ? 'bg-sabres-navy/5 text-sabres-navy' : 'bg-sabres-blue/10 text-sabres-blue'
@@ -381,7 +381,7 @@ function Shell({
       {/* Compact 82-0.com-style top bar: brand + 82-0 badge left, round right. */}
       <header className="border-b-4 shadow-lg" style={{ background: ui.bg, borderBottomColor: ui.border }}>
         <div className="mx-auto flex max-w-[860px] items-center justify-between gap-3 px-4 py-2.5">
-          <Link href={ui.home} className="flex min-w-0 items-center gap-2.5 transition-opacity hover:opacity-90">
+          <Link href="/" className="flex min-w-0 items-center gap-2.5 transition-opacity hover:opacity-90">
             <span className="text-2xl font-bold tracking-wider text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
               Lindy&apos;s Five
             </span>

@@ -6,6 +6,7 @@
 
 import type { SportConfig } from './types';
 import type { DailyRecord } from './storage';
+import { dailyDateLabel } from './seed';
 
 const EMOJI = { green: '🟩', yellow: '🟨', gray: '⬜' } as const;
 
@@ -16,8 +17,9 @@ function shortDecade(d: string): string {
 export function buildDailyShare(rec: DailyRecord, config: SportConfig, variant: 'classic' | 'blind'): string {
   const title = config.sport === 'mlb' ? '162-0' : '82-0';
   const brain = variant === 'blind' ? ' 🧠' : '';
+  const label = rec.date ? dailyDateLabel(rec.date) : `Daily #${rec.dayNumber}`;
   const lines: string[] = [
-    `${title} ${config.shareIcon} Daily #${rec.dayNumber}${brain}`,
+    `${title} ${config.shareIcon} ${label}${brain}`,
     `🏆 ${rec.wins}-${rec.losses} · ${rec.setsWon}/${rec.totalSets} sets`,
     '',
   ];

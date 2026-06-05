@@ -137,16 +137,18 @@ export default function BoardPlayerList({ players, config, blind, selectedId, ge
                     {blocked && <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">No open slots</span>}
                   </div>
                 </div>
-                {!blind && (
-                  <div className="flex shrink-0 gap-2.5">
-                    {cells.map((cell) => (
-                      <div key={cell.label} className="w-9 text-center">
+                <div className="flex shrink-0 gap-2.5">
+                  {cells.map((cell) => (
+                    <div key={cell.label} className="w-9 text-center">
+                      {blind ? (
+                        <div className="select-none text-sm font-bold tracking-tight text-gray-300">•••</div>
+                      ) : (
                         <div className="text-sm font-bold text-gray-800">{cell.value}</div>
-                        <div className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">{cell.label}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      )}
+                      <div className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">{cell.label}</div>
+                    </div>
+                  ))}
+                </div>
               </button>
             </li>
           );

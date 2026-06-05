@@ -1,11 +1,10 @@
 import type { Metadata } from 'next';
-import { dayNumber, easternDateString } from '@/lib/perfectseason/seed';
+import { dailyDateLabel, easternDateString } from '@/lib/perfectseason/seed';
 
-// Dynamic so the social unfurl carries today's day number (spec Section 10).
+// Dynamic so the social unfurl carries today's daily date (spec Section 10).
 export function generateMetadata(): Metadata {
-  const n = dayNumber(easternDateString());
   const title = 'Can you go 82-0?';
-  const subtitle = `Daily #${n} · Draft an all-time NHL roster`;
+  const subtitle = `${dailyDateLabel(easternDateString())} · Draft an all-time NHL roster`;
   const og = `/api/og?type=sport-hub&sport=nhl&title=${encodeURIComponent(title)}&subtitle=${encodeURIComponent(subtitle)}`;
   return {
     title: '82-0 — The Perfect Season (NHL)',

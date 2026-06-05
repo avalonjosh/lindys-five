@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { SportConfig } from '@/lib/perfectseason/types';
 import type { DailyRecord, Streak } from '@/lib/perfectseason/storage';
 import { buildDailyShare } from '@/lib/perfectseason/share';
+import { dailyDateLabel } from '@/lib/perfectseason/seed';
 import ResultBoard, { type RosterEntry } from './ResultBoard';
 
 interface NhlDailyResultProps {
@@ -56,9 +57,7 @@ export default function NhlDailyResult({ record, config, variant, streak, played
     stats: c.stats ?? [],
   }));
 
-  const dayLabel = record.date
-    ? new Date(`${record.date}T12:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
-    : `Daily #${record.dayNumber}`;
+  const dayLabel = record.date ? dailyDateLabel(record.date) : `Daily #${record.dayNumber}`;
 
   const onShare = async () => {
     const shareText = buildDailyShare(record, config, variant);
