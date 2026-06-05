@@ -137,6 +137,12 @@ onboarding, attribution).
 - **Board redesign to nhl82.ca one-page style**: `/162-0` is the playable board
   (no hub), manual SPIN button, vertical roster, search + position filters,
   inline slot-assign buttons.
+- **Launch sequencing REVERSED (owner override, 2026-06-04)**: the spec
+  (Section 16) said NHL waits until the MLB game ships. Josh overrode this. MLB
+  (`162-0`) stays private/quiet-shipped as-is and must NOT go live until NHL
+  (`82-0`) is finished; the two launch together. So NHL development is NOT gated
+  on an MLB launch anymore. 7a (`build-nhl-data.ts`) is unblocked except for
+  Josh's explicit go-ahead to start coding (currently on a "do not code" hold).
 
 ---
 
@@ -340,8 +346,10 @@ became the single source for all decades. No Kaggle needed.
   Plante) and DET (Howe/Sawchuk); 1980s EDM (Gretzky 1532 P, Kurri, Messier,
   Coffey).
 
-**7a is now gated ONLY on MLB shipping** (per spec, NHL waits for the MLB game to
-launch). The data is in hand; nothing else blocks the build.
+**7a is no longer gated on MLB shipping** (sequencing reversed; see Section 7
+override 2026-06-04: MLB holds until NHL is finished, then both launch together).
+The data is in hand; the only hold on 7a is Josh's explicit go-ahead to start
+coding.
 
 Position note for 7a: the NHL API gives one positionCode per player-season, not
 appearance splits, so the spec's "20% of appearances" eligibility rule does not
