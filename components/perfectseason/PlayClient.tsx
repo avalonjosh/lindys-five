@@ -1,39 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import type {
-  GameData,
-  ModeDescriptor,
-  ModeType,
-  RoundTree,
-  Sport,
-  Spin,
-  SportConfig,
-} from '@/lib/perfectseason/types';
-import { generateDay, generateFranchiseDay, poolPlayers } from '@/lib/perfectseason/schedule';
-import { mulberry32, easternDateString } from '@/lib/perfectseason/seed';
+import type { Sport } from '@/lib/perfectseason/types';
 import {
   canSkipDecade,
   canSkipTeam,
-  createGame,
   currentSpin,
   legalSlots,
   openSlots,
-  reduce,
   spinPlayers,
-  type Action,
-  type EngineState,
 } from '@/lib/perfectseason/engine';
-import {
-  getDaily,
-  getStats,
-  getStreak,
-  recordDaily,
-  type DailyRecord,
-  type GridCell,
-  type GridTier,
-} from '@/lib/perfectseason/storage';
+import { getStats, getStreak } from '@/lib/perfectseason/storage';
 import RosterList from './RosterList';
 import SpinReveal from './SpinReveal';
 import PlayerList from './PlayerList';
@@ -43,214 +20,39 @@ import FranchisePicker from './FranchisePicker';
 import HowToPlay from './HowToPlay';
 import { franchiseLogo, franchiseName } from './ui';
 import Decade from './Decade';
+import { SPORT_UI } from './sportUi';
+import { usePerfectSeasonGame, type FreeType, type GameProps, type Source } from './usePerfectSeasonGame';
 
-const ROLL_TOTAL_MS = 1750;
+export type { ScheduleJson } from './usePerfectSeasonGame';
 
-export type ScheduleJson = { days: Record<string, { dayNumber: number; rounds: RoundTree[] }> };
-
-interface PlayClientProps {
-  sport: Sport;
-  data: GameData;
-  config: SportConfig;
-  schedule: ScheduleJson;
-  /** The idle preview spin shown on the starting board (a real pool). */
-  defaultSpin: Spin;
-}
-
-// Sport-specific header chrome (label, league shield, palette, home link). The
-// big data/config stay as props so route bundles do not include both sports.
-const SPORT_UI: Record<
-  Sport,
-  { label: string; logo: string; logoClass: string; bg: string; border: string; home: string }
-> = {
-  mlb: {
-    label: '162-0',
-    logo: 'https://www.mlbstatic.com/team-logos/league-on-dark/1.svg',
-    logoClass: 'h-6 w-auto',
-    bg: '#002D72',
-    border: '#041E42',
-    home: '/162-0',
-  },
-  nhl: {
-    label: '82-0',
-    logo: 'https://assets.nhle.com/logos/nhl/svg/NHL_light.svg',
-    // NHL shield is narrower (1.5 vs 1.78 aspect), so a touch taller matches the
-    // MLB logo's rendered width.
-    logoClass: 'h-7 w-auto',
-    bg: '#002D72',
-    border: '#041E42',
-    home: '/82-0',
-  },
-};
-
-type Phase = 'board' | 'rolling' | 'pick';
-type Source = 'daily' | 'free';
-type FreeType = 'standard' | 'tank' | 'franchise';
-
-function randomGame(data: GameData, config: SportConfig, type: 'standard' | 'tank'): EngineState {
-  const seed = Math.floor(Math.random() * 0xffffffff);
-  const sched = generateDay(data, config, easternDateString(), mulberry32(seed));
-  return createGame(data, config, sched.rounds, { type, source: 'free' });
-}
-
-function franchiseGame(data: GameData, config: SportConfig, franchiseId: string): EngineState {
-  const seed = Math.floor(Math.random() * 0xffffffff);
-  const sched = generateFranchiseDay(data, config, franchiseId, mulberry32(seed));
-  return createGame(data, config, sched.rounds, { type: 'franchise', source: 'free', franchiseId });
-}
-
-function dailyToday(
-  data: GameData,
-  config: SportConfig,
-  schedule: ScheduleJson,
-): { state: EngineState; dayNumber: number; date: string } | null {
-  const date = easternDateString();
-  const day = schedule.days[date];
-  if (!day) return null;
-  return {
-    state: createGame(data, config, day.rounds, { type: 'standard', source: 'daily' }),
-    dayNumber: day.dayNumber,
-    date,
-  };
-}
-
-function buildDailyRecord(
-  data: GameData,
-  config: SportConfig,
-  state: EngineState,
-  dayNumber: number,
-): DailyRecord {
-  const r = state.result!;
-  const grid: GridCell[] = state.picks.map((p) => {
-    const pool = poolPlayers(data, p.spin, config);
-    const higher = pool.filter((pl) => pl.score > p.score).length;
-    const tier: GridTier = higher === 0 ? 'green' : higher < 3 ? 'yellow' : 'gray';
-    const slot = config.slots.find((s) => s.id === p.slotId);
-    return {
-      slot: slot?.label ?? p.slotId,
-      decade: p.spin.decade,
-      franchise: franchiseName(data, p.spin),
-      tier,
-      skipped: p.skips.team || p.skips.decade,
-    };
-  });
-  return {
-    done: true,
-    dayNumber,
-    wins: r.wins,
-    losses: r.losses,
-    setsWon: r.setsWon,
-    totalSets: r.totalSets,
-    perfectSets: r.perfectSets,
-    verdict: r.verdict,
-    grid,
-    skips: { team: state.picks.some((p) => p.skips.team), decade: state.picks.some((p) => p.skips.decade) },
-  };
-}
-
-export default function PlayClient({ sport, data, config, schedule, defaultSpin }: PlayClientProps) {
-  const [source, setSource] = useState<Source>('daily');
-  const [freeType, setFreeType] = useState<FreeType>('standard');
-  const [franchiseId, setFranchiseId] = useState<string | null>(null);
-  const [variant, setVariant] = useState<'classic' | 'blind'>('classic');
-  const [state, setState] = useState<EngineState | null>(null);
-  const [phase, setPhase] = useState<Phase>('board');
-  const [undo, setUndo] = useState(false);
-  const [day, setDay] = useState<{ dayNumber: number; date: string } | null>(null);
-  const [record, setRecord] = useState<DailyRecord | null>(null);
-
-  const type: ModeType = source === 'daily' ? 'standard' : freeType;
-  const mode = useMemo<ModeDescriptor>(
-    () => ({ type, source, franchiseId: type === 'franchise' ? franchiseId ?? undefined : undefined }),
-    [type, source, franchiseId],
-  );
-
-  // Initialize / re-initialize when the mode changes.
-  useEffect(() => {
-    setUndo(false);
-    setPhase('board');
-    if (source === 'daily') {
-      const date = easternDateString();
-      const existing = getDaily(sport, date, variant);
-      if (existing) {
-        setRecord(existing);
-        setDay({ dayNumber: existing.dayNumber, date });
-        setState(null);
-        return;
-      }
-      const dg = dailyToday(data, config, schedule);
-      if (!dg) {
-        setSource('free');
-        return;
-      }
-      setRecord(null);
-      setDay({ dayNumber: dg.dayNumber, date: dg.date });
-      setState(dg.state);
-      return;
-    }
-    // Free Play
-    setRecord(null);
-    setDay(null);
-    if (freeType === 'franchise') {
-      setState(franchiseId ? franchiseGame(data, config, franchiseId) : null);
-      return;
-    }
-    setState(randomGame(data, config, freeType));
-  }, [sport, data, config, schedule, source, freeType, franchiseId, variant]);
-
-  // Lock and record a finished Daily once.
-  useEffect(() => {
-    if (source !== 'daily' || record || !state?.done || !state.result || !day) return;
-    const rec = buildDailyRecord(data, config, state, day.dayNumber);
-    recordDaily(sport, day.date, variant, rec);
-    setRecord(rec);
-  }, [sport, data, config, source, record, state, day, variant]);
-
-  const spinKey =
-    !state || state.done
-      ? 'idle'
-      : `${state.round}:${state.curTeamUsed ? 'T' : ''}${state.curDecadeUsed ? 'D' : ''}:${state.firstSkip ?? ''}`;
-
-  useEffect(() => {
-    if (phase !== 'rolling') return;
-    const reduceMotion =
-      typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const t = setTimeout(() => setPhase('pick'), reduceMotion ? 0 : ROLL_TOTAL_MS);
-    return () => clearTimeout(t);
-  }, [phase, spinKey]);
-
-  useEffect(() => {
-    if (!undo) return;
-    const t = setTimeout(() => setUndo(false), 4000);
-    return () => clearTimeout(t);
-  }, [undo]);
-
-  const dispatch = useCallback((a: Action) => setState((s) => (s ? reduce(s, a) : s)), []);
-
-  const commitAssign = useCallback((id: string, slotId: string) => {
-    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
-    setPhase('board');
-    setState((s) => (s ? reduce(reduce(s, { type: 'SELECT_PLAYER', id }), { type: 'ASSIGN_SLOT', slotId }) : s));
-    setUndo(true);
-  }, []);
-
-  const onSkip = (a: Action) => {
-    dispatch(a);
-    setPhase('rolling');
-  };
-
-  const newGame = useCallback(() => {
-    setUndo(false);
-    setPhase('board');
-    if (freeType === 'franchise' && franchiseId) setState(franchiseGame(data, config, franchiseId));
-    else if (freeType !== 'franchise') setState(randomGame(data, config, freeType));
-  }, [data, config, freeType, franchiseId]);
-
-  const chooseFreeType = (t: FreeType) => {
-    setSource('free');
-    setFreeType(t);
-    if (t === 'franchise') setFranchiseId(null);
-  };
+/**
+ * MLB ("stacked", single-column) board layout. Game logic lives in
+ * usePerfectSeasonGame; the NHL board renders a different layout on the same hook.
+ */
+export default function PlayClient(props: GameProps) {
+  const { sport, data, config, defaultSpin } = props;
+  const g = usePerfectSeasonGame(props);
+  const {
+    source,
+    freeType,
+    variant,
+    state,
+    phase,
+    undo,
+    record,
+    type,
+    mode,
+    spinKey,
+    setSource,
+    setVariant,
+    setPhase,
+    setFranchiseId,
+    commitAssign,
+    onSkip,
+    newGame,
+    undoPick,
+    chooseFreeType,
+  } = g;
 
   const shellProps = { sport, source, freeType, onSource: setSource, onFreeType: chooseFreeType };
 
@@ -271,7 +73,7 @@ export default function PlayClient({ sport, data, config, schedule, defaultSpin 
   }
 
   // --- Franchise picker ---
-  if (source === 'free' && freeType === 'franchise' && !franchiseId) {
+  if (source === 'free' && freeType === 'franchise' && !g.franchiseId) {
     return (
       <Shell {...shellProps}>
         <FranchisePicker data={data} onPick={setFranchiseId} />
@@ -448,11 +250,7 @@ export default function PlayClient({ sport, data, config, schedule, defaultSpin 
             <span className="text-sm font-semibold">Pick added</span>
             <button
               type="button"
-              onClick={() => {
-                dispatch({ type: 'UNDO' });
-                setUndo(false);
-                setPhase('pick');
-              }}
+              onClick={undoPick}
               className="text-sm font-bold uppercase tracking-wide text-sabres-gold"
             >
               Undo
