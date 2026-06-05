@@ -250,14 +250,16 @@ Also tracked in Claude's memory at
 **Prerequisite (Josh):** drop the Kaggle NHL CSVs into `raw-data/nhl/`. Inspect
 the real column names BEFORE writing the parser.
 
-- **7a — Data pipeline.** New `scripts/build-nhl-data.ts` + committed
-  `data/nhl-data.json`. Stints by (player, franchise, decade); per-82 skater
-  stats (>= 150 GP), era-normalized goalie SV%/GAA (>= 80 GP); >= 20% position
-  eligibility. Hand-maintained franchise lineage table in the script (Nordiques
-  to COL, Whalers to CAR, Thrashers to WPG, Jets 1.0 decision documented, etc.).
-  CHECKPOINT: print the 10 spec pools (80s Oilers, 70s Canadiens, 70s Bruins, 90s
-  Red Wings, 00s Avalanche, 80s Islanders, 90s Penguins, 00s Devils, 10s
-  Blackhawks, 70s Sabres) for eyeball check.
+- **7a — Data pipeline. DONE, approved 2026-06-04.** `scripts/build-nhl-data.ts`
+  + committed `data/nhl-data.json`. Stints by (player, franchise, decade); per-82
+  skater stats (>= 150 GP), era-normalized goalie SV%/GAA (>= 80 GP); >= 20%
+  position eligibility; franchise lineage per Section 12.6 hardcoded in the
+  script. Output: 5,219 players (4,718 skaters, 501 goalies), 175 pools, 32
+  franchises, ~580 KB. All 10 hand-check pools approved (Gretzky/Dryden/Orr/
+  Bossy/Jagr/Roy/Brodeur/Kane/French Connection all resolve correctly). Scoring
+  is stat-based: durability weighting puts Lemieux (98.2, missed 90s seasons)
+  just behind Jagr (100); 80s goalie GAAs read high but era-normalization keeps
+  cross-decade scoring fair.
 
 - **7b — Config + calibration.** New `lib/perfectseason/config.nhl.ts`: slots
   LW/C/RW/D1/D2/G (generic D pair, not LD/RD; sources record only "D" — spec
