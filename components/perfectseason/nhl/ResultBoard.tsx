@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { Sport } from '@/lib/perfectseason/types';
 import type { GridTier } from '@/lib/perfectseason/storage';
-import { franchiseColor, franchiseLogo, shortDecade } from '../ui';
+import { franchiseColor, shortDecade } from '../ui';
 
 export interface RosterEntry {
   slotLabel: string;
@@ -114,7 +114,6 @@ export default function ResultBoard({
       {/* Tinted roster cards. */}
       <div className="flex flex-col gap-2">
         {roster.map((r, i) => {
-          const logo = franchiseLogo(r.franchiseId, sport);
           return (
             <div key={`${r.slotLabel}-${i}`} className={`flex items-center gap-3 rounded-xl border border-l-4 border-gray-100 p-2.5 ${CARD_TINT[r.tier]}`}>
               <span
@@ -126,8 +125,7 @@ export default function ResultBoard({
               </span>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-bold text-gray-900">{r.playerName}</div>
-                <div className="flex items-center gap-1 text-[11px] text-gray-500">
-                  {logo && <img src={logo} alt="" className="h-3.5 w-auto" />}
+                <div className="text-[11px] font-semibold text-gray-500">
                   {r.franchiseId} · {shortDecade(r.decade)}
                 </div>
               </div>

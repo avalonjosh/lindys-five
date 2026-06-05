@@ -77,13 +77,10 @@ export default function NhlDailyResult({ record, config, variant, streak, played
 
   return (
     <div className="flex flex-col gap-4 py-2">
-      <div className="flex items-center justify-between px-1">
+      <div className="px-1">
         <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
           {dayLabel} · {variant === 'blind' ? `🧠 ${config.blindLabel}` : 'Classic'}
         </p>
-        <span className="rounded-full bg-sabres-gold/15 px-2 py-0.5 text-[11px] font-bold text-sabres-navy">
-          🔥 {streak.current} day{streak.current === 1 ? '' : 's'}
-        </span>
       </div>
 
       <ResultBoard

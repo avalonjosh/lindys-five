@@ -2,7 +2,7 @@
 
 import type { SlotDef, Sport } from '@/lib/perfectseason/types';
 import type { PickRecord } from '@/lib/perfectseason/engine';
-import { franchiseLogo } from '../ui';
+import { franchiseColor } from '../ui';
 
 interface RinkProps {
   slots: SlotDef[];
@@ -56,18 +56,21 @@ export default function Rink({ slots, picks, sport, legalSlotIds, selecting, onA
         const at = POS[slot.id] ?? { left: '50%', top: '50%' };
         const pick = bySlot.get(slot.id);
         const open = !pick && selecting && legalSlotIds.has(slot.id);
-        const logo = pick ? franchiseLogo(pick.spin.franchise, sport) : null;
         return (
           <button
             key={slot.id}
             type="button"
             disabled={!open}
             onClick={() => open && onAssign(slot.id)}
-            style={{ left: at.left, top: at.top }}
+            style={{
+              left: at.left,
+              top: at.top,
+              ...(pick ? { background: franchiseColor(pick.spin.franchise, sport) ?? '#003087' } : {}),
+            }}
             className={[
-              'absolute flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-xl text-center transition-all',
+              'absolute flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-xl text-center transition-all',
               pick
-                ? 'border-2 border-sabres-blue bg-white shadow-md'
+                ? 'text-white shadow-md ring-1 ring-black/20'
                 : open
                   ? 'animate-pulse cursor-pointer border-2 border-sabres-gold bg-sabres-gold/15 shadow-lg'
                   : 'border-2 border-dashed border-gray-300 bg-white/70',
@@ -75,11 +78,10 @@ export default function Rink({ slots, picks, sport, legalSlotIds, selecting, onA
           >
             {pick ? (
               <>
-                {logo && <img src={logo} alt="" className="h-4 w-auto" />}
-                <span className="text-[11px] font-bold leading-none text-sabres-navy" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                <span className="text-lg font-bold leading-none" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
                   {initials(pick.playerName)}
                 </span>
-                <span className="text-[8px] font-bold uppercase text-gray-400">{slot.label}</span>
+                <span className="mt-0.5 text-[9px] font-bold uppercase leading-none text-white/70">{slot.label}</span>
               </>
             ) : (
               <span className={`text-xs font-bold uppercase ${open ? 'text-sabres-navy' : 'text-gray-400'}`}>{slot.label}</span>

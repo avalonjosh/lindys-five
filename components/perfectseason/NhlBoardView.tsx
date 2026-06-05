@@ -257,11 +257,6 @@ export default function NhlBoardView(props: GameProps) {
         {/* RIGHT: rink (desktop only) */}
         <div className="hidden min-w-0 md:block">
           <div className="sticky top-4">
-            {!inProgress && (
-              <div className="mb-2 flex items-center justify-end">
-                <HelpButton onClick={openHelp} pulse={!helpSeen} />
-              </div>
-            )}
             <Rink
               slots={config.slots}
               picks={state.picks}
@@ -273,6 +268,11 @@ export default function NhlBoardView(props: GameProps) {
             <p className="mt-2 text-center text-xs font-semibold text-gray-500">
               {selectedPlayer ? `Placing ${selectedPlayer.name} — click a spot` : `${filled}/${total} positions filled`}
             </p>
+            {!inProgress && (
+              <div className="mt-2 flex items-center justify-end">
+                <HelpButton onClick={openHelp} pulse={!helpSeen} />
+              </div>
+            )}
           </div>
         </div>
       </div>

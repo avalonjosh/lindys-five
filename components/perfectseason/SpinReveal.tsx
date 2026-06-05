@@ -115,7 +115,8 @@ export default function SpinReveal({
         ? spin.franchise
         : null
       : boardSpin?.franchise ?? null;
-  const logo = landedFranchiseId ? franchiseLogo(landedFranchiseId, data.sport) : null;
+  // The NHL franchise tile is a light (gold/cream) panel, so use the colored logo.
+  const logo = landedFranchiseId ? franchiseLogo(landedFranchiseId, data.sport, 'light') : null;
 
   const tile = nhl
     ? 'rounded-2xl border-2 border-sabres-gold bg-gradient-to-br from-amber-50 to-amber-100 text-center px-4 py-4 shadow-md overflow-hidden'

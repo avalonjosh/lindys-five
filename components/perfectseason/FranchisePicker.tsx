@@ -19,7 +19,7 @@ function recentName(names: Record<string, string>, activeDecades: string[]): str
 /** Choose a franchise to build an all-time team for (Franchise mode). */
 export default function FranchisePicker({ data, onPick }: FranchisePickerProps) {
   const franchises = data.franchises
-    .map((f) => ({ id: f.id, name: recentName(f.names, f.activeDecades), logo: franchiseLogo(f.id, data.sport) }))
+    .map((f) => ({ id: f.id, name: recentName(f.names, f.activeDecades), logo: franchiseLogo(f.id, data.sport, 'light') }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return (

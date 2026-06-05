@@ -32,9 +32,11 @@ const MLB_FRANCHISE_ID: Record<string, number> = {
  * NHL franchise ids are the current triCodes, so they resolve straight to the
  * NHL asset CDN; MLB ids go through the Lahman -> MLB Stats id map.
  */
-export function franchiseLogo(franchiseId: string, sport: Sport): string | null {
+export function franchiseLogo(franchiseId: string, sport: Sport, onBg: 'light' | 'dark' = 'dark'): string | null {
   if (sport === 'nhl') {
-    return `https://assets.nhle.com/logos/nhl/svg/${franchiseId}_dark.svg`;
+    // NHL has two variants: `_dark` is the white logo for dark backgrounds,
+    // `_light` is the colored logo for light backgrounds.
+    return `https://assets.nhle.com/logos/nhl/svg/${franchiseId}_${onBg}.svg`;
   }
   const id = MLB_FRANCHISE_ID[franchiseId];
   return id ? `https://www.mlbstatic.com/team-logos/${id}.svg` : null;
