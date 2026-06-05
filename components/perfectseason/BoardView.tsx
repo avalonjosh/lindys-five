@@ -1,27 +1,45 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentType } from 'react';
 import Link from 'next/link';
-import { canSkipDecade, canSkipTeam, currentSpin, legalSlots, spinPlayers } from '@/lib/perfectseason/engine';
+import { canSkipDecade, canSkipTeam, currentSpin, legalSlots, spinPlayers, type PickRecord } from '@/lib/perfectseason/engine';
 import { getStats, getStreak } from '@/lib/perfectseason/storage';
+import type { SlotDef, Sport } from '@/lib/perfectseason/types';
 import type { FreeType, GameProps, Source } from './usePerfectSeasonGame';
 import { usePerfectSeasonGame } from './usePerfectSeasonGame';
 import { SPORT_UI } from './sportUi';
 import SpinReveal from './SpinReveal';
-import NhlDailyResult from './nhl/NhlDailyResult';
+import BoardDailyResult from './board/BoardDailyResult';
 import FranchisePicker from './FranchisePicker';
-import HowToPlaySheet, { HelpButton } from './nhl/HowToPlaySheet';
+import HowToPlaySheet, { HelpButton } from './board/HowToPlaySheet';
 import { franchiseColor, franchiseLogo, franchiseName, shortDecade } from './ui';
-import Rink from './nhl/Rink';
-import RosterCircles from './nhl/RosterCircles';
-import PositionSheet from './nhl/PositionSheet';
-import RinkPlayerList from './nhl/RinkPlayerList';
-import RinkResult from './nhl/RinkResult';
+import RosterStrip from './board/RosterStrip';
+import PositionSheet from './board/PositionSheet';
+import BoardPlayerList from './board/BoardPlayerList';
+import BoardResult from './board/BoardResult';
 
-/** 82-0.com-style NHL board: two columns on desktop (controls/list + rink),
- *  stacked on mobile (list + bottom position circles + a Choose Position sheet). */
-export default function NhlBoardView(props: GameProps) {
-  const { sport, data, config, defaultSpin } = props;
+/** The field-diagram component (rink for NHL, diamond for MLB). */
+export type DiagramProps = {
+  slots: SlotDef[];
+  picks: PickRecord[];
+  sport: Sport;
+  legalSlotIds: Set<string>;
+  selecting: boolean;
+  onAssign: (slotId: string) => void;
+};
+
+export interface BoardViewProps extends GameProps {
+  /** The desktop field diagram (Rink / Diamond). */
+  Diagram: ComponentType<DiagramProps>;
+  /** Where players are placed, for the How-To copy: "ice" / "field". */
+  surface: string;
+}
+
+/** 82-0.com-style board, shared by both sports: two columns on desktop
+ *  (controls/list + field diagram), stacked on mobile (list + bottom position
+ *  circles + a Choose Position sheet). */
+export default function BoardView(props: BoardViewProps) {
+  const { sport, data, config, defaultSpin, Diagram, surface } = props;
   const g = usePerfectSeasonGame(props);
   const {
     source,
@@ -82,7 +100,7 @@ export default function NhlBoardView(props: GameProps) {
     return (
       <Shell {...shellProps}>
         <div className="mx-auto max-w-[480px]">
-          <NhlDailyResult
+          <BoardDailyResult
             record={record}
             config={config}
             variant={variant}
@@ -118,7 +136,7 @@ export default function NhlBoardView(props: GameProps) {
       return (
         <Shell {...shellProps}>
           <div className="mx-auto max-w-[560px]">
-            <RinkResult result={state.result} config={config} mode={mode} picks={state.picks} data={data} onPlayAgain={newGame} />
+            <BoardResult result={state.result} config={config} mode={mode} picks={state.picks} data={data} onPlayAgain={newGame} />
           </div>
         </Shell>
       );
@@ -156,7 +174,9 @@ export default function NhlBoardView(props: GameProps) {
           className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold text-white shadow-sm"
           style={{ background: franchiseColor(spin.franchise, sport) ?? '#003087' }}
         >
-          {franchiseLogo(spin.franchise, sport) && (
+          {/* NHL has a white logo variant for the team-color pill; MLB logos are
+              single-color and would clash on the team background, so show the abbrev only. */}
+          {sport === 'nhl' && franchiseLogo(spin.franchise, sport) && (
             <img src={franchiseLogo(spin.franchise, sport)!} alt="" className="h-4 w-auto shrink-0" />
           )}
           {spin.franchise}
@@ -241,7 +261,7 @@ export default function NhlBoardView(props: GameProps) {
                 {players.length} available · {selectedPlayer ? 'choose a spot' : isTank ? 'pick a bad one' : 'pick one'} · {filled}/{total} filled
               </p>
               <div className="mt-3">
-                <RinkPlayerList
+                <BoardPlayerList
                   players={players}
                   config={config}
                   blind={blind}
@@ -254,10 +274,10 @@ export default function NhlBoardView(props: GameProps) {
           )}
         </div>
 
-        {/* RIGHT: rink (desktop only) */}
+        {/* RIGHT: field diagram (desktop only) */}
         <div className="hidden min-w-0 md:block">
           <div className="sticky top-4">
-            <Rink
+            <Diagram
               slots={config.slots}
               picks={state.picks}
               sport={sport}
@@ -285,7 +305,7 @@ export default function NhlBoardView(props: GameProps) {
           </div>
         )}
         <div className="mx-auto max-w-[480px]">
-          <RosterCircles slots={config.slots} picks={state.picks} sport={sport} />
+          <RosterStrip slots={config.slots} picks={state.picks} sport={sport} />
         </div>
       </div>
 
@@ -303,7 +323,7 @@ export default function NhlBoardView(props: GameProps) {
         </div>
       )}
 
-      <HowToPlaySheet open={helpOpen} onClose={() => setHelpOpen(false)} goal={`${config.games}-0`} />
+      <HowToPlaySheet open={helpOpen} onClose={() => setHelpOpen(false)} goal={`${config.games}-0`} surface={surface} slotCount={config.slots.length} />
 
       {undo && (
         <div className="fixed inset-x-0 bottom-20 z-20 flex justify-center px-4 md:bottom-4">

@@ -63,6 +63,7 @@ export default function RinkResult({ result, config, mode, picks, data, onPlayAg
         rating={rating.rating}
         grade={rating.grade}
         tier={rating.tier}
+        totalStats={config.totalStats}
         roster={roster}
       />
 

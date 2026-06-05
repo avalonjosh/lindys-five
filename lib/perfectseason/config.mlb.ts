@@ -30,6 +30,19 @@ export const mlbConfig: SportConfig = {
     bat: ['hr', 'rbi', 'avg', 'ops'],
     pitch: ['w', 'era', 'whip', 'so'],
   },
+  positionGroups: [
+    { key: 'All', accepts: null },
+    { key: 'SP', accepts: ['SP'] },
+    { key: 'C', accepts: ['C'] },
+    { key: '1B', accepts: ['1B'] },
+    { key: '2B', accepts: ['2B'] },
+    { key: '3B', accepts: ['3B'] },
+    { key: 'SS', accepts: ['SS'] },
+    { key: 'LF', accepts: ['LF'] },
+    { key: 'CF', accepts: ['CF'] },
+    { key: 'RF', accepts: ['RF'] },
+  ],
+  totalStats: ['HR', 'RBI'],
   verdict: {
     // Standard: higher win totals are better. First band whose min is met wins.
     standard: [

@@ -69,6 +69,12 @@ export interface VerdictBand {
   line: string;
 }
 
+/** A player-list filter chip: a label and the positions it matches (null = All). */
+export interface PositionGroup {
+  key: string;
+  accepts: string[] | null;
+}
+
 export interface SportConfig {
   sport: Sport;
   games: number;
@@ -77,6 +83,10 @@ export interface SportConfig {
   setSizes: number[];
   /** Compact stat keys shown on a player row, in order, per player kind. */
   statColumns: { bat: string[]; pitch: string[] };
+  /** Player-list filter chips (board player list). */
+  positionGroups: PositionGroup[];
+  /** Stat labels to sum in the result "team totals" row, e.g. ['G','A','P']. */
+  totalStats: string[];
   verdict: { standard: VerdictBand[]; tank: VerdictBand[] };
   blindLabel: string;
   shareIcon: string;

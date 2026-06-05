@@ -32,6 +32,15 @@ export const nhlConfig: SportConfig = {
     bat: ['g', 'a', 'p', 'plusMinus'], // skaters
     pitch: ['svp', 'gaa', 'w', 'so'], // goalies
   },
+  positionGroups: [
+    { key: 'All', accepts: null },
+    { key: 'C', accepts: ['C'] },
+    { key: 'LW', accepts: ['LW'] },
+    { key: 'RW', accepts: ['RW'] },
+    { key: 'D', accepts: ['D'] },
+    { key: 'G', accepts: ['G'] },
+  ],
+  totalStats: ['G', 'A', 'P'],
   verdict: {
     // Standard: higher win totals are better. First band whose min is met wins.
     standard: [

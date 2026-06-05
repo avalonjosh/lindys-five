@@ -16,15 +16,27 @@ export function HelpButton({ onClick, pulse = false }: { onClick: () => void; pu
   );
 }
 
-const STEPS = (goal: string): string[] => [
+const STEPS = (goal: string, surface: string, slotCount: number): string[] => [
   'Press SPIN to reveal a decade and a franchise for the round.',
-  'Pick a player from that pool, then place them at a position on the ice.',
+  `Pick a player from that pool, then place them at a position on the ${surface}.`,
   'Skip the team or the decade once each if you want a different pool.',
-  `After six picks, your season plays out. Chase ${goal}.`,
+  `After ${slotCount} picks, your season plays out. Chase ${goal}.`,
 ];
 
 /** How To Play overlay: a bottom sheet on mobile, a centered modal on desktop. */
-export default function HowToPlaySheet({ open, onClose, goal }: { open: boolean; onClose: () => void; goal: string }) {
+export default function HowToPlaySheet({
+  open,
+  onClose,
+  goal,
+  surface = 'ice',
+  slotCount = 6,
+}: {
+  open: boolean;
+  onClose: () => void;
+  goal: string;
+  surface?: string;
+  slotCount?: number;
+}) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center md:items-center" role="dialog" aria-modal="true">
@@ -45,7 +57,7 @@ export default function HowToPlaySheet({ open, onClose, goal }: { open: boolean;
           </button>
         </div>
         <ol className="flex flex-col gap-3">
-          {STEPS(goal).map((line, i) => (
+          {STEPS(goal, surface, slotCount).map((line, i) => (
             <li key={i} className="flex gap-3 text-sm text-gray-700">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sabres-blue text-xs font-bold text-white">
                 {i + 1}

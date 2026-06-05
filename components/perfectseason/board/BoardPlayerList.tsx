@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import type { Player, SlotDef, SportConfig } from '@/lib/perfectseason/types';
-import { statCells } from '../ui';
+import { posTint, statCells } from '../ui';
 
-interface RinkPlayerListProps {
+interface BoardPlayerListProps {
   players: Player[];
   config: SportConfig;
   blind: boolean;
@@ -13,23 +13,8 @@ interface RinkPlayerListProps {
   onSelect: (player: Player) => void;
 }
 
-// NHL position filters: All plus each individual position.
-const GROUPS: { key: string; accepts: string[] | null }[] = [
-  { key: 'All', accepts: null },
-  { key: 'C', accepts: ['C'] },
-  { key: 'LW', accepts: ['LW'] },
-  { key: 'RW', accepts: ['RW'] },
-  { key: 'D', accepts: ['D'] },
-  { key: 'G', accepts: ['G'] },
-];
-
-function posTint(pos: string): string {
-  if (pos === 'D') return 'bg-emerald-100 text-emerald-700';
-  if (pos === 'G') return 'bg-amber-100 text-amber-700';
-  return 'bg-sabres-blue/10 text-sabres-blue';
-}
-
-export default function RinkPlayerList({ players, config, blind, selectedId, getLegalSlots, onSelect }: RinkPlayerListProps) {
+export default function BoardPlayerList({ players, config, blind, selectedId, getLegalSlots, onSelect }: BoardPlayerListProps) {
+  const GROUPS = config.positionGroups;
   const [query, setQuery] = useState('');
   const [group, setGroup] = useState('All');
   const [sortBy, setSortBy] = useState('Best'); // Best = engine order

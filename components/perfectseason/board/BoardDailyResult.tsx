@@ -91,6 +91,7 @@ export default function NhlDailyResult({ record, config, variant, streak, played
         rating={record.rating}
         grade={record.grade}
         tier={record.tier}
+        totalStats={config.totalStats}
         roster={roster}
       />
 

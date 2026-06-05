@@ -22,6 +22,8 @@ interface ResultBoardProps {
   rating?: number;
   grade?: string;
   tier?: string;
+  /** Stat labels to sum in the team-totals row (e.g. ['G','A','P'] or ['HR','RBI']). */
+  totalStats: string[];
   roster: RosterEntry[];
 }
 
@@ -54,6 +56,7 @@ export default function ResultBoard({
   rating,
   grade,
   tier,
+  totalStats,
   roster,
 }: ResultBoardProps) {
   const [count, setCount] = useState(0);
@@ -75,25 +78,24 @@ export default function ResultBoard({
     return () => cancelAnimationFrame(raf);
   }, [wins]);
 
-  // Team totals: sum the skater counting columns across the roster.
+  // Team totals: sum the configured counting columns across the roster.
   const totals = (() => {
-    const keep = ['G', 'A', 'P'];
     const acc = new Map<string, number>();
     for (const r of roster) {
       for (const c of r.stats) {
-        if (!keep.includes(c.label)) continue;
+        if (!totalStats.includes(c.label)) continue;
         const n = Number(String(c.value).replace(/[^\d.-]/g, ''));
         if (!Number.isNaN(n)) acc.set(c.label, (acc.get(c.label) ?? 0) + n);
       }
     }
-    return keep.filter((k) => acc.has(k)).map((k) => ({ label: k, value: acc.get(k)! }));
+    return totalStats.filter((k) => acc.has(k)).map((k) => ({ label: k, value: acc.get(k)! }));
   })();
 
   return (
     <div className="flex flex-col gap-4 py-2">
       {/* Record + rating hero. */}
       <div className="rounded-2xl border-2 border-gray-200 bg-white p-5 text-center shadow-xl">
-        <p className="text-xs font-bold uppercase tracking-widest text-gray-400">{tank ? 'Can you go 0-82?' : 'Can you go 82-0?'}</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-gray-400">{tank ? `Can you go 0-${games}?` : `Can you go ${games}-0?`}</p>
         <p className="mt-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Projected record</p>
         <div className="text-7xl font-bold leading-none text-sabres-navy" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
           {count}
@@ -147,7 +149,7 @@ export default function ResultBoard({
       {/* Team totals row. */}
       {totals.length > 0 && (
         <div className="flex items-center justify-between rounded-xl border-2 border-sabres-blue/30 bg-sabres-blue/5 px-3 py-2">
-          <span className="text-xs font-bold uppercase tracking-widest text-sabres-blue">Skater Totals</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-sabres-blue">Team Totals</span>
           <div className="flex gap-4">
             {totals.map((t) => (
               <div key={t.label} className="text-center">

@@ -93,3 +93,16 @@ export function scoreTier(score: number, poolTopScore: number, poolTop3Score: nu
   if (score >= poolTop3Score) return 'yellow';
   return 'gray';
 }
+
+// Position badge tint for the player list, covering both sports (codes don't
+// collide): specialists (goalie / pitcher) amber, the "back"/outfield group
+// emerald, everyone else blue.
+const POS_AMBER = new Set(['G', 'SP']);
+const POS_EMERALD = new Set(['D', 'LF', 'CF', 'RF']);
+
+/** Tailwind classes for a position badge by position code. */
+export function posTint(pos: string): string {
+  if (POS_AMBER.has(pos)) return 'bg-amber-100 text-amber-700';
+  if (POS_EMERALD.has(pos)) return 'bg-emerald-100 text-emerald-700';
+  return 'bg-sabres-blue/10 text-sabres-blue';
+}
