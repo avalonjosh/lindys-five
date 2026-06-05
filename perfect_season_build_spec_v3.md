@@ -161,33 +161,35 @@ Lahman CSVs -> join on playerID -> group by (player, franchise, decade)
 
 Per-162 math: sum counting stats across the stint, scale to 162 G; rate stats from summed components. 2020 weighted at 60/162 for thresholds. Pitchers normalized to 32 GS (W, IP, SO), ERA and WHIP from summed components.
 
-### 6.2 NHL: two-source plan (amended 2026-06-04)
+### 6.2 NHL: single source, the NHL stats REST API (amended 2026-06-04)
 
-The originally-credited single Kaggle dump (flynn28 "NHL player database") is
-career-aggregate only: no team and no per-season rows, so it cannot produce
-(player, franchise, decade) stints. It is dropped entirely. Replaced by two
-sources stitched at the 2010 decade boundary, never mixed within a decade:
+Two prior plans were abandoned. The originally-credited Kaggle dump (flynn28
+"NHL player database") is career-aggregate only (no team, no per-season rows) and
+cannot produce (player, franchise, decade) stints. The two-source fallback
+(Kaggle "Professional Hockey Database" for 1950s-2000s + MoneyPuck for
+2010s-2020s) was also dropped: MoneyPuck blocks scraping, and testing showed the
+NHL API alone covers every season back to 1917 with one consistent schema. So
+the NHL is the single source. No Kaggle account, no manual download, no
+cross-source stitch or boundary dedup.
 
-1. **Decades 1950s-2000s: Kaggle "Professional Hockey Database"** by
-   open-source-sports (the Hockey Databank project; Lahman-style, one row per
-   player per season per team; covers 1909-2011). Downloaded to
-   `raw-data/nhl/databank/`. Owner supplies this locally (gitignored).
-2. **Decades 2010s-2020s: NHL stats REST API.** Per-(player, team, season)
-   regular-season summaries from `api.nhle.com/stats/rest/en/{skater,goalie}/
-   summary`, seasons 2010-11 through 2025-26, fetched by
-   `scripts/fetch-nhl-api.ts` and cached to `raw-data/nhl/nhlapi/{seasonId}/`.
-   (MoneyPuck was the original choice but blocks automated scraping; dropped.)
-   The API's summary report returns one combined row for a traded player, so the
-   fetch loops per team (filtering `teamId`) to get split per-stint stats and
-   tags each row with the queried team. Fields: skaters give playerId, name,
-   positionCode (C/L/R/D), GP, G, A, P, +/-; goalies give GP, wins, savePct,
-   GAA, shutouts.
+**NHL stats REST API**, per-(player, team, season) regular-season summaries from
+`api.nhle.com/stats/rest/en/{skater,goalie}/summary`, seasons 1950-51 through
+2025-26, fetched by `scripts/fetch-nhl-api.ts` and cached to
+`raw-data/nhl/nhlapi/{seasonId}/` (gitignored). This is the `api.nhle.com/stats/
+rest` host, NOT the `api-web.nhle.com` the app proxies; the fetch is a local
+script, so no proxy/CORS concern.
 
-Clean stitch: the databank owns start years <= 2009 (1950s-2000s decades), the
-API owns start years >= 2010 (2010s-2020s), so each source owns whole decades.
-Players spanning the 2000s/2010s boundary are deduped by normalized name match,
-with a logged review list. Verify each source's license on download and credit
-both (Hockey Databank + the NHL) in the footer.
+- The summary report returns ONE combined row for a traded player (teamAbbrevs
+  "PIT,CAR", merged totals). The fetch loops per team (filtering `teamId`) to get
+  split per-stint stats and tags each row with `queriedTri` / `queriedTeamId`.
+  The row's own `teamAbbrevs` is cosmetic; use `queriedTri` for attribution.
+- Fields: skaters give playerId, skaterFullName, positionCode (C/L/R/D), GP, G,
+  A, P, plusMinus. Goalies give GP, wins, savePct, goalsAgainstAverage,
+  shutouts, saves, shotsAgainst.
+- Era caveats handled in the build: plusMinus is null before 1967-68; goalie
+  savePct is null in the very early 1950s (GAA is the fallback there).
+
+Credit the NHL as the data source in the footer.
 
 Script `scripts/build-nhl-data.ts`:
 

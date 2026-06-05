@@ -205,23 +205,18 @@ Also tracked in Claude's memory at
 
 ### 12.1 Owner decisions (locked)
 
-- **NHL data source (two-source plan, decided 2026-06-04)**: the originally
-  credited single Kaggle dump (flynn28) is career-aggregate only (no team, no
-  per-season rows) and is DROPPED entirely. Replaced by two sources stitched at
-  the 2010 decade boundary, never mixed within a decade:
-  1. **1950s-2000s**: Kaggle "Professional Hockey Database" by open-source-sports
-     (Hockey Databank; Lahman-style, one row per player per season per team;
-     1909-2011). Lands in `raw-data/nhl/databank/`. Josh downloads it locally
-     (gitignored). **Status: Josh will confirm when it is in place.**
-  2. **2010s-2020s**: NHL stats REST API (`api.nhle.com/stats/rest`), seasons
-     2010-11..2025-26, fetched by `scripts/fetch-nhl-api.ts` and cached to
-     `raw-data/nhl/nhlapi/{seasonId}/`. **DONE 2026-06-04**: all 16 seasons
-     cached (15,725 skater stint rows, 1,608 goalie rows, 8.1 MB). MoneyPuck was
-     the original choice but blocks scraping; dropped (see 12.5).
-  - Stitch is clean: databank owns start years <= 2009 (1950s-2000s), the API
-    owns start years >= 2010 (2010s-2020s), so each source owns whole decades.
-    Dedupe players spanning the 2000s/2010s boundary by normalized name match
-    with a logged review list. Credit both (Hockey Databank + NHL) in the footer.
+- **NHL data source (single source, decided 2026-06-04)**: the **NHL stats REST
+  API** for ALL decades (1950-51..2025-26). Two earlier plans were dropped: the
+  flynn28 Kaggle dump (career-aggregate, no team/season) and the two-source
+  Kaggle-databank + MoneyPuck plan (MoneyPuck blocks scraping; and testing showed
+  the NHL API alone covers every season back to 1917 with one schema). Net win:
+  no Kaggle login, no manual download, no cross-source stitch, no boundary dedup.
+  - `scripts/fetch-nhl-api.ts` pulls per-(player, team, season) summaries from
+    `api.nhle.com/stats/rest/en/{skater,goalie}/summary` and caches to
+    `raw-data/nhl/nhlapi/{seasonId}/` (gitignored). See 12.5 for the API
+    mechanics (per-team loop for trade splits, `queriedTri` tagging, era caveats).
+  - **The Kaggle databank is NOT needed and should NOT be added.** If a
+    `raw-data/nhl/databank/` folder appears, ignore it.
 - **Logos**: mirror the MLB override. Add the NHL shield in the 82-0 header
   (NHL-blue palette) and modern team logos on filled roster slots, parallel to
   162-0. Footer carries the NHL/NHLPA + Kaggle attribution.
@@ -308,37 +303,47 @@ MLB. Files needing sport-parameterizing in 7c:
   import `mlbConfig` / read `mlb-data.json` directly; add NHL variants or
   parameterize.
 
-### 12.5 2010s-2020s data: RESOLVED via NHL API (2026-06-04)
+### 12.5 NHL data: RESOLVED, single source NHL API (2026-06-04)
 
-MoneyPuck (the original choice) blocks automated fetching: every request
-returned a license-notice HTML page behind a Cloudflare challenge, then HTTP 429.
-We did NOT evade the bot protection; MoneyPuck was dropped and
-`scripts/fetch-moneypuck.sh` deleted.
+History: MoneyPuck (an early pick) blocks automated fetching (license-notice HTML
+behind Cloudflare, then 429); not evaded, dropped, `fetch-moneypuck.sh` deleted.
+The Kaggle "Professional Hockey Database" was the planned 1950s-2000s source, but
+testing showed the **NHL stats REST API covers every season back to 1917**, so it
+became the single source for all decades. No Kaggle needed.
 
-Replaced by the **NHL stats REST API** via `scripts/fetch-nhl-api.ts`:
+`scripts/fetch-nhl-api.ts`:
 - Endpoints: `api.nhle.com/stats/rest/en/{skater,goalie}/summary`,
   `cayenneExp=seasonId=YYYYYYYY and gameTypeId=2 and teamId=N`,
-  `isAggregate=false`. Note: this is the `api.nhle.com/stats/rest` host, NOT the
+  `isAggregate=false`. Note: `api.nhle.com/stats/rest` host, NOT the
   `api-web.nhle.com` the app proxies; the script is local, no proxy/CORS issue.
 - **Per-team loop is required**: with `isAggregate=false` a traded player returns
   ONE combined row (`teamAbbrevs "PIT,CAR"`, merged totals). Filtering `teamId`
-  returns the split stint stats, so the script loops a curated list of ~36 modern
-  teamIds per season and tags each row with `queriedTri` / `queriedTeamId`. The
-  row's own `teamAbbrevs` is the cosmetic full-season label; DO NOT use it for
-  franchise attribution, use `queriedTri`.
+  returns the split stint stats, so the script loops every team ID active since
+  1950 (~46 incl. defunct: Nordiques, Whalers, North Stars, Seals/Barons,
+  Rockies, Scouts, Atlanta Flames, original Jets) per season and tags each row
+  with `queriedTri` / `queriedTeamId`. The row's own `teamAbbrevs` is the
+  cosmetic full-season label; DO NOT use it for attribution, use `queriedTri`.
 - Fields: skaters -> playerId, skaterFullName, positionCode (C/L/R/D), GP, G, A,
   P, plusMinus. Goalies -> goalieFullName, GP, wins, savePct,
   goalsAgainstAverage, shutouts, saves, shotsAgainst, goalsAgainst.
+- Era caveats (handle in 7a): plusMinus null before 1967-68; goalie savePct null
+  in the very early 1950s (use GAA there).
 - Verified: Guentzel 2023-24 splits to CAR 17GP + PIT 50GP; McDavid 2023-24 EDM
-  76GP/132P/+35. positionCode set is exactly {C,L,R,D} (confirms D1/D2).
+  76GP/132P/+35; Beliveau 55-56 88P; Gretzky 85-86 215P/+71; positionCode set is
+  exactly {C,L,R,D} (confirms D1/D2).
 - Output cached to `raw-data/nhl/nhlapi/{seasonId}/{skaters,goalies}.json`
-  (gitignored). 16 seasons, 15,725 skater rows, 1,608 goalie rows, 8.1 MB.
+  (gitignored). Full pull DONE 2026-06-04: 76 seasons (1950-51..2025-26),
+  47,816 skater rows, 4,873 goalie rows, 25 MB. Only empty season is 2004-05
+  (the lockout, correct). One transient HTTP 502 on a guaranteed-empty query
+  (NJD 1963-64, franchise did not exist) caused exit code 1; re-checked and
+  confirmed 0 rows, no data lost. Verified pools: 1950s MTL (Richard/Beliveau/
+  Plante) and DET (Howe/Sawchuk); 1980s EDM (Gretzky 1532 P, Kurri, Messier,
+  Coffey).
 
-**7a is now gated only on the databank landing in `raw-data/nhl/databank/`** (Josh
-will confirm). Once it is there, write `build-nhl-data.ts` to read both sources.
+**7a is now gated ONLY on MLB shipping** (per spec, NHL waits for the MLB game to
+launch). The data is in hand; nothing else blocks the build.
 
 Position note for 7a: the NHL API gives one positionCode per player-season, not
 appearance splits, so the spec's "20% of appearances" eligibility rule does not
-apply to the API half. Map L->LW, R->RW, C->C, D->D1/D2; a player listed under
-different codes across seasons naturally becomes multi-position. Decide how the
-databank's position field maps to the same scheme during 7a.
+apply. Map L->LW, R->RW, C->C, D->D1/D2; a player listed under different codes
+across seasons naturally becomes multi-position.
