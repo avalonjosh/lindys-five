@@ -1948,6 +1948,124 @@ export async function incrementSendStat(sendRecordId: string, stat: 'delivered' 
   await kv.set(`email:send:${sendRecordId}`, record);
 }
 
+// ---------------------------------------------------------------------------
+// Weekly cross-league digest (broadcast to the general list). Drives traffic
+// back to on-site pages — including the affiliate gear/tickets hubs — which is
+// the Amazon-compliant way to monetize email (no Amazon links in the email).
+// ---------------------------------------------------------------------------
+
+export interface WeeklyDigestContent {
+  latestPost?: { title: string; url: string };
+}
+
+const digestUtm = (path: string, content: string) =>
+  `${SITE_URL}${path}?utm_source=newsletter&utm_medium=email&utm_campaign=weekly-digest&utm_content=${content}`;
+
+export function renderWeeklyDigestEmail(content: WeeklyDigestContent, unsubscribeUrl: string): string {
+  const navy = '#041E42';
+  const blue = '#003087';
+  const gold = '#FFB81C';
+
+  const linkRow = (label: string, href: string) =>
+    `<tr><td style="padding:6px 0;"><a href="${href}" style="color:${blue};font-weight:600;text-decoration:none;font-size:15px;">${label} &rarr;</a></td></tr>`;
+
+  const blogBlock = content.latestPost
+    ? `<div style="padding:18px 0 4px;"><p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;">Latest from the blog</p>
+         <a href="${content.latestPost.url}" style="color:${navy};font-weight:700;text-decoration:none;font-size:17px;">${content.latestPost.title}</a></div>`
+    : '';
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;background:#f1f5f9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 0;"><tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;">
+      <tr><td style="background:${navy};padding:24px;text-align:center;">
+        <div style="font-size:26px;font-weight:800;color:#ffffff;letter-spacing:1px;">LINDY&rsquo;S FIVE</div>
+        <div style="font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:${gold};margin-top:4px;">Weekly Rundown</div>
+      </td></tr>
+      <tr><td style="padding:24px 28px;">
+        <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.6;">Here&rsquo;s what&rsquo;s moving across the NHL and MLB playoff races this week.</p>
+
+        <p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;">Playoff races</p>
+        <table width="100%" cellpadding="0" cellspacing="0">
+          ${linkRow('NHL playoff odds &amp; standings', digestUtm('/nhl-playoff-odds', 'nhl-odds'))}
+          ${linkRow('MLB playoff odds &amp; standings', digestUtm('/mlb/playoff-odds', 'mlb-odds'))}
+          ${linkRow('Playoff bracket &amp; series odds', digestUtm('/playoffs', 'bracket'))}
+        </table>
+
+        ${blogBlock}
+
+        <table width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:18px 0 4px;">
+          <p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;">Can you go 82-0?</p>
+          <p style="margin:0 0 8px;font-size:14px;color:#334155;line-height:1.5;">Draft an all-time roster and climb the daily leaderboard.</p>
+          <a href="${digestUtm('/82-0/leaderboard', 'lb-nhl')}" style="display:inline-block;background:${blue};color:#fff;font-weight:700;font-size:14px;text-decoration:none;padding:10px 18px;border-radius:8px;margin:0 8px 8px 0;">82-0 leaderboard</a>
+          <a href="${digestUtm('/162-0/leaderboard', 'lb-mlb')}" style="display:inline-block;background:${blue};color:#fff;font-weight:700;font-size:14px;text-decoration:none;padding:10px 18px;border-radius:8px;">162-0 leaderboard</a>
+        </td></tr></table>
+
+        <table width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:14px 0 0;">
+          <p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;">Fan gear &amp; tickets</p>
+          <p style="margin:0;font-size:14px;color:#334155;line-height:1.5;">
+            <a href="${digestUtm('/nhl/sabres/gear', 'gear')}" style="color:${blue};font-weight:600;text-decoration:none;">Shop team gear</a> &nbsp;&middot;&nbsp;
+            <a href="${digestUtm('/nhl/sabres/tickets', 'tickets')}" style="color:${blue};font-weight:600;text-decoration:none;">Find tickets</a>
+          </p>
+        </td></tr></table>
+      </td></tr>
+      <tr><td style="padding:18px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+        <p style="margin:0 0 6px;font-size:12px;color:#94a3b8;">Lindy&rsquo;s Five &middot; NHL &amp; MLB playoff tracking</p>
+        <a href="${unsubscribeUrl}" style="font-size:12px;color:#94a3b8;text-decoration:underline;">Unsubscribe</a>
+      </td></tr>
+    </table>
+  </td></tr></table>
+</body></html>`;
+}
+
+/**
+ * Send the weekly digest. With opts.testEmail, sends a single email to that
+ * address only (review/QA) and records nothing. Otherwise sends to all verified,
+ * active subscribers.
+ */
+export async function sendWeeklyDigest(
+  subscribers: NewsletterSubscriber[],
+  content: WeeklyDigestContent,
+  opts?: { testEmail?: string },
+): Promise<{ sent: number }> {
+  const recipients: NewsletterSubscriber[] = opts?.testEmail
+    ? [{ id: 'test', email: opts.testEmail, teams: [], createdAt: new Date().toISOString(), verified: true }]
+    : subscribers.filter((s) => s.verified && !s.unsubscribedAt);
+  if (recipients.length === 0) return { sent: 0 };
+
+  const subject = 'Your Lindy’s Five weekly rundown';
+  const sendId = opts?.testEmail ? undefined : await recordEmailSend('weekly-digest', recipients.length, subject);
+
+  let sent = 0;
+  const BATCH = 50;
+  for (let i = 0; i < recipients.length; i += BATCH) {
+    const batch = recipients.slice(i, i + BATCH);
+    await Promise.all(
+      batch.map(async (sub) => {
+        const unsubscribeUrl = `${SITE_URL}/api/newsletter/unsubscribe?id=${sub.id}`;
+        const html = renderWeeklyDigestEmail(content, unsubscribeUrl);
+        try {
+          const res = await getResend().emails.send({
+            from: FROM_EMAIL,
+            to: sub.email,
+            subject,
+            html,
+            headers: {
+              'List-Unsubscribe': `<${unsubscribeUrl}>`,
+              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+            },
+          });
+          sent++;
+          if (sendId && res.data?.id) await kv.set(`email:resend-map:${res.data.id}`, sendId, { ex: 60 * 60 * 24 * 30 });
+        } catch (err) {
+          console.error(`Failed to send weekly digest to ${sub.email}:`, err);
+        }
+      }),
+    );
+  }
+  return { sent };
+}
+
 export async function getSendRecordIdForResendEmail(resendEmailId: string): Promise<string | null> {
   return kv.get<string>(`email:resend-map:${resendEmailId}`);
 }
