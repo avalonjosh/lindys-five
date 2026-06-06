@@ -295,6 +295,7 @@ export default async function BlogPostPage({
               sport="nhl"
               variant="card"
               primaryColor={postConfig.primary}
+              teamSlug="sabres"
             />
           )}
 

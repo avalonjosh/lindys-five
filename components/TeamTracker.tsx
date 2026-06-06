@@ -897,6 +897,7 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
               sport="nhl"
               variant="compact"
               primaryColor={isGoatMode ? darkModeColors.accent : team.colors.accent}
+              teamSlug={team.slug}
             />
           </div>
         </div>

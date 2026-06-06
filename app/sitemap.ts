@@ -80,24 +80,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // All 32 NHL team tracker routes
+  // All 32 NHL team tracker routes + gear/tickets hubs
   for (const team of NHL_TEAM_ROUTES) {
-    urls.push({
-      url: `${BASE_URL}/nhl/${team}`,
-      lastModified: now,
-      changeFrequency: 'daily',
-      priority: 0.9,
-    });
+    urls.push({ url: `${BASE_URL}/nhl/${team}`, lastModified: now, changeFrequency: 'daily', priority: 0.9 });
+    urls.push({ url: `${BASE_URL}/nhl/${team}/gear`, lastModified: now, changeFrequency: 'weekly', priority: 0.5 });
+    urls.push({ url: `${BASE_URL}/nhl/${team}/tickets`, lastModified: now, changeFrequency: 'weekly', priority: 0.5 });
   }
 
-  // All 30 MLB team tracker routes
+  // All 30 MLB team tracker routes + gear/tickets hubs
   for (const team of MLB_TEAM_ROUTES) {
-    urls.push({
-      url: `${BASE_URL}/mlb/${team}`,
-      lastModified: now,
-      changeFrequency: 'daily',
-      priority: 0.85,
-    });
+    urls.push({ url: `${BASE_URL}/mlb/${team}`, lastModified: now, changeFrequency: 'daily', priority: 0.85 });
+    urls.push({ url: `${BASE_URL}/mlb/${team}/gear`, lastModified: now, changeFrequency: 'weekly', priority: 0.5 });
+    urls.push({ url: `${BASE_URL}/mlb/${team}/tickets`, lastModified: now, changeFrequency: 'weekly', priority: 0.5 });
   }
 
   // Blog pages

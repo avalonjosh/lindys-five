@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { ShoppingBag } from 'lucide-react';
 import { generateAmazonMerchLink } from '@/lib/utils/affiliateLinks';
 import { trackClick } from '@/lib/analytics';
@@ -18,63 +19,55 @@ interface MerchCTAProps {
   sport: 'nhl' | 'mlb';
   variant: 'compact' | 'card';
   primaryColor?: string;
+  /** When set, the CTA links to the on-site gear hub (preferred); otherwise it
+   *  links straight to Amazon. The hub keeps users on-site and is email-safe. */
+  teamSlug?: string;
 }
 
-export default function MerchCTA({ teamCity, teamName, sport, variant, primaryColor }: MerchCTAProps) {
-  const link = generateAmazonMerchLink(teamCity, teamName, sport);
+export default function MerchCTA({ teamCity, teamName, sport, variant, primaryColor, teamSlug }: MerchCTAProps) {
+  const hubHref = teamSlug ? `/${sport}/${teamSlug}/gear` : undefined;
+  const href = hubHref ?? generateAmazonMerchLink(teamCity, teamName, sport);
+  const label = `${teamCity}-${teamName}`.toLowerCase().replace(/\s+/g, '-');
+  const handleClick = () => trackClick(hubHref ? 'gear-cta' : 'merch', label);
 
-  const handleClick = () => {
-    trackClick('merch', `${teamCity}-${teamName}`.toLowerCase().replace(/\s+/g, '-'));
-  };
+  // Internal hub link uses next/link; the Amazon fallback is a sponsored anchor.
+  const Anchor = ({ className, style, children }: { className: string; style: React.CSSProperties; children: React.ReactNode }) =>
+    hubHref ? (
+      <Link href={hubHref} onClick={handleClick} className={className} style={style}>{children}</Link>
+    ) : (
+      <a href={href} target="_blank" rel="sponsored noopener noreferrer" onClick={handleClick} className={className} style={style}>{children}</a>
+    );
 
   if (variant === 'compact') {
-    // Use dark text on light backgrounds (e.g., yellow/gold accent colors)
     const isLightBg = primaryColor ? isLightColor(primaryColor) : false;
     const textColor = isLightBg ? '#1a1a2e' : '#ffffff';
     return (
-      <a
-        href={link}
-        target="_blank"
-        rel="sponsored noopener noreferrer"
-        onClick={handleClick}
+      <Anchor
         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full transition-all hover:scale-105 shadow-sm"
-        style={{
-          backgroundColor: primaryColor || '#1a1a2e',
-          color: textColor,
-        }}
+        style={{ backgroundColor: primaryColor || '#1a1a2e', color: textColor }}
       >
         <ShoppingBag size={12} />
         Shop Gear
-      </a>
+      </Anchor>
     );
   }
 
   // card variant
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-4">
-      <div
-        className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
-        style={{ backgroundColor: primaryColor || '#1a1a2e' }}
-      >
+      <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: primaryColor || '#1a1a2e' }}>
         <ShoppingBag size={18} color="#ffffff" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-900">Shop {teamCity} {teamName} Gear</p>
-        <p className="text-xs text-gray-500">Jerseys, hats, and apparel on Amazon</p>
+        <p className="text-xs text-gray-500">Jerseys, hats, and apparel — Amazon &amp; Fanatics</p>
       </div>
-      <a
-        href={link}
-        target="_blank"
-        rel="sponsored noopener noreferrer"
-        onClick={handleClick}
+      <Anchor
         className="flex-shrink-0 px-4 py-2 text-sm font-bold rounded-lg transition-all hover:shadow-md"
-        style={{
-          backgroundColor: primaryColor || '#1a1a2e',
-          color: '#ffffff',
-        }}
+        style={{ backgroundColor: primaryColor || '#1a1a2e', color: '#ffffff' }}
       >
         Shop Now
-      </a>
+      </Anchor>
     </div>
   );
 }

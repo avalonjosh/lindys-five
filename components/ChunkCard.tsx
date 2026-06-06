@@ -337,6 +337,7 @@ export default function ChunkCard({ chunk, isGoatMode, previousChunkStats, onSta
                 sport="nhl"
                 variant="compact"
                 primaryColor={isGoatMode ? darkModeColors.accent : teamColors.primary}
+                teamSlug={team.slug}
               />
             </div>
           );

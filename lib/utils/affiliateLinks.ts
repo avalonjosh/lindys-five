@@ -151,6 +151,27 @@ export function generateGameTicketLink(
  */
 export function generateAmazonMerchLink(teamCity: string, teamName: string, sport: 'nhl' | 'mlb'): string {
   const league = sport === 'nhl' ? 'NHL' : 'MLB';
-  const query = encodeURIComponent(`${teamCity} ${teamName} ${league} jersey`);
-  return `https://www.amazon.com/s?k=${query}&tag=${AMAZON_TAG}`;
+  return generateAmazonSearchLink(`${teamCity} ${teamName} ${league} jersey`);
+}
+
+/** Amazon search URL with the Associates tag, for any query (gear-hub categories). */
+export function generateAmazonSearchLink(query: string): string {
+  return `https://www.amazon.com/s?k=${encodeURIComponent(query)}&tag=${AMAZON_TAG}`;
+}
+
+// Fanatics affiliate (Impact). Set NEXT_PUBLIC_FANATICS_DEEPLINK to your Impact
+// deep-link prefix (everything before the URL-encoded destination); until then
+// links go direct (non-affiliate), mirroring the StubHub direct-link fallback.
+const FANATICS_DEEPLINK = process.env.NEXT_PUBLIC_FANATICS_DEEPLINK || '';
+
+/** Fanatics search URL for team gear, wrapped in the Impact deep link if configured. */
+export function generateFanaticsLink(teamCity: string, teamName: string, category = ''): string {
+  const query = `${teamCity} ${teamName} ${category}`.trim().replace(/\s+/g, ' ');
+  const destination = `https://www.fanatics.com/search?query=${encodeURIComponent(query)}`;
+  return FANATICS_DEEPLINK ? `${FANATICS_DEEPLINK}${encodeURIComponent(destination)}` : destination;
+}
+
+/** StubHub team-tickets landing (not game-specific) for the tickets hub. */
+export function generateTeamTicketsLink(teamSlug: string, teamCity: string, stubhubId: number): string {
+  return generateStubHubLink({ stubhubId, trackingRef: `hub-${teamSlug}`, teamSlug, teamCity });
 }

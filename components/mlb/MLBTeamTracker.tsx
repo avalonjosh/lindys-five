@@ -253,6 +253,7 @@ export default function MLBTeamTracker({ team }: MLBTeamTrackerProps) {
                 sport="mlb"
                 variant="compact"
                 primaryColor={team.colors.secondary}
+                teamSlug={team.slug}
               />
             </div>
           </div>
