@@ -2018,6 +2018,130 @@ export function renderWeeklyDigestEmail(content: WeeklyDigestContent, unsubscrib
 </body></html>`;
 }
 
+// ---------------------------------------------------------------------------
+// MLB per-game recap email (data-driven, per team — mirrors the NHL recap).
+// ---------------------------------------------------------------------------
+
+export interface MLBGameRecapEmailData {
+  teamSlug: string;
+  teamCity: string;
+  teamName: string;
+  primaryColor: string;
+  won: boolean;
+  teamScore: number;
+  oppScore: number;
+  oppName: string;
+  isHome: boolean;
+  gameId: number;
+  probability: number;
+  projectedWins: number;
+  wins: number;
+  losses: number;
+}
+
+const mlbUtm = (path: string, content: string) =>
+  `${SITE_URL}${path}?utm_source=newsletter&utm_medium=email&utm_campaign=mlb-game-recap&utm_content=${content}`;
+
+export function renderMLBGameRecapEmail(d: MLBGameRecapEmailData, unsubscribeUrl: string): string {
+  const navy = '#041E42';
+  const result = d.won ? 'W' : 'L';
+  const resultColor = d.won ? '#16a34a' : '#dc2626';
+  const vs = d.isHome ? 'vs' : '@';
+  const btn = (label: string, href: string, filled: boolean) =>
+    `<a href="${href}" style="display:inline-block;margin:0 6px 8px 0;padding:10px 16px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;${
+      filled ? `background:${d.primaryColor};color:#fff;` : `border:2px solid ${d.primaryColor};color:${d.primaryColor};`
+    }">${label}</a>`;
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;background:#f1f5f9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 0;"><tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;">
+      <tr><td style="background:${d.primaryColor};padding:22px;text-align:center;">
+        <div style="font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#ffffff;opacity:.8;">${d.teamCity} ${d.teamName} &middot; Game Recap</div>
+        <div style="margin-top:8px;font-size:34px;font-weight:800;color:#ffffff;">
+          <span style="color:${d.won ? '#bbf7d0' : '#fecaca'};">${result}</span> ${d.teamScore}&ndash;${d.oppScore}
+        </div>
+        <div style="margin-top:2px;font-size:14px;color:#ffffff;opacity:.85;">${vs} ${d.oppName}</div>
+      </td></tr>
+      <tr><td style="padding:24px 28px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;"><tr>
+          <td style="text-align:center;padding:10px;background:#f8fafc;border-radius:10px;">
+            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Record</div>
+            <div style="font-size:22px;font-weight:800;color:${navy};">${d.wins}&ndash;${d.losses}</div>
+          </td>
+          <td width="12"></td>
+          <td style="text-align:center;padding:10px;background:#f8fafc;border-radius:10px;">
+            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Playoff odds</div>
+            <div style="font-size:22px;font-weight:800;color:${resultColor};">${d.probability}%</div>
+          </td>
+          <td width="12"></td>
+          <td style="text-align:center;padding:10px;background:#f8fafc;border-radius:10px;">
+            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Proj. wins</div>
+            <div style="font-size:22px;font-weight:800;color:${navy};">${d.projectedWins}</div>
+          </td>
+        </tr></table>
+        <div style="text-align:center;">
+          ${btn('Box score', mlbUtm(`/mlb/scores/${d.gameId}`, 'boxscore'), true)}
+          ${btn('Season tracker', mlbUtm(`/mlb/${d.teamSlug}`, 'tracker'), false)}
+        </div>
+        <div style="text-align:center;margin-top:4px;">
+          ${btn('Shop gear', mlbUtm(`/mlb/${d.teamSlug}/gear`, 'gear'), false)}
+          ${btn('Tickets', mlbUtm(`/mlb/${d.teamSlug}/tickets`, 'tickets'), false)}
+        </div>
+      </td></tr>
+      <tr><td style="padding:18px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+        <p style="margin:0 0 6px;font-size:12px;color:#94a3b8;">Lindy&rsquo;s Five &middot; ${d.teamCity} ${d.teamName} recaps</p>
+        <a href="${unsubscribeUrl}" style="font-size:12px;color:#94a3b8;text-decoration:underline;">Unsubscribe</a>
+      </td></tr>
+    </table>
+  </td></tr></table>
+</body></html>`;
+}
+
+/** Send an MLB game recap to a team's subscribers (or a single test address). */
+export async function sendMLBGameRecap(
+  subscribers: NewsletterSubscriber[],
+  data: MLBGameRecapEmailData,
+  opts?: { testEmail?: string },
+): Promise<{ sent: number }> {
+  const recipients: NewsletterSubscriber[] = opts?.testEmail
+    ? [{ id: 'test', email: opts.testEmail, teams: [], createdAt: new Date().toISOString(), verified: true }]
+    : subscribers.filter((s) => s.verified && !s.unsubscribedAt);
+  if (recipients.length === 0) return { sent: 0 };
+
+  const subject = `${data.teamCity} ${data.teamName} ${data.won ? 'win' : 'fall'} ${data.teamScore}-${data.oppScore} ${data.isHome ? 'vs' : '@'} ${data.oppName}`;
+  const sendId = opts?.testEmail ? undefined : await recordEmailSend(`mlb-recap:${data.teamSlug}`, recipients.length, subject);
+
+  let sent = 0;
+  const BATCH = 50;
+  for (let i = 0; i < recipients.length; i += BATCH) {
+    const batch = recipients.slice(i, i + BATCH);
+    await Promise.all(
+      batch.map(async (sub) => {
+        const unsubscribeUrl = `${SITE_URL}/api/newsletter/unsubscribe?id=${sub.id}`;
+        const html = renderMLBGameRecapEmail(data, unsubscribeUrl);
+        try {
+          const res = await getResend().emails.send({
+            from: FROM_EMAIL,
+            to: sub.email,
+            subject,
+            html,
+            headers: {
+              'List-Unsubscribe': `<${unsubscribeUrl}>`,
+              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+            },
+          });
+          sent++;
+          if (sendId && res.data?.id) await kv.set(`email:resend-map:${res.data.id}`, sendId, { ex: 60 * 60 * 24 * 30 });
+        } catch (err) {
+          console.error(`Failed to send MLB recap to ${sub.email}:`, err);
+        }
+      }),
+    );
+  }
+  return { sent };
+}
+
 /**
  * Send the weekly digest. With opts.testEmail, sends a single email to that
  * address only (review/QA) and records nothing. Otherwise sends to all verified,
