@@ -28,6 +28,9 @@ export default function TeamGearHub({ team }: { team: HubTeam }) {
   const league = team.sport === 'nhl' ? 'NHL' : 'MLB';
   const teamPath = `/${team.sport}/${team.slug}`;
   const accent = team.accentColor || '#FFB81C';
+  // Only surface the Fanatics button once the affiliate deep link is configured;
+  // until then show Amazon alone (no non-earning outbound traffic).
+  const showFanatics = !!process.env.NEXT_PUBLIC_FANATICS_DEEPLINK;
 
   const breadcrumb = {
     '@context': 'https://schema.org',
@@ -61,7 +64,7 @@ export default function TeamGearHub({ team }: { team: HubTeam }) {
             {full} Gear &amp; Jerseys
           </h1>
           <p className="mx-auto mt-2 max-w-xl text-sm text-white/80">
-            Shop officially licensed {full} {league} jerseys, hats, and apparel — curated from Amazon and Fanatics.
+            Shop officially licensed {full} {league} jerseys, hats, and apparel — curated from Amazon{showFanatics ? ' and Fanatics' : ''}.
           </p>
         </div>
       </header>
@@ -89,14 +92,16 @@ export default function TeamGearHub({ team }: { team: HubTeam }) {
                 >
                   Amazon
                 </AffiliateLink>
-                <AffiliateLink
-                  href={generateFanaticsLink(team.city, team.name, c.label)}
-                  track="gear" trackLabel={`${team.slug}-fanatics-${c.key}`}
-                  className="flex-1 rounded-lg border-2 px-3 py-2 text-center text-xs font-bold transition-colors hover:bg-gray-50"
-                  style={{ borderColor: team.primaryColor, color: team.primaryColor }}
-                >
-                  Fanatics
-                </AffiliateLink>
+                {showFanatics && (
+                  <AffiliateLink
+                    href={generateFanaticsLink(team.city, team.name, c.label)}
+                    track="gear" trackLabel={`${team.slug}-fanatics-${c.key}`}
+                    className="flex-1 rounded-lg border-2 px-3 py-2 text-center text-xs font-bold transition-colors hover:bg-gray-50"
+                    style={{ borderColor: team.primaryColor, color: team.primaryColor }}
+                  >
+                    Fanatics
+                  </AffiliateLink>
+                )}
               </div>
             </div>
           ))}

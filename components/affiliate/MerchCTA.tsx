@@ -60,7 +60,7 @@ export default function MerchCTA({ teamCity, teamName, sport, variant, primaryCo
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-900">Shop {teamCity} {teamName} Gear</p>
-        <p className="text-xs text-gray-500">Jerseys, hats, and apparel — Amazon &amp; Fanatics</p>
+        <p className="text-xs text-gray-500">Jerseys, hats, and apparel</p>
       </div>
       <Anchor
         className="flex-shrink-0 px-4 py-2 text-sm font-bold rounded-lg transition-all hover:shadow-md"
