@@ -389,7 +389,7 @@ export default function GameBox({ game, gameNumber, isGoatMode, whatIfMode, onGa
                   <a
                     href={ticketLink}
                     target="_blank"
-                    rel="noopener noreferrer"
+                    rel="sponsored noopener noreferrer"
                     onClick={(e) => {
                       e.stopPropagation();
                       trackClick('ticket', game.opponent);

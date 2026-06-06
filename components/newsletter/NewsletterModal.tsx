@@ -111,6 +111,10 @@ export default function NewsletterModal({
         // Re-check at fire time: the suppression flag may have been set after
         // mount (e.g. NewsletterVerified writing it on ?newsletter=success).
         if (isSuppressed()) return;
+        // Mark shown at fire time (not just on dismiss) so the auto-popup is
+        // once per session across navigations — avoids repeat interstitials
+        // when the same visitor browses several team/odds pages.
+        sessionStorage.setItem('newsletterModalShown', '1');
         setVisible(true);
       }, 2500);
     }

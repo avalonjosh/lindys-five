@@ -91,7 +91,7 @@ export default function NextGameCTA({ team, primaryColor, accentColor }: NextGam
           teamCity: venueTeam.city,
         })}
         target="_blank"
-        rel="noopener noreferrer"
+        rel="sponsored noopener noreferrer"
         className="block rounded-2xl p-5 shadow-lg border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl bg-white"
         style={{ borderColor: accentColor }}
       >

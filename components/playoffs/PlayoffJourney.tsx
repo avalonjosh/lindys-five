@@ -582,7 +582,7 @@ function SeriesCard({
                     <a
                       href={merchLink}
                       target="_blank"
-                      rel="noopener noreferrer"
+                      rel="sponsored noopener noreferrer"
                       onClick={() => trackClick('merch', `${teamCfg.city}-${teamCfg.name}`.toLowerCase().replace(/\s+/g, '-'))}
                       className={outlineButtonClass}
                       style={outlineButtonStyle}
@@ -897,7 +897,7 @@ function PlayoffGameBox({
                 <a
                   href={ticketLink}
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel="sponsored noopener noreferrer"
                   onClick={(e) => {
                     e.stopPropagation();
                     trackClick('ticket', opponent.abbrev);

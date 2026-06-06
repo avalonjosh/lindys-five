@@ -39,7 +39,7 @@ export default function GamePreview({
           <a
             href={ticketLink}
             target="_blank"
-            rel="noopener noreferrer"
+            rel="sponsored noopener noreferrer"
             onClick={() => trackClick('ticket-boxscore', `${homeAbbrev}-vs-${awayAbbrev}`)}
             className="inline-block px-5 py-2.5 text-sm font-bold rounded-lg transition-all shadow-md hover:shadow-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white"
           >

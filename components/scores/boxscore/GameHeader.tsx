@@ -240,7 +240,7 @@ export default function GameHeader({ boxscore, landing }: GameHeaderProps) {
               <a
                 href={ticketLink}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="sponsored noopener noreferrer"
                 onClick={() => trackClick('ticket-boxscore', `${homeTeam.abbrev}-vs-${awayTeam.abbrev}`)}
                 className="px-3 py-1.5 sm:px-5 sm:py-2 text-xs sm:text-sm font-bold rounded-lg transition-all shadow-md hover:shadow-lg bg-white text-[#003087] hover:bg-white/90"
               >

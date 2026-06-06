@@ -35,7 +35,7 @@ export default function MerchCTA({ teamCity, teamName, sport, variant, primaryCo
       <a
         href={link}
         target="_blank"
-        rel="noopener noreferrer"
+        rel="sponsored noopener noreferrer"
         onClick={handleClick}
         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full transition-all hover:scale-105 shadow-sm"
         style={{
@@ -65,7 +65,7 @@ export default function MerchCTA({ teamCity, teamName, sport, variant, primaryCo
       <a
         href={link}
         target="_blank"
-        rel="noopener noreferrer"
+        rel="sponsored noopener noreferrer"
         onClick={handleClick}
         className="flex-shrink-0 px-4 py-2 text-sm font-bold rounded-lg transition-all hover:shadow-md"
         style={{
