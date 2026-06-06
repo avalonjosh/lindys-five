@@ -10,8 +10,11 @@ import { rateLimit, clientIp } from '@/lib/perfectseason/server/ratelimit';
  */
 export async function POST(request: NextRequest) {
   let email: string;
+  let source = 'site';
   try {
-    email = String((await request.json()).email ?? '').trim();
+    const body = await request.json();
+    email = String(body.email ?? '').trim();
+    if (typeof body.source === 'string') source = body.source.slice(0, 40).replace(/[^a-z0-9-]/gi, '') || 'site';
   } catch {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
@@ -25,7 +28,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await ensureSubscriber(email, [], 'perfectseason-game', { single: true });
+    await ensureSubscriber(email, [], source, { single: true });
   } catch (err) {
     console.error('quick-subscribe failed:', err);
     return NextResponse.json({ error: 'Could not subscribe right now' }, { status: 500 });

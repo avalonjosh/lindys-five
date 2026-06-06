@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { MLB_TEAMS } from '@/lib/teamConfig';
 import MLBTeamTracker from '@/components/mlb/MLBTeamTracker';
+import NewsletterModal from '@/components/newsletter/NewsletterModal';
 import { fetchMLBSchedule, fetchMLBStandings } from '@/lib/services/mlbApi';
 import { calculateMLBChunks, calculateMLBSeasonStats } from '@/lib/utils/mlbChunkCalculator';
 
@@ -221,6 +222,12 @@ export default async function MLBTeamPage({ params }: MLBTeamPageProps) {
         </p>
       </div>
       <MLBTeamTracker team={team} />
+      <NewsletterModal
+        team={teamSlug}
+        teamDisplayName={team.name}
+        primaryColor={team.colors.primary}
+        accentColor={team.colors.accent}
+      />
     </>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
+import InlineEmailCapture from '@/components/newsletter/InlineEmailCapture';
 
 export const metadata: Metadata = {
   title: "Lindy's Five — Track Every Season, Five Games at a Time",
@@ -106,6 +107,11 @@ export default function LandingPage() {
                 <p className="font-bold text-lg text-white/80">Enter →</p>
               </div>
             </Link>
+          </div>
+
+          {/* Email capture */}
+          <div className="mx-auto mb-12 max-w-2xl">
+            <InlineEmailCapture source="home" theme="dark" />
           </div>
 
           {/* Footer */}

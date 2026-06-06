@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import MLBPlayoffOddsClient, { type MLBTeamRow } from '@/components/mlb/MLBPlayoffOddsClient';
+import InlineEmailCapture from '@/components/newsletter/InlineEmailCapture';
 import { MLB_TEAMS } from '@/lib/teamConfig';
 import { fetchMLBStandings } from '@/lib/services/mlbApi';
 import type { MLBStandingsTeam } from '@/lib/types/mlb';
@@ -246,6 +247,10 @@ export default async function MLBPlayoffOddsPage() {
           {/* Tabbed standings views */}
           <section className="mb-10">
             <MLBPlayoffOddsClient rows={rows} />
+          </section>
+
+          <section className="mb-10 max-w-3xl mx-auto">
+            <InlineEmailCapture source="mlb-odds" heading="Track the MLB playoff race by email" subtext="Playoff odds movement, new games, and leaderboards — no spam, unsubscribe anytime." />
           </section>
 
           {/* Narrative — keyword-rich, server-rendered */}
