@@ -87,10 +87,11 @@ export interface RankedEntry extends LeaderboardEntry {
 // Board ids — one string keys both the sorted set and the per-user entry
 // ---------------------------------------------------------------------------
 
-export type BoardKind = 'daily' | 'alltime' | 'tank' | 'franchise';
+export type BoardKind = 'daily' | 'alltime' | 'free' | 'tank' | 'franchise';
 
 export const dailyBoard = (sport: Sport, variant: Variant, date: string) => `daily:${sport}:${variant}:${date}`;
 export const alltimeBoard = (sport: Sport, variant: Variant) => `alltime:${sport}:${variant}`;
+export const freeBoard = (sport: Sport, variant: Variant) => `free:${sport}:${variant}`;
 export const tankBoard = (sport: Sport, variant: Variant) => `tank:${sport}:${variant}`;
 export const franchiseBoard = (sport: Sport, franchiseId: string, variant: Variant) =>
   `franchise:${sport}:${franchiseId}:${variant}`;
@@ -105,7 +106,7 @@ const VARIANTS = new Set<string>(['classic', 'blind']);
 export function isValidBoard(board: string): boolean {
   const p = board.split(':');
   if (p[0] === 'daily') return p.length === 4 && SPORTS.has(p[1]) && VARIANTS.has(p[2]) && /^\d{4}-\d{2}-\d{2}$/.test(p[3]);
-  if (p[0] === 'alltime' || p[0] === 'tank') return p.length === 3 && SPORTS.has(p[1]) && VARIANTS.has(p[2]);
+  if (p[0] === 'alltime' || p[0] === 'free' || p[0] === 'tank') return p.length === 3 && SPORTS.has(p[1]) && VARIANTS.has(p[2]);
   if (p[0] === 'franchise') return p.length === 4 && SPORTS.has(p[1]) && /^[A-Za-z0-9]{2,4}$/.test(p[2]) && VARIANTS.has(p[3]);
   return false;
 }

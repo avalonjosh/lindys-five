@@ -14,6 +14,7 @@ import { statCells } from '../ui';
 import ResultBoard, { type RosterEntry } from './ResultBoard';
 import ShareTeamModal from './ShareTeamModal';
 import LeaderboardCta from './LeaderboardCta';
+import NewsletterPrompt from './NewsletterPrompt';
 
 interface RinkResultProps {
   result: SimResult;
@@ -92,6 +93,8 @@ export default function RinkResult({ result, config, mode, picks, data, state, v
           Build another
         </button>
       </div>
+
+      <NewsletterPrompt />
 
       {shareTeam && <ShareTeamModal team={shareTeam} onClose={() => setShareTeam(null)} />}
     </div>

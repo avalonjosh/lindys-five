@@ -8,6 +8,7 @@ import { easternDateString, dailyDateLabel } from '@/lib/perfectseason/seed';
 import {
   dailyBoard,
   alltimeBoard,
+  freeBoard,
   tankBoard,
   franchiseBoard,
   type RankedEntry,
@@ -16,10 +17,11 @@ import {
 import { SPORT_UI } from './sportUi';
 import { franchiseColor, franchiseLogo } from './ui';
 
-type Tab = 'daily' | 'alltime' | 'tank' | 'franchise';
+type Tab = 'daily' | 'alltime' | 'free' | 'tank' | 'franchise';
 const TABS: { key: Tab; label: string }[] = [
   { key: 'daily', label: 'Daily' },
   { key: 'alltime', label: 'All-Time' },
+  { key: 'free', label: 'Free Play' },
   { key: 'tank', label: 'Tank' },
   { key: 'franchise', label: 'Franchise' },
 ];
@@ -51,6 +53,7 @@ export default function Leaderboard({ sport, franchises }: { sport: Sport; franc
   const board =
     tab === 'daily' ? dailyBoard(sport, variant, date)
     : tab === 'alltime' ? alltimeBoard(sport, variant)
+    : tab === 'free' ? freeBoard(sport, variant)
     : tab === 'tank' ? tankBoard(sport, variant)
     : franchiseBoard(sport, franchiseId, variant);
 
@@ -74,7 +77,8 @@ export default function Leaderboard({ sport, franchises }: { sport: Sport; franc
 
   const subtitle =
     tab === 'daily' ? dailyDateLabel(date)
-    : tab === 'alltime' ? 'Best rating ever'
+    : tab === 'alltime' ? 'Best daily rating ever'
+    : tab === 'free' ? 'Free play · best build'
     : tab === 'tank' ? 'Worst team wins'
     : franchises.find((f) => f.id === franchiseId)?.name ?? franchiseId;
 
@@ -97,7 +101,7 @@ export default function Leaderboard({ sport, franchises }: { sport: Sport; franc
         </div>
 
         {/* Board tabs */}
-        <div className="mx-auto mb-2 grid max-w-[480px] grid-cols-4 gap-1 rounded-xl bg-white p-1 shadow-sm">
+        <div className="mx-auto mb-2 grid max-w-[480px] grid-cols-5 gap-1 rounded-xl bg-white p-1 shadow-sm">
           {TABS.map((t) => (
             <button
               key={t.key}

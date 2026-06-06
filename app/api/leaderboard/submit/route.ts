@@ -11,6 +11,7 @@ import {
   lbEntryKey,
   dailyBoard,
   alltimeBoard,
+  freeBoard,
   tankBoard,
   franchiseBoard,
   compositeScore,
@@ -27,6 +28,7 @@ function boardsFor(sub: ScoreSubmission): string[] | null {
     // Counts on the day's board AND the all-time best board (daily only, to stay fair).
     return [dailyBoard(sub.sport, sub.variant, sub.date), alltimeBoard(sub.sport, sub.variant)];
   }
+  if (sub.source === 'free' && sub.modeType === 'standard') return [freeBoard(sub.sport, sub.variant)];
   if (sub.source === 'free' && sub.modeType === 'tank') return [tankBoard(sub.sport, sub.variant)];
   if (sub.source === 'free' && sub.modeType === 'franchise' && sub.franchiseId) {
     return [franchiseBoard(sub.sport, sub.franchiseId, sub.variant)];

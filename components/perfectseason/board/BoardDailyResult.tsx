@@ -11,6 +11,7 @@ import type { SubmitState } from '@/lib/perfectseason/account';
 import ResultBoard, { type RosterEntry } from './ResultBoard';
 import ShareTeamModal from './ShareTeamModal';
 import LeaderboardCta from './LeaderboardCta';
+import NewsletterPrompt from './NewsletterPrompt';
 
 interface NhlDailyResultProps {
   record: DailyRecord;
@@ -149,6 +150,8 @@ export default function NhlDailyResult({ record, config, variant, streak, played
       </div>
 
       {shareTeam && <ShareTeamModal team={shareTeam} onClose={() => setShareTeam(null)} />}
+
+      <NewsletterPrompt />
 
       <Link
         href={config.sport === 'mlb' ? '/82-0' : '/162-0'}

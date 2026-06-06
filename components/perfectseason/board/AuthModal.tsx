@@ -24,6 +24,7 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [subscribe, setSubscribe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -38,7 +39,7 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
     if (submitting) return;
     setSubmitting(true);
     setError(null);
-    const result = mode === 'signin' ? await login(emailOrUsername, password) : await signup(email, username, password);
+    const result = mode === 'signin' ? await login(emailOrUsername, password) : await signup(email, username, password, subscribe);
     setSubmitting(false);
     if (result.ok) onSuccess(result.user);
     else setError(result.error);
@@ -82,6 +83,13 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
             <label className={labelClass} htmlFor="auth-password">Password</label>
             <input id="auth-password" type="password" className={inputClass} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} />
           </div>
+
+          {mode === 'signup' && (
+            <label className="flex cursor-pointer items-start gap-2 text-xs text-gray-600">
+              <input type="checkbox" checked={subscribe} onChange={(e) => setSubscribe(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-sabres-blue" />
+              <span>Email me about new games &amp; features from Lindy&apos;s Five. No spam, unsubscribe anytime.</span>
+            </label>
+          )}
 
           {error && <p className="text-sm font-semibold text-sabres-red">{error}</p>}
 

@@ -138,7 +138,7 @@ export default function BoardView(props: BoardViewProps) {
     newGame();
   }, [newGame]);
 
-  const rankableFree = type === 'tank' || type === 'franchise';
+  const rankableFree = source === 'free';
   const freeSubmission = (): ScoreSubmission | null =>
     state && state.done
       ? { sport, variant, modeType: type, source: 'free', franchiseId: franchiseId ?? undefined, picks: state.picks }

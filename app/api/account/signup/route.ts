@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { kv } from '@vercel/kv';
 import { signUserToken, userCookieOptions, USER_COOKIE } from '@/lib/perfectseason/server/session';
 import { rateLimit, clientIp } from '@/lib/perfectseason/server/ratelimit';
+import { ensureSubscriber } from '@/lib/newsletter';
 import { userKey, userEmailKey, userNameKey, type User } from '@/lib/perfectseason/leaderboard';
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
@@ -10,7 +11,7 @@ const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 const DENY = /(admin|moderator|f[u\*]ck|sh[i\*]t|n[i1]gg|c[u\*]nt|rape)/i;
 
 export async function POST(request: NextRequest) {
-  let body: { email?: string; username?: string; password?: string };
+  let body: { email?: string; username?: string; password?: string; subscribe?: boolean };
   try {
     body = await request.json();
   } catch {
@@ -50,6 +51,16 @@ export async function POST(request: NextRequest) {
     kv.set(userEmailKey(email), id),
     kv.set(userNameKey(username), id),
   ]);
+
+  // Optional, consented newsletter opt-in (double opt-in via verification email).
+  // Best-effort: never fail account creation on a newsletter/email hiccup.
+  if (body.subscribe) {
+    try {
+      await ensureSubscriber(email, [], 'perfectseason', { single: true });
+    } catch (err) {
+      console.error('Newsletter opt-in failed during signup:', err);
+    }
+  }
 
   const token = await signUserToken(id);
   const res = NextResponse.json({ user: { id, username } });
