@@ -1,17 +1,22 @@
 'use client';
 
-import { useEffect, useState, type ComponentType } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentType } from 'react';
 import Link from 'next/link';
+import { LogIn, LogOut, Trophy } from 'lucide-react';
 import { canSkipDecade, canSkipTeam, currentSpin, legalSlots, openSlots, spinPlayers, type PickRecord } from '@/lib/perfectseason/engine';
 import { getStats, getStreak } from '@/lib/perfectseason/storage';
 import type { SlotDef, Sport } from '@/lib/perfectseason/types';
+import type { PublicUser, ScoreSubmission } from '@/lib/perfectseason/leaderboard';
+import { logout, submitScore, type SubmitState } from '@/lib/perfectseason/account';
 import type { FreeType, GameProps, Source } from './usePerfectSeasonGame';
 import { usePerfectSeasonGame } from './usePerfectSeasonGame';
+import { useCurrentUser } from './useCurrentUser';
 import { SPORT_UI } from './sportUi';
 import SpinReveal from './SpinReveal';
 import BoardDailyResult from './board/BoardDailyResult';
 import FranchisePicker from './FranchisePicker';
 import HowToPlaySheet, { HelpButton } from './board/HowToPlaySheet';
+import AuthModal from './board/AuthModal';
 import { franchiseColor, franchiseLogo, franchiseName, shortDecade } from './ui';
 import RosterStrip from './board/RosterStrip';
 import PositionSheet from './board/PositionSheet';
@@ -50,6 +55,7 @@ export default function BoardView(props: BoardViewProps) {
     phase,
     undo,
     record,
+    dailySubmission,
     type,
     mode,
     spinKey,
@@ -63,6 +69,80 @@ export default function BoardView(props: BoardViewProps) {
     undoPick,
     chooseFreeType,
   } = g;
+
+  // --- Leaderboard accounts (opt-in; never required to play) ---
+  const { user, setUser } = useCurrentUser();
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authReason, setAuthReason] = useState<string | undefined>(undefined);
+  const pendingRef = useRef<ScoreSubmission | null>(null);
+  const [submit, setSubmit] = useState<SubmitState>({ status: 'idle' });
+  const submittedKeyRef = useRef<string | null>(null);
+
+  const runSubmit = useCallback(async (sub: ScoreSubmission) => {
+    setSubmit({ status: 'submitting' });
+    const r = await submitScore(sub);
+    setSubmit(r.ok ? { status: 'done', result: r.data } : { status: 'error', error: r.error });
+  }, []);
+
+  const requestSubmit = useCallback(
+    (sub: ScoreSubmission, reason?: string) => {
+      if (user) runSubmit(sub);
+      else {
+        pendingRef.current = sub;
+        setAuthReason(reason);
+        setAuthOpen(true);
+      }
+    },
+    [user, runSubmit],
+  );
+
+  const onAuthSuccess = useCallback(
+    (u: PublicUser) => {
+      setUser(u);
+      setAuthOpen(false);
+      if (pendingRef.current) {
+        runSubmit(pendingRef.current);
+        pendingRef.current = null;
+      }
+    },
+    [setUser, runSubmit],
+  );
+
+  const onLogout = useCallback(async () => {
+    await logout();
+    setUser(null);
+  }, [setUser]);
+
+  const openAuth = useCallback(() => {
+    setAuthReason(undefined);
+    setAuthOpen(true);
+  }, []);
+
+  // Auto-submit a freshly-locked daily once, when signed in.
+  useEffect(() => {
+    if (!user || !dailySubmission) return;
+    const key = `${dailySubmission.sport}:${dailySubmission.variant}:${dailySubmission.date}`;
+    if (submittedKeyRef.current === key) return;
+    submittedKeyRef.current = key;
+    runSubmit(dailySubmission);
+  }, [user, dailySubmission, runSubmit]);
+
+  // Reset the submission status when the game mode/variant changes.
+  useEffect(() => {
+    setSubmit({ status: 'idle' });
+  }, [source, freeType, franchiseId, variant]);
+
+  // "Build another" (free play) — clear status, then a fresh game.
+  const onPlayAgain = useCallback(() => {
+    setSubmit({ status: 'idle' });
+    newGame();
+  }, [newGame]);
+
+  const rankableFree = type === 'tank' || type === 'franchise';
+  const freeSubmission = (): ScoreSubmission | null =>
+    state && state.done
+      ? { sport, variant, modeType: type, source: 'free', franchiseId: franchiseId ?? undefined, picks: state.picks }
+      : null;
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   useEffect(() => {
@@ -94,7 +174,21 @@ export default function BoardView(props: BoardViewProps) {
   // Hide the Daily/Free + mode toggles once a game is underway (spun or any picks
   // down) so they can't switch mid-draft; they return on the opening board + results.
   const inProgress = !!state && !state.done && (state.picks.length > 0 || phase !== 'board');
-  const shellProps = { sport, source, freeType, inProgress, onSource: setSource, onFreeType: chooseFreeType };
+  const shellProps = {
+    sport,
+    source,
+    freeType,
+    inProgress,
+    onSource: setSource,
+    onFreeType: chooseFreeType,
+    user,
+    onOpenAuth: openAuth,
+    onLogout,
+    authOpen,
+    authReason,
+    onAuthClose: () => setAuthOpen(false),
+    onAuthSuccess,
+  };
 
   if (source === 'daily' && record) {
     return (
@@ -107,6 +201,10 @@ export default function BoardView(props: BoardViewProps) {
             streak={getStreak(sport, variant)}
             played={getStats(sport, variant).played}
             onPlayFree={() => chooseFreeType('standard')}
+            user={user}
+            canSave={!!dailySubmission}
+            saveStatus={submit}
+            onSave={() => dailySubmission && requestSubmit(dailySubmission, 'Sign in to save your score to the leaderboard')}
           />
         </div>
       </Shell>
@@ -136,7 +234,23 @@ export default function BoardView(props: BoardViewProps) {
       return (
         <Shell {...shellProps}>
           <div className="mx-auto max-w-[560px]">
-            <BoardResult result={state.result} config={config} mode={mode} picks={state.picks} data={data} state={state} variant={variant} onPlayAgain={newGame} />
+            <BoardResult
+              result={state.result}
+              config={config}
+              mode={mode}
+              picks={state.picks}
+              data={data}
+              state={state}
+              variant={variant}
+              onPlayAgain={onPlayAgain}
+              user={user}
+              rankable={rankableFree}
+              saveStatus={submit}
+              onSave={() => {
+                const sub = freeSubmission();
+                if (sub) requestSubmit(sub, 'Sign in to post your build to the leaderboard');
+              }}
+            />
           </div>
         </Shell>
       );
@@ -364,6 +478,13 @@ function Shell({
   subBar,
   onSource,
   onFreeType,
+  user,
+  onOpenAuth,
+  onLogout,
+  authOpen,
+  authReason,
+  onAuthClose,
+  onAuthSuccess,
   children,
 }: {
   sport: GameProps['sport'];
@@ -374,9 +495,17 @@ function Shell({
   subBar?: React.ReactNode;
   onSource: (s: Source) => void;
   onFreeType: (t: FreeType) => void;
+  user: PublicUser | null;
+  onOpenAuth: () => void;
+  onLogout: () => void;
+  authOpen: boolean;
+  authReason?: string;
+  onAuthClose: () => void;
+  onAuthSuccess: (u: PublicUser) => void;
   children: React.ReactNode;
 }) {
   const ui = SPORT_UI[sport];
+  const slug = sport === 'mlb' ? '162-0' : '82-0';
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Compact 82-0.com-style top bar: brand + 82-0 badge left, round right. */}
@@ -393,12 +522,29 @@ function Shell({
               {ui.label}
             </span>
           </Link>
-          <div className="flex shrink-0 items-center gap-2.5">
-            {roundLabel && <span className="text-xs font-bold uppercase tracking-wide text-white/80">{roundLabel}</span>}
+          <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
+            {roundLabel && <span className="hidden text-xs font-bold uppercase tracking-wide text-white/80 sm:inline">{roundLabel}</span>}
+            <Link href={`/${slug}/leaderboard`} aria-label="Leaderboard" title="Leaderboard" className="flex items-center text-white/80 transition-colors hover:text-white">
+              <Trophy className="h-5 w-5" />
+            </Link>
+            {user ? (
+              <div className="flex items-center gap-1.5">
+                <span className="max-w-[90px] truncate text-xs font-bold text-white" title={user.username}>{user.username}</span>
+                <button type="button" onClick={onLogout} aria-label="Sign out" title="Sign out" className="flex items-center text-white/70 transition-colors hover:text-white">
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <button type="button" onClick={onOpenAuth} aria-label="Sign in" title="Sign in" className="flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold text-white transition-colors hover:bg-white/25">
+                <LogIn className="h-4 w-4" />
+                <span className="hidden sm:inline">Sign in</span>
+              </button>
+            )}
             <img src={ui.logo} alt={sport.toUpperCase()} className="h-6 w-auto opacity-90" />
           </div>
         </div>
       </header>
+      {authOpen && <AuthModal onClose={onAuthClose} onSuccess={onAuthSuccess} reason={authReason} />}
       {/* Secondary band (team + decade + reroll), stacked under the header like 82-0.com. */}
       {subBar && (
         <div className="border-b border-gray-200 bg-white shadow-sm">

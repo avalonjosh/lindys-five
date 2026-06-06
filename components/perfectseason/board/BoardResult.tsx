@@ -8,9 +8,12 @@ import type { GridTier } from '@/lib/perfectseason/storage';
 import { poolPlayers } from '@/lib/perfectseason/schedule';
 import { rosterRating } from '@/lib/perfectseason/rating';
 import { buildSharePayload, type SharedTeam, type Variant } from '@/lib/perfectseason/share';
+import type { PublicUser } from '@/lib/perfectseason/leaderboard';
+import type { SubmitState } from '@/lib/perfectseason/account';
 import { statCells } from '../ui';
 import ResultBoard, { type RosterEntry } from './ResultBoard';
 import ShareTeamModal from './ShareTeamModal';
+import LeaderboardCta from './LeaderboardCta';
 
 interface RinkResultProps {
   result: SimResult;
@@ -21,12 +24,17 @@ interface RinkResultProps {
   state: EngineState;
   variant: Variant;
   onPlayAgain: () => void;
+  rankable: boolean;
+  saveStatus: SubmitState;
+  onSave: () => void;
+  user?: PublicUser | null;
 }
 
 /** Free-play NHL result: the shared 82-0.com-style ResultBoard + share/build-another. */
-export default function RinkResult({ result, config, mode, picks, data, state, variant, onPlayAgain }: RinkResultProps) {
+export default function RinkResult({ result, config, mode, picks, data, state, variant, onPlayAgain, rankable, saveStatus, onSave, user = null }: RinkResultProps) {
   const [shareTeam, setShareTeam] = useState<SharedTeam | null>(null);
   const tank = mode.type === 'tank';
+  const slug = config.sport === 'mlb' ? '162-0' : '82-0';
 
   const { roster, rating } = useMemo(() => {
     const roster: RosterEntry[] = picks.map((p) => {
@@ -65,6 +73,8 @@ export default function RinkResult({ result, config, mode, picks, data, state, v
         totalStats={config.totalStats}
         roster={roster}
       />
+
+      {rankable && <LeaderboardCta user={user} status={saveStatus} onSave={onSave} slug={slug} kind="free" />}
 
       <div className="flex flex-col gap-2">
         <button

@@ -7,6 +7,7 @@ import { mulberry32, easternDateString } from '@/lib/perfectseason/seed';
 import { createGame, reduce, type Action, type EngineState } from '@/lib/perfectseason/engine';
 import { getDaily, recordDaily, type DailyRecord, type GridCell, type GridTier } from '@/lib/perfectseason/storage';
 import { rosterRating } from '@/lib/perfectseason/rating';
+import type { ScoreSubmission } from '@/lib/perfectseason/leaderboard';
 import { franchiseName, statCells } from './ui';
 
 const ROLL_TOTAL_MS = 1750;
@@ -112,6 +113,9 @@ export function usePerfectSeasonGame({ sport, data, config, schedule }: GameProp
   const [undo, setUndo] = useState(false);
   const [day, setDay] = useState<{ dayNumber: number; date: string } | null>(null);
   const [record, setRecord] = useState<DailyRecord | null>(null);
+  // The leaderboard payload captured when a daily locks (picks are live then).
+  // Null when a previously-locked daily is loaded from storage (can't resubmit).
+  const [dailySubmission, setDailySubmission] = useState<ScoreSubmission | null>(null);
 
   const type: ModeType = source === 'daily' ? 'standard' : freeType;
   const mode = useMemo<ModeDescriptor>(
@@ -123,6 +127,7 @@ export function usePerfectSeasonGame({ sport, data, config, schedule }: GameProp
   useEffect(() => {
     setUndo(false);
     setPhase('board');
+    setDailySubmission(null);
     if (source === 'daily') {
       const date = easternDateString();
       const existing = getDaily(sport, date, variant);
@@ -158,6 +163,7 @@ export function usePerfectSeasonGame({ sport, data, config, schedule }: GameProp
     const rec = buildDailyRecord(data, config, state, day.dayNumber, day.date);
     recordDaily(sport, day.date, variant, rec);
     setRecord(rec);
+    setDailySubmission({ sport, variant, modeType: 'standard', source: 'daily', date: day.date, picks: state.picks });
   }, [sport, data, config, source, record, state, day, variant]);
 
   const spinKey =
@@ -225,6 +231,7 @@ export function usePerfectSeasonGame({ sport, data, config, schedule }: GameProp
     undo,
     day,
     record,
+    dailySubmission,
     type,
     mode,
     spinKey,

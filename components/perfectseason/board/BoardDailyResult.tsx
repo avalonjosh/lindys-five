@@ -6,8 +6,11 @@ import type { SportConfig } from '@/lib/perfectseason/types';
 import type { DailyRecord, Streak } from '@/lib/perfectseason/storage';
 import { buildDailyShare, sharedTeamFromRecord, type SharedTeam } from '@/lib/perfectseason/share';
 import { dailyDateLabel } from '@/lib/perfectseason/seed';
+import type { PublicUser } from '@/lib/perfectseason/leaderboard';
+import type { SubmitState } from '@/lib/perfectseason/account';
 import ResultBoard, { type RosterEntry } from './ResultBoard';
 import ShareTeamModal from './ShareTeamModal';
+import LeaderboardCta from './LeaderboardCta';
 
 interface NhlDailyResultProps {
   record: DailyRecord;
@@ -16,6 +19,10 @@ interface NhlDailyResultProps {
   streak: Streak;
   played: number;
   onPlayFree: () => void;
+  user: PublicUser | null;
+  canSave: boolean;
+  saveStatus: SubmitState;
+  onSave: () => void;
 }
 
 function secondsUntilEtMidnight(): number {
@@ -39,7 +46,8 @@ function fmt(total: number): string {
 }
 
 /** Daily result for NHL: the 82-0.com-style ResultBoard plus our daily layer. */
-export default function NhlDailyResult({ record, config, variant, streak, played, onPlayFree }: NhlDailyResultProps) {
+export default function NhlDailyResult({ record, config, variant, streak, played, onPlayFree, user, canSave, saveStatus, onSave }: NhlDailyResultProps) {
+  const slug = config.sport === 'mlb' ? '162-0' : '82-0';
   const [copied, setCopied] = useState(false);
   const [shareTeam, setShareTeam] = useState<SharedTeam | null>(null);
   const [left, setLeft] = useState(secondsUntilEtMidnight());
@@ -105,6 +113,16 @@ export default function NhlDailyResult({ record, config, variant, streak, played
           Played {played} · Best {streak.best} day streak
         </p>
       </div>
+
+      {canSave ? (
+        <LeaderboardCta user={user} status={saveStatus} onSave={onSave} slug={slug} kind="daily" />
+      ) : (
+        <div className="rounded-xl bg-slate-100 px-4 py-3 text-center text-sm text-gray-600">
+          <Link href={`/${slug}/leaderboard`} className="text-sabres-blue underline-offset-2 hover:underline">
+            View leaderboard
+          </Link>
+        </div>
+      )}
 
       <div className="flex flex-col gap-2">
         <button
