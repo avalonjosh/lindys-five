@@ -2,13 +2,15 @@
 
 import { useMemo, useState } from 'react';
 import type { GameData, ModeDescriptor, SportConfig } from '@/lib/perfectseason/types';
-import type { PickRecord } from '@/lib/perfectseason/engine';
+import type { EngineState, PickRecord } from '@/lib/perfectseason/engine';
 import type { SimResult } from '@/lib/perfectseason/types';
 import type { GridTier } from '@/lib/perfectseason/storage';
 import { poolPlayers } from '@/lib/perfectseason/schedule';
 import { rosterRating } from '@/lib/perfectseason/rating';
+import { buildSharePayload, type SharedTeam, type Variant } from '@/lib/perfectseason/share';
 import { statCells } from '../ui';
 import ResultBoard, { type RosterEntry } from './ResultBoard';
+import ShareTeamModal from './ShareTeamModal';
 
 interface RinkResultProps {
   result: SimResult;
@@ -16,12 +18,14 @@ interface RinkResultProps {
   mode: ModeDescriptor;
   picks: PickRecord[];
   data: GameData;
+  state: EngineState;
+  variant: Variant;
   onPlayAgain: () => void;
 }
 
 /** Free-play NHL result: the shared 82-0.com-style ResultBoard + share/build-another. */
-export default function RinkResult({ result, config, mode, picks, data, onPlayAgain }: RinkResultProps) {
-  const [copied, setCopied] = useState(false);
+export default function RinkResult({ result, config, mode, picks, data, state, variant, onPlayAgain }: RinkResultProps) {
+  const [shareTeam, setShareTeam] = useState<SharedTeam | null>(null);
   const tank = mode.type === 'tank';
 
   const { roster, rating } = useMemo(() => {
@@ -43,14 +47,9 @@ export default function RinkResult({ result, config, mode, picks, data, onPlayAg
     return { roster, rating: rosterRating(data, config, picks, mode.type) };
   }, [picks, data, config, mode.type]);
 
-  const onCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(buildShareText(result, config, mode));
-    } catch {
-      /* clipboard unavailable; ignore */
-    }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1800);
+  const onShare = () => {
+    const team = buildSharePayload(data, config, state, variant, Date.now());
+    if (team) setShareTeam(team);
   };
 
   return (
@@ -70,10 +69,10 @@ export default function RinkResult({ result, config, mode, picks, data, onPlayAg
       <div className="flex flex-col gap-2">
         <button
           type="button"
-          onClick={onCopy}
+          onClick={onShare}
           className="w-full rounded-xl bg-sabres-blue py-3 text-sm font-bold uppercase tracking-wide text-white shadow-md transition-colors hover:bg-sabres-light"
         >
-          {copied ? 'Copied' : 'Share result'}
+          Share your team
         </button>
         <button
           type="button"
@@ -83,12 +82,8 @@ export default function RinkResult({ result, config, mode, picks, data, onPlayAg
           Build another
         </button>
       </div>
+
+      {shareTeam && <ShareTeamModal team={shareTeam} onClose={() => setShareTeam(null)} />}
     </div>
   );
-}
-
-function buildShareText(result: SimResult, config: SportConfig, mode: ModeDescriptor): string {
-  const title = config.sport === 'mlb' ? '162-0' : '82-0';
-  const label = mode.type === 'tank' ? 'Tank (Free Play)' : mode.type === 'franchise' ? 'Franchise (Free Play)' : 'Free Play';
-  return [`${title} ${config.shareIcon} ${label}`, `${result.wins}-${result.losses} · ${result.setsWon}/${result.totalSets} sets`, '', `lindysfive.com/${title}`].join('\n');
 }

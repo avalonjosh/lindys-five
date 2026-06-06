@@ -136,7 +136,7 @@ export default function BoardView(props: BoardViewProps) {
       return (
         <Shell {...shellProps}>
           <div className="mx-auto max-w-[560px]">
-            <BoardResult result={state.result} config={config} mode={mode} picks={state.picks} data={data} onPlayAgain={newGame} />
+            <BoardResult result={state.result} config={config} mode={mode} picks={state.picks} data={data} state={state} variant={variant} onPlayAgain={newGame} />
           </div>
         </Shell>
       );

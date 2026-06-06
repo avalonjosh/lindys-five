@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { SportConfig } from '@/lib/perfectseason/types';
 import type { DailyRecord, Streak } from '@/lib/perfectseason/storage';
-import { buildDailyShare } from '@/lib/perfectseason/share';
+import { buildDailyShare, sharedTeamFromRecord, type SharedTeam } from '@/lib/perfectseason/share';
 import { dailyDateLabel } from '@/lib/perfectseason/seed';
 import ResultBoard, { type RosterEntry } from './ResultBoard';
+import ShareTeamModal from './ShareTeamModal';
 
 interface NhlDailyResultProps {
   record: DailyRecord;
@@ -40,6 +41,7 @@ function fmt(total: number): string {
 /** Daily result for NHL: the 82-0.com-style ResultBoard plus our daily layer. */
 export default function NhlDailyResult({ record, config, variant, streak, played, onPlayFree }: NhlDailyResultProps) {
   const [copied, setCopied] = useState(false);
+  const [shareTeam, setShareTeam] = useState<SharedTeam | null>(null);
   const [left, setLeft] = useState(secondsUntilEtMidnight());
 
   useEffect(() => {
@@ -107,10 +109,17 @@ export default function NhlDailyResult({ record, config, variant, streak, played
       <div className="flex flex-col gap-2">
         <button
           type="button"
-          onClick={onShare}
+          onClick={() => setShareTeam(sharedTeamFromRecord(record, config, variant, Date.now()))}
           className="w-full rounded-xl bg-sabres-blue py-3 text-sm font-bold uppercase tracking-wide text-white shadow-md transition-colors hover:bg-sabres-light"
         >
-          {copied ? 'Copied' : 'Share'}
+          Share your team
+        </button>
+        <button
+          type="button"
+          onClick={onShare}
+          className="w-full rounded-xl border-2 border-gray-300 bg-white py-3 text-sm font-bold uppercase tracking-wide text-gray-700 transition-colors hover:border-gray-400"
+        >
+          {copied ? 'Copied' : 'Share spoiler-free grid'}
         </button>
         <button
           type="button"
@@ -120,6 +129,8 @@ export default function NhlDailyResult({ record, config, variant, streak, played
           Free Play
         </button>
       </div>
+
+      {shareTeam && <ShareTeamModal team={shareTeam} onClose={() => setShareTeam(null)} />}
 
       <Link
         href={config.sport === 'mlb' ? '/82-0' : '/162-0'}

@@ -1,5 +1,7 @@
 import { NextRequest } from 'next/server';
+import { kv } from '@vercel/kv';
 import { generateOgImageResponse, type OgImageParams } from '@/lib/utils/ogImage';
+import { shareKey, type SharedTeam } from '@/lib/perfectseason/share';
 
 export const runtime = 'edge';
 
@@ -15,6 +17,14 @@ export async function GET(request: NextRequest) {
     let params: OgImageParams;
 
     switch (type) {
+      case 'ps-team': {
+        const id = searchParams.get('id');
+        if (!id) return new Response('Missing id parameter', { status: 400 });
+        const team = await kv.get<SharedTeam>(shareKey(id));
+        if (!team) return new Response('Team not found', { status: 404 });
+        params = { type: 'ps-team', team };
+        break;
+      }
       case 'game-recap':
         params = {
           type: 'game-recap',

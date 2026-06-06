@@ -2,6 +2,8 @@ import React from 'react';
 import { ImageResponse } from '@vercel/og';
 import { put } from '@vercel/blob';
 import { TEAMS, type TeamConfig } from '@/lib/teamConfig';
+import { franchiseLogo, franchiseColor } from '@/lib/perfectseason/logos';
+import { modeBadgeLabel, type SharedTeam, type SharedTeamRow } from '@/lib/perfectseason/share';
 
 const OG_WIDTH = 1200;
 const OG_HEIGHT = 630;
@@ -615,7 +617,153 @@ function sportHubTemplate({
   );
 }
 
-export type OgImageType = 'game-recap' | 'set-recap' | 'news-analysis' | 'weekly-roundup' | 'sport-hub';
+const TIER_DOT: Record<string, string> = { green: '#22c55e', yellow: '#eab308', gray: '#6b7280' };
+
+function gradeColor(grade: string): string {
+  switch (grade.charAt(0)) {
+    case 'A': return '#22c55e';
+    case 'B': return '#38bdf8';
+    case 'C': return '#f59e0b';
+    case 'D': return '#f97316';
+    default: return '#ef4444';
+  }
+}
+
+function psPlayerRow(row: SharedTeamRow, sport: 'nhl' | 'mlb', size: number, nameFont: number, subFont: number) {
+  const logo = franchiseLogo(row.franchiseId, sport, 'dark');
+  const color = franchiseColor(row.franchiseId, sport) || '#1e3a8a';
+  return (
+    <div key={`${row.slot}-${row.playerName}`} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      {/* Slot chip with faint team logo behind the position label */}
+      <div
+        style={{
+          position: 'relative',
+          width: size,
+          height: size,
+          borderRadius: 10,
+          background: color,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        {logo && (
+          <img
+            src={logo}
+            width={Math.round(size * 0.78)}
+            height={Math.round(size * 0.78)}
+            style={{ position: 'absolute', objectFit: 'contain', opacity: 0.35 }}
+          />
+        )}
+        <span style={{ fontSize: Math.round(size * 0.42), fontWeight: 800, color: '#ffffff' }}>{row.slot}</span>
+      </div>
+      {/* Name + franchise / decade */}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', fontSize: nameFont, fontWeight: 700, color: '#f8fafc' }}>{row.playerName}</div>
+        <div style={{ display: 'flex', fontSize: subFont, fontWeight: 500, color: '#94a3b8' }}>
+          {row.franchiseId} &middot; {row.decade}
+        </div>
+      </div>
+      <div style={{ display: 'flex', width: 12, height: 12, borderRadius: 6, background: TIER_DOT[row.tier], flexShrink: 0 }} />
+    </div>
+  );
+}
+
+function psTeamTemplate(team: SharedTeam) {
+  const isNHL = team.sport === 'nhl';
+  const slug = isNHL ? '82-0' : '162-0';
+  const accentLeft = isNHL ? '#003087' : '#002D72';
+  const accentRight = isNHL ? '#0A1128' : '#E81828';
+  const twoCol = team.rows.length > 6;
+  const half = Math.ceil(team.rows.length / 2);
+  const columns = twoCol ? [team.rows.slice(0, half), team.rows.slice(half)] : [team.rows];
+  // The longest column drives sizing so the rows fit under the header. Six in one
+  // column (NHL) needs a tighter row than five per column (MLB two-up).
+  const longest = twoCol ? half : team.rows.length;
+  const compact = longest >= 6;
+  const rowSize = compact ? 42 : 48;
+  const nameFont = compact ? 23 : 26;
+  const subFont = compact ? 15 : 17;
+  const ROW_GAP = compact ? 8 : 12;
+
+  return (
+    <div
+      style={{
+        width: OG_WIDTH,
+        height: OG_HEIGHT,
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'linear-gradient(135deg, #0b1220 0%, #111a2e 55%, #0b1220 100%)',
+        position: 'relative',
+        padding: '40px 48px',
+      }}
+    >
+      {/* Top accent bar */}
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 8, display: 'flex' }}>
+        <div style={{ flex: 1, background: accentLeft, display: 'flex' }} />
+        <div style={{ flex: 1, background: accentRight, display: 'flex' }} />
+      </div>
+
+      {/* Header: projected record + grade, team OVR */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', fontSize: 18, fontWeight: 700, color: '#64748b', letterSpacing: 4 }}>
+            PROJECTED RECORD
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, marginTop: 4 }}>
+            <div style={{ display: 'flex', fontSize: 64, fontWeight: 900, color: '#ffffff', lineHeight: 1 }}>
+              {team.wins}-{team.losses}
+            </div>
+            <div style={{ display: 'flex', fontSize: 46, fontWeight: 900, color: gradeColor(team.grade), lineHeight: 1.1 }}>
+              {team.grade}
+            </div>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              marginTop: 10,
+              padding: '6px 16px',
+              borderRadius: 8,
+              background: 'rgba(56,189,248,0.15)',
+              fontSize: 18,
+              fontWeight: 700,
+              color: '#7dd3fc',
+              letterSpacing: 2,
+            }}
+          >
+            {modeBadgeLabel(team.variant, team.modeType)}
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', fontSize: 18, fontWeight: 700, color: '#64748b', letterSpacing: 4 }}>
+            TEAM OVR
+          </div>
+          <div style={{ display: 'flex', fontSize: 64, fontWeight: 900, color: '#fbbf24', lineHeight: 1 }}>
+            {Math.round(team.rating)}
+          </div>
+        </div>
+      </div>
+
+      {/* Roster rows (one or two columns) */}
+      <div style={{ display: 'flex', gap: 48, marginTop: 14, flex: 1, overflow: 'hidden' }}>
+        {columns.map((col, i) => (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: ROW_GAP, flex: 1 }}>
+            {col.map((row) => psPlayerRow(row, team.sport, rowSize, nameFont, subFont))}
+          </div>
+        ))}
+      </div>
+
+      {/* Footer: hook + brand */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 }}>
+        <div style={{ display: 'flex', fontSize: 26, fontWeight: 800, color: '#f8fafc' }}>Can you go {slug}?</div>
+        <div style={{ display: 'flex', fontSize: 24, fontWeight: 700, color: '#7dd3fc' }}>lindysfive.com/{slug}</div>
+      </div>
+    </div>
+  );
+}
+
+export type OgImageType = 'game-recap' | 'set-recap' | 'news-analysis' | 'weekly-roundup' | 'sport-hub' | 'ps-team';
 
 export interface GameRecapImageParams {
   type: 'game-recap';
@@ -658,7 +806,12 @@ export interface SportHubImageParams {
   subtitle: string;
 }
 
-export type OgImageParams = GameRecapImageParams | SetRecapImageParams | NewsImageParams | WeeklyRoundupImageParams | SportHubImageParams;
+export interface PsTeamImageParams {
+  type: 'ps-team';
+  team: SharedTeam;
+}
+
+export type OgImageParams = GameRecapImageParams | SetRecapImageParams | NewsImageParams | WeeklyRoundupImageParams | SportHubImageParams | PsTeamImageParams;
 
 export function generateOgImageResponse(params: OgImageParams): ImageResponse {
   let element: React.JSX.Element;
@@ -678,6 +831,9 @@ export function generateOgImageResponse(params: OgImageParams): ImageResponse {
       break;
     case 'sport-hub':
       element = sportHubTemplate(params);
+      break;
+    case 'ps-team':
+      element = psTeamTemplate(params.team);
       break;
   }
 
