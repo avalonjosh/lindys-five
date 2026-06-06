@@ -41,6 +41,13 @@ export default function BoardPlayerList({ players, config, blind, selectedId, ge
     });
   }
 
+  // Open, finishable slot count per player. Drives both the per-row "No open
+  // slots" state and which position-filter chips stay live: a chip is dead once
+  // no player in that group can still be placed anywhere (e.g. the C slot is full).
+  const legalCount = new Map(players.map((p) => [p.id, getLegalSlots(p).length]));
+  const groupBlocked = (accepts: string[] | null): boolean =>
+    !!accepts && !players.some((p) => p.pos.some((pos) => accepts.includes(pos)) && (legalCount.get(p.id) ?? 0) > 0);
+
   return (
     <div>
       <div className="flex gap-2">
@@ -88,27 +95,34 @@ export default function BoardPlayerList({ players, config, blind, selectedId, ge
       </div>
 
       <div className="mt-2 flex flex-wrap gap-1.5">
-        {GROUPS.map((gr) => (
-          <button
-            key={gr.key}
-            type="button"
-            onClick={() => setGroup(gr.key)}
-            className={[
-              'rounded-full border-2 px-3 py-1 text-xs font-bold transition-colors',
-              group === gr.key ? 'border-sabres-blue bg-sabres-blue text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300',
-            ].join(' ')}
-          >
-            {gr.key}
-          </button>
-        ))}
+        {GROUPS.map((gr) => {
+          const blocked = groupBlocked(gr.accepts);
+          return (
+            <button
+              key={gr.key}
+              type="button"
+              disabled={blocked}
+              onClick={() => !blocked && setGroup(gr.key)}
+              className={[
+                'rounded-full border-2 px-3 py-1 text-xs font-bold transition-colors',
+                blocked
+                  ? 'cursor-not-allowed border-gray-100 bg-gray-50 text-gray-300'
+                  : group === gr.key
+                    ? 'border-sabres-blue bg-sabres-blue text-white'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300',
+              ].join(' ')}
+            >
+              {gr.key}
+            </button>
+          );
+        })}
       </div>
 
       <p className="mt-2 text-xs text-gray-500">{shown.length} available</p>
 
       <ul className="mt-1 flex flex-col gap-1.5" role="listbox" aria-label="Available players">
         {shown.map((player) => {
-          const legal = getLegalSlots(player);
-          const blocked = legal.length === 0;
+          const blocked = (legalCount.get(player.id) ?? 0) === 0;
           const selected = player.id === selectedId;
           const cells = statCells(player, config);
           return (
