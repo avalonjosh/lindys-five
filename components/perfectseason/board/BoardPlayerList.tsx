@@ -9,11 +9,13 @@ interface BoardPlayerListProps {
   config: SportConfig;
   blind: boolean;
   selectedId: string | null;
+  /** Slots still open on the roster — drives which position chips stay live. */
+  openSlots: SlotDef[];
   getLegalSlots: (player: Player) => SlotDef[];
   onSelect: (player: Player) => void;
 }
 
-export default function BoardPlayerList({ players, config, blind, selectedId, getLegalSlots, onSelect }: BoardPlayerListProps) {
+export default function BoardPlayerList({ players, config, blind, selectedId, openSlots, getLegalSlots, onSelect }: BoardPlayerListProps) {
   const GROUPS = config.positionGroups;
   const [query, setQuery] = useState('');
   const [group, setGroup] = useState('All');
@@ -41,12 +43,15 @@ export default function BoardPlayerList({ players, config, blind, selectedId, ge
     });
   }
 
-  // Open, finishable slot count per player. Drives both the per-row "No open
-  // slots" state and which position-filter chips stay live: a chip is dead once
-  // no player in that group can still be placed anywhere (e.g. the C slot is full).
+  // Open, finishable slot count per player — drives the per-row "No open slots" state.
   const legalCount = new Map(players.map((p) => [p.id, getLegalSlots(p).length]));
-  const groupBlocked = (accepts: string[] | null): boolean =>
-    !!accepts && !players.some((p) => p.pos.some((pos) => accepts.includes(pos)) && (legalCount.get(p.id) ?? 0) > 0);
+  // A position chip is dead once no open slot accepts that position (e.g. the lone
+  // C/LF/CF slot is filled). Slot-based, not player-based: a multi-position player
+  // (LF/RF) still reaches an open RF via the RF chip, so greying LF hides nothing.
+  const groupBlocked = (accepts: string[] | null): boolean => {
+    if (!accepts) return false;
+    return !openSlots.some((slot) => slot.accepts.some((a) => accepts.includes(a)));
+  };
 
   return (
     <div>

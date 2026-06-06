@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ComponentType } from 'react';
 import Link from 'next/link';
-import { canSkipDecade, canSkipTeam, currentSpin, legalSlots, spinPlayers, type PickRecord } from '@/lib/perfectseason/engine';
+import { canSkipDecade, canSkipTeam, currentSpin, legalSlots, openSlots, spinPlayers, type PickRecord } from '@/lib/perfectseason/engine';
 import { getStats, getStreak } from '@/lib/perfectseason/storage';
 import type { SlotDef, Sport } from '@/lib/perfectseason/types';
 import type { FreeType, GameProps, Source } from './usePerfectSeasonGame';
@@ -266,6 +266,7 @@ export default function BoardView(props: BoardViewProps) {
                   config={config}
                   blind={blind}
                   selectedId={selectedId}
+                  openSlots={openSlots(state)}
                   getLegalSlots={(p) => legalSlots(state, p)}
                   onSelect={(p) => setSelectedId(p.id)}
                 />
