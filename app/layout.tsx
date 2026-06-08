@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import Script from 'next/script';
 import { Suspense } from 'react';
 import { Bebas_Neue, Permanent_Marker } from 'next/font/google';
 import PageTracker from '@/components/analytics/PageTracker';
+import GoogleAnalytics from '@/components/analytics/GoogleAnalytics';
 import NewsletterVerified from '@/components/newsletter/NewsletterVerified';
 import './globals.css';
 
@@ -61,18 +61,7 @@ export default function RootLayout({
         <PageTracker />
         <Suspense><NewsletterVerified /></Suspense>
         {children}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-ZQRG7XK9D6"
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-ZQRG7XK9D6');
-          `}
-        </Script>
+        <GoogleAnalytics />
       </body>
     </html>
   );

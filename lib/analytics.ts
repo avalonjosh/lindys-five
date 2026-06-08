@@ -77,16 +77,25 @@ export function derivePageType(path: string): string {
   return 'team';
 }
 
+// Sport-section paths under /nhl and /mlb that are not team trackers.
+const NON_TEAM_SECTIONS = new Set(['scores', 'playoff-odds']);
+
 export function extractTeamFromPath(path: string): string | null {
-  if (path.startsWith('/blog/')) {
-    const parts = path.split('/');
-    if (parts.length === 3 && !parts[2].includes('-')) return parts[2];
+  const parts = path.split('/').filter(Boolean);
+
+  // Blog team index: /blog/sabres, /blog/bills (not individual posts).
+  if (parts[0] === 'blog') {
+    if (parts.length === 2 && !parts[1].includes('-')) return parts[1];
     return null;
   }
-  const slug = path.replace(/^\//, '');
-  if (slug && !slug.includes('/') && slug !== 'nhl-playoff-odds') {
-    return slug;
+
+  // Team tracker: /nhl/{team} or /mlb/{team}, exactly two segments. Sub-pages
+  // (gear/tickets/history) and sport sections (scores, playoff-odds) don't count.
+  // Bare slug is returned so the series stays continuous with pre-migration data.
+  if ((parts[0] === 'nhl' || parts[0] === 'mlb') && parts.length === 2) {
+    if (!NON_TEAM_SECTIONS.has(parts[1])) return parts[1];
   }
+
   return null;
 }
 

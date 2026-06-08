@@ -182,6 +182,8 @@ All crons are configured in `vercel.json` and authorized via `CRON_SECRET` Beare
 | `email:set-recap-sent:{team}:{setNumber}` | Boolean | None | Duplicate prevention per set |
 
 ### Analytics
+> **Architecture note (current):** The admin dashboard reads most metrics (pageviews, visitors, bounce, duration, top pages, referrers, devices, countries, UTM, realtime) from the **GA4 Data API** via `lib/ga4.ts`, gated on `GSC_CLIENT_EMAIL` / `GSC_PRIVATE_KEY` / `GA4_PROPERTY_ID` (a missing/expired key makes every panel return zeros, not an error). Only **team views** (`analytics:top:teams:*`) and **click targets** (`analytics:clicks:*`) are still written to KV, by `app/api/analytics/track/route.ts`. Team views depend on `extractTeamFromPath` matching `/nhl/{team}` and `/mlb/{team}` (and `/blog/{team}`). GA4 is excluded from `/admin` routes via `components/analytics/GoogleAnalytics.tsx`. Most of the KV keys below are legacy/no longer written.
+
 | Key Pattern | Type | Expiry | Purpose |
 |-------------|------|--------|---------|
 | `analytics:pv:{date}` | Integer | 90 days | Daily pageview count |
