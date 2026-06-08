@@ -220,4 +220,19 @@ export interface EmailSendRecord {
   clicked?: number;
   bounced?: number;
   complained?: number;
+  // Which program this send belongs to, for per-program performance. Optional
+  // for back-compat; old records fall back to inference from `team`/subject.
+  campaign?: EmailCampaign;
+  // Clicks on gear/tickets affiliate links within the email (from Resend click
+  // events whose URL points at a hub page). Owned proxy for email-driven
+  // affiliate traffic; precise UTM attribution lives in GA4.
+  affiliateClicks?: number;
 }
+
+export type EmailCampaign =
+  | 'game-recap'
+  | 'set-recap'
+  | 'mlb-game-recap'
+  | 'mlb-set-recap'
+  | 'weekly-digest'
+  | 'announcement';

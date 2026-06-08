@@ -9,6 +9,9 @@ import { GET as setRecapHandler } from '@/app/api/cron/set-recap/route';
 import { GET as billsNewsScanHandler } from '@/app/api/cron/bills-news-scan/route';
 import { GET as billsWeeklyRoundupHandler } from '@/app/api/cron/bills-weekly-roundup/route';
 import { GET as billsGameRecapHandler } from '@/app/api/cron/bills-game-recap/route';
+import { GET as weeklyDigestHandler } from '@/app/api/cron/weekly-digest/route';
+import { GET as mlbGameRecapHandler } from '@/app/api/cron/email-mlb-game-recap/route';
+import { GET as mlbSetRecapHandler } from '@/app/api/cron/email-mlb-set-recap/route';
 
 async function verifyAdmin(request: NextRequest): Promise<boolean> {
   const token = request.cookies.get('admin_token')?.value;
@@ -32,7 +35,11 @@ const handlers: Record<string, (request: NextRequest) => Promise<NextResponse>> 
   // Bills
   'bills-news': billsNewsScanHandler,
   'bills-weekly': billsWeeklyRoundupHandler,
-  'bills-game-recap': billsGameRecapHandler
+  'bills-game-recap': billsGameRecapHandler,
+  // Email programs (newsletter admin)
+  'weekly-digest': weeklyDigestHandler,
+  'email-mlb-game-recap': mlbGameRecapHandler,
+  'email-mlb-set-recap': mlbSetRecapHandler
 };
 
 const validTypes = Object.keys(handlers);
@@ -44,7 +51,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { type, setNumber, force } = body;
+  const { type, setNumber, force, test, preview } = body;
 
   if (!type || !validTypes.includes(type)) {
     return NextResponse.json({ error: 'Invalid trigger type', validTypes }, { status: 400 });
@@ -61,6 +68,13 @@ export async function POST(request: NextRequest) {
     }
     if (type === 'set-recap' && force) {
       url.searchParams.set('force', 'true');
+    }
+    // Email-program crons: test sends to a single address; preview renders without sending.
+    if (test) {
+      url.searchParams.set('test', String(test));
+    }
+    if (preview) {
+      url.searchParams.set('preview', '1');
     }
 
     // Create a new NextRequest with the cron authorization header

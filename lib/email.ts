@@ -1,6 +1,6 @@
 import { Resend } from 'resend';
 import { kv } from '@vercel/kv';
-import type { BlogPost, NewsletterSubscriber, EmailSendRecord, GameResult, GameChunk } from './types';
+import type { BlogPost, NewsletterSubscriber, EmailSendRecord, EmailCampaign, GameResult, GameChunk } from './types';
 import type { LandingResponse, StandingsTeam, ScoringGoal, ThreeStar } from './types/boxscore';
 import { TEAMS } from './teamConfig';
 import { fetchJsonWithRetry } from './fetchWithRetry';
@@ -97,7 +97,7 @@ export async function sendGameRecapNewsletter(post: BlogPost) {
     const subject = post.title;
     const postUrl = `${SITE_URL}/blog/${post.team}/${post.slug}?utm_source=newsletter&utm_medium=email&utm_campaign=game-recap&utm_content=blog-link`;
     const html = renderSimpleBlogRecap(post, postUrl);
-    const sendId = await recordEmailSend(post.team, subscribers.length, subject);
+    const sendId = await recordEmailSend(post.team, subscribers.length, subject, 'game-recap');
     await sendBatchEmails(subscribers, subject, html, sendId);
   }
 }
@@ -116,7 +116,7 @@ export async function sendSetRecapNewsletter(post: BlogPost) {
     const subject = post.title;
     const postUrl = `${SITE_URL}/blog/${post.team}/${post.slug}?utm_source=newsletter&utm_medium=email&utm_campaign=set-recap&utm_content=blog-link`;
     const html = renderSimpleBlogRecap(post, postUrl);
-    const sendId = await recordEmailSend(post.team, subscribers.length, subject);
+    const sendId = await recordEmailSend(post.team, subscribers.length, subject, 'set-recap');
     await sendBatchEmails(subscribers, subject, html, sendId);
   }
 }
@@ -187,7 +187,7 @@ export async function sendSetRecapForTeam(
     nextGame,
   });
 
-  const sendId = await recordEmailSend(teamSlug, subscribers.length, subject);
+  const sendId = await recordEmailSend(teamSlug, subscribers.length, subject, 'set-recap');
   await sendBatchEmails(subscribers, subject, html, sendId);
 }
 
@@ -314,7 +314,7 @@ async function sendBoxscoreRecapForTeam(
 
   const html = renderBoxscoreEmail(data, blogPost);
 
-  const sendId = await recordEmailSend(teamSlug, subscribers.length, subject);
+  const sendId = await recordEmailSend(teamSlug, subscribers.length, subject, 'game-recap');
   await sendBatchEmails(subscribers, subject, html, sendId);
 }
 
@@ -721,7 +721,7 @@ async function sendPlayoffBoxscoreRecap(
   const subject = `${teamConfig.name} ${resultWord} ${data.oppAbbrev} ${teamScore}-${oppScore}${suffix} · ${seriesTag}`;
 
   const html = renderPlayoffBoxscoreEmail(data, blogPost);
-  const sendId = await recordEmailSend(teamSlug, subscribers.length, subject);
+  const sendId = await recordEmailSend(teamSlug, subscribers.length, subject, 'game-recap');
   await sendBatchEmails(subscribers, subject, html, sendId);
 }
 
@@ -1137,7 +1137,7 @@ export async function sendAnnouncementEmail(
   if (!content) throw new Error(`Unknown announcement slug: ${slug}`);
   if (subscribers.length === 0) return;
 
-  const sendId = await recordEmailSend('announcement', subscribers.length, content.subject);
+  const sendId = await recordEmailSend('announcement', subscribers.length, content.subject, 'announcement');
 
   // Personalize per subscriber: primary team color + direct link to their tracker.
   // sendBatchEmails uses a single htmlTemplate, so we build a batch-friendly default template;
@@ -1931,7 +1931,7 @@ export async function getAllSendRecords(): Promise<EmailSendRecord[]> {
   return results.filter((r): r is EmailSendRecord => r !== null);
 }
 
-async function recordEmailSend(team: string, recipientCount: number, subject: string): Promise<string> {
+async function recordEmailSend(team: string, recipientCount: number, subject: string, campaign?: EmailCampaign): Promise<string> {
   const id = crypto.randomUUID();
   const record: EmailSendRecord = {
     id,
@@ -1941,18 +1941,23 @@ async function recordEmailSend(team: string, recipientCount: number, subject: st
     sentAt: new Date().toISOString(),
     recipientCount,
     subject,
+    campaign,
     delivered: 0,
     opened: 0,
     clicked: 0,
     bounced: 0,
     complained: 0,
+    affiliateClicks: 0,
   };
   await kv.set(`email:send:${id}`, record);
   await kv.zadd('email:sends', { score: Date.now(), member: id });
   return id;
 }
 
-export async function incrementSendStat(sendRecordId: string, stat: 'delivered' | 'opened' | 'clicked' | 'bounced' | 'complained') {
+export async function incrementSendStat(
+  sendRecordId: string,
+  stat: 'delivered' | 'opened' | 'clicked' | 'bounced' | 'complained' | 'affiliateClicks',
+) {
   const record = await kv.get<EmailSendRecord>(`email:send:${sendRecordId}`);
   if (!record) return;
   record[stat] = (record[stat] || 0) + 1;
@@ -2213,7 +2218,7 @@ export async function sendMLBGameRecap(
   if (recipients.length === 0) return { sent: 0 };
 
   const subject = `${data.teamCity} ${data.teamName} ${data.won ? 'win' : 'fall'} ${data.teamScore}-${data.oppScore} ${data.isHome ? 'vs' : '@'} ${data.oppName}`;
-  const sendId = opts?.testEmail ? undefined : await recordEmailSend(`mlb-recap:${data.teamSlug}`, recipients.length, subject);
+  const sendId = opts?.testEmail ? undefined : await recordEmailSend(`mlb-recap:${data.teamSlug}`, recipients.length, subject, 'mlb-game-recap');
 
   let sent = 0;
   const BATCH = 50;
@@ -2261,7 +2266,7 @@ export async function sendWeeklyDigest(
   if (recipients.length === 0) return { sent: 0 };
 
   const subject = 'Your Lindy’s Five weekly rundown';
-  const sendId = opts?.testEmail ? undefined : await recordEmailSend('weekly-digest', recipients.length, subject);
+  const sendId = opts?.testEmail ? undefined : await recordEmailSend('weekly-digest', recipients.length, subject, 'weekly-digest');
 
   let sent = 0;
   const BATCH = 50;
@@ -2415,7 +2420,7 @@ export async function sendMLBSetRecap(
   if (recipients.length === 0) return { sent: 0 };
 
   const subject = `${data.teamCity} ${data.teamName} — Set #${data.setNumber} recap (${data.wins}-${data.losses})`;
-  const sendId = opts?.testEmail ? undefined : await recordEmailSend(`mlb-set-recap:${data.teamSlug}`, recipients.length, subject);
+  const sendId = opts?.testEmail ? undefined : await recordEmailSend(`mlb-set-recap:${data.teamSlug}`, recipients.length, subject, 'mlb-set-recap');
 
   let sent = 0;
   const BATCH = 50;

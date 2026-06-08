@@ -43,6 +43,16 @@ export async function POST(request: NextRequest) {
     const stat = EVENT_TO_STAT[type as ResendEventType];
     await incrementSendStat(sendRecordId, stat);
 
+    // On a click, also attribute gear/tickets hub links as affiliate clicks —
+    // an owned proxy for email-driven affiliate traffic. Resend puts the clicked
+    // URL on data.click.link.
+    if (type === 'email.clicked') {
+      const link: string = data.click?.link || data.link || '';
+      if (/\/(gear|tickets)(\/|\?|$)/.test(link)) {
+        await incrementSendStat(sendRecordId, 'affiliateClicks');
+      }
+    }
+
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error('Resend webhook error:', error);

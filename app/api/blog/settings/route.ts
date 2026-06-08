@@ -27,6 +27,10 @@ const SETTINGS_KEYS: Record<string, string> = {
   'auto-publish-bills-news': 'blog:settings:auto-publish-bills-news',
   'auto-publish-bills-weekly': 'blog:settings:auto-publish-bills-weekly',
   'auto-publish-bills-game-recap': 'blog:settings:auto-publish-bills-game-recap',
+  // Email programs (gate the digest + MLB recap crons; toggled from the Newsletter admin)
+  'weekly-digest-enabled': 'blog:settings:weekly-digest-enabled',
+  'mlb-recap-enabled': 'blog:settings:mlb-recap-enabled',
+  'mlb-set-recap-enabled': 'blog:settings:mlb-set-recap-enabled',
 };
 
 // GET - fetch all settings
