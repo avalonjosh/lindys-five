@@ -2263,11 +2263,6 @@ export interface MLBSetRecapEmailData {
 const mlbSetUtm = (path: string, content: string) =>
   `${SITE_URL}${path}?utm_source=newsletter&utm_medium=email&utm_campaign=mlb-set-recap&utm_content=${content}`;
 
-function fmtSetDate(date: string): string {
-  const [, m, d] = (date.slice(0, 10).match(/(\d{4})-(\d{2})-(\d{2})/) ?? []);
-  return m && d ? `${Number(m)}/${Number(d)}` : '';
-}
-
 export function renderMLBSetRecapEmail(d: MLBSetRecapEmailData, unsubscribeUrl: string): string {
   const impact = `font-family:Impact,'Arial Narrow',Helvetica,sans-serif;`;
   const statBox = (label: string, value: string, color: string) =>
@@ -2278,14 +2273,21 @@ export function renderMLBSetRecapEmail(d: MLBSetRecapEmailData, unsubscribeUrl: 
   const targetBadge = `<span style="display:inline-block;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;${
     d.targetMet ? 'background:#dcfce7;color:#16a34a;' : 'background:#fee2e2;color:#dc2626;'
   }">${d.targetMet ? 'Target met' : 'Target missed'}</span>`;
+  const colHead = 'font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;';
+  const gamesHeader = `<tr>
+        <td style="${colHead}padding:0 0 8px;">Date</td>
+        <td style="${colHead}padding:0 8px 8px;">Matchup</td>
+        <td align="right" style="${colHead}padding:0 8px 8px;">Score</td>
+        <td style="width:18px;"></td>
+      </tr>`;
   const gameRows = d.games
     .map((g) => {
       const o = g.outcome === 'W' ? 'W' : g.outcome === 'L' ? 'L' : '&middot;';
       const oc = g.outcome === 'W' ? '#16a34a' : g.outcome === 'L' ? '#dc2626' : '#94a3b8';
       return `<tr>
-        <td style="font-size:12px;color:#94a3b8;white-space:nowrap;padding:6px 0;">${fmtSetDate(g.date)}</td>
+        <td style="font-size:12px;color:#94a3b8;white-space:nowrap;padding:6px 0;">${g.date}</td>
         <td style="font-size:13px;color:#64748b;padding:6px 8px;">${g.isHome ? 'vs' : '@'} ${g.opponent}</td>
-        <td align="right" style="font-size:13px;font-weight:700;color:#1e293b;padding:6px 8px;white-space:nowrap;">${g.teamScore}-${g.opponentScore}</td>
+        <td align="right" style="font-size:13px;font-weight:700;color:#1e293b;padding:6px 8px;white-space:nowrap;">${g.teamScore}&ndash;${g.opponentScore}</td>
         <td align="right" style="font-size:12px;font-weight:800;color:${oc};padding:6px 0;width:18px;">${o}</td>
       </tr>`;
     })
@@ -2297,7 +2299,8 @@ export function renderMLBSetRecapEmail(d: MLBSetRecapEmailData, unsubscribeUrl: 
       <div style="font-size:36px;font-weight:800;color:#1e293b;${impact}letter-spacing:1px;margin-top:2px;">${d.wins}&ndash;${d.losses}</div>
       <div style="margin-top:6px;">${targetBadge}</div>
     </div>
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">${gameRows}</table>
+    <p style="margin:0 0 6px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;">Games</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;border-bottom:1px solid #e2e8f0;">${gamesHeader}${gameRows}</table>
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;"><tr>
       ${statBox('Season', `${d.seasonWins}&ndash;${d.seasonLosses}`, '#1e293b')}
       <td width="10"></td>
