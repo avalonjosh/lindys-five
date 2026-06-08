@@ -309,6 +309,11 @@ Curated AI-crawler index: site summary, methodology, data sources, and deep link
 ### GEO: server-rendered standings mirror
 The interactive odds tables (`PlayoffOddsClient`, `MLBPlayoffOddsClient`) are client-rendered, so the full table is not in the initial HTML. Both odds pages (`/nhl-playoff-odds`, `/mlb/playoff-odds`) therefore also render an `sr-only` `<table>` mirror server-side, listing every team ranked by points/wins with record, projected points/wins, and playoff probability. This is the faithful crawler/AI-readable copy of the visible table; keep it in sync if the row data shape changes.
 
+### Breadcrumbs
+- `components/seo/BreadcrumbNav.tsx` is the reusable visible trail (`<nav aria-label="Breadcrumb">`); pages that use it already emit a matching BreadcrumbList JSON-LD, so it is the visual counterpart only.
+- Visible trails exist on: NHL/MLB odds, playoffs, gear, tickets, blog, and the NHL/MLB box scores (the box score's final crumb is the live matchup, e.g. "Pirates at Braves").
+- Team pages (dark team-colored hero) and scores hubs (colored hero) intentionally keep JSON-LD breadcrumbs only; a gray server-rendered trail would clash with those client-owned hero headers.
+- Gear/tickets BreadcrumbList JSON-LD and visible trail both live inside the hub components (`TeamGearHub`/`TeamTicketsHub`), not the page files.
+
 ### Known opportunities (from SEO/GEO audit, not yet done)
-- Visible HTML breadcrumbs to match the BreadcrumbList JSON-LD (only the NHL odds page has a visible trail today).
-- OG/Twitter + BreadcrumbList on gear/tickets pages.
+- `/playoffs` has footer cross-links but no top Home > Playoffs trail; could add one if desired.

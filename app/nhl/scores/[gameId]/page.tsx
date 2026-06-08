@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { LandingResponse } from '@/lib/types/boxscore';
 import BoxScoreClient from '@/components/scores/boxscore/BoxScoreClient';
+import BreadcrumbNav from '@/components/seo/BreadcrumbNav';
 
 interface PageProps {
   params: Promise<{ gameId: string }>;
@@ -72,6 +73,9 @@ export default async function BoxScorePage({ params }: PageProps) {
 
   const summary = await fetchGameSummary(gameId);
   const sportsEventLd = summary ? buildSportsEventLd(gameId, summary) : null;
+  const matchup = summary
+    ? `${summary.awayTeam.placeName.default} ${summary.awayTeam.commonName.default} at ${summary.homeTeam.placeName.default} ${summary.homeTeam.commonName.default}`
+    : 'Box Score';
 
   const breadcrumbLd = {
     '@context': 'https://schema.org',
@@ -106,6 +110,16 @@ export default async function BoxScorePage({ params }: PageProps) {
           __html: JSON.stringify(sportsEventLd ? [breadcrumbLd, sportsEventLd] : breadcrumbLd),
         }}
       />
+      <div className="bg-slate-50">
+        <BreadcrumbNav
+          className="max-w-6xl mx-auto px-4 py-3 text-sm text-gray-500"
+          items={[
+            { name: 'Home', href: '/' },
+            { name: 'NHL Scores', href: '/nhl/scores' },
+            { name: matchup },
+          ]}
+        />
+      </div>
       <BoxScoreClient gameId={gameId} />
     </>
   );

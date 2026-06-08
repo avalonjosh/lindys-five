@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import MLBBoxScoreClient from '@/components/mlb/boxscore/MLBBoxScoreClient';
+import BreadcrumbNav from '@/components/seo/BreadcrumbNav';
 
 interface Props {
   params: Promise<{ gameId: string }>;
@@ -84,6 +85,9 @@ export default async function MLBBoxScorePage({ params }: Props) {
 
   const summary = await fetchGameSummary(gameId);
   const sportsEventLd = summary ? buildSportsEventLd(gameId, summary) : null;
+  const away = summary?.teams?.away?.team?.name;
+  const home = summary?.teams?.home?.team?.name;
+  const matchup = away && home ? `${away} at ${home}` : `Game ${gameId}`;
 
   const breadcrumbLd = {
     '@context': 'https://schema.org',
@@ -103,6 +107,16 @@ export default async function MLBBoxScorePage({ params }: Props) {
           __html: JSON.stringify(sportsEventLd ? [breadcrumbLd, sportsEventLd] : breadcrumbLd),
         }}
       />
+      <div className="bg-slate-50">
+        <BreadcrumbNav
+          className="max-w-6xl mx-auto px-4 py-3 text-sm text-gray-500"
+          items={[
+            { name: 'Home', href: '/' },
+            { name: 'MLB Scores', href: '/mlb/scores' },
+            { name: matchup },
+          ]}
+        />
+      </div>
       <MLBBoxScoreClient gameId={gameId} />
     </>
   );

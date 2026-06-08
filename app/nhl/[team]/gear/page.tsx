@@ -17,6 +17,20 @@ export async function generateMetadata({ params }: { params: Promise<{ team: str
   return {
     title: `${full} Gear & Jerseys — Shop NHL Fan Merch`,
     description: `Shop ${full} jerseys, hats, and apparel from Amazon and Fanatics. Officially licensed NHL fan gear.`,
+    openGraph: {
+      title: `${full} Gear & Jerseys — Shop NHL Fan Merch`,
+      description: `Shop ${full} jerseys, hats, and apparel. Officially licensed NHL fan gear.`,
+      type: 'website',
+      url: `https://www.lindysfive.com/nhl/${team}/gear`,
+      siteName: "Lindy's Five",
+      images: [{ url: t.logo }],
+    },
+    twitter: {
+      card: 'summary',
+      title: `${full} Gear & Jerseys`,
+      description: `Shop ${full} jerseys, hats, and apparel. Officially licensed NHL fan gear.`,
+      images: [t.logo],
+    },
     alternates: { canonical: `https://www.lindysfive.com/nhl/${team}/gear` },
   };
 }

@@ -18,6 +18,20 @@ export async function generateMetadata({ params }: { params: Promise<{ team: str
   return {
     title: `${full} Tickets — MLB Schedule & Seats on StubHub`,
     description: `Find ${full} tickets for every home and away game on StubHub. Verified resale with seat maps and live pricing.`,
+    openGraph: {
+      title: `${full} Tickets — MLB Schedule & Seats on StubHub`,
+      description: `Find ${full} tickets for every home and away game on StubHub. Verified resale with seat maps and live pricing.`,
+      type: 'website',
+      url: `https://www.lindysfive.com/mlb/${team}/tickets`,
+      siteName: "Lindy's Five",
+      images: [{ url: t.logo }],
+    },
+    twitter: {
+      card: 'summary',
+      title: `${full} Tickets on StubHub`,
+      description: `Find ${full} tickets for every home and away game. Verified resale with seat maps and live pricing.`,
+      images: [t.logo],
+    },
     alternates: { canonical: `https://www.lindysfive.com/mlb/${team}/tickets` },
   };
 }
