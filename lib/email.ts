@@ -2230,6 +2230,133 @@ export async function getSendRecordIdForResendEmail(resendEmailId: string): Prom
   return kv.get<string>(`email:resend-map:${resendEmailId}`);
 }
 
+// ---------------------------------------------------------------------------
+// MLB set recap email — sent when a team completes a 5-game set (mirrors the NHL
+// set recap). Uses the same brand shell; set math comes from mlbChunkCalculator.
+// ---------------------------------------------------------------------------
+
+export interface MLBSetRecapGame {
+  date: string;
+  opponent: string;
+  isHome: boolean;
+  teamScore: number;
+  opponentScore: number;
+  outcome: 'W' | 'L' | 'PENDING';
+}
+
+export interface MLBSetRecapEmailData {
+  teamSlug: string;
+  teamCity: string;
+  teamName: string;
+  primaryColor: string;
+  setNumber: number;
+  wins: number;
+  losses: number;
+  targetMet: boolean;
+  games: MLBSetRecapGame[];
+  seasonWins: number;
+  seasonLosses: number;
+  probability: number;
+  projectedWins: number;
+}
+
+const mlbSetUtm = (path: string, content: string) =>
+  `${SITE_URL}${path}?utm_source=newsletter&utm_medium=email&utm_campaign=mlb-set-recap&utm_content=${content}`;
+
+function fmtSetDate(date: string): string {
+  const [, m, d] = (date.slice(0, 10).match(/(\d{4})-(\d{2})-(\d{2})/) ?? []);
+  return m && d ? `${Number(m)}/${Number(d)}` : '';
+}
+
+export function renderMLBSetRecapEmail(d: MLBSetRecapEmailData, unsubscribeUrl: string): string {
+  const impact = `font-family:Impact,'Arial Narrow',Helvetica,sans-serif;`;
+  const statBox = (label: string, value: string, color: string) =>
+    `<td style="text-align:center;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;">${label}</div>
+      <div style="font-size:22px;font-weight:800;color:${color};${impact}">${value}</div>
+    </td>`;
+  const targetBadge = `<span style="display:inline-block;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;${
+    d.targetMet ? 'background:#dcfce7;color:#16a34a;' : 'background:#fee2e2;color:#dc2626;'
+  }">${d.targetMet ? 'Target met' : 'Target missed'}</span>`;
+  const gameRows = d.games
+    .map((g) => {
+      const o = g.outcome === 'W' ? 'W' : g.outcome === 'L' ? 'L' : '&middot;';
+      const oc = g.outcome === 'W' ? '#16a34a' : g.outcome === 'L' ? '#dc2626' : '#94a3b8';
+      return `<tr>
+        <td style="font-size:12px;color:#94a3b8;white-space:nowrap;padding:6px 0;">${fmtSetDate(g.date)}</td>
+        <td style="font-size:13px;color:#64748b;padding:6px 8px;">${g.isHome ? 'vs' : '@'} ${g.opponent}</td>
+        <td align="right" style="font-size:13px;font-weight:700;color:#1e293b;padding:6px 8px;white-space:nowrap;">${g.teamScore}-${g.opponentScore}</td>
+        <td align="right" style="font-size:12px;font-weight:800;color:${oc};padding:6px 0;width:18px;">${o}</td>
+      </tr>`;
+    })
+    .join('');
+
+  const body = `
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Set #${d.setNumber}</div>
+      <div style="font-size:36px;font-weight:800;color:#1e293b;${impact}letter-spacing:1px;margin-top:2px;">${d.wins}&ndash;${d.losses}</div>
+      <div style="margin-top:6px;">${targetBadge}</div>
+    </div>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">${gameRows}</table>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;"><tr>
+      ${statBox('Season', `${d.seasonWins}&ndash;${d.seasonLosses}`, '#1e293b')}
+      <td width="10"></td>
+      ${statBox('Playoff odds', `${d.probability}%`, d.targetMet ? '#16a34a' : '#1e293b')}
+      <td width="10"></td>
+      ${statBox('Proj. wins', String(d.projectedWins), '#1e293b')}
+    </tr></table>
+    <div style="text-align:center;">
+      ${emailButton('Season tracker', mlbSetUtm(`/mlb/${d.teamSlug}`, 'tracker'), { color: d.primaryColor, filled: true })}
+      ${emailButton('Shop gear', mlbSetUtm(`/mlb/${d.teamSlug}/gear`, 'gear'), { color: d.primaryColor, filled: false })}
+      ${emailButton('Tickets', mlbSetUtm(`/mlb/${d.teamSlug}/tickets`, 'tickets'), { color: d.primaryColor, filled: false })}
+    </div>`;
+  return brandEmailShell({ headerBg: d.primaryColor, label: 'Set Recap', body, unsubscribeUrl, footerNote: `${d.teamCity} ${d.teamName} recaps` });
+}
+
+/** Send an MLB set recap to a team's subscribers (or a single test address). */
+export async function sendMLBSetRecap(
+  subscribers: NewsletterSubscriber[],
+  data: MLBSetRecapEmailData,
+  opts?: { testEmail?: string },
+): Promise<{ sent: number }> {
+  const recipients: NewsletterSubscriber[] = opts?.testEmail
+    ? [{ id: 'test', email: opts.testEmail, teams: [], createdAt: new Date().toISOString(), verified: true }]
+    : subscribers.filter((s) => s.verified && !s.unsubscribedAt);
+  if (recipients.length === 0) return { sent: 0 };
+
+  const subject = `${data.teamCity} ${data.teamName} — Set #${data.setNumber} recap (${data.wins}-${data.losses})`;
+  const sendId = opts?.testEmail ? undefined : await recordEmailSend(`mlb-set-recap:${data.teamSlug}`, recipients.length, subject);
+
+  let sent = 0;
+  const BATCH = 50;
+  for (let i = 0; i < recipients.length; i += BATCH) {
+    const batch = recipients.slice(i, i + BATCH);
+    await Promise.all(
+      batch.map(async (sub) => {
+        const unsubscribeUrl = `${SITE_URL}/api/newsletter/unsubscribe?id=${sub.id}`;
+        const html = renderMLBSetRecapEmail(data, unsubscribeUrl);
+        try {
+          const res = await getResend().emails.send({
+            from: FROM_EMAIL,
+            to: sub.email,
+            subject,
+            html,
+            headers: {
+              'List-Unsubscribe': `<${unsubscribeUrl}>`,
+              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+            },
+          });
+          sent++;
+          if (sendId && res.data?.id) await kv.set(`email:resend-map:${res.data.id}`, sendId, { ex: 60 * 60 * 24 * 30 });
+        } catch (err) {
+          console.error(`Failed to send MLB set recap to ${sub.email}:`, err);
+        }
+      }),
+    );
+  }
+  return { sent };
+}
+
 // ─── Exported for Cron / Multi-Team Use ──────────────────────────
 
 export { sendBoxscoreRecapForTeam };
