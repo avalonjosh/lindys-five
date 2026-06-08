@@ -25,7 +25,8 @@ const FROM_EMAIL = "Lindy's Five <noreply@lindysfive.com>";
 // Gmail/Outlook, so we use ESPN's PNG CDN. ESPN codes are the lowercased
 // abbreviation except for these (verified against the CDN — all 62 teams 200):
 const ESPN_NHL_CODES: Record<string, string> = { TBL: 'tb', NJD: 'nj', LAK: 'la', SJS: 'sj', UTA: 'utah' };
-const ESPN_MLB_CODES: Record<string, string> = { CWS: 'chw' };
+// CWS = teamConfig abbrev; AZ = MLB-API abbrev for Arizona (used for opponents).
+const ESPN_MLB_CODES: Record<string, string> = { CWS: 'chw', AZ: 'ari' };
 
 function espnLogoUrl(sport: 'nhl' | 'mlb', abbrev: string): string {
   const a = (abbrev || '').toUpperCase();
@@ -2298,7 +2299,7 @@ export function renderMLBSetRecapEmail(d: MLBSetRecapEmailData, unsubscribeUrl: 
       const tint = win ? '#f0fdf4' : loss ? '#fef2f2' : '#f8fafc';
       return `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:6px;background:${tint};border-left:4px solid ${bar};border-radius:6px;"><tr>
         <td style="padding:9px 12px;font-size:12px;color:#94a3b8;white-space:nowrap;">${g.date}</td>
-        <td style="padding:9px 4px;font-size:13px;font-weight:600;color:#334155;">${g.isHome ? 'vs' : '@'} ${g.opponent}</td>
+        <td style="padding:9px 4px;font-size:13px;font-weight:600;color:#334155;white-space:nowrap;">${g.isHome ? 'vs' : '@'}&nbsp;<img src="${espnLogoUrl('mlb', g.opponent)}" width="18" height="18" alt="" style="vertical-align:middle;margin:0 4px;" />${g.opponent}</td>
         <td align="right" style="padding:9px 14px;font-size:15px;font-weight:800;color:${bar};white-space:nowrap;${impact}">${g.teamScore}&ndash;${g.opponentScore}</td>
       </tr></table>`;
     })
