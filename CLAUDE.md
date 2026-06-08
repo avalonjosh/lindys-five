@@ -241,9 +241,10 @@ Embedded via `<script type="application/ld+json">` with `dangerouslySetInnerHTML
 |------|---------|
 | Home | WebSite (publisher: JRR Apps) |
 | NHL/MLB Hub | WebPage + BreadcrumbList + FAQPage |
-| Playoff Odds (NHL/MLB) | WebPage (+ `dateModified`) + BreadcrumbList + FAQPage |
+| Playoff Odds (NHL/MLB) | WebPage (+ `dateModified`) + Dataset (+ `dateModified`, `variableMeasured`) + BreadcrumbList + FAQPage |
 | Playoffs bracket | WebPage (+ `dateModified`) + BreadcrumbList + SportsEvent (per active series) |
-| Scores hub / Box score | BreadcrumbList |
+| Scores hub | BreadcrumbList |
+| Box score (NHL/MLB) | BreadcrumbList + SportsEvent (teams, startDate, venue, final score; server-fetched landing/schedule, revalidate 300) |
 | Team Tracker (NHL/MLB) | WebPage (+ `dateModified`) + SportsTeam + FAQPage (3 Qs) + BreadcrumbList |
 | Team History (NHL) | WebPage + BreadcrumbList + SportsTeam |
 | Gear / Tickets | none |
@@ -309,5 +310,5 @@ Curated AI-crawler index: site summary, methodology, data sources, and deep link
 The interactive odds tables (`PlayoffOddsClient`, `MLBPlayoffOddsClient`) are client-rendered, so the full table is not in the initial HTML. Both odds pages (`/nhl-playoff-odds`, `/mlb/playoff-odds`) therefore also render an `sr-only` `<table>` mirror server-side, listing every team ranked by points/wins with record, projected points/wins, and playoff probability. This is the faithful crawler/AI-readable copy of the visible table; keep it in sync if the row data shape changes.
 
 ### Known opportunities (from SEO/GEO audit, not yet done)
-- `Dataset` JSON-LD on the odds pages; `SportsEvent` schema on box scores; visible HTML breadcrumbs to match the BreadcrumbList JSON-LD.
+- Visible HTML breadcrumbs to match the BreadcrumbList JSON-LD (only the NHL odds page has a visible trail today).
 - OG/Twitter + BreadcrumbList on gear/tickets pages.

@@ -290,6 +290,34 @@ export default async function NHLPlayoffOddsPage() {
             },
             {
               '@context': 'https://schema.org',
+              '@type': 'Dataset',
+              name: 'NHL Playoff Odds & Standings 2025-26',
+              description:
+                'Daily-updated playoff probability, projected points, and standings for all 32 NHL teams for the 2025-26 season. Each team row includes record, points, games played, projected points at current pace, and a logistic playoff probability measured against the division and wild card cut lines.',
+              url: 'https://www.lindysfive.com/nhl-playoff-odds',
+              keywords: [
+                'NHL playoff odds',
+                'NHL standings',
+                'Stanley Cup odds',
+                'playoff probability',
+                'projected points',
+              ],
+              creator: { '@type': 'Organization', name: 'JRR Apps' },
+              publisher: { '@type': 'Organization', name: "Lindy's Five" },
+              isAccessibleForFree: true,
+              temporalCoverage: '2025-10/2026-06',
+              dateModified: new Date().toISOString(),
+              measurementTechnique:
+                'Logistic curve over the gap between projected points and the higher of the division-3 or wild-card-2 cut line, computed daily from live standings.',
+              variableMeasured: [
+                { '@type': 'PropertyValue', name: 'Playoff probability', unitText: 'percent' },
+                { '@type': 'PropertyValue', name: 'Projected points' },
+                { '@type': 'PropertyValue', name: 'Points' },
+                { '@type': 'PropertyValue', name: 'Record (wins-losses-OT losses)' },
+              ],
+            },
+            {
+              '@context': 'https://schema.org',
               '@type': 'BreadcrumbList',
               itemListElement: [
                 {

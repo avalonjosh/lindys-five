@@ -123,6 +123,34 @@ export default async function MLBPlayoffOddsPage() {
     },
     {
       '@context': 'https://schema.org',
+      '@type': 'Dataset',
+      name: 'MLB Playoff Odds & Standings 2026',
+      description:
+        'Daily-updated playoff probability, projected wins, and standings for all 30 MLB teams for the 2026 season. Each team row includes record, win percentage, games back, projected wins at current pace, and a logistic playoff probability measured against the division-winner and third wild card cut lines.',
+      url: 'https://www.lindysfive.com/mlb/playoff-odds',
+      keywords: [
+        'MLB playoff odds',
+        'MLB standings',
+        'World Series odds',
+        'playoff probability',
+        'projected wins',
+      ],
+      creator: { '@type': 'Organization', name: 'JRR Apps' },
+      publisher: { '@type': 'Organization', name: "Lindy's Five" },
+      isAccessibleForFree: true,
+      temporalCoverage: '2026-03/2026-11',
+      dateModified: new Date().toISOString(),
+      measurementTechnique:
+        'Logistic curve over the gap between projected wins and the higher of the division-winner or third wild card cut line, computed daily from live standings.',
+      variableMeasured: [
+        { '@type': 'PropertyValue', name: 'Playoff probability', unitText: 'percent' },
+        { '@type': 'PropertyValue', name: 'Projected wins' },
+        { '@type': 'PropertyValue', name: 'Win percentage' },
+        { '@type': 'PropertyValue', name: 'Record (wins-losses)' },
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.lindysfive.com/' },
