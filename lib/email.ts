@@ -2019,6 +2019,67 @@ export function renderWeeklyDigestEmail(content: WeeklyDigestContent, unsubscrib
 }
 
 // ---------------------------------------------------------------------------
+// Welcome email — sent the moment someone opts in (single opt-in), so they get
+// immediate acknowledgment and a path back into the site.
+// ---------------------------------------------------------------------------
+
+const welcomeUtm = (path: string, content: string) =>
+  `${SITE_URL}${path}?utm_source=newsletter&utm_medium=email&utm_campaign=welcome&utm_content=${content}`;
+
+function renderWelcomeEmail(unsubscribeUrl: string): string {
+  const navy = '#041E42';
+  const blue = '#003087';
+  const gold = '#FFB81C';
+  const btn = (label: string, href: string) =>
+    `<a href="${href}" style="display:inline-block;margin:0 6px 8px 0;padding:11px 18px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;background:${blue};color:#fff;">${label}</a>`;
+  const link = (label: string, href: string) =>
+    `<a href="${href}" style="color:${blue};font-weight:600;text-decoration:none;">${label}</a>`;
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;background:#f1f5f9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 0;"><tr><td align="center">
+    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;">
+      <tr><td style="background:${navy};padding:26px;text-align:center;">
+        <div style="font-size:26px;font-weight:800;color:#ffffff;letter-spacing:1px;">LINDY&rsquo;S FIVE</div>
+        <div style="font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:${gold};margin-top:4px;">You&rsquo;re in</div>
+      </td></tr>
+      <tr><td style="padding:26px 28px;">
+        <p style="margin:0 0 14px;font-size:16px;color:#0f172a;font-weight:700;">Thanks for subscribing! 🏒⚾</p>
+        <p style="margin:0 0 18px;font-size:15px;color:#334155;line-height:1.6;">You&rsquo;ll get occasional updates on new games, the NHL &amp; MLB playoff races, and leaderboards — no spam, and you can unsubscribe anytime.</p>
+        <p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;">Jump in</p>
+        <div>
+          ${btn('Play 82-0 (NHL)', welcomeUtm('/82-0', 'play-nhl'))}
+          ${btn('Play 162-0 (MLB)', welcomeUtm('/162-0', 'play-mlb'))}
+        </div>
+        <p style="margin:14px 0 0;font-size:14px;color:#334155;line-height:1.6;">
+          Or track the races: ${link('NHL playoff odds', welcomeUtm('/nhl-playoff-odds', 'nhl-odds'))} &middot; ${link('MLB playoff odds', welcomeUtm('/mlb/playoff-odds', 'mlb-odds'))}.
+        </p>
+      </td></tr>
+      <tr><td style="padding:18px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
+        <p style="margin:0 0 6px;font-size:12px;color:#94a3b8;">Lindy&rsquo;s Five &middot; NHL &amp; MLB playoff tracking</p>
+        <a href="${unsubscribeUrl}" style="font-size:12px;color:#94a3b8;text-decoration:underline;">Unsubscribe</a>
+      </td></tr>
+    </table>
+  </td></tr></table>
+</body></html>`;
+}
+
+/** Send a one-off welcome email to a freshly opted-in subscriber. Best-effort. */
+export async function sendWelcomeEmail(email: string, subscriberId: string): Promise<void> {
+  const unsubscribeUrl = `${SITE_URL}/api/newsletter/unsubscribe?id=${subscriberId}`;
+  await getResend().emails.send({
+    from: FROM_EMAIL,
+    to: email,
+    subject: 'Welcome to Lindy’s Five',
+    html: renderWelcomeEmail(unsubscribeUrl),
+    headers: {
+      'List-Unsubscribe': `<${unsubscribeUrl}>`,
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
 // MLB per-game recap email (data-driven, per team — mirrors the NHL recap).
 // ---------------------------------------------------------------------------
 

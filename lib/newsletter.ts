@@ -6,8 +6,17 @@
  */
 
 import { kv } from '@vercel/kv';
-import { sendVerificationEmail } from '@/lib/email';
+import { sendVerificationEmail, sendWelcomeEmail } from '@/lib/email';
 import type { NewsletterSubscriber, EmailVerificationToken } from '@/lib/types';
+
+/** Single opt-in acknowledgment. Best-effort — never block signup on a send. */
+async function sendWelcome(subscriberId: string, email: string): Promise<void> {
+  try {
+    await sendWelcomeEmail(email, subscriberId);
+  } catch (err) {
+    console.error('Welcome email failed:', err);
+  }
+}
 
 async function sendVerificationToken(subscriberId: string, email: string): Promise<void> {
   const token = crypto.randomUUID();
@@ -53,7 +62,8 @@ export async function ensureSubscriber(
     };
     await kv.set(`email:subscriber:${existing.id}`, updated);
     for (const team of teams) await kv.sadd(`email:subscribers:team:${team}`, existing.id);
-    if (!single) await sendVerificationToken(existing.id, lower);
+    if (single) await sendWelcome(existing.id, lower);
+    else await sendVerificationToken(existing.id, lower);
     return;
   }
 
@@ -70,5 +80,6 @@ export async function ensureSubscriber(
   await kv.set(`email:subscriber:${id}`, subscriber);
   await kv.sadd('email:subscribers', id);
   for (const team of teams) await kv.sadd(`email:subscribers:team:${team}`, id);
-  if (!single) await sendVerificationToken(id, lower);
+  if (single) await sendWelcome(id, lower);
+  else await sendVerificationToken(id, lower);
 }
