@@ -2096,58 +2096,108 @@ export interface MLBGameRecapEmailData {
   teamCity: string;
   teamName: string;
   teamAbbrev: string;
-  oppAbbrev?: string;
+  oppAbbrev: string;
+  oppName: string;
   primaryColor: string;
   won: boolean;
+  isHome: boolean;
   teamScore: number;
   oppScore: number;
-  oppName: string;
-  isHome: boolean;
   gameId: number;
-  probability: number;
-  projectedWins: number;
-  wins: number;
-  losses: number;
+  // Playoff impact (both teams, before -> after)
+  probBefore: number;
+  probAfter: number;
+  oppProbBefore: number;
+  oppProbAfter: number;
+  // Season progress
+  record: string;
+  winPct: string;
+  projWins: number;
+  gamesBack: string;
+  // Next game CTA
+  nextGame: { opponent: string; date: string; ticketLink: string } | null;
 }
 
 const mlbUtm = (path: string, content: string) =>
   `${SITE_URL}${path}?utm_source=newsletter&utm_medium=email&utm_campaign=mlb-game-recap&utm_content=${content}`;
 
 export function renderMLBGameRecapEmail(d: MLBGameRecapEmailData, unsubscribeUrl: string): string {
-  const result = d.won ? 'W' : 'L';
-  const resultColor = d.won ? '#16a34a' : '#dc2626';
-  const vs = d.isHome ? 'vs' : '@';
   const impact = `font-family:Impact,'Arial Narrow',Helvetica,sans-serif;`;
-  const statBox = (label: string, value: string, color: string) =>
-    `<td style="text-align:center;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;">${label}</div>
-      <div style="font-size:22px;font-weight:800;color:${color};${impact}">${value}</div>
-    </td>`;
+  const tracker = mlbUtm(`/mlb/${d.teamSlug}`, 'tracker');
 
-  const teamLogo = `<td style="padding:0 12px;"><img src="${espnLogoUrl('mlb', d.teamAbbrev)}" width="44" height="44" alt="" style="display:block;" /></td>`;
-  const oppLogo = d.oppAbbrev
-    ? `<td style="padding:0 12px;"><img src="${espnLogoUrl('mlb', d.oppAbbrev)}" width="44" height="44" alt="" style="display:block;" /></td>`
+  // Away team is listed first in the score block.
+  const awayAbbrev = d.isHome ? d.oppAbbrev : d.teamAbbrev;
+  const homeAbbrev = d.isHome ? d.teamAbbrev : d.oppAbbrev;
+  const awayScore = d.isHome ? d.oppScore : d.teamScore;
+  const homeScore = d.isHome ? d.teamScore : d.oppScore;
+  const awayWon = awayScore > homeScore;
+  const homeWon = homeScore > awayScore;
+
+  const card = (label: string, inner: string) =>
+    `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+      <tr><td style="padding:12px 16px 4px;"><span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">${label}</span></td></tr>
+      <tr><td style="padding:4px 16px 14px;">${inner}</td></tr>
+    </table>`;
+
+  const delta = (before: number, after: number) => {
+    const dlt = after - before;
+    const color = dlt >= 0 ? '#16a34a' : '#dc2626';
+    const arrow = dlt >= 0 ? '&#9652;' : '&#9662;';
+    return `<span style="font-size:14px;font-weight:700;color:${color};">${arrow} ${dlt >= 0 ? '+' : ''}${dlt}%</span>`;
+  };
+  const impactRow = (abbrev: string, name: string, before: number, after: number) =>
+    `<table width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td width="28" valign="middle"><img src="${espnLogoUrl('mlb', abbrev)}" width="24" height="24" alt="" style="display:block;" /></td>
+      <td valign="middle" style="padding-left:8px;"><span style="font-size:14px;font-weight:700;color:#1e293b;">${name}</span><br/><span style="font-size:13px;color:#64748b;">${before}% &rarr; ${after}%</span></td>
+      <td align="right" valign="middle">${delta(before, after)}</td>
+    </tr></table>`;
+
+  const statCell = (label: string, value: string) =>
+    `<td align="center" width="50%" style="padding:6px 0;"><span style="display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;">${label}</span><span style="display:block;font-size:16px;font-weight:700;color:#1e293b;">${value}</span></td>`;
+
+  const scoreBlock = `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;"><tr>
+      <td align="center" width="35%"><img src="${espnLogoUrl('mlb', awayAbbrev)}" width="48" height="48" alt="" style="display:block;margin:0 auto 8px;" /><span style="font-size:14px;font-weight:700;color:#1e293b;">${awayAbbrev}</span></td>
+      <td align="center" width="30%">
+        <span style="${impact}font-size:32px;font-weight:800;"><span style="color:${awayWon ? '#1e293b' : '#64748b'};">${awayScore}</span><span style="color:#94a3b8;font-size:18px;"> - </span><span style="color:${homeWon ? '#1e293b' : '#64748b'};">${homeScore}</span></span>
+        <span style="display:block;margin-top:4px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">Final</span>
+      </td>
+      <td align="center" width="35%"><img src="${espnLogoUrl('mlb', homeAbbrev)}" width="48" height="48" alt="" style="display:block;margin:0 auto 8px;" /><span style="font-size:14px;font-weight:700;color:#1e293b;">${homeAbbrev}</span></td>
+    </tr></table>`;
+
+  const impactCard = card(
+    'Playoff Impact',
+    `${impactRow(d.teamAbbrev, d.teamName, d.probBefore, d.probAfter)}
+     <table width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #e2e8f0;padding-top:8px;"></td></tr></table>
+     ${impactRow(d.oppAbbrev, d.oppName, d.oppProbBefore, d.oppProbAfter)}`,
+  );
+
+  const probCard = card(
+    'Playoff Probability',
+    `<table width="100%" cellpadding="0" cellspacing="0" style="background:#e2e8f0;border-radius:4px;"><tr><td style="width:${d.probAfter}%;background:${d.primaryColor};border-radius:4px;height:8px;font-size:0;line-height:0;">&nbsp;</td><td style="font-size:0;line-height:0;">&nbsp;</td></tr></table>
+     <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;"><tr>
+       <td><span style="font-size:20px;font-weight:800;color:#1e293b;">${d.probAfter}%</span></td>
+       <td align="right"><a href="${tracker}" style="font-size:12px;color:${d.primaryColor};text-decoration:none;font-weight:600;">View full tracker &rarr;</a></td>
+     </tr></table>`,
+  );
+
+  const seasonCard = card(
+    'Season Progress',
+    `<table width="100%" cellpadding="0" cellspacing="0">
+       <tr>${statCell('Record', d.record)}${statCell('Win %', d.winPct)}</tr>
+       <tr>${statCell('Proj. Wins', String(d.projWins))}${statCell('Games Back', d.gamesBack)}</tr>
+     </table>`,
+  );
+
+  const nextGameCard = d.nextGame
+    ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:6px;background:${d.primaryColor};border-radius:8px;"><tr><td style="padding:20px;text-align:center;">
+        <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">Next Game</div>
+        <div style="margin-top:6px;${impact}font-size:20px;font-weight:800;color:#ffffff;text-transform:uppercase;letter-spacing:1px;">${d.nextGame.opponent}</div>
+        <div style="margin-top:2px;font-size:14px;color:rgba(255,255,255,0.85);">${d.nextGame.date}</div>
+        <a href="${d.nextGame.ticketLink}" style="display:inline-block;margin-top:14px;background:#ffffff;color:${d.primaryColor};padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">Get Tickets</a>
+      </td></tr></table>`
     : '';
-  const body = `
-    <table align="center" cellpadding="0" cellspacing="0" style="margin:0 auto 4px;"><tr>
-      ${teamLogo}
-      <td style="font-size:36px;font-weight:800;color:#1e293b;${impact}letter-spacing:1px;white-space:nowrap;"><span style="color:${resultColor};">${result}</span> ${d.teamScore}&ndash;${d.oppScore}</td>
-      ${oppLogo}
-    </tr></table>
-    <div style="text-align:center;margin-bottom:18px;font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">Final &middot; ${vs} ${d.oppName}</div>
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;"><tr>
-      ${statBox('Record', `${d.wins}&ndash;${d.losses}`, '#1e293b')}
-      <td width="10"></td>
-      ${statBox('Playoff odds', `${d.probability}%`, resultColor)}
-      <td width="10"></td>
-      ${statBox('Proj. wins', String(d.projectedWins), '#1e293b')}
-    </tr></table>
-    <div style="text-align:center;">
-      ${emailButton('Box score', mlbUtm(`/mlb/scores/${d.gameId}`, 'boxscore'), { color: d.primaryColor, filled: true })}
-      ${emailButton('Season tracker', mlbUtm(`/mlb/${d.teamSlug}`, 'tracker'), { color: d.primaryColor, filled: false })}
-      ${emailButton('Shop gear', mlbUtm(`/mlb/${d.teamSlug}/gear`, 'gear'), { color: d.primaryColor, filled: false })}
-      ${emailButton('Tickets', mlbUtm(`/mlb/${d.teamSlug}/tickets`, 'tickets'), { color: d.primaryColor, filled: false })}
-    </div>`;
+
+  const body = `${scoreBlock}${impactCard}${probCard}${seasonCard}${nextGameCard}`;
   return brandEmailShell({ headerBg: d.primaryColor, label: 'Game Recap', body, unsubscribeUrl, footerNote: `${d.teamCity} ${d.teamName} recaps` });
 }
 
