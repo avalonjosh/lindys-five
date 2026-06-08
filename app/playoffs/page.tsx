@@ -568,6 +568,7 @@ export default async function PlayoffsPage() {
               name: 'NHL Playoff Bracket 2026',
               description: 'NHL playoff bracket with series odds and Stanley Cup predictions.',
               url: 'https://www.lindysfive.com/playoffs',
+              dateModified: new Date().toISOString(),
               publisher: { '@type': 'Organization', name: 'JRR Apps' },
             },
             {

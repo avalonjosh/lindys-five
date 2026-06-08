@@ -117,7 +117,7 @@ export default function MLBLandingPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
       />
       <div className="sr-only" aria-hidden="false">
-        <h1>MLB Playoff Odds &amp; Standings 2026 — All 30 Teams</h1>
+        <p>MLB Playoff Odds &amp; Standings 2026 — All 30 Teams</p>
         <p>
           MLB playoff odds, standings, and projections for all 30 teams in the 2026 season.
           Track win pace, playoff picture, World Series odds, and the wild card race — updated daily.

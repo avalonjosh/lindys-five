@@ -3,7 +3,7 @@
 ## Project Overview
 NHL playoff odds tracker and scores site. Tracks playoff probability for all 32 NHL teams with 5-game set analysis, live scores, box scores, and standings.
 
-**URL:** https://lindysfive.com
+**URL:** https://www.lindysfive.com (canonical host is `www`; the apex 301-redirects to it)
 
 ## Tech Stack
 - **Framework:** Next.js (App Router)
@@ -16,8 +16,8 @@ NHL playoff odds tracker and scores site. Tracks playoff probability for all 32 
 - **Auth:** bcryptjs (password hashing) + jose (JWT tokens)
 
 ## Key Directories
-- `app/` - Next.js routes (scores, team tracker, blog, admin)
-- `app/scores/[gameId]/` - Box score pages
+- `app/` - Next.js routes, namespaced by sport (`app/nhl/*`, `app/mlb/*`) plus games (`app/82-0`, `app/162-0`), blog, admin
+- `app/nhl/scores/[gameId]/`, `app/mlb/scores/[gameId]/` - Box score pages
 - `app/admin/` - Admin dashboard (analytics, posts, outreach, newsletter)
 - `app/api/cron/` - Automated cron jobs (game recaps, set recaps, news scans)
 - `components/scores/boxscore/` - Box score components (GameHeader, ScoringTimeline, PlayoffImpact, etc.)
@@ -215,26 +215,24 @@ All crons are configured in `vercel.json` and authorized via `CRON_SECRET` Beare
 
 ## SEO Implementation
 
+> Canonical host is `https://www.lindysfive.com` everywhere (root layout `metadataBase`, all canonicals, sitemap, robots, llms.txt). The site is now multi-sport (NHL + MLB) with games. Routes are namespaced by sport: `/nhl/*` and `/mlb/*`. Old flat NHL routes (`/{team}`, `/scores/{gameId}`) 301-redirect to the `/nhl/*` equivalents via `redirects()` in `next.config`.
+
+### Route Map (current)
+- **Hubs:** `/nhl`, `/mlb` (sport landing pages with team grids + sr-only crawler text)
+- **Odds:** `/nhl-playoff-odds`, `/mlb/playoff-odds`, `/playoffs` (live Stanley Cup bracket)
+- **Team trackers:** `/nhl/{team}`, `/mlb/{team}` (+ `/gear`, `/tickets`; NHL also `/history`)
+- **Scores:** `/nhl/scores`, `/nhl/scores/{gameId}`, `/mlb/scores`, `/mlb/scores/{gameId}`
+- **Games (Perfect Season):** `/82-0` (NHL), `/162-0` (MLB), each with `/leaderboard` and noindexed `/share`
+- **Blog:** `/blog`, `/blog/{team}`, `/blog/{team}/{slug}`
+
 ### Metadata Pattern
-- **Root layout** provides title template: `"%s | Lindy's Five"`
-- Each page overrides with specific title and description
-- Titles kept to 50-80 characters, descriptions to 150-160 characters
-
-### Page Metadata
-
-| Page | Title | Twitter Card |
-|------|-------|-------------|
-| Home (`/`) | "NHL Playoff Odds & Standings 2025-26 — Projections for All 32 Teams" | summary_large_image |
-| Playoff Odds (`/nhl-playoff-odds`) | "NHL Playoff Odds 2025-26 — Standings, Projections & Playoff Picture" | summary_large_image |
-| Scores (`/scores`) | "NHL Scores Today — Live Results, Box Scores & Playoff Impact" | summary |
-| Box Score (`/scores/{gameId}`) | "Game {gameId} — Box Score" | summary |
-| Team Tracker (`/{team}`) | "{Team} Playoff Odds & Standings 2025-26 — Chances & Projections" | summary_large_image |
-| Blog Hub (`/blog`) | "NHL Blog — Sabres Playoff Coverage, Game Recaps & Analysis" | summary |
-| Team Blog (`/blog/{team}`) | "{Team} Blog" | summary |
-| Blog Post (`/blog/{team}/{slug}`) | Post title from DB | summary_large_image |
+- **Root layout** provides title template `"%s | Lindy's Five"` and `metadataBase`
+- Each page overrides with specific title/description; titles ~50-80 chars, descriptions ~150-160
+- **OG images:** hub/odds pages use a dynamic generator at `/api/og?type=...`; team pages use team logo; blog posts use `ogImage` from DB
+- Perfect Season layouts use `generateMetadata()` so the social unfurl carries the current daily date
 
 ### Canonical URLs
-Set via `alternates.canonical` on all pages. Pattern: `https://lindysfive.com/{path}`. **Note:** Box score pages (`/scores/{gameId}`) are missing canonical URLs — should be added.
+Set via `alternates.canonical` on all pages, pattern `https://www.lindysfive.com/{path}`. Team-page canonicals use `team.id`, which equals the route slug (verified). Box score pages (`/nhl|/mlb/scores/{gameId}`) now have canonicals (previously a known gap, resolved).
 
 ### Structured Data (JSON-LD)
 Embedded via `<script type="application/ld+json">` with `dangerouslySetInnerHTML`.
@@ -242,31 +240,43 @@ Embedded via `<script type="application/ld+json">` with `dangerouslySetInnerHTML
 | Page | Schemas |
 |------|---------|
 | Home | WebSite (publisher: JRR Apps) |
-| Playoff Odds | WebPage + BreadcrumbList |
-| Scores | BreadcrumbList |
-| Box Score | BreadcrumbList |
-| Team Tracker | WebPage + FAQPage (3 questions about playoff odds) + BreadcrumbList + SportsTeam |
+| NHL/MLB Hub | WebPage + BreadcrumbList + FAQPage |
+| Playoff Odds (NHL/MLB) | WebPage (+ `dateModified`) + BreadcrumbList + FAQPage |
+| Playoffs bracket | WebPage (+ `dateModified`) + BreadcrumbList + SportsEvent (per active series) |
+| Scores hub / Box score | BreadcrumbList |
+| Team Tracker (NHL/MLB) | WebPage (+ `dateModified`) + SportsTeam + FAQPage (3 Qs) + BreadcrumbList |
+| Team History (NHL) | WebPage + BreadcrumbList + SportsTeam |
+| Gear / Tickets | none |
+| Perfect Season (`/82-0`, `/162-0`) | none (sr-only H1 + descriptive prose only) |
 | Blog Hub | CollectionPage |
 | Team Blog | CollectionPage + BreadcrumbList |
-| Blog Post | Article (with dates, author, image) + BreadcrumbList |
+| Blog Post | Article (dates, author, image) + BreadcrumbList |
+
+`dateModified: new Date().toISOString()` is emitted at render on the ISR odds/team/playoffs WebPage schemas to signal freshness.
 
 ### FAQPage Schema (Team Tracker Pages)
-Each of the 32 team pages generates 3 FAQ questions:
-- "Will the {Team} make the playoffs in 2026?"
+Each team page generates 3 FAQ questions (`/nhl/{team}` and `/mlb/{team}`):
+- "Will the {Team} make the playoffs in {year}?"
 - "What are the {Team}'s playoff odds?"
-- "What are the {Team}'s Stanley Cup odds?"
+- "What are the {Team}'s {Stanley Cup | World Series} odds?"
 
 ### Sitemap (`app/sitemap.ts`)
-Base URL: `https://lindysfive.com`
+Base URL: `https://www.lindysfive.com`. Generates ~200 URLs:
 
 | URLs | Change Freq | Priority |
 |------|-------------|----------|
 | `/` | daily | 1.0 |
-| `/nhl-playoff-odds` | daily | 0.95 |
-| `/{all 32 teams}` | daily | 0.9 |
+| `/nhl-playoff-odds`, `/playoffs`, `/nhl` | daily/hourly | 0.95 |
+| `/mlb/playoff-odds`, `/mlb` | daily | 0.9-0.95 |
+| `/nhl/{32 teams}` | daily | 0.9 |
+| `/mlb/{30 teams}` | daily | 0.85 |
+| `/nhl|/mlb/{team}/gear`, `/tickets` | weekly | 0.5 |
+| `/nhl/scores`, `/mlb/scores` | daily | 0.7 |
+| `/82-0`, `/162-0` (+ leaderboards) | daily | 0.6-0.7 |
 | `/blog`, `/blog/sabres`, `/blog/bills` | daily | 0.8 |
-| `/scores` | daily | 0.7 |
-| `/blog/{team}/{slug}` (dynamic) | weekly | 0.7 |
+| `/blog/{team}/{slug}` (dynamic from KV) | weekly | 0.7 |
+
+Box score and `/share` pages are intentionally excluded.
 
 ### RSS Feed (`/feed.xml`)
 - Cached 1 hour (`max-age=3600`)
@@ -279,13 +289,25 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /admin/*
-Sitemap: https://lindysfive.com/sitemap.xml
+Disallow: /api/
+
+Sitemap: https://www.lindysfive.com/sitemap.xml
 ```
 
+### llms.txt (`/public/llms.txt`)
+Curated AI-crawler index: site summary, methodology, data sources, and deep links to every NHL/MLB team tracker, the odds/bracket pages, the Perfect Season games, and the blog/RSS. Keep in sync when routes change.
+
 ### SEO-Specific Patterns
-- **ISR revalidation:** `/nhl-playoff-odds` revalidates every 5 min, team blogs every 60s
-- **Screen-reader SEO text:** Team tracker pages have `sr-only` div with server-rendered summary for crawlers
-- **Blog posts:** Use `metaDescription` field from DB, fallback to `excerpt`
-- **OG images:** Team pages use team logo, blog posts use `ogImage` field from DB
-- **Admin pages:** `robots: { index: false, follow: false }` — excluded from indexing
-- **Image optimization:** `next.config.js` allows remote images from `assets.nhle.com` and `*.public.blob.vercel-storage.com`
+- **ISR revalidation:** odds + team pages every 5 min, `/playoffs` every 60s, gear/tickets every 24h, blog 60s (`force-dynamic` on individual posts)
+- **Screen-reader SEO text:** NHL and MLB team pages (and the hub pages, and the Perfect Season pages) have an `sr-only` block with a server-rendered, answer-shaped summary of live stats for crawlers/AI engines
+- **Single H1:** one canonical H1 per page; hub pages keep the visible H1 and use `<p>` for the sr-only keyword line
+- **Blog posts:** use `metaDescription` from DB, fallback to `excerpt`
+- **Admin pages:** `robots: { index: false, follow: false }`; Perfect Season `/share` pages `robots: { index: false, follow: true }` (UGC)
+- **Image optimization:** `next.config.js` allows remote images from `assets.nhle.com`, `*.public.blob.vercel-storage.com`, and `www.mlbstatic.com` / `img.mlbstatic.com`
+
+### GEO: server-rendered standings mirror
+The interactive odds tables (`PlayoffOddsClient`, `MLBPlayoffOddsClient`) are client-rendered, so the full table is not in the initial HTML. Both odds pages (`/nhl-playoff-odds`, `/mlb/playoff-odds`) therefore also render an `sr-only` `<table>` mirror server-side, listing every team ranked by points/wins with record, projected points/wins, and playoff probability. This is the faithful crawler/AI-readable copy of the visible table; keep it in sync if the row data shape changes.
+
+### Known opportunities (from SEO/GEO audit, not yet done)
+- `Dataset` JSON-LD on the odds pages; `SportsEvent` schema on box scores; visible HTML breadcrumbs to match the BreadcrumbList JSON-LD.
+- OG/Twitter + BreadcrumbList on gear/tickets pages.

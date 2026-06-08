@@ -119,6 +119,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
     name: `${fullName} Playoff Odds & Standings 2025-26`,
     description: `${fullName} playoff odds, chances, and Stanley Cup projections for 2025-26. Track playoff probability, points pace, and playoff picture updated daily.`,
     url: `https://www.lindysfive.com/nhl/${team.id}`,
+    dateModified: new Date().toISOString(),
     publisher: {
       '@type': 'Organization',
       name: "Lindy's Five",

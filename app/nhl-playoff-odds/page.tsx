@@ -261,6 +261,9 @@ export default async function NHLPlayoffOddsPage() {
   }
 
   const teams = buildTeamData(standings);
+  const leagueRanked = [...teams].sort(
+    (a, b) => b.points - a.points || b.pointPctg - a.pointPctg
+  );
 
   return (
     <>
@@ -279,6 +282,7 @@ export default async function NHLPlayoffOddsPage() {
               description:
                 'NHL playoff odds, standings, and playoff picture for all 32 teams in 2025-26. Stanley Cup projections and wild card race updated daily.',
               url: 'https://www.lindysfive.com/nhl-playoff-odds',
+              dateModified: new Date().toISOString(),
               publisher: {
                 '@type': 'Organization',
                 name: 'JRR Apps',
@@ -305,6 +309,50 @@ export default async function NHLPlayoffOddsPage() {
           ]),
         }}
       />
+
+      {/* Server-rendered standings mirror for crawlers and AI answer engines.
+          Duplicates the interactive (client-rendered) table so every team's row
+          is present in the initial HTML without JS execution. */}
+      <section className="sr-only" aria-label="NHL playoff odds and standings for all 32 teams, 2025-26 season">
+        <h2>NHL Playoff Odds &amp; Standings 2025-26 — All 32 Teams</h2>
+        <p>
+          Live NHL playoff probability, projected points, and standings for all 32 teams,
+          ranked by points and updated daily. Projected points extrapolate the current
+          points pace over an 82-game season; playoff probability is a logistic estimate
+          against the division and wild card cut lines.
+        </p>
+        <table>
+          <caption>NHL standings and playoff odds, all 32 teams, 2025-26 (updated daily)</caption>
+          <thead>
+            <tr>
+              <th scope="col">League rank</th>
+              <th scope="col">Team</th>
+              <th scope="col">Record (W-L-OTL)</th>
+              <th scope="col">Points</th>
+              <th scope="col">Games played</th>
+              <th scope="col">Projected points</th>
+              <th scope="col">Playoff probability</th>
+              <th scope="col">Conference</th>
+              <th scope="col">Division (rank)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {leagueRanked.map((t, i) => (
+              <tr key={t.abbrev}>
+                <td>{i + 1}</td>
+                <td>{t.name}</td>
+                <td>{t.wins}-{t.losses}-{t.otLosses}</td>
+                <td>{t.points}</td>
+                <td>{t.gamesPlayed}</td>
+                <td>{t.pace}</td>
+                <td>{t.odds}%</td>
+                <td>{t.conferenceName}</td>
+                <td>{t.divisionName} (#{t.divisionSequence})</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
 
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         {/* Header */}

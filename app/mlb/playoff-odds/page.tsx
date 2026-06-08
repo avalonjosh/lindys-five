@@ -93,6 +93,9 @@ export default async function MLBPlayoffOddsPage() {
   }
 
   const rows = buildTeamRows(standings);
+  const leagueRanked = [...rows].sort(
+    (a, b) => b.team.wins - a.team.wins || b.team.winPct - a.team.winPct
+  );
 
   const totalGamesPlayed = standings.reduce((sum, t) => sum + t.wins + t.losses, 0);
   const seasonStarted = totalGamesPlayed > 0;
@@ -110,6 +113,7 @@ export default async function MLBPlayoffOddsPage() {
       description:
         'MLB playoff odds, standings, and playoff picture for all 30 teams in 2026. World Series projections and wild card race updated daily.',
       url: 'https://www.lindysfive.com/mlb/playoff-odds',
+      dateModified: new Date().toISOString(),
       publisher: { '@type': 'Organization', name: 'JRR Apps' },
       about: {
         '@type': 'SportsOrganization',
@@ -172,6 +176,50 @@ export default async function MLBPlayoffOddsPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+
+      {/* Server-rendered standings mirror for crawlers and AI answer engines.
+          Duplicates the interactive (client-rendered) table so every team's row
+          is present in the initial HTML without JS execution. */}
+      <section className="sr-only" aria-label="MLB playoff odds and standings for all 30 teams, 2026 season">
+        <h2>MLB Playoff Odds &amp; Standings 2026 — All 30 Teams</h2>
+        <p>
+          Live MLB playoff probability, projected wins, and standings for all 30 teams,
+          ranked by wins and updated daily. Projected wins extrapolate the current win
+          pace over a 162-game season; playoff probability is a logistic estimate against
+          the division-winner and third wild card cut lines.
+        </p>
+        <table>
+          <caption>MLB standings and playoff odds, all 30 teams, 2026 (updated daily)</caption>
+          <thead>
+            <tr>
+              <th scope="col">League rank</th>
+              <th scope="col">Team</th>
+              <th scope="col">Record (W-L)</th>
+              <th scope="col">Win %</th>
+              <th scope="col">Games back</th>
+              <th scope="col">Projected wins</th>
+              <th scope="col">Playoff probability</th>
+              <th scope="col">League</th>
+              <th scope="col">Division (rank)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {leagueRanked.map(({ team, probability, projectedWins }, i) => (
+              <tr key={team.teamAbbrev}>
+                <td>{i + 1}</td>
+                <td>{team.teamName}</td>
+                <td>{team.wins}-{team.losses}</td>
+                <td>.{(team.winPct * 1000).toFixed(0).padStart(3, '0')}</td>
+                <td>{team.gamesBack === 0 ? '—' : team.gamesBack}</td>
+                <td>{projectedWins}</td>
+                <td>{probability}%</td>
+                <td>{team.league}</td>
+                <td>{team.division} (#{team.divisionRank})</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
 
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         {/* Header */}
@@ -359,6 +407,12 @@ export default async function MLBPlayoffOddsPage() {
         </main>
 
         <footer className="mt-auto py-6 text-center text-sm text-gray-500">
+          <nav className="mb-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 font-medium">
+            <Link href="/nhl-playoff-odds" className="text-blue-700 hover:underline">NHL Playoff Odds</Link>
+            <Link href="/playoffs" className="text-blue-700 hover:underline">Playoff Bracket</Link>
+            <Link href="/162-0" className="text-blue-700 hover:underline">Play 162-0</Link>
+            <Link href="/" className="text-blue-700 hover:underline">Home</Link>
+          </nav>
           <p>Lindy&apos;s Five &bull; {new Date().getFullYear()}</p>
           <p className="mt-1">Data sourced from MLB Stats API. Updated every 5 minutes.</p>
         </footer>

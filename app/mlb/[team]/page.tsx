@@ -79,6 +79,7 @@ export default async function MLBTeamPage({ params }: MLBTeamPageProps) {
     name: `${fullName} Playoff Odds & Standings 2026`,
     description: `${fullName} playoff odds and projections for 2026. Track win pace, playoff picture, and probability updated daily.`,
     url: `https://www.lindysfive.com/mlb/${team.id}`,
+    dateModified: new Date().toISOString(),
     publisher: {
       '@type': 'Organization',
       name: "Lindy's Five",

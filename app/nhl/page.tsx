@@ -140,7 +140,7 @@ export default async function NHLLandingPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
       />
       <div className="sr-only" aria-hidden="false">
-        <h1>NHL Playoff Odds &amp; Standings 2025-26 — All 32 Teams</h1>
+        <p>NHL Playoff Odds &amp; Standings 2025-26 — All 32 Teams</p>
         <p>
           NHL playoff odds, standings, and playoff picture for all 32 teams in the 2025-26 season.
           Track playoff probability, Stanley Cup odds, points pace, and the wild card race — updated daily.

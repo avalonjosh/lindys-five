@@ -47,12 +47,12 @@ export default function LandingPage() {
         <div className="max-w-4xl w-full">
           {/* Header */}
           <div className="text-center mb-16">
-            <p
+            <h1
               className="text-5xl md:text-7xl font-bold text-white mb-4"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
               Lindy&apos;s Five
-            </p>
+            </h1>
             <p className="text-lg md:text-xl text-gray-400">
               Track Every Season, Five Games at a Time
             </p>
