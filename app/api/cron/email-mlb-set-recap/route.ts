@@ -30,6 +30,7 @@ function buildData(team: MLBTeamConfig, chunk: MLBGameChunk, standings: MLBStand
     teamSlug: team.slug,
     teamCity: team.city,
     teamName: team.name,
+    teamAbbrev: team.abbreviation,
     primaryColor: team.colors.primary,
     setNumber: chunk.chunkNumber,
     wins: chunk.wins,
@@ -51,7 +52,7 @@ function buildData(team: MLBTeamConfig, chunk: MLBGameChunk, standings: MLBStand
 }
 
 const SAMPLE: MLBSetRecapEmailData = {
-  teamSlug: 'yankees', teamCity: 'New York', teamName: 'Yankees', primaryColor: '#003087',
+  teamSlug: 'yankees', teamCity: 'New York', teamName: 'Yankees', teamAbbrev: 'NYY', primaryColor: '#003087',
   setNumber: 12, wins: 4, losses: 1, targetMet: true,
   games: [
     { date: '2026-06-02', opponent: 'BOS', isHome: true, teamScore: 6, opponentScore: 3, outcome: 'W' },

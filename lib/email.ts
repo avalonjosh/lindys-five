@@ -20,6 +20,18 @@ function getResend(): Resend {
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.lindysfive.com';
 const FROM_EMAIL = "Lindy's Five <noreply@lindysfive.com>";
+
+// PNG team logos for email. Team SVGs (nhle.com / mlbstatic) don't render in
+// Gmail/Outlook, so we use ESPN's PNG CDN. ESPN codes are the lowercased
+// abbreviation except for these (verified against the CDN — all 62 teams 200):
+const ESPN_NHL_CODES: Record<string, string> = { TBL: 'tb', NJD: 'nj', LAK: 'la', SJS: 'sj', UTA: 'utah' };
+const ESPN_MLB_CODES: Record<string, string> = { CWS: 'chw' };
+
+function espnLogoUrl(sport: 'nhl' | 'mlb', abbrev: string): string {
+  const a = (abbrev || '').toUpperCase();
+  const code = (sport === 'nhl' ? ESPN_NHL_CODES[a] : ESPN_MLB_CODES[a]) ?? a.toLowerCase();
+  return `https://a.espncdn.com/i/teamlogos/${sport}/500/${code}.png`;
+}
 const NHL_API = 'https://api-web.nhle.com/v1';
 
 // ─── Verification Email ───────────────────────────────────────────
@@ -449,11 +461,9 @@ function renderBoxscoreEmail(data: GameRecapData, blogPost?: BlogPost): string {
   const oppProbColor = oppProbDelta >= 0 ? '#16a34a' : '#dc2626';
   const oppProbArrow = oppProbDelta >= 0 ? '&#9652;' : '&#9662;';
 
-  // Team logos (NHL CDN)
-  const teamLogo = `https://assets.nhle.com/logos/nhl/svg/${teamConfig.abbreviation}_light.svg`;
-  const oppLogo = oppConfig
-    ? `https://assets.nhle.com/logos/nhl/svg/${oppConfig.abbreviation}_light.svg`
-    : '';
+  // Team logos (ESPN PNG — renders in Gmail/Outlook, unlike the NHL SVGs)
+  const teamLogo = espnLogoUrl('nhl', teamConfig.abbreviation);
+  const oppLogo = oppConfig ? espnLogoUrl('nhl', oppConfig.abbreviation) : '';
 
   // Away team is always listed first in the score block
   const awayAbbrev = isHome ? oppAbbrev : teamConfig.abbreviation;
@@ -881,9 +891,9 @@ function renderPlayoffBoxscoreEmail(data: PlayoffGameRecapData, blogPost?: BlogP
   const goalsByTeam = collectGoalScorers(landing, teamConfig.abbreviation);
   const threeStars = landing.summary?.threeStars || [];
 
-  // Team logos
-  const teamLogo = `https://assets.nhle.com/logos/nhl/svg/${teamConfig.abbreviation}_light.svg`;
-  const oppLogo = `https://assets.nhle.com/logos/nhl/svg/${oppAbbrev}_light.svg`;
+  // Team logos (ESPN PNG — renders in Gmail/Outlook, unlike the NHL SVGs)
+  const teamLogo = espnLogoUrl('nhl', teamConfig.abbreviation);
+  const oppLogo = espnLogoUrl('nhl', oppAbbrev);
   const awayAbbrev = isHome ? oppAbbrev : teamConfig.abbreviation;
   const homeAbbrev = isHome ? teamConfig.abbreviation : oppAbbrev;
   const awayLogo = isHome ? oppLogo : teamLogo;
@@ -2084,6 +2094,8 @@ export interface MLBGameRecapEmailData {
   teamSlug: string;
   teamCity: string;
   teamName: string;
+  teamAbbrev: string;
+  oppAbbrev?: string;
   primaryColor: string;
   won: boolean;
   teamScore: number;
@@ -2111,13 +2123,17 @@ export function renderMLBGameRecapEmail(d: MLBGameRecapEmailData, unsubscribeUrl
       <div style="font-size:22px;font-weight:800;color:${color};${impact}">${value}</div>
     </td>`;
 
+  const teamLogo = `<td style="padding:0 12px;"><img src="${espnLogoUrl('mlb', d.teamAbbrev)}" width="44" height="44" alt="" style="display:block;" /></td>`;
+  const oppLogo = d.oppAbbrev
+    ? `<td style="padding:0 12px;"><img src="${espnLogoUrl('mlb', d.oppAbbrev)}" width="44" height="44" alt="" style="display:block;" /></td>`
+    : '';
   const body = `
-    <div style="text-align:center;margin-bottom:18px;">
-      <div style="font-size:36px;font-weight:800;color:#1e293b;${impact}letter-spacing:1px;">
-        <span style="color:${resultColor};">${result}</span> ${d.teamScore}&ndash;${d.oppScore}
-      </div>
-      <div style="margin-top:4px;font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">Final &middot; ${vs} ${d.oppName}</div>
-    </div>
+    <table align="center" cellpadding="0" cellspacing="0" style="margin:0 auto 4px;"><tr>
+      ${teamLogo}
+      <td style="font-size:36px;font-weight:800;color:#1e293b;${impact}letter-spacing:1px;white-space:nowrap;"><span style="color:${resultColor};">${result}</span> ${d.teamScore}&ndash;${d.oppScore}</td>
+      ${oppLogo}
+    </tr></table>
+    <div style="text-align:center;margin-bottom:18px;font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">Final &middot; ${vs} ${d.oppName}</div>
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;"><tr>
       ${statBox('Record', `${d.wins}&ndash;${d.losses}`, '#1e293b')}
       <td width="10"></td>
@@ -2248,6 +2264,7 @@ export interface MLBSetRecapEmailData {
   teamSlug: string;
   teamCity: string;
   teamName: string;
+  teamAbbrev: string;
   primaryColor: string;
   setNumber: number;
   wins: number;
@@ -2289,6 +2306,7 @@ export function renderMLBSetRecapEmail(d: MLBSetRecapEmailData, unsubscribeUrl: 
 
   const body = `
     <div style="text-align:center;margin-bottom:16px;">
+      <img src="${espnLogoUrl('mlb', d.teamAbbrev)}" width="48" height="48" alt="" style="display:block;margin:0 auto 6px;" />
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Set #${d.setNumber}</div>
       <div style="font-size:36px;font-weight:800;color:#1e293b;${impact}letter-spacing:1px;margin-top:2px;">${d.wins}&ndash;${d.losses}</div>
       <div style="margin-top:6px;">${targetBadge}</div>

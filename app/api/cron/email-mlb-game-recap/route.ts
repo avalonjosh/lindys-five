@@ -19,6 +19,7 @@ function buildData(game: MLBScoreGame, side: 'home' | 'away', standings: MLBStan
   const team = side === 'home' ? game.homeTeam : game.awayTeam;
   const opp = side === 'home' ? game.awayTeam : game.homeTeam;
   const cfg = ABBREV_TO_CFG[team.abbrev];
+  const oppCfg = ABBREV_TO_CFG[opp.abbrev];
   const standing = standings.find((t) => t.teamAbbrev === team.abbrev);
   if (!cfg || !standing) return null;
   const odds = getMLBPlayoffProbability(standing, standings);
@@ -26,6 +27,8 @@ function buildData(game: MLBScoreGame, side: 'home' | 'away', standings: MLBStan
     teamSlug: cfg.slug,
     teamCity: cfg.city,
     teamName: cfg.name,
+    teamAbbrev: cfg.abbreviation,
+    oppAbbrev: oppCfg?.abbreviation,
     primaryColor: cfg.colors.primary,
     won: team.score > opp.score,
     teamScore: team.score,
@@ -41,7 +44,7 @@ function buildData(game: MLBScoreGame, side: 'home' | 'away', standings: MLBStan
 }
 
 const SAMPLE: MLBGameRecapEmailData = {
-  teamSlug: 'yankees', teamCity: 'New York', teamName: 'Yankees', primaryColor: '#003087',
+  teamSlug: 'yankees', teamCity: 'New York', teamName: 'Yankees', teamAbbrev: 'NYY', oppAbbrev: 'BOS', primaryColor: '#003087',
   won: true, teamScore: 6, oppScore: 3, oppName: 'Red Sox', isHome: true, gameId: 0,
   probability: 78, projectedWins: 92, wins: 50, losses: 34,
 };
