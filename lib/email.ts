@@ -2318,14 +2318,21 @@ export interface MLBSetRecapEmailData {
   teamAbbrev: string;
   primaryColor: string;
   setNumber: number;
+  dateRange: string;
   wins: number;
   losses: number;
+  totalGames: number;
+  runDiff: number;
+  targetWins: number;
   targetMet: boolean;
   games: MLBSetRecapGame[];
-  seasonWins: number;
-  seasonLosses: number;
-  probability: number;
-  projectedWins: number;
+  // Season + odds (mirrors the game recap)
+  probAfter: number;
+  record: string;
+  winPct: string;
+  projWins: number;
+  gamesBack: string;
+  nextGame: { opponent: string; date: string; ticketLink: string } | null;
 }
 
 const mlbSetUtm = (path: string, content: string) =>
@@ -2333,50 +2340,66 @@ const mlbSetUtm = (path: string, content: string) =>
 
 export function renderMLBSetRecapEmail(d: MLBSetRecapEmailData, unsubscribeUrl: string): string {
   const impact = `font-family:Impact,'Arial Narrow',Helvetica,sans-serif;`;
-  const statBox = (label: string, value: string, color: string) =>
-    `<td style="text-align:center;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;">${label}</div>
-      <div style="font-size:22px;font-weight:800;color:${color};${impact}">${value}</div>
-    </td>`;
-  const targetBadge = `<span style="display:inline-block;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;${
-    d.targetMet ? 'background:#dcfce7;color:#16a34a;' : 'background:#fee2e2;color:#dc2626;'
-  }">${d.targetMet ? 'Target met' : 'Target missed'}</span>`;
-  const gameCards = d.games
+  const tracker = mlbSetUtm(`/mlb/${d.teamSlug}`, 'tracker');
+
+  const card = (label: string, inner: string) =>
+    `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+      <tr><td style="padding:12px 16px 4px;"><span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">${label}</span></td></tr>
+      <tr><td style="padding:4px 16px 14px;">${inner}</td></tr>
+    </table>`;
+  const coloredBox = (value: string, label: string, color: string, bg: string) =>
+    `<td align="center" width="33%" style="padding:0 4px;"><table width="100%" cellpadding="0" cellspacing="0" style="background:${bg};border-radius:8px;"><tr><td align="center" style="padding:12px 4px;">
+      <span style="display:block;font-size:24px;font-weight:800;color:${color};${impact}">${value}</span>
+      <span style="display:block;font-size:10px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.5px;">${label}</span>
+    </td></tr></table></td>`;
+  const statCell = (label: string, value: string) =>
+    `<td align="center" width="50%" style="padding:6px 0;"><span style="display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;">${label}</span><span style="display:block;font-size:16px;font-weight:700;color:#1e293b;">${value}</span></td>`;
+
+  const gameRows = d.games
     .map((g) => {
       const win = g.outcome === 'W';
-      const loss = g.outcome === 'L';
-      const bar = win ? '#16a34a' : loss ? '#dc2626' : '#cbd5e1';
-      const tint = win ? '#f0fdf4' : loss ? '#fef2f2' : '#f8fafc';
-      return `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:6px;background:${tint};border-left:4px solid ${bar};border-radius:6px;"><tr>
-        <td style="padding:9px 12px;font-size:12px;color:#94a3b8;white-space:nowrap;">${g.date}</td>
-        <td style="padding:9px 4px;font-size:13px;font-weight:600;color:#334155;white-space:nowrap;">${g.isHome ? 'vs' : '@'}&nbsp;<img src="${espnLogoUrl('mlb', g.opponent)}" width="18" height="18" alt="" style="vertical-align:middle;margin:0 4px;" />${g.opponent}</td>
-        <td align="right" style="padding:9px 14px;font-size:15px;font-weight:800;color:${bar};white-space:nowrap;${impact}">${g.teamScore}&ndash;${g.opponentScore}</td>
-      </tr></table>`;
+      const outcomeColor = win ? '#16a34a' : g.outcome === 'L' ? '#dc2626' : '#94a3b8';
+      const outcomeLabel = win ? 'WIN' : g.outcome === 'L' ? 'LOSS' : '—';
+      return `<tr><td style="padding:8px 0;border-bottom:1px solid #e2e8f0;"><table width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td width="52" style="font-size:12px;color:#94a3b8;white-space:nowrap;">${g.date}</td>
+        <td><table cellpadding="0" cellspacing="0"><tr>
+          <td style="font-size:12px;color:#94a3b8;padding-right:6px;">${g.isHome ? 'vs' : '@'}</td>
+          <td><img src="${espnLogoUrl('mlb', g.opponent)}" width="20" height="20" alt="" style="display:block;" /></td>
+          <td style="font-size:13px;font-weight:600;color:#1e293b;padding-left:6px;">${g.opponent}</td>
+        </tr></table></td>
+        <td width="62" align="center" style="font-size:14px;font-weight:700;color:#1e293b;">${g.teamScore} - ${g.opponentScore}</td>
+        <td width="42" align="right"><span style="font-size:12px;font-weight:700;color:${outcomeColor};">${outcomeLabel}</span></td>
+      </tr></table></td></tr>`;
     })
     .join('');
 
+  const targetBg = d.targetMet ? '#f0fdf4' : '#fef2f2';
+  const targetColor = d.targetMet ? '#16a34a' : '#dc2626';
+  const targetText = d.targetMet ? `Target Met! (${d.targetWins}+ wins)` : `Missed Target (${d.wins} of ${d.targetWins}+)`;
+  const runColor = d.runDiff >= 0 ? '#16a34a' : '#dc2626';
+  const runBg = d.runDiff >= 0 ? '#f0fdf4' : '#fef2f2';
+
   const body = `
-    <div style="text-align:center;margin-bottom:16px;">
-      <img src="${espnLogoUrl('mlb', d.teamAbbrev)}" width="48" height="48" alt="" style="display:block;margin:0 auto 6px;" />
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Set #${d.setNumber}</div>
-      <div style="font-size:36px;font-weight:800;color:#1e293b;${impact}letter-spacing:1px;margin-top:2px;">${d.wins}&ndash;${d.losses}</div>
-      <div style="margin-top:6px;">${targetBadge}</div>
-    </div>
-    <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;">Games</p>
-    ${gameCards}
-    <div style="height:12px;"></div>
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;"><tr>
-      ${statBox('Season', `${d.seasonWins}&ndash;${d.seasonLosses}`, '#1e293b')}
-      <td width="10"></td>
-      ${statBox('Playoff odds', `${d.probability}%`, d.targetMet ? '#16a34a' : '#1e293b')}
-      <td width="10"></td>
-      ${statBox('Proj. wins', String(d.projectedWins), '#1e293b')}
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;"><tr>
+      <td><span style="display:block;${impact}font-size:24px;font-weight:800;color:#1e293b;text-transform:uppercase;letter-spacing:1px;">Set ${d.setNumber}</span><span style="display:block;font-size:13px;color:#64748b;margin-top:2px;">${d.dateRange}</span></td>
+      <td align="right"><span style="display:block;${impact}font-size:32px;font-weight:800;color:${d.primaryColor};">${d.wins}</span><span style="display:block;font-size:12px;color:#64748b;">of ${d.totalGames} games</span></td>
     </tr></table>
-    <div style="text-align:center;">
-      ${emailButton('Season tracker', mlbSetUtm(`/mlb/${d.teamSlug}`, 'tracker'), { color: d.primaryColor, filled: true })}
-      ${emailButton('Shop gear', mlbSetUtm(`/mlb/${d.teamSlug}/gear`, 'gear'), { color: d.primaryColor, filled: false })}
-      ${emailButton('Tickets', mlbSetUtm(`/mlb/${d.teamSlug}/tickets`, 'tickets'), { color: d.primaryColor, filled: false })}
-    </div>`;
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px;"><tr>
+      ${coloredBox(String(d.wins), 'Wins', '#16a34a', '#f0fdf4')}
+      ${coloredBox(String(d.losses), 'Losses', '#dc2626', '#fef2f2')}
+      ${coloredBox(`${d.runDiff >= 0 ? '+' : ''}${d.runDiff}`, 'Run Diff', runColor, runBg)}
+    </tr></table>
+    <div style="text-align:center;margin-bottom:18px;"><span style="display:inline-block;background:${targetBg};color:${targetColor};padding:8px 20px;border-radius:20px;font-size:13px;font-weight:700;">${d.targetMet ? '&#10003;' : '&#10007;'} ${targetText}</span></div>
+    ${card('Game Results', `<table width="100%" cellpadding="0" cellspacing="0">${gameRows}</table>`)}
+    ${card('Playoff Probability', `<table width="100%" cellpadding="0" cellspacing="0" style="background:#e2e8f0;border-radius:4px;"><tr><td style="width:${d.probAfter}%;background:${d.primaryColor};border-radius:4px;height:8px;font-size:0;line-height:0;">&nbsp;</td><td style="font-size:0;line-height:0;">&nbsp;</td></tr></table>
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;"><tr><td><span style="font-size:20px;font-weight:800;color:#1e293b;">${d.probAfter}%</span></td><td align="right"><a href="${tracker}" style="font-size:12px;color:${d.primaryColor};text-decoration:none;font-weight:600;">View full tracker &rarr;</a></td></tr></table>`)}
+    ${card('Season Progress', `<table width="100%" cellpadding="0" cellspacing="0"><tr>${statCell('Record', d.record)}${statCell('Win %', d.winPct)}</tr><tr>${statCell('Proj. Wins', String(d.projWins))}${statCell('Games Back', d.gamesBack)}</tr></table>`)}
+    ${d.nextGame ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:6px;background:${d.primaryColor};border-radius:8px;"><tr><td style="padding:20px;text-align:center;">
+      <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">Next Game</div>
+      <div style="margin-top:6px;${impact}font-size:20px;font-weight:800;color:#ffffff;text-transform:uppercase;letter-spacing:1px;">${d.nextGame.opponent}</div>
+      <div style="margin-top:2px;font-size:14px;color:rgba(255,255,255,0.85);">${d.nextGame.date}</div>
+      <a href="${d.nextGame.ticketLink}" style="display:inline-block;margin-top:14px;background:#ffffff;color:${d.primaryColor};padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">Get Tickets</a>
+    </td></tr></table>` : ''}`;
   return brandEmailShell({ headerBg: d.primaryColor, label: 'Set Recap', body, unsubscribeUrl, footerNote: `${d.teamCity} ${d.teamName} recaps` });
 }
 
