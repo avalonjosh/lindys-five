@@ -1949,6 +1949,49 @@ export async function incrementSendStat(sendRecordId: string, stat: 'delivered' 
 }
 
 // ---------------------------------------------------------------------------
+// Shared shell for the newer broadcast emails (welcome, digest, MLB recap) so
+// they match the game/set-recap design: Impact wordmark, slate palette, 12px
+// card, #f8fafc footer.
+// ---------------------------------------------------------------------------
+
+const EMAIL_NAVY = '#041E42';
+const EMAIL_BLUE = '#003087';
+
+function emailButton(label: string, href: string, opts: { color?: string; filled?: boolean } = {}): string {
+  const color = opts.color ?? EMAIL_BLUE;
+  const filled = opts.filled ?? true;
+  const style = filled ? `background:${color};color:#ffffff;` : `background:#ffffff;color:${color};border:2px solid ${color};`;
+  return `<a href="${href}" style="display:inline-block;margin:0 8px 10px 0;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;${style}">${label}</a>`;
+}
+
+function brandEmailShell(opts: { headerBg: string; label: string; body: string; unsubscribeUrl: string; footerNote?: string }): string {
+  const footerNote = opts.footerNote ?? 'NHL &amp; MLB Playoff Tracking';
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:20px;"><tr><td align="center">
+    <table cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
+      <tr><td style="background:${opts.headerBg};padding:16px 20px;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td><h1 style="margin:0;color:#ffffff;font-size:22px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;letter-spacing:2px;text-transform:uppercase;font-style:normal;">Lindy's Five</h1></td>
+          <td align="right"><span style="color:rgba(255,255,255,0.7);font-size:12px;text-transform:uppercase;letter-spacing:1px;">${opts.label}</span></td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="padding:24px 20px;background:#ffffff;">${opts.body}</td></tr>
+      <tr><td style="background:#f8fafc;padding:16px 20px;border-top:1px solid #e2e8f0;">
+        <table width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td><p style="margin:0;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; ${footerNote}</p></td>
+          <td align="right"><a href="${opts.unsubscribeUrl}" style="color:#94a3b8;font-size:12px;text-decoration:none;">Unsubscribe</a></td>
+        </tr></table>
+      </td></tr>
+    </table>
+  </td></tr></table>
+</body>
+</html>`;
+}
+
+// ---------------------------------------------------------------------------
 // Weekly cross-league digest (broadcast to the general list). Drives traffic
 // back to on-site pages — including the affiliate gear/tickets hubs — which is
 // the Amazon-compliant way to monetize email (no Amazon links in the email).
@@ -1962,60 +2005,37 @@ const digestUtm = (path: string, content: string) =>
   `${SITE_URL}${path}?utm_source=newsletter&utm_medium=email&utm_campaign=weekly-digest&utm_content=${content}`;
 
 export function renderWeeklyDigestEmail(content: WeeklyDigestContent, unsubscribeUrl: string): string {
-  const navy = '#041E42';
-  const blue = '#003087';
-  const gold = '#FFB81C';
-
+  const sectionLabel = (t: string) =>
+    `<p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;">${t}</p>`;
   const linkRow = (label: string, href: string) =>
-    `<tr><td style="padding:6px 0;"><a href="${href}" style="color:${blue};font-weight:600;text-decoration:none;font-size:15px;">${label} &rarr;</a></td></tr>`;
-
+    `<tr><td style="padding:6px 0;"><a href="${href}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;font-size:15px;">${label} &rarr;</a></td></tr>`;
   const blogBlock = content.latestPost
-    ? `<div style="padding:18px 0 4px;"><p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;">Latest from the blog</p>
-         <a href="${content.latestPost.url}" style="color:${navy};font-weight:700;text-decoration:none;font-size:17px;">${content.latestPost.title}</a></div>`
+    ? `<div style="padding:18px 0 4px;">${sectionLabel('Latest from the blog')}<a href="${content.latestPost.url}" style="color:#1e293b;font-weight:700;text-decoration:none;font-size:17px;">${content.latestPost.title}</a></div>`
     : '';
 
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;background:#f1f5f9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 0;"><tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;">
-      <tr><td style="background:${navy};padding:24px;text-align:center;">
-        <div style="font-size:26px;font-weight:800;color:#ffffff;letter-spacing:1px;">LINDY&rsquo;S FIVE</div>
-        <div style="font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:${gold};margin-top:4px;">Weekly Rundown</div>
-      </td></tr>
-      <tr><td style="padding:24px 28px;">
-        <p style="margin:0 0 16px;font-size:15px;color:#334155;line-height:1.6;">Here&rsquo;s what&rsquo;s moving across the NHL and MLB playoff races this week.</p>
-
-        <p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;">Playoff races</p>
-        <table width="100%" cellpadding="0" cellspacing="0">
-          ${linkRow('NHL playoff odds &amp; standings', digestUtm('/nhl-playoff-odds', 'nhl-odds'))}
-          ${linkRow('MLB playoff odds &amp; standings', digestUtm('/mlb/playoff-odds', 'mlb-odds'))}
-          ${linkRow('Playoff bracket &amp; series odds', digestUtm('/playoffs', 'bracket'))}
-        </table>
-
-        ${blogBlock}
-
-        <table width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:18px 0 4px;">
-          <p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;">Can you go 82-0?</p>
-          <p style="margin:0 0 8px;font-size:14px;color:#334155;line-height:1.5;">Draft an all-time roster and climb the daily leaderboard.</p>
-          <a href="${digestUtm('/82-0/leaderboard', 'lb-nhl')}" style="display:inline-block;background:${blue};color:#fff;font-weight:700;font-size:14px;text-decoration:none;padding:10px 18px;border-radius:8px;margin:0 8px 8px 0;">82-0 leaderboard</a>
-          <a href="${digestUtm('/162-0/leaderboard', 'lb-mlb')}" style="display:inline-block;background:${blue};color:#fff;font-weight:700;font-size:14px;text-decoration:none;padding:10px 18px;border-radius:8px;">162-0 leaderboard</a>
-        </td></tr></table>
-
-        <table width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:14px 0 0;">
-          <p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;">Fan gear &amp; tickets</p>
-          <p style="margin:0;font-size:14px;color:#334155;line-height:1.5;">
-            <a href="${digestUtm('/nhl/sabres/gear', 'gear')}" style="color:${blue};font-weight:600;text-decoration:none;">Shop team gear</a> &nbsp;&middot;&nbsp;
-            <a href="${digestUtm('/nhl/sabres/tickets', 'tickets')}" style="color:${blue};font-weight:600;text-decoration:none;">Find tickets</a>
-          </p>
-        </td></tr></table>
-      </td></tr>
-      <tr><td style="padding:18px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-        <p style="margin:0 0 6px;font-size:12px;color:#94a3b8;">Lindy&rsquo;s Five &middot; NHL &amp; MLB playoff tracking</p>
-        <a href="${unsubscribeUrl}" style="font-size:12px;color:#94a3b8;text-decoration:underline;">Unsubscribe</a>
-      </td></tr>
+  const body = `
+    <p style="margin:0 0 16px;font-size:15px;color:#64748b;line-height:1.6;">Here&rsquo;s what&rsquo;s moving across the NHL and MLB playoff races this week.</p>
+    ${sectionLabel('Playoff races')}
+    <table width="100%" cellpadding="0" cellspacing="0">
+      ${linkRow('NHL playoff odds &amp; standings', digestUtm('/nhl-playoff-odds', 'nhl-odds'))}
+      ${linkRow('MLB playoff odds &amp; standings', digestUtm('/mlb/playoff-odds', 'mlb-odds'))}
+      ${linkRow('Playoff bracket &amp; series odds', digestUtm('/playoffs', 'bracket'))}
     </table>
-  </td></tr></table>
-</body></html>`;
+    ${blogBlock}
+    <div style="padding:18px 0 4px;">
+      ${sectionLabel('Can you go 82-0?')}
+      <p style="margin:0 0 10px;font-size:14px;color:#64748b;line-height:1.5;">Draft an all-time roster and climb the daily leaderboard.</p>
+      ${emailButton('82-0 leaderboard', digestUtm('/82-0/leaderboard', 'lb-nhl'))}
+      ${emailButton('162-0 leaderboard', digestUtm('/162-0/leaderboard', 'lb-mlb'))}
+    </div>
+    <div style="padding:6px 0 0;">
+      ${sectionLabel('Fan gear &amp; tickets')}
+      <p style="margin:0;font-size:14px;color:#64748b;line-height:1.5;">
+        <a href="${digestUtm('/nhl/sabres/gear', 'gear')}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">Shop team gear</a> &nbsp;&middot;&nbsp;
+        <a href="${digestUtm('/nhl/sabres/tickets', 'tickets')}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">Find tickets</a>
+      </p>
+    </div>`;
+  return brandEmailShell({ headerBg: EMAIL_NAVY, label: 'Weekly Rundown', body, unsubscribeUrl });
 }
 
 // ---------------------------------------------------------------------------
@@ -2027,41 +2047,18 @@ const welcomeUtm = (path: string, content: string) =>
   `${SITE_URL}${path}?utm_source=newsletter&utm_medium=email&utm_campaign=welcome&utm_content=${content}`;
 
 function renderWelcomeEmail(unsubscribeUrl: string): string {
-  const navy = '#041E42';
-  const blue = '#003087';
-  const gold = '#FFB81C';
-  const btn = (label: string, href: string) =>
-    `<a href="${href}" style="display:inline-block;margin:0 6px 8px 0;padding:11px 18px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;background:${blue};color:#fff;">${label}</a>`;
   const link = (label: string, href: string) =>
-    `<a href="${href}" style="color:${blue};font-weight:600;text-decoration:none;">${label}</a>`;
-
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;background:#f1f5f9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 0;"><tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;">
-      <tr><td style="background:${navy};padding:26px;text-align:center;">
-        <div style="font-size:26px;font-weight:800;color:#ffffff;letter-spacing:1px;">LINDY&rsquo;S FIVE</div>
-        <div style="font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:${gold};margin-top:4px;">You&rsquo;re in</div>
-      </td></tr>
-      <tr><td style="padding:26px 28px;">
-        <p style="margin:0 0 14px;font-size:16px;color:#0f172a;font-weight:700;">Thanks for subscribing! 🏒⚾</p>
-        <p style="margin:0 0 18px;font-size:15px;color:#334155;line-height:1.6;">You&rsquo;ll get occasional updates on new games, the NHL &amp; MLB playoff races, and leaderboards — no spam, and you can unsubscribe anytime.</p>
-        <p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;">Jump in</p>
-        <div>
-          ${btn('Play 82-0 (NHL)', welcomeUtm('/82-0', 'play-nhl'))}
-          ${btn('Play 162-0 (MLB)', welcomeUtm('/162-0', 'play-mlb'))}
-        </div>
-        <p style="margin:14px 0 0;font-size:14px;color:#334155;line-height:1.6;">
-          Or track the races: ${link('NHL playoff odds', welcomeUtm('/nhl-playoff-odds', 'nhl-odds'))} &middot; ${link('MLB playoff odds', welcomeUtm('/mlb/playoff-odds', 'mlb-odds'))}.
-        </p>
-      </td></tr>
-      <tr><td style="padding:18px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-        <p style="margin:0 0 6px;font-size:12px;color:#94a3b8;">Lindy&rsquo;s Five &middot; NHL &amp; MLB playoff tracking</p>
-        <a href="${unsubscribeUrl}" style="font-size:12px;color:#94a3b8;text-decoration:underline;">Unsubscribe</a>
-      </td></tr>
-    </table>
-  </td></tr></table>
-</body></html>`;
+    `<a href="${href}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">${label}</a>`;
+  const body = `
+    <p style="margin:0 0 14px;font-size:16px;color:#1e293b;font-weight:700;">Thanks for subscribing! 🏒⚾</p>
+    <p style="margin:0 0 20px;font-size:15px;color:#64748b;line-height:1.6;">You&rsquo;ll get occasional updates on new games, the NHL &amp; MLB playoff races, and leaderboards — no spam, unsubscribe anytime.</p>
+    <p style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;">Jump in</p>
+    <div>
+      ${emailButton('Play 82-0 (NHL)', welcomeUtm('/82-0', 'play-nhl'))}
+      ${emailButton('Play 162-0 (MLB)', welcomeUtm('/162-0', 'play-mlb'))}
+    </div>
+    <p style="margin:14px 0 0;font-size:14px;color:#64748b;line-height:1.6;">Or track the races: ${link('NHL playoff odds', welcomeUtm('/nhl-playoff-odds', 'nhl-odds'))} &middot; ${link('MLB playoff odds', welcomeUtm('/mlb/playoff-odds', 'mlb-odds'))}.</p>`;
+  return brandEmailShell({ headerBg: EMAIL_NAVY, label: 'Welcome', body, unsubscribeUrl });
 }
 
 /** Send a one-off welcome email to a freshly opted-in subscriber. Best-effort. */
@@ -2104,59 +2101,37 @@ const mlbUtm = (path: string, content: string) =>
   `${SITE_URL}${path}?utm_source=newsletter&utm_medium=email&utm_campaign=mlb-game-recap&utm_content=${content}`;
 
 export function renderMLBGameRecapEmail(d: MLBGameRecapEmailData, unsubscribeUrl: string): string {
-  const navy = '#041E42';
   const result = d.won ? 'W' : 'L';
   const resultColor = d.won ? '#16a34a' : '#dc2626';
   const vs = d.isHome ? 'vs' : '@';
-  const btn = (label: string, href: string, filled: boolean) =>
-    `<a href="${href}" style="display:inline-block;margin:0 6px 8px 0;padding:10px 16px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none;${
-      filled ? `background:${d.primaryColor};color:#fff;` : `border:2px solid ${d.primaryColor};color:${d.primaryColor};`
-    }">${label}</a>`;
+  const impact = `font-family:Impact,'Arial Narrow',Helvetica,sans-serif;`;
+  const statBox = (label: string, value: string, color: string) =>
+    `<td style="text-align:center;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;">${label}</div>
+      <div style="font-size:22px;font-weight:800;color:${color};${impact}">${value}</div>
+    </td>`;
 
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;background:#f1f5f9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:24px 0;"><tr><td align="center">
-    <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;">
-      <tr><td style="background:${d.primaryColor};padding:22px;text-align:center;">
-        <div style="font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#ffffff;opacity:.8;">${d.teamCity} ${d.teamName} &middot; Game Recap</div>
-        <div style="margin-top:8px;font-size:34px;font-weight:800;color:#ffffff;">
-          <span style="color:${d.won ? '#bbf7d0' : '#fecaca'};">${result}</span> ${d.teamScore}&ndash;${d.oppScore}
-        </div>
-        <div style="margin-top:2px;font-size:14px;color:#ffffff;opacity:.85;">${vs} ${d.oppName}</div>
-      </td></tr>
-      <tr><td style="padding:24px 28px;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;"><tr>
-          <td style="text-align:center;padding:10px;background:#f8fafc;border-radius:10px;">
-            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Record</div>
-            <div style="font-size:22px;font-weight:800;color:${navy};">${d.wins}&ndash;${d.losses}</div>
-          </td>
-          <td width="12"></td>
-          <td style="text-align:center;padding:10px;background:#f8fafc;border-radius:10px;">
-            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Playoff odds</div>
-            <div style="font-size:22px;font-weight:800;color:${resultColor};">${d.probability}%</div>
-          </td>
-          <td width="12"></td>
-          <td style="text-align:center;padding:10px;background:#f8fafc;border-radius:10px;">
-            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">Proj. wins</div>
-            <div style="font-size:22px;font-weight:800;color:${navy};">${d.projectedWins}</div>
-          </td>
-        </tr></table>
-        <div style="text-align:center;">
-          ${btn('Box score', mlbUtm(`/mlb/scores/${d.gameId}`, 'boxscore'), true)}
-          ${btn('Season tracker', mlbUtm(`/mlb/${d.teamSlug}`, 'tracker'), false)}
-        </div>
-        <div style="text-align:center;margin-top:4px;">
-          ${btn('Shop gear', mlbUtm(`/mlb/${d.teamSlug}/gear`, 'gear'), false)}
-          ${btn('Tickets', mlbUtm(`/mlb/${d.teamSlug}/tickets`, 'tickets'), false)}
-        </div>
-      </td></tr>
-      <tr><td style="padding:18px 28px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
-        <p style="margin:0 0 6px;font-size:12px;color:#94a3b8;">Lindy&rsquo;s Five &middot; ${d.teamCity} ${d.teamName} recaps</p>
-        <a href="${unsubscribeUrl}" style="font-size:12px;color:#94a3b8;text-decoration:underline;">Unsubscribe</a>
-      </td></tr>
-    </table>
-  </td></tr></table>
-</body></html>`;
+  const body = `
+    <div style="text-align:center;margin-bottom:18px;">
+      <div style="font-size:36px;font-weight:800;color:#1e293b;${impact}letter-spacing:1px;">
+        <span style="color:${resultColor};">${result}</span> ${d.teamScore}&ndash;${d.oppScore}
+      </div>
+      <div style="margin-top:4px;font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">Final &middot; ${vs} ${d.oppName}</div>
+    </div>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;"><tr>
+      ${statBox('Record', `${d.wins}&ndash;${d.losses}`, '#1e293b')}
+      <td width="10"></td>
+      ${statBox('Playoff odds', `${d.probability}%`, resultColor)}
+      <td width="10"></td>
+      ${statBox('Proj. wins', String(d.projectedWins), '#1e293b')}
+    </tr></table>
+    <div style="text-align:center;">
+      ${emailButton('Box score', mlbUtm(`/mlb/scores/${d.gameId}`, 'boxscore'), { color: d.primaryColor, filled: true })}
+      ${emailButton('Season tracker', mlbUtm(`/mlb/${d.teamSlug}`, 'tracker'), { color: d.primaryColor, filled: false })}
+      ${emailButton('Shop gear', mlbUtm(`/mlb/${d.teamSlug}/gear`, 'gear'), { color: d.primaryColor, filled: false })}
+      ${emailButton('Tickets', mlbUtm(`/mlb/${d.teamSlug}/tickets`, 'tickets'), { color: d.primaryColor, filled: false })}
+    </div>`;
+  return brandEmailShell({ headerBg: d.primaryColor, label: 'Game Recap', body, unsubscribeUrl, footerNote: `${d.teamCity} ${d.teamName} recaps` });
 }
 
 /** Send an MLB game recap to a team's subscribers (or a single test address). */
