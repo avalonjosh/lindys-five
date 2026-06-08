@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { dailyDateLabel, easternDateString } from '@/lib/perfectseason/seed';
 
 // Dynamic so the social unfurl carries today's daily date (spec Section 10).
@@ -27,6 +28,12 @@ export default function PerfectSeasonLayout({ children }: { children: React.Reac
     <>
       {children}
       <footer className="bg-slate-50 px-4 py-6 text-center">
+        <nav className="mx-auto mb-4 flex max-w-[480px] flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-semibold">
+          <Link href="/mlb/playoff-odds" className="text-sabres-blue hover:underline">MLB Playoff Odds</Link>
+          <Link href="/mlb/scores" className="text-sabres-blue hover:underline">Scores</Link>
+          <Link href="/blog" className="text-sabres-blue hover:underline">Blog</Link>
+          <Link href="/" className="text-sabres-blue hover:underline">Home</Link>
+        </nav>
         <p className="mx-auto max-w-[480px] text-[11px] leading-relaxed text-gray-400">
           An independent fan game by Lindys Five. Not affiliated with or endorsed by Major League Baseball or the
           MLBPA. MLB and the MLB shield are trademarks of their respective owners. MLB data: Lahman Baseball

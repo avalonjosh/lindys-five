@@ -524,6 +524,9 @@ function Shell({
           </Link>
           <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
             {roundLabel && <span className="hidden text-xs font-bold uppercase tracking-wide text-white/80 sm:inline">{roundLabel}</span>}
+            <Link href={sport === 'mlb' ? '/mlb/playoff-odds' : '/nhl-playoff-odds'} className="hidden text-xs font-bold uppercase tracking-wide text-white/80 transition-colors hover:text-white sm:inline">
+              Odds
+            </Link>
             <Link href={`/${slug}/leaderboard`} aria-label="Leaderboard" title="Leaderboard" className="flex items-center text-white/80 transition-colors hover:text-white">
               <Trophy className="h-5 w-5" />
             </Link>

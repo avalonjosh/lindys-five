@@ -11,6 +11,7 @@ import MLBProgressBar from './MLBProgressBar';
 import MLBTeamNav from './MLBTeamNav';
 import MLBStandingsCard from './MLBStandingsCard';
 import MerchCTA from '@/components/affiliate/MerchCTA';
+import GamePromo from '@/components/perfectseason/GamePromo';
 
 // Teams whose logo blends into their header background color
 const mlbBgTeamIds = ['orioles', 'reds', 'cardinals', 'angels', 'phillies', 'nationals', 'rays', 'tigers', 'royals', 'twins', 'dodgers', 'giants', 'rockies', 'padres'];
@@ -395,6 +396,10 @@ export default function MLBTeamTracker({ team }: MLBTeamTrackerProps) {
               <p className="text-gray-500">No games scheduled yet for the 2026 season.</p>
             </div>
           )}
+        </div>
+
+        <div className="mt-8 max-w-2xl mx-auto">
+          <GamePromo sport="mlb" />
         </div>
 
         {/* Footer — matches NHL */}

@@ -255,6 +255,9 @@ export default function MLBTeamNav({ currentTeamId, teamColors, defaultTab = 'ml
                 <button onClick={() => handleNavigation('/playoffs')} className="w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold hover:bg-blue-50 text-gray-900 transition-all">
                   Playoff Bracket
                 </button>
+                <button onClick={() => handleNavigation('/82-0')} className="w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold hover:bg-blue-50 text-gray-900 transition-all">
+                  82-0 <span className="text-xs font-normal opacity-60">· Perfect Season</span>
+                </button>
               </>
             )}
 
@@ -266,6 +269,9 @@ export default function MLBTeamNav({ currentTeamId, teamColors, defaultTab = 'ml
                 </button>
                 <button onClick={() => handleNavigation('/mlb/playoff-odds')} className="w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold hover:bg-blue-50 text-gray-900 transition-all">
                   Playoff Odds
+                </button>
+                <button onClick={() => handleNavigation('/162-0')} className="w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold hover:bg-blue-50 text-gray-900 transition-all">
+                  162-0
                 </button>
               </>
             )}

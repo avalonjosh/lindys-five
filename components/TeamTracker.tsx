@@ -15,6 +15,7 @@ import { getDarkModeColors } from '@/lib/teamConfig';
 import ClinchCelebration from '@/components/ClinchCelebration';
 import SteamEffect from '@/components/SteamEffect';
 import MerchCTA from '@/components/affiliate/MerchCTA';
+import GamePromo from '@/components/perfectseason/GamePromo';
 import PlayoffJourney, { type JourneySeries } from '@/components/playoffs/PlayoffJourney';
 import { hasTeamHistory } from '@/lib/data/teamHistory';
 import {
@@ -1159,6 +1160,10 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
         </div>
       </div>
       )}
+
+      <div className="mt-8 max-w-2xl mx-auto">
+        <GamePromo sport="nhl" />
+      </div>
 
       {/* Footer */}
       <footer className={`text-center text-sm mt-8 pb-8 ${

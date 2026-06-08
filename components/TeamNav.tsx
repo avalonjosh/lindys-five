@@ -464,6 +464,14 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                 >
                   Playoff Bracket
                 </button>
+                <button
+                  onClick={() => handleNavigation('/82-0')}
+                  className={`w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold transition-all ${
+                    useClassicStyling ? 'hover:bg-zinc-800 text-white' : 'hover:bg-blue-50 text-gray-900'
+                  }`}
+                >
+                  82-0
+                </button>
               </>
             )}
 
@@ -485,6 +493,14 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                   }`}
                 >
                   Playoff Odds
+                </button>
+                <button
+                  onClick={() => handleNavigation('/162-0')}
+                  className={`w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold transition-all ${
+                    useClassicStyling ? 'hover:bg-zinc-800 text-white' : 'hover:bg-blue-50 text-gray-900'
+                  }`}
+                >
+                  162-0 <span className="text-xs font-normal opacity-60">· Perfect Season</span>
                 </button>
               </>
             )}

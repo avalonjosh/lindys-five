@@ -78,6 +78,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly',
       priority: 0.6,
     },
+    {
+      url: `${BASE_URL}/82-0`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/82-0/leaderboard`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.6,
+    },
+    {
+      url: `${BASE_URL}/162-0`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/162-0/leaderboard`,
+      lastModified: now,
+      changeFrequency: 'daily',
+      priority: 0.6,
+    },
   ];
 
   // All 32 NHL team tracker routes + gear/tickets hubs

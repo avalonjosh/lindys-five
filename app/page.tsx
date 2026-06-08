@@ -109,6 +109,16 @@ export default function LandingPage() {
             </Link>
           </div>
 
+          {/* Games CTA */}
+          <div className="mx-auto mb-12 max-w-2xl rounded-2xl border border-slate-700 bg-slate-800/50 p-6 text-center">
+            <h2 className="text-xl font-bold text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>Can you go 82-0?</h2>
+            <p className="mx-auto mt-1 max-w-md text-sm text-gray-400">Draft an all-time roster from decade &amp; franchise spins and chase a perfect season — a free daily game.</p>
+            <div className="mt-4 flex flex-wrap justify-center gap-3">
+              <Link href="/82-0" className="rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-slate-900 transition-transform hover:scale-105">Play 82-0 · NHL</Link>
+              <Link href="/162-0" className="rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-slate-900 transition-transform hover:scale-105">Play 162-0 · MLB</Link>
+            </div>
+          </div>
+
           {/* Email capture */}
           <div className="mx-auto mb-12 max-w-2xl">
             <InlineEmailCapture source="home" theme="dark" />

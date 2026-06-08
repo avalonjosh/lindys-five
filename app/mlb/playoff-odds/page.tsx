@@ -3,6 +3,7 @@ import Link from 'next/link';
 import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import MLBPlayoffOddsClient, { type MLBTeamRow } from '@/components/mlb/MLBPlayoffOddsClient';
 import InlineEmailCapture from '@/components/newsletter/InlineEmailCapture';
+import GamePromo from '@/components/perfectseason/GamePromo';
 import { MLB_TEAMS } from '@/lib/teamConfig';
 import { fetchMLBStandings } from '@/lib/services/mlbApi';
 import type { MLBStandingsTeam } from '@/lib/types/mlb';
@@ -247,6 +248,10 @@ export default async function MLBPlayoffOddsPage() {
           {/* Tabbed standings views */}
           <section className="mb-10">
             <MLBPlayoffOddsClient rows={rows} />
+          </section>
+
+          <section className="mb-6 max-w-3xl mx-auto">
+            <GamePromo sport="mlb" />
           </section>
 
           <section className="mb-10 max-w-3xl mx-auto">

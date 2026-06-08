@@ -10,6 +10,7 @@ import PlayoffOddsClient, { type TeamData } from '@/components/PlayoffOddsClient
 import StanleyCupOddsTable, { type CupOddsTeam } from '@/components/playoffs/StanleyCupOddsTable';
 import NewsletterModal from '@/components/newsletter/NewsletterModal';
 import GameTicker from '@/components/landing/GameTicker';
+import GamePromo from '@/components/perfectseason/GamePromo';
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
 
@@ -380,6 +381,10 @@ export default async function NHLPlayoffOddsPage() {
           ) : (
             <PlayoffOddsClient teams={teams} />
           )}
+
+          <section className="mt-12 max-w-3xl mx-auto">
+            <GamePromo sport="nhl" />
+          </section>
 
           {/* Narrative Section */}
           <section className="mt-12 max-w-3xl mx-auto">
