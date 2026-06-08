@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import FavoriteTeamsGrid from '@/components/landing/FavoriteTeamsGrid';
+import SiteFooter from '@/components/SiteFooter';
 
 export const metadata: Metadata = {
   title: "MLB Playoff Odds & Standings 2026 — Projections for All 30 Teams",
@@ -156,8 +157,9 @@ export default function MLBLandingPage() {
           <li><a href="/mlb/nationals">Washington Nationals Playoff Odds</a></li>
         </ul>
       </div>
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-      <div className="max-w-4xl w-full">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
+      <div className="flex flex-1 items-center justify-center p-4">
+        <div className="max-w-4xl w-full">
         {/* Header */}
         <div className="text-center mb-12">
           <Link href="/" className="text-2xl md:text-3xl font-bold text-gray-400 mb-2 block hover:text-gray-300 transition-colors" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
@@ -190,11 +192,9 @@ export default function MLBLandingPage() {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="text-center mt-12 text-gray-400 text-sm">
-          <p>&copy; {new Date().getFullYear()} JRR Apps. All rights reserved.</p>
         </div>
       </div>
+      <SiteFooter />
     </div>
     </>
   );

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import InlineEmailCapture from '@/components/newsletter/InlineEmailCapture';
+import SiteFooter from '@/components/SiteFooter';
 
 export const metadata: Metadata = {
   title: "Lindy's Five — Track Every Season, Five Games at a Time",
@@ -43,8 +44,9 @@ export default function LandingPage() {
         }}
       />
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-        <div className="max-w-4xl w-full">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
+        <div className="flex flex-1 items-center justify-center p-4">
+          <div className="max-w-4xl w-full">
           {/* Header */}
           <div className="text-center mb-16">
             <h1
@@ -124,20 +126,9 @@ export default function LandingPage() {
             <InlineEmailCapture source="home" theme="dark" />
           </div>
 
-          {/* Footer */}
-          <div className="text-center text-gray-500 text-sm">
-            <div className="flex flex-wrap justify-center gap-4 mb-4">
-              <Link href="/nhl/scores" className="text-gray-400 hover:text-white transition-colors">NHL Scores</Link>
-              <span className="text-gray-600">|</span>
-              <Link href="/mlb/scores" className="text-gray-400 hover:text-white transition-colors">MLB Scores</Link>
-              <span className="text-gray-600">|</span>
-              <Link href="/blog" className="text-gray-400 hover:text-white transition-colors">Blog</Link>
-              <span className="text-gray-600">|</span>
-              <Link href="/feed.xml" className="text-gray-400 hover:text-white transition-colors">RSS</Link>
-            </div>
-            <p>&copy; {new Date().getFullYear()} JRR Apps. All rights reserved.</p>
           </div>
         </div>
+        <SiteFooter />
       </div>
     </>
   );

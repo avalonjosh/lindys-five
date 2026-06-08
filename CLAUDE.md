@@ -317,5 +317,10 @@ The interactive odds tables (`PlayoffOddsClient`, `MLBPlayoffOddsClient`) are cl
 - Team pages (dark team-colored hero) and scores hubs (colored hero) intentionally keep JSON-LD breadcrumbs only; a gray server-rendered trail would clash with those client-owned hero headers.
 - Gear/tickets BreadcrumbList JSON-LD and visible trail both live inside the hub components (`TeamGearHub`/`TeamTicketsHub`), not the page files.
 
+### Internal linking
+- `components/SiteFooter.tsx` is a pure server component rendering a full, visible team directory (all 32 NHL + 30 MLB teams) plus key section links. It's on the home page and both sport hubs (`/`, `/nhl`, `/mlb`), so every crawl of those high-authority pages surfaces real `<a>` links to every team page in both sports.
+- Why it exists: the visible team grid (`FavoriteTeamsGrid`) is a client component gated on localStorage state, so its links are not reliably in the server HTML. GSC URL inspection showed MLB team pages as "unknown to Google" / "discovered, not indexed" (e.g. `/mlb/yankees`), i.e. an indexing problem caused by weak server-rendered internal links, not a ranking problem. SiteFooter gives crawlers durable discovery paths, especially cross-sport (indexed NHL pages now link to MLB team pages).
+
 ### Known opportunities (from SEO/GEO audit, not yet done)
 - `/playoffs` has footer cross-links but no top Home > Playoffs trail; could add one if desired.
+- Differentiate MLB team-page visible content so Google stops treating them as thin/duplicate ("crawled, currently not indexed"); request indexing in GSC after deploys.

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import FavoriteTeamsGrid from '@/components/landing/FavoriteTeamsGrid';
 import GameTicker from '@/components/landing/GameTicker';
+import SiteFooter from '@/components/SiteFooter';
 
 export const revalidate = 300;
 
@@ -182,8 +183,9 @@ export default async function NHLLandingPage() {
         </ul>
       </div>
       <GameTicker />
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-        <div className="max-w-4xl w-full">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
+        <div className="flex flex-1 items-center justify-center p-4">
+          <div className="max-w-4xl w-full">
           {/* Header */}
           <div className="text-center mb-12">
             <Link href="/" className="text-2xl md:text-3xl font-bold text-gray-400 mb-2 block hover:text-gray-300 transition-colors" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
@@ -220,11 +222,9 @@ export default async function NHLLandingPage() {
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="text-center mt-12 text-gray-400 text-sm">
-            <p>&copy; {new Date().getFullYear()} JRR Apps. All rights reserved.</p>
           </div>
         </div>
+        <SiteFooter />
       </div>
     </>
   );
