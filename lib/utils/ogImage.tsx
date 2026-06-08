@@ -617,8 +617,6 @@ function sportHubTemplate({
   );
 }
 
-const TIER_DOT: Record<string, string> = { green: '#22c55e', yellow: '#eab308', gray: '#6b7280' };
-
 function gradeColor(grade: string): string {
   switch (grade.charAt(0)) {
     case 'A': return '#22c55e';
@@ -665,7 +663,6 @@ function psPlayerRow(row: SharedTeamRow, sport: 'nhl' | 'mlb', size: number, nam
           {row.franchiseId} &middot; {row.decade}
         </div>
       </div>
-      <div style={{ display: 'flex', width: 12, height: 12, borderRadius: 6, background: TIER_DOT[row.tier], flexShrink: 0 }} />
     </div>
   );
 }

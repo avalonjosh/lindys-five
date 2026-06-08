@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import type { Sport } from '@/lib/perfectseason/types';
-import type { GridTier } from '@/lib/perfectseason/storage';
 import { franchiseColor, shortDecade } from '../ui';
 
 export interface RosterEntry {
@@ -10,7 +9,6 @@ export interface RosterEntry {
   franchiseId: string;
   decade: string;
   playerName: string;
-  tier: GridTier;
   stats: { label: string; value: string }[];
 }
 
@@ -27,10 +25,12 @@ interface ResultBoardProps {
   roster: RosterEntry[];
 }
 
-const CARD_TINT: Record<GridTier, string> = {
-  green: 'border-l-emerald-500 bg-emerald-50',
-  yellow: 'border-l-sabres-blue bg-blue-50',
-  gray: 'border-l-gray-300 bg-gray-50',
+// Canonical NHL roster order so results always read LW · C · RW · D · D · G
+// regardless of pick order. Stable sort keeps the two D slots in their original order.
+const NHL_SLOT_ORDER = ['LW', 'C', 'RW', 'D', 'G'];
+const nhlSlotRank = (label: string) => {
+  const i = NHL_SLOT_ORDER.indexOf(label);
+  return i === -1 ? 99 : i;
 };
 
 function gradeColor(grade: string): string {
@@ -78,6 +78,11 @@ export default function ResultBoard({
     return () => cancelAnimationFrame(raf);
   }, [wins]);
 
+  const orderedRoster =
+    sport === 'nhl'
+      ? [...roster].sort((a, b) => nhlSlotRank(a.slotLabel) - nhlSlotRank(b.slotLabel))
+      : roster;
+
   // Team totals: sum the configured counting columns across the roster.
   const totals = (() => {
     const acc = new Map<string, number>();
@@ -115,9 +120,9 @@ export default function ResultBoard({
 
       {/* Tinted roster cards. */}
       <div className="flex flex-col gap-2">
-        {roster.map((r, i) => {
+        {orderedRoster.map((r, i) => {
           return (
-            <div key={`${r.slotLabel}-${i}`} className={`flex items-center gap-3 rounded-xl border border-l-4 border-gray-100 p-2.5 ${CARD_TINT[r.tier]}`}>
+            <div key={`${r.slotLabel}-${i}`} className="flex items-center gap-3 rounded-xl border border-l-4 border-gray-200 border-l-sabres-blue bg-white p-2.5">
               <span
                 className="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg text-white shadow-sm"
                 style={{ background: franchiseColor(r.franchiseId, sport) ?? '#003087' }}

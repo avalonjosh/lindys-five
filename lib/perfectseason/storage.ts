@@ -7,13 +7,10 @@ const VERSION_KEY = 'l5ps.version';
 const VERSION = 1;
 const ONBOARDED_KEY = 'l5ps.onboarded';
 
-export type GridTier = 'green' | 'yellow' | 'gray';
-
 export interface GridCell {
   slot: string;
   decade: string;
   franchise: string;
-  tier: GridTier;
   skipped: boolean;
   // Optional richer fields for the 82-0.com-style roster cards (NHL result).
   // Older saved records / the MLB share grid simply omit these.
@@ -51,7 +48,6 @@ export interface Stats {
   played: number;
   totalWins: number;
   best: number;
-  greenPicks: number;
   perfectSets: number;
 }
 
@@ -93,7 +89,7 @@ export function getStreak(sport: string, variant: string): Streak {
 }
 
 export function getStats(sport: string, variant: string): Stats {
-  return read<Stats>(statsKey(sport, variant), { played: 0, totalWins: 0, best: 0, greenPicks: 0, perfectSets: 0 });
+  return read<Stats>(statsKey(sport, variant), { played: 0, totalWins: 0, best: 0, perfectSets: 0 });
 }
 
 /**
@@ -110,12 +106,10 @@ export function recordDaily(sport: string, date: string, variant: string, rec: D
   write(streakKey(sport, variant), { current, best: Math.max(s.best, current), lastPlayed: date });
 
   const st = getStats(sport, variant);
-  const greens = rec.grid.filter((g) => g.tier === 'green').length;
   write(statsKey(sport, variant), {
     played: st.played + 1,
     totalWins: st.totalWins + rec.wins,
     best: Math.max(st.best, rec.wins),
-    greenPicks: st.greenPicks + greens,
     perfectSets: st.perfectSets + rec.perfectSets,
   });
 }

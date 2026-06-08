@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import type { GameData, ModeDescriptor, SportConfig } from '@/lib/perfectseason/types';
 import type { EngineState, PickRecord } from '@/lib/perfectseason/engine';
 import type { SimResult } from '@/lib/perfectseason/types';
-import type { GridTier } from '@/lib/perfectseason/storage';
 import { poolPlayers } from '@/lib/perfectseason/schedule';
 import { rosterRating } from '@/lib/perfectseason/rating';
 import { buildSharePayload, type SharedTeam, type Variant } from '@/lib/perfectseason/share';
@@ -41,15 +40,12 @@ export default function RinkResult({ result, config, mode, picks, data, state, v
     const roster: RosterEntry[] = picks.map((p) => {
       const pool = poolPlayers(data, p.spin, config);
       const player = pool.find((pl) => pl.id === p.playerId);
-      const higher = pool.filter((pl) => pl.score > p.score).length;
-      const tier: GridTier = higher === 0 ? 'green' : higher < 3 ? 'yellow' : 'gray';
       const slot = config.slots.find((s) => s.id === p.slotId);
       return {
         slotLabel: slot?.label ?? p.slotId,
         franchiseId: p.spin.franchise,
         decade: p.spin.decade,
         playerName: p.playerName,
-        tier,
         stats: player ? statCells(player, config) : [],
       };
     });

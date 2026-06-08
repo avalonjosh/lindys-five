@@ -105,9 +105,6 @@ export function verifySubmission(sub: ScoreSubmission): VerifyResult {
   const { rating, grade, tier } = rosterRating(data, config, verified, modeType);
 
   const rows: SharedTeamRow[] = verified.map((p) => {
-    const pool = poolPlayers(data, p.spin, config);
-    const higher = pool.filter((pl) => pl.score > p.score).length;
-    const rowTier = higher === 0 ? 'green' : higher < 3 ? 'yellow' : 'gray';
     const f = data.franchises.find((fr) => fr.id === p.spin.franchise);
     const slot = config.slots.find((s) => s.id === p.slotId);
     return {
@@ -116,7 +113,6 @@ export function verifySubmission(sub: ScoreSubmission): VerifyResult {
       franchise: f?.names[p.spin.decade] ?? p.spin.franchise,
       franchiseId: p.spin.franchise,
       decade: p.spin.decade,
-      tier: rowTier,
     };
   });
 

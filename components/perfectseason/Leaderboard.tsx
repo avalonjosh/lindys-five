@@ -204,7 +204,6 @@ function Row({
           <div className="flex flex-col gap-1">
             {entry.rows.map((r, i) => {
               const logo = franchiseLogo(r.franchiseId, sport, 'dark');
-              const dot = r.tier === 'green' ? '#22c55e' : r.tier === 'yellow' ? '#eab308' : '#9ca3af';
               return (
                 <div key={`${r.slot}-${i}`} className="flex items-center gap-2 text-xs">
                   <span className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded text-[9px] font-bold text-white" style={{ background: franchiseColor(r.franchiseId, sport) ?? '#1e3a8a' }}>
@@ -213,7 +212,6 @@ function Row({
                   </span>
                   <span className="flex-1 truncate font-semibold text-gray-800">{r.playerName}</span>
                   <span className="shrink-0 text-[10px] text-gray-400">{r.franchiseId} · {r.decade}</span>
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: dot }} />
                 </div>
               );
             })}

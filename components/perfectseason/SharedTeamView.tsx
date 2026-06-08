@@ -15,7 +15,6 @@ export default function SharedTeamView({ team }: { team: SharedTeam }) {
     franchiseId: r.franchiseId,
     decade: r.decade,
     playerName: r.playerName,
-    tier: r.tier,
     stats: [],
   }));
 

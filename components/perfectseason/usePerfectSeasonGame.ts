@@ -5,7 +5,7 @@ import type { GameData, ModeDescriptor, ModeType, RoundTree, Sport, Spin, SportC
 import { generateDay, generateFranchiseDay, poolPlayers } from '@/lib/perfectseason/schedule';
 import { mulberry32, easternDateString } from '@/lib/perfectseason/seed';
 import { createGame, reduce, type Action, type EngineState } from '@/lib/perfectseason/engine';
-import { getDaily, recordDaily, type DailyRecord, type GridCell, type GridTier } from '@/lib/perfectseason/storage';
+import { getDaily, recordDaily, type DailyRecord, type GridCell } from '@/lib/perfectseason/storage';
 import { rosterRating } from '@/lib/perfectseason/rating';
 import type { ScoreSubmission } from '@/lib/perfectseason/leaderboard';
 import { franchiseName, statCells } from './ui';
@@ -64,8 +64,6 @@ export function buildDailyRecord(
   const r = state.result!;
   const grid: GridCell[] = state.picks.map((p) => {
     const pool = poolPlayers(data, p.spin, config);
-    const higher = pool.filter((pl) => pl.score > p.score).length;
-    const tier: GridTier = higher === 0 ? 'green' : higher < 3 ? 'yellow' : 'gray';
     const slot = config.slots.find((s) => s.id === p.slotId);
     const player = pool.find((pl) => pl.id === p.playerId);
     return {
@@ -75,7 +73,6 @@ export function buildDailyRecord(
       franchiseId: p.spin.franchise,
       playerName: p.playerName,
       stats: player ? statCells(player, config) : [],
-      tier,
       skipped: p.skips.team || p.skips.decade,
     };
   });

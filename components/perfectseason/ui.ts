@@ -57,13 +57,6 @@ export function statCells(player: Player, config: SportConfig): StatCell[] {
   return keys.map((k) => ({ label: STAT_LABELS[k] ?? k.toUpperCase(), value: String(player.line[k] ?? '') }));
 }
 
-/** Tier of a score for green/yellow/gray treatment, mirrors the share grid. */
-export function scoreTier(score: number, poolTopScore: number, poolTop3Score: number): 'green' | 'yellow' | 'gray' {
-  if (score >= poolTopScore) return 'green';
-  if (score >= poolTop3Score) return 'yellow';
-  return 'gray';
-}
-
 // Position badge tint for the player list, covering both sports (codes don't
 // collide): specialists (goalie / pitcher) amber, the "back"/outfield group
 // emerald, everyone else blue.
