@@ -239,7 +239,7 @@ function getChampion(bracket: PlayoffBracketResponse | null): Champion | null {
   const top = series.matchupTeams?.find(t => t.seed?.isTop);
   const bottom = series.matchupTeams?.find(t => !t.seed?.isTop);
   const teamInfo = (mt?: PlayoffSeries['matchupTeams'][0]): string =>
-    mt?.team.commonName?.default || mt?.team.name?.default || mt?.team.abbrev || '';
+    mt?.team.name?.default || mt?.team.commonName?.default || mt?.team.abbrev || '';
   if ((series.topSeedWins || 0) >= 4 && top) {
     return { name: teamInfo(top), logo: top.team.logo, runnerUp: teamInfo(bottom) };
   }
@@ -689,14 +689,8 @@ export default async function PlayoffsPage() {
               className="rounded-2xl border-2 px-5 py-5 text-center shadow-sm flex flex-col items-center gap-2"
               style={{ backgroundColor: '#FBF5E6', borderColor: '#D4AF37' }}
             >
-              <div className="flex items-center justify-center gap-4">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/stanley-cup.png" alt="Stanley Cup" className="h-16 md:h-20 w-auto object-contain" />
-                {champion.logo && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={champion.logo} alt={`${champion.name} logo`} className="h-14 w-14 md:h-16 md:w-16 object-contain" />
-                )}
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/stanley-cup.png" alt="Stanley Cup" className="h-16 md:h-20 w-auto object-contain" />
               <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#9A7B1F' }}>
                 {endYear} Stanley Cup Champions
               </div>
