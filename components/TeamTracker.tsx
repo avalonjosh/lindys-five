@@ -8,7 +8,10 @@ import { fetchSabresSchedule, fetchLastSeasonComparison, isRateLimitError } from
 import { calculateChunks, calculateSeasonStats, calculateChunkStats } from '@/lib/utils/chunkCalculator';
 import ChunkCard from '@/components/ChunkCard';
 import ProgressBar from '@/components/ProgressBar';
+import SeasonComplete from '@/components/SeasonComplete';
 import StandingsCard from '@/components/StandingsCard';
+import type { SeasonSummary } from '@/lib/utils/seasonSummary';
+import { getCurrentNHLSeason } from '@/lib/utils/season';
 import TeamNav from '@/components/TeamNav';
 import type { TeamConfig } from '@/lib/teamConfig';
 import { getDarkModeColors } from '@/lib/teamConfig';
@@ -25,10 +28,13 @@ import {
 
 interface TeamTrackerProps {
   team: TeamConfig;
+  seasonComplete?: boolean;
+  seasonSummary?: SeasonSummary | null;
 }
 
-export default function TeamTracker({ team }: TeamTrackerProps) {
+export default function TeamTracker({ team, seasonComplete = false, seasonSummary = null }: TeamTrackerProps) {
   const router = useRouter();
+  const season = getCurrentNHLSeason();
   const darkModeColors = getDarkModeColors(team);
   const [hasClinched, setHasClinched] = useState(false);
   const [celebrateOverride, setCelebrateOverride] = useState(false);
@@ -101,7 +107,7 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
     const myAbbrev = team.abbreviation;
     Promise.all([
       fetch('/api/playoffs/bracket').then((r) => (r.ok ? r.json() : null)),
-      fetch(`/api/v1/club-schedule-season/${myAbbrev}/20252026`).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/v1/club-schedule-season/${myAbbrev}/${season}`).then((r) => (r.ok ? r.json() : null)),
     ])
       .then(([bracketData, scheduleData]) => {
         if (cancelled || !bracketData?.bracket?.rounds) return;
@@ -456,7 +462,7 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const schedule = await fetchSabresSchedule('20252026', team.abbreviation, team.nhlId);
+      const schedule = await fetchSabresSchedule(season, team.abbreviation, team.nhlId);
 
       // Only update if we got valid data (not empty array from error)
       if (schedule && schedule.length > 0) {
@@ -520,11 +526,14 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
 
     loadData();
 
+    // No live polling once the season is complete — the data is frozen.
+    if (seasonComplete) return;
+
     // Auto-refresh with dynamic interval using ref
     const interval = setInterval(loadData, pollingIntervalRef.current);
 
     return () => clearInterval(interval);
-  }, [team]); // REMOVED pollingInterval from dependencies
+  }, [team, seasonComplete]); // REMOVED pollingInterval from dependencies
 
   // Separate effect to handle polling interval changes
   useEffect(() => {
@@ -706,6 +715,16 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
     accent: darkModeColors.accent // Thrashers red
   } : team.colors;
 
+  // In season-complete mode this card replaces the live ProgressBar everywhere.
+  const summaryCard = seasonComplete && seasonSummary ? (
+    <SeasonComplete
+      summary={seasonSummary}
+      teamColors={effectiveTeamColors}
+      darkModeColors={darkModeColors}
+      isGoatMode={!useClassicStyling}
+    />
+  ) : null;
+
   return (
     <div
       className={`min-h-screen ${
@@ -879,7 +898,9 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
             }`}
             style={(team.id === 'lightning' || team.id === 'penguins') && isGoatMode ? { color: team.colors.primary } : isVintageJetsMode ? { color: '#041E42' } : undefined}
           >
-            5-Game Set Analysis &bull; Target: 6+ points per set
+            {seasonComplete && seasonSummary
+              ? `${seasonSummary.seasonLabel} Season Complete • Final Results`
+              : '5-Game Set Analysis • Target: 6+ points per set'}
           </p>
           {hasTeamHistory(team.id) && playoffSeries.length === 0 && (
             <div className="sm:hidden mt-2">
@@ -907,7 +928,7 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
 
     <main className="max-w-7xl mx-auto px-4 py-6">
       {/* Progress Bar — in playoff mode we move this below PlayoffJourney (see that branch) */}
-      {stats && playoffSeries.length === 0 && (
+      {playoffSeries.length === 0 && (seasonComplete ? summaryCard : (stats && (
         <ProgressBar
           stats={whatIfMode && hypotheticalResults.size > 0 ? calculateSeasonStats(getChunksWithHypotheticals()) : stats}
           isGoatMode={!useClassicStyling}
@@ -935,10 +956,10 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
           inPlayoffs={playoffSeries.length > 0}
           playoffFetchLoaded={playoffFetchLoaded}
         />
-      )}
+      )))}
 
-      {/* Standings Card — shown above the set grid during regular season; moved below Playoff Journey during playoffs */}
-      {playoffSeries.length === 0 && (
+      {/* Standings Card — shown above the set grid during regular season; moved below Playoff Journey during playoffs. Hidden once the season is complete (final standings live in the summary card and the live standings feed is empty in the offseason). */}
+      {!seasonComplete && playoffSeries.length === 0 && (
         <StandingsCard
           teamAbbrev={team.abbreviation}
           isGoatMode={!useClassicStyling}
@@ -993,6 +1014,7 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
       {/* Playoff Journey: when the team is in the playoffs, replace the set grid with stacked series cards */}
       {playoffSeries.length > 0 ? (
         <>
+          {summaryCard}
           <PlayoffJourney
             series={playoffSeries}
             teamAbbrev={team.abbreviation}
@@ -1004,7 +1026,7 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
             cupOdds={teamCupOdds}
             cupOddsRank={cupOddsRank}
           />
-          {stats && (
+          {!seasonComplete && stats && (
             <ProgressBar
               stats={stats}
               isGoatMode={!useClassicStyling}
@@ -1057,6 +1079,7 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
           >
             Game Sets
           </h2>
+          {!seasonComplete && (
           <div className="flex items-center gap-1.5 md:gap-3">
             {/* What If Toggle */}
             <div className="flex items-center gap-1.5 md:gap-2">
@@ -1125,10 +1148,11 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
               <span className="sm:hidden">{hideCompleted ? 'Show All' : 'Hide Done'}</span>
             </button>
           </div>
+          )}
         </div>
         <div className="grid grid-cols-1 gap-4">
           {chunks
-            .filter(chunk => !hideCompleted || !shouldHideCompletedSet(chunk))
+            .filter(chunk => seasonComplete || !hideCompleted || !shouldHideCompletedSet(chunk))
             .map((chunk) => {
               // Find the previous chunk (by chunk number, not filtered index)
               const previousChunk = chunks.find(c => c.chunkNumber === chunk.chunkNumber - 1);
@@ -1146,7 +1170,7 @@ export default function TeamTracker({ team }: TeamTrackerProps) {
                   isGoatMode={!useClassicStyling}
                   previousChunkStats={previousChunkStats}
                   onStatsCalculated={handleStatsCalculated}
-                  whatIfMode={whatIfMode && isWhatIfSet}
+                  whatIfMode={!seasonComplete && whatIfMode && isWhatIfSet}
                   onGameClick={handleGameClick}
                   hypotheticalResults={hypotheticalResults}
                   teamId={team.nhlId}

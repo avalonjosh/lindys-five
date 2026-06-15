@@ -6,6 +6,8 @@ import NewsletterModal from '@/components/newsletter/NewsletterModal';
 import { fetchWithRetry, isRateLimitError } from '@/lib/services/nhlApi';
 import { calculateChunks, calculateSeasonStats } from '@/lib/utils/chunkCalculator';
 import { computePositionAwareProbability, getPlayoffStatusMessage } from '@/lib/utils/playoffProbability';
+import { getSeasonState, playoffResultText } from '@/lib/utils/seasonSummary';
+import { getCurrentNHLSeason, formatSeasonLabel, formatSeasonEndYear } from '@/lib/utils/season';
 import type { GameResult } from '@/lib/types';
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes for fresh data
@@ -49,14 +51,6 @@ function ordinal(n: number): string {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
-function getCurrentNHLSeason(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  if (month >= 8) return `${year}${year + 1}`;
-  return `${year - 1}${year}`;
-}
-
 // Helper: possessive form that handles names ending in 's'
 function possessive(name: string): string {
   return name.endsWith('s') ? `${name}'` : `${name}'s`;
@@ -77,15 +71,30 @@ export async function generateMetadata({ params }: TeamPageProps): Promise<Metad
   }
 
   const fullName = `${team.city} ${team.name}`;
-  const title = `${fullName} Playoff Odds & Standings 2025-26 — Chances & Projections`;
-  const description = `${fullName} playoff odds, playoff chances, and Stanley Cup projections for 2025-26. Track ${possessive(fullName)} points pace, playoff picture, and playoff probability updated daily.`;
+  const season = getCurrentNHLSeason();
+  const seasonLabel = formatSeasonLabel(season);
+  const { complete: seasonComplete } = await getSeasonState(team.abbreviation, season);
+
+  const title = seasonComplete
+    ? `${fullName} ${seasonLabel} Season: Final Record, Standings & Playoff Results`
+    : `${fullName} Playoff Odds & Standings ${seasonLabel} — Chances & Projections`;
+  const description = seasonComplete
+    ? `${fullName} ${seasonLabel} season recap: final record, division and conference finish, and playoff result. See how the ${possessive(fullName)} season ended.`
+    : `${fullName} playoff odds, playoff chances, and Stanley Cup projections for ${seasonLabel}. Track ${possessive(fullName)} points pace, playoff picture, and playoff probability updated daily.`;
+
+  const ogTitle = seasonComplete
+    ? `${fullName} ${seasonLabel} Season Recap — Final Record & Playoff Result`
+    : `${fullName} Playoff Odds ${seasonLabel} — Chances, Standings & Projections`;
+  const ogDescription = seasonComplete
+    ? `${fullName} ${seasonLabel} final record, standings finish, and playoff result.`
+    : `${fullName} playoff odds, chances, and Stanley Cup projections for the ${seasonLabel} NHL season. Points pace and playoff picture updated daily.`;
 
   return {
     title,
     description,
     openGraph: {
-      title: `${fullName} Playoff Odds 2025-26 — Chances, Standings & Projections`,
-      description: `${fullName} playoff odds, chances, and Stanley Cup projections for the 2025-26 NHL season. Points pace and playoff picture updated daily.`,
+      title: ogTitle,
+      description: ogDescription,
       type: 'website',
       url: `https://www.lindysfive.com/nhl/${team.id}`,
       images: [{ url: team.logo }],
@@ -93,8 +102,8 @@ export async function generateMetadata({ params }: TeamPageProps): Promise<Metad
     },
     twitter: {
       card: 'summary',
-      title: `${fullName} Playoff Odds 2025-26`,
-      description: `${fullName} playoff odds, chances, and Stanley Cup projections. Points pace and playoff picture updated daily.`,
+      title: seasonComplete ? `${fullName} ${seasonLabel} Season Recap` : `${fullName} Playoff Odds ${seasonLabel}`,
+      description: ogDescription,
       images: [team.logo],
     },
     alternates: {
@@ -112,12 +121,27 @@ export default async function TeamPage({ params }: TeamPageProps) {
   }
 
   const fullName = `${team.city} ${team.name}`;
+  const season = getCurrentNHLSeason();
+  const seasonLabel = formatSeasonLabel(season);
+  const endYear = formatSeasonEndYear(season);
+
+  // Detect a finished season (all games played) to flip the page into
+  // season-complete mode. Derived from the schedule, which stays reliable in
+  // the offseason.
+  const { complete: seasonComplete, summary: seasonSummary } = await getSeasonState(
+    team.abbreviation,
+    season
+  );
 
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
-    name: `${fullName} Playoff Odds & Standings 2025-26`,
-    description: `${fullName} playoff odds, chances, and Stanley Cup projections for 2025-26. Track playoff probability, points pace, and playoff picture updated daily.`,
+    name: seasonComplete
+      ? `${fullName} ${seasonLabel} Season: Final Record, Standings & Playoff Results`
+      : `${fullName} Playoff Odds & Standings ${seasonLabel}`,
+    description: seasonComplete
+      ? `${fullName} ${seasonLabel} season recap: final record, division and conference finish, and playoff result.`
+      : `${fullName} playoff odds, chances, and Stanley Cup projections for ${seasonLabel}. Track playoff probability, points pace, and playoff picture updated daily.`,
     url: `https://www.lindysfive.com/nhl/${team.id}`,
     dateModified: new Date().toISOString(),
     publisher: {
@@ -135,35 +159,70 @@ export default async function TeamPage({ params }: TeamPageProps) {
     },
   };
 
+  const playoffResultAnswer =
+    seasonComplete && seasonSummary ? playoffResultText(seasonSummary) : null;
+
   const faqLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: [
-      {
-        '@type': 'Question',
-        name: `Will the ${fullName} make the playoffs in 2026?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: `Track the ${possessive(fullName)} live playoff odds, points pace, and probability on this page. Updated daily with the latest standings data.`,
-        },
-      },
-      {
-        '@type': 'Question',
-        name: `What are the ${possessive(fullName)} playoff odds?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: `See the ${possessive(fullName)} current playoff probability percentage at the top of this page, based on points pace, division standings, and wild card positioning.`,
-        },
-      },
-      {
-        '@type': 'Question',
-        name: `What are the ${possessive(fullName)} Stanley Cup odds?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: `The ${possessive(fullName)} Stanley Cup chances start with making the playoffs. Track their current playoff probability and points pace projections here.`,
-        },
-      },
-    ],
+    mainEntity: seasonComplete
+      ? [
+          {
+            '@type': 'Question',
+            name: `Did the ${fullName} make the playoffs in ${endYear}?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: playoffResultAnswer
+                ? `${playoffResultAnswer} in the ${seasonLabel} season. See the full ${possessive(fullName)} season recap above.`
+                : `See the ${possessive(fullName)} ${seasonLabel} playoff result and final standings above.`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: `How did the ${fullName} finish the ${seasonLabel} season?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text:
+                seasonSummary?.finalRecord
+                  ? `The ${fullName} finished ${seasonSummary.finalRecord.wins}-${seasonSummary.finalRecord.losses}-${seasonSummary.finalRecord.otLosses} with ${seasonSummary.finalRecord.points} points${seasonSummary.divisionName && seasonSummary.divisionFinish ? `, ${ordinal(seasonSummary.divisionFinish)} in the ${seasonSummary.divisionName} Division` : ''}.`
+                  : `See the ${possessive(fullName)} final record and standings for the ${seasonLabel} season above.`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: `When does the ${fullName} next season start?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `The NHL regular season typically opens in early October. ${possessive(fullName)} schedule and playoff odds for next season will be tracked here once the schedule is released.`,
+            },
+          },
+        ]
+      : [
+          {
+            '@type': 'Question',
+            name: `Will the ${fullName} make the playoffs in ${endYear}?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `Track the ${possessive(fullName)} live playoff odds, points pace, and probability on this page. Updated daily with the latest standings data.`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: `What are the ${possessive(fullName)} playoff odds?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `See the ${possessive(fullName)} current playoff probability percentage at the top of this page, based on points pace, division standings, and wild card positioning.`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: `What are the ${possessive(fullName)} Stanley Cup odds?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `The ${possessive(fullName)} Stanley Cup chances start with making the playoffs. Track their current playoff probability and points pace projections here.`,
+            },
+          },
+        ],
   };
 
   const breadcrumbLd = {
@@ -191,10 +250,36 @@ export default async function TeamPage({ params }: TeamPageProps) {
     ],
   };
 
-  // Fetch live data server-side for SEO (direct NHL API, not proxy)
+  // Server-rendered SEO summary for crawlers — past-tense in the offseason,
+  // live stats during the season.
   let seoContent: string | null = null;
-  try {
-    const season = getCurrentNHLSeason();
+
+  if (seasonComplete && seasonSummary) {
+    const r = seasonSummary.finalRecord;
+    const parts: string[] = [];
+    parts.push(
+      r
+        ? `${fullName} finished the ${seasonLabel} season ${r.wins}-${r.losses}-${r.otLosses} with ${r.points} points in ${r.gamesPlayed} games.`
+        : `${fullName} ${seasonLabel} season recap.`
+    );
+    if (seasonSummary.divisionFinish && seasonSummary.divisionName) {
+      parts.push(
+        `Finished ${ordinal(seasonSummary.divisionFinish)} in the ${seasonSummary.divisionName} Division${
+          seasonSummary.conferenceFinish && seasonSummary.conferenceName
+            ? `, ${ordinal(seasonSummary.conferenceFinish)} in the ${seasonSummary.conferenceName} Conference`
+            : ''
+        }.`
+      );
+    }
+    parts.push(`${playoffResultText(seasonSummary)}.`);
+    parts.push(
+      `${possessive(fullName)} schedule and playoff odds for next season will be tracked here once the new NHL schedule is released.`
+    );
+    seoContent = parts.join(' ');
+  }
+
+  // Fetch live data server-side for SEO (direct NHL API, not proxy)
+  if (!seasonComplete) try {
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
     const [scheduleRes, standingsRes] = await Promise.all([
       fetchWithRetry(`https://api-web.nhle.com/v1/club-schedule-season/${team.abbreviation}/${season}`, 1),
@@ -269,7 +354,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
       const nextGame = games.find(g => g.outcome === 'PENDING');
 
       const lines: string[] = [];
-      lines.push(`${fullName} 2025-26 Season: ${teamStanding.wins}-${teamStanding.losses}-${teamStanding.otLosses}, ${teamStanding.points} points through ${teamStanding.gamesPlayed} games.`);
+      lines.push(`${fullName} ${seasonLabel} Season: ${teamStanding.wins}-${teamStanding.losses}-${teamStanding.otLosses}, ${teamStanding.points} points through ${teamStanding.gamesPlayed} games.`);
       lines.push(`${ordinal(teamStanding.divisionSequence)} in the ${teamStanding.divisionName} Division, ${ordinal(teamStanding.conferenceSequence)} in the ${teamStanding.conferenceName} Conference.`);
       lines.push(`${Math.round(seasonStats.projectedPoints)} projected points at current pace — ${seasonStats.pointsAboveBelow >= 0 ? seasonStats.pointsAboveBelow + ' above' : Math.abs(seasonStats.pointsAboveBelow) + ' below'} the ${seasonStats.playoffTarget}-point playoff target.`);
       lines.push(`${Math.round(probability)}% playoff probability. ${statusMessage}.`);
@@ -323,12 +408,19 @@ export default async function TeamPage({ params }: TeamPageProps) {
       />
       {/* Server-rendered SEO summary for crawlers — live data refreshed via ISR */}
       <div className="sr-only" aria-hidden="false">
-        <h1>{fullName} Playoff Odds &amp; Standings 2025-26</h1>
+        <h1>
+          {seasonComplete
+            ? `${fullName} ${seasonLabel} Season: Final Record, Standings & Playoff Results`
+            : `${fullName} Playoff Odds & Standings ${seasonLabel}`}
+        </h1>
         <p>
-          {seoContent || `${fullName} playoff odds, chances, and Stanley Cup projections for the 2025-26 NHL season. Track ${possessive(fullName)} points pace, playoff picture, playoff probability, and wild card standings — updated daily.`}
+          {seoContent ||
+            (seasonComplete
+              ? `${fullName} ${seasonLabel} season recap: final record, division and conference finish, and playoff result. Next season's schedule and playoff odds will be tracked here once released.`
+              : `${fullName} playoff odds, chances, and Stanley Cup projections for the ${seasonLabel} NHL season. Track ${possessive(fullName)} points pace, playoff picture, playoff probability, and wild card standings — updated daily.`)}
         </p>
       </div>
-      <TeamTracker team={team} />
+      <TeamTracker team={team} seasonComplete={seasonComplete} seasonSummary={seasonSummary} />
       <NewsletterModal
         team={teamSlug}
         teamDisplayName={team.name}
