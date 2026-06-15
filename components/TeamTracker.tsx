@@ -637,7 +637,11 @@ export default function TeamTracker({ team, seasonComplete = false, seasonSummar
       }
     };
 
-    if (chunks.length > 0) {
+    // Skip the bulk pre-fetch once the season is complete: every set is
+    // "complete" then, so this would fan out detailed-stats fetches for all
+    // ~16 sets at once and exhaust the NHL API rate limit. ChunkCards still
+    // fetch their own stats lazily when a set is expanded.
+    if (!seasonComplete && chunks.length > 0) {
       calculateAllCompletedStats();
     }
 
@@ -648,7 +652,7 @@ export default function TeamTracker({ team, seasonComplete = false, seasonSummar
     // Note: chunkStatsCache intentionally NOT in dependencies to avoid feedback loop
     // The filter inside checks the current cache state via closure
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chunks, team.nhlId]);
+  }, [chunks, team.nhlId, seasonComplete]);
 
   if (loading && chunks.length === 0) {
     return (
