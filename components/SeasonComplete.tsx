@@ -73,10 +73,16 @@ export default function SeasonComplete({
           {summary.seasonLabel} Season Complete
         </h3>
         <span
-          className="text-xs md:text-sm font-bold px-3 py-1 rounded-full whitespace-nowrap"
+          className="inline-flex items-center gap-1.5 text-xs md:text-sm font-bold px-3 py-1 rounded-full whitespace-nowrap"
           style={{ backgroundColor: `${outcomeColor}1A`, color: outcomeColor }}
         >
-          {playoff.wonCup ? '🏆 Stanley Cup Champions' : playoff.made ? 'Made Playoffs' : 'Missed Playoffs'}
+          {playoff.wonCup ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/stanley-cup.png" alt="Stanley Cup" className="h-4 w-auto object-contain" />
+              Stanley Cup Champions
+            </>
+          ) : playoff.made ? 'Made Playoffs' : 'Missed Playoffs'}
         </span>
       </div>
 

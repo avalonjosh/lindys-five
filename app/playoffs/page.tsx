@@ -689,12 +689,16 @@ export default async function PlayoffsPage() {
               className="rounded-2xl border-2 px-5 py-5 text-center shadow-sm flex flex-col items-center gap-2"
               style={{ backgroundColor: '#FBF5E6', borderColor: '#D4AF37' }}
             >
-              {champion.logo && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={champion.logo} alt={`${champion.name} logo`} className="h-14 w-14 md:h-16 md:w-16" />
-              )}
+              <div className="flex items-center justify-center gap-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/stanley-cup.png" alt="Stanley Cup" className="h-16 md:h-20 w-auto object-contain" />
+                {champion.logo && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={champion.logo} alt={`${champion.name} logo`} className="h-14 w-14 md:h-16 md:w-16 object-contain" />
+                )}
+              </div>
               <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#9A7B1F' }}>
-                🏆 {endYear} Stanley Cup Champions
+                {endYear} Stanley Cup Champions
               </div>
               <div className="text-2xl md:text-3xl font-bold" style={{ color: '#8a6d1b', fontFamily: 'Bebas Neue, sans-serif' }}>
                 {champion.name}

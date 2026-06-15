@@ -66,17 +66,22 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
   }, [favorites]);
 
   // Detect whether the NHL playoffs are currently active — used to hide the redundant
-  // "Playoff Odds" nav item once the full bracket/odds/schedule page has gone live.
+  // "Playoff Odds" nav item once playoffs go live. A completed bracket (champion
+  // decided, i.e. offseason) is NOT active, so the Odds link returns.
   useEffect(() => {
     let cancelled = false;
     fetch('/api/playoffs/bracket')
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (cancelled) return;
-        interface BracketRoundLite { series?: Array<unknown> }
+        interface BracketSeriesLite { topSeedWins?: number; bottomSeedWins?: number }
+        interface BracketRoundLite { roundNumber?: number; series?: BracketSeriesLite[] }
         const rounds = (data?.bracket?.rounds || []) as BracketRoundLite[];
         const hasSeries = rounds.some((r) => (r.series?.length || 0) > 0);
-        setNhlPlayoffsActive(hasSeries);
+        const finalDecided = rounds
+          .find((r) => r.roundNumber === 4)
+          ?.series?.some((s) => (s.topSeedWins || 0) >= 4 || (s.bottomSeedWins || 0) >= 4);
+        setNhlPlayoffsActive(hasSeries && !finalDecided);
       })
       .catch(() => {
         /* silent — assume not in playoffs */

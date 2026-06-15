@@ -488,14 +488,16 @@ export default async function NHLPlayoffOddsPage() {
           {seasonComplete && outcome.championName && (
             <Link
               href="/playoffs"
-              className="mt-6 block rounded-2xl border-2 px-5 py-4 text-center shadow-sm transition-colors hover:shadow-md"
+              className="mt-6 flex flex-col items-center rounded-2xl border-2 px-5 py-5 text-center shadow-sm transition-colors hover:shadow-md"
               style={{ backgroundColor: '#FBF5E6', borderColor: '#D4AF37' }}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/stanley-cup.png" alt="Stanley Cup" className="h-12 md:h-14 w-auto object-contain mb-1" />
               <div className="text-xs font-bold uppercase tracking-wide" style={{ color: '#9A7B1F' }}>
                 {endYear} Stanley Cup Champions
               </div>
               <div className="mt-1 text-xl md:text-2xl font-bold" style={{ color: '#8a6d1b' }}>
-                🏆 {outcome.championName}
+                {outcome.championName}
               </div>
               {outcome.runnerUpName && (
                 <div className="mt-0.5 text-xs" style={{ color: '#9A7B1F' }}>
