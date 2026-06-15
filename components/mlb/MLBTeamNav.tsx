@@ -61,16 +61,23 @@ export default function MLBTeamNav({ currentTeamId, teamColors, defaultTab = 'ml
     }
   }, [favorites, favoritesLoaded]);
 
-  // Detect NHL playoffs — hides the redundant "Playoff Odds" link once the /playoffs page has live series
+  // Detect ACTIVE NHL playoffs — hides the redundant "Playoff Odds" link only while
+  // playoffs are in progress (push users to the live Bracket). A completed bracket
+  // (champion decided, i.e. offseason) is NOT active, so the Odds link returns.
   useEffect(() => {
     let cancelled = false;
     fetch('/api/playoffs/bracket')
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (cancelled) return;
-        interface BracketRoundLite { series?: Array<unknown> }
+        interface BracketSeriesLite { topSeedWins?: number; bottomSeedWins?: number }
+        interface BracketRoundLite { roundNumber?: number; series?: BracketSeriesLite[] }
         const rounds = (data?.bracket?.rounds || []) as BracketRoundLite[];
-        setNhlPlayoffsActive(rounds.some((r) => (r.series?.length || 0) > 0));
+        const hasSeries = rounds.some((r) => (r.series?.length || 0) > 0);
+        const finalDecided = rounds
+          .find((r) => r.roundNumber === 4)
+          ?.series?.some((s) => (s.topSeedWins || 0) >= 4 || (s.bottomSeedWins || 0) >= 4);
+        setNhlPlayoffsActive(hasSeries && !finalDecided);
       })
       .catch(() => {
         /* silent — assume not in playoffs */
