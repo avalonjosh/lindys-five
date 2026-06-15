@@ -11,40 +11,49 @@ import StanleyCupOddsTable, { type CupOddsTeam } from '@/components/playoffs/Sta
 import NewsletterModal from '@/components/newsletter/NewsletterModal';
 import GameTicker from '@/components/landing/GameTicker';
 import GamePromo from '@/components/perfectseason/GamePromo';
+import { getCurrentNHLSeason, formatSeasonLabel, formatSeasonEndYear } from '@/lib/utils/season';
+import { getPlayoffsOutcome, getFinalStandings } from '@/lib/services/nhlOffseason';
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
 
-export const metadata: Metadata = {
-  title: 'NHL Playoff Odds 2025-26 — Standings, Projections & Playoff Picture',
-  description:
-    'NHL playoff odds, standings, and projections for all 32 teams in 2025-26. Track playoff picture, Stanley Cup odds, wild card race, and playoff probability updated daily.',
-  openGraph: {
-    title: 'NHL Playoff Odds 2025-26 — Standings, Projections & Playoff Picture',
-    description:
-      'NHL playoff odds, standings, and playoff picture for all 32 teams. Stanley Cup projections and wild card race updated daily.',
-    type: 'website',
-    url: 'https://www.lindysfive.com/nhl-playoff-odds',
-    siteName: "Lindy's Five",
-    images: [
-      {
-        url: '/api/og?type=sport-hub&sport=nhl&title=NHL%20Playoff%20Odds%202025-26&subtitle=Live%20Standings%2C%20Projections%20%26%20Wild%20Card%20Race',
-        width: 1200,
-        height: 630,
-        alt: "NHL Playoff Odds 2025-26 — Lindy's Five",
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'NHL Playoff Odds 2025-26 — Standings & Playoff Picture',
-    description:
-      'NHL playoff odds, standings, and projections for all 32 teams. Playoff picture and Stanley Cup odds updated daily.',
-    images: ['/api/og?type=sport-hub&sport=nhl&title=NHL%20Playoff%20Odds%202025-26&subtitle=Live%20Standings%2C%20Projections%20%26%20Wild%20Card%20Race'],
-  },
-  alternates: {
-    canonical: 'https://www.lindysfive.com/nhl-playoff-odds',
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const season = getCurrentNHLSeason();
+  const label = formatSeasonLabel(season);
+  const endYear = formatSeasonEndYear(season);
+  const { complete, championName } = await getPlayoffsOutcome(season);
+
+  const title = complete
+    ? `NHL ${label} Final Standings & Playoff Results`
+    : `NHL Playoff Odds ${label} — Standings, Projections & Playoff Picture`;
+  const description = complete
+    ? `Final ${label} NHL standings and playoff results for all 32 teams.${championName ? ` ${championName} won the ${endYear} Stanley Cup.` : ''} Next season's odds will be tracked here once the schedule is released.`
+    : `NHL playoff odds, standings, and projections for all 32 teams in ${label}. Track playoff picture, Stanley Cup odds, wild card race, and playoff probability updated daily.`;
+  const ogTitle = complete ? `NHL ${label} Final Standings & Playoff Results` : `NHL Playoff Odds ${label} — Standings, Projections & Playoff Picture`;
+  const ogSubtitle = complete ? 'Final Standings & Playoff Results' : 'Live Standings, Projections & Wild Card Race';
+  const ogImage = `/api/og?type=sport-hub&sport=nhl&title=${encodeURIComponent(ogTitle)}&subtitle=${encodeURIComponent(ogSubtitle)}`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title: ogTitle,
+      description,
+      type: 'website',
+      url: 'https://www.lindysfive.com/nhl-playoff-odds',
+      siteName: "Lindy's Five",
+      images: [{ url: ogImage, width: 1200, height: 630, alt: `${ogTitle} — Lindy's Five` }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: ogTitle,
+      description,
+      images: [ogImage],
+    },
+    alternates: {
+      canonical: 'https://www.lindysfive.com/nhl-playoff-odds',
+    },
+  };
+}
 
 // Reverse lookup: NHL abbreviation -> our slug
 const abbrevToSlug = Object.fromEntries(
@@ -234,9 +243,20 @@ function buildCupOddsFromStandings(standings: StandingsTeam[]): CupOddsTeam[] | 
 }
 
 export default async function NHLPlayoffOddsPage() {
-  const [standings, bracket] = await Promise.all([fetchStandings(), fetchBracket()]);
-  const playoffsActive = isPlayoffActive(bracket);
-  const regularSeasonOver = standings && standings.length > 0 &&
+  const season = getCurrentNHLSeason();
+  const seasonLabel = formatSeasonLabel(season);
+  const endYear = formatSeasonEndYear(season);
+  const outcome = await getPlayoffsOutcome(season);
+  const seasonComplete = outcome.complete;
+
+  const [liveStandings, bracket] = await Promise.all([fetchStandings(), fetchBracket()]);
+  let standings = liveStandings;
+  // Offseason: standings/today is empty — fall back to final regular-season standings.
+  if ((!standings || standings.length === 0) && seasonComplete) {
+    standings = await getFinalStandings(season);
+  }
+  const playoffsActive = !seasonComplete && isPlayoffActive(bracket);
+  const regularSeasonOver = !seasonComplete && standings && standings.length > 0 &&
     standings.filter(t => t.gamesPlayed >= 82).length >= 28;
 
   if (!standings || standings.length === 0) {
@@ -265,6 +285,13 @@ export default async function NHLPlayoffOddsPage() {
     (a, b) => b.points - a.points || b.pointPctg - a.pointPctg
   );
 
+  // Past-tense playoff result for a team, used in the offseason standings mirror.
+  const playoffResultLabel = (t: TeamData): string => {
+    if (outcome.championAbbrev && t.abbrev === outcome.championAbbrev) return 'Won Stanley Cup';
+    const madePlayoffs = (t.clinchIndicator && t.clinchIndicator !== 'e') || t.isInPlayoffs;
+    return madePlayoffs ? 'Made playoffs' : 'Missed playoffs';
+  };
+
   return (
     <>
       <GameTicker />
@@ -278,9 +305,12 @@ export default async function NHLPlayoffOddsPage() {
             {
               '@context': 'https://schema.org',
               '@type': 'WebPage',
-              name: 'NHL Playoff Odds 2025-26',
-              description:
-                'NHL playoff odds, standings, and playoff picture for all 32 teams in 2025-26. Stanley Cup projections and wild card race updated daily.',
+              name: seasonComplete
+                ? `NHL ${seasonLabel} Final Standings & Playoff Results`
+                : `NHL Playoff Odds ${seasonLabel}`,
+              description: seasonComplete
+                ? `Final ${seasonLabel} NHL standings and playoff results for all 32 teams.${outcome.championName ? ` ${outcome.championName} won the ${endYear} Stanley Cup.` : ''}`
+                : `NHL playoff odds, standings, and playoff picture for all 32 teams in ${seasonLabel}. Stanley Cup projections and wild card race updated daily.`,
               url: 'https://www.lindysfive.com/nhl-playoff-odds',
               dateModified: new Date().toISOString(),
               publisher: {
@@ -291,9 +321,12 @@ export default async function NHLPlayoffOddsPage() {
             {
               '@context': 'https://schema.org',
               '@type': 'Dataset',
-              name: 'NHL Playoff Odds & Standings 2025-26',
-              description:
-                'Daily-updated playoff probability, projected points, and standings for all 32 NHL teams for the 2025-26 season. Each team row includes record, points, games played, projected points at current pace, and a logistic playoff probability measured against the division and wild card cut lines.',
+              name: seasonComplete
+                ? `NHL Final Standings & Playoff Results ${seasonLabel}`
+                : `NHL Playoff Odds & Standings ${seasonLabel}`,
+              description: seasonComplete
+                ? `Final standings and playoff results for all 32 NHL teams for the ${seasonLabel} season. Each team row includes final record, points, games played, and playoff result.${outcome.championName ? ` ${outcome.championName} won the ${endYear} Stanley Cup.` : ''}`
+                : `Daily-updated playoff probability, projected points, and standings for all 32 NHL teams for the ${seasonLabel} season. Each team row includes record, points, games played, projected points at current pace, and a logistic playoff probability measured against the division and wild card cut lines.`,
               url: 'https://www.lindysfive.com/nhl-playoff-odds',
               keywords: [
                 'NHL playoff odds',
@@ -305,7 +338,7 @@ export default async function NHLPlayoffOddsPage() {
               creator: { '@type': 'Organization', name: 'JRR Apps' },
               publisher: { '@type': 'Organization', name: "Lindy's Five" },
               isAccessibleForFree: true,
-              temporalCoverage: '2025-10/2026-06',
+              temporalCoverage: `${season.slice(0, 4)}-10/${season.slice(4, 8)}-06`,
               dateModified: new Date().toISOString(),
               measurementTechnique:
                 'Logistic curve over the gap between projected points and the higher of the division-3 or wild-card-2 cut line, computed daily from live standings.',
@@ -341,16 +374,34 @@ export default async function NHLPlayoffOddsPage() {
       {/* Server-rendered standings mirror for crawlers and AI answer engines.
           Duplicates the interactive (client-rendered) table so every team's row
           is present in the initial HTML without JS execution. */}
-      <section className="sr-only" aria-label="NHL playoff odds and standings for all 32 teams, 2025-26 season">
-        <h2>NHL Playoff Odds &amp; Standings 2025-26 — All 32 Teams</h2>
+      <section className="sr-only" aria-label={seasonComplete ? `NHL ${seasonLabel} final standings and playoff results for all 32 teams` : `NHL playoff odds and standings for all 32 teams, ${seasonLabel} season`}>
+        <h2>
+          {seasonComplete
+            ? `NHL ${seasonLabel} Final Standings & Playoff Results — All 32 Teams`
+            : `NHL Playoff Odds & Standings ${seasonLabel} — All 32 Teams`}
+        </h2>
         <p>
-          Live NHL playoff probability, projected points, and standings for all 32 teams,
-          ranked by points and updated daily. Projected points extrapolate the current
-          points pace over an 82-game season; playoff probability is a logistic estimate
-          against the division and wild card cut lines.
+          {seasonComplete ? (
+            <>
+              Final {seasonLabel} NHL standings and playoff results for all 32 teams, ranked by points.
+              {outcome.championName ? ` ${outcome.championName} won the ${endYear} Stanley Cup.` : ''} Next
+              season&apos;s playoff odds will be tracked here once the schedule is released.
+            </>
+          ) : (
+            <>
+              Live NHL playoff probability, projected points, and standings for all 32 teams,
+              ranked by points and updated daily. Projected points extrapolate the current
+              points pace over an 82-game season; playoff probability is a logistic estimate
+              against the division and wild card cut lines.
+            </>
+          )}
         </p>
         <table>
-          <caption>NHL standings and playoff odds, all 32 teams, 2025-26 (updated daily)</caption>
+          <caption>
+            {seasonComplete
+              ? `NHL ${seasonLabel} final standings and playoff results, all 32 teams`
+              : `NHL standings and playoff odds, all 32 teams, ${seasonLabel} (updated daily)`}
+          </caption>
           <thead>
             <tr>
               <th scope="col">League rank</th>
@@ -358,8 +409,8 @@ export default async function NHLPlayoffOddsPage() {
               <th scope="col">Record (W-L-OTL)</th>
               <th scope="col">Points</th>
               <th scope="col">Games played</th>
-              <th scope="col">Projected points</th>
-              <th scope="col">Playoff probability</th>
+              <th scope="col">{seasonComplete ? 'Playoff result' : 'Projected points'}</th>
+              {!seasonComplete && <th scope="col">Playoff probability</th>}
               <th scope="col">Conference</th>
               <th scope="col">Division (rank)</th>
             </tr>
@@ -372,8 +423,8 @@ export default async function NHLPlayoffOddsPage() {
                 <td>{t.wins}-{t.losses}-{t.otLosses}</td>
                 <td>{t.points}</td>
                 <td>{t.gamesPlayed}</td>
-                <td>{t.pace}</td>
-                <td>{t.odds}%</td>
+                <td>{seasonComplete ? playoffResultLabel(t) : t.pace}</td>
+                {!seasonComplete && <td>{t.odds}%</td>}
                 <td>{t.conferenceName}</td>
                 <td>{t.divisionName} (#{t.divisionSequence})</td>
               </tr>
@@ -411,11 +462,14 @@ export default async function NHLPlayoffOddsPage() {
               className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-3"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
-              NHL Playoff Odds &amp; Standings 2025-26
+              {seasonComplete
+                ? `NHL ${seasonLabel} Final Standings & Playoff Results`
+                : `NHL Playoff Odds & Standings ${seasonLabel}`}
             </h1>
             <p className="text-base md:text-lg text-white/80 max-w-2xl mx-auto">
-              NHL playoff picture, Stanley Cup projections, and wild card race for
-              all 32 teams. Updated daily.
+              {seasonComplete
+                ? `Final ${seasonLabel} standings and playoff results for all 32 teams. Next season's odds arrive once the schedule is released.`
+                : 'NHL playoff picture, Stanley Cup projections, and wild card race for all 32 teams. Updated daily.'}
             </p>
           </div>
         </header>
@@ -431,12 +485,31 @@ export default async function NHLPlayoffOddsPage() {
 
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 pb-16">
+          {seasonComplete && outcome.championName && (
+            <Link
+              href="/playoffs"
+              className="mt-6 block rounded-2xl border-2 px-5 py-4 text-center shadow-sm transition-colors hover:shadow-md"
+              style={{ backgroundColor: '#FBF5E6', borderColor: '#D4AF37' }}
+            >
+              <div className="text-xs font-bold uppercase tracking-wide" style={{ color: '#9A7B1F' }}>
+                {endYear} Stanley Cup Champions
+              </div>
+              <div className="mt-1 text-xl md:text-2xl font-bold" style={{ color: '#8a6d1b' }}>
+                🏆 {outcome.championName}
+              </div>
+              {outcome.runnerUpName && (
+                <div className="mt-0.5 text-xs" style={{ color: '#9A7B1F' }}>
+                  def. {outcome.runnerUpName} in the Final · View full bracket →
+                </div>
+              )}
+            </Link>
+          )}
           <div className="mt-6 mb-4 text-center">
             <Link
               href="/playoffs"
               className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-500 text-sm font-medium"
             >
-              View {playoffsActive ? 'Full' : regularSeasonOver ? 'Confirmed' : 'Projected'} Playoff Bracket &rarr;
+              View {seasonComplete ? 'Final' : playoffsActive ? 'Full' : regularSeasonOver ? 'Confirmed' : 'Projected'} Playoff Bracket &rarr;
             </Link>
           </div>
 
@@ -468,17 +541,28 @@ export default async function NHLPlayoffOddsPage() {
               className="text-2xl md:text-3xl font-bold text-gray-900 mb-6"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
-              2025-26 NHL Playoff Race
+              {seasonComplete ? `${seasonLabel} NHL Season Recap` : `${seasonLabel} NHL Playoff Race`}
             </h2>
             <div className="space-y-4 text-gray-600 leading-relaxed">
-              <p>
-                The 2025-26 NHL playoff race is heating up as teams jockey for
-                position in what has been one of the most competitive seasons in
-                recent memory. With 16 of 32 teams earning a postseason berth,
-                every point matters down the stretch. The top three teams in each
-                division clinch a playoff spot, while the remaining four spots
-                are decided by wildcard positioning within each conference.
-              </p>
+              {seasonComplete ? (
+                <p>
+                  The {seasonLabel} NHL season is complete.
+                  {outcome.championName ? ` ${outcome.championName} captured the ${endYear} Stanley Cup${outcome.runnerUpName ? `, defeating the ${outcome.runnerUpName} in the Final` : ''}.` : ''}{' '}
+                  The final standings above show where all 32 teams finished — the top three in
+                  each division plus two wild cards per conference reached the playoffs. Next
+                  season&apos;s playoff odds, points pace, and projections will be tracked here
+                  once the new schedule is released.
+                </p>
+              ) : (
+                <p>
+                  The {seasonLabel} NHL playoff race is heating up as teams jockey for
+                  position in what has been one of the most competitive seasons in
+                  recent memory. With 16 of 32 teams earning a postseason berth,
+                  every point matters down the stretch. The top three teams in each
+                  division clinch a playoff spot, while the remaining four spots
+                  are decided by wildcard positioning within each conference.
+                </p>
+              )}
               <p>
                 Points pace is one of the most telling indicators of a
                 team&apos;s playoff trajectory. Teams on pace for 100 or more

@@ -94,10 +94,26 @@ The payoff is being indexed and ready when demand returns in October, not summer
 
 ---
 
+## Other pages in offseason mode (added 2026-06-15)
+
+The original plan was scoped to team tracker pages. These league-wide pages also needed offseason handling and now have it:
+
+- **Team trackers (`/nhl/{team}`)** — DONE. Season-complete summary (final record, finish, playoff result), past-tense metadata/JSON-LD/sr-only, read-only 5-game sets, no live polling. Detection via `getSeasonState()` from the schedule.
+- **Playoff odds (`/nhl-playoff-odds`)** — DONE. Was rendering a "Standings Unavailable" error in the offseason (`standings/now` is empty). Now falls back to final regular-season standings (schedule-derived last regular-season date), shows a champion banner, past-tense title/description/Dataset JSON-LD, and an offseason sr-only table (Playoff result column instead of probability).
+- **Playoff bracket (`/playoffs`)** — DONE. Already rendered the completed bracket via the carousel endpoint, but conference routing silently piled every series into the East because standings were empty — fixed with the final-standings fallback. Added a champion crown banner, past-tense metadata with the champion's name, and dynamic season strings.
+- **Scores (`/nhl/scores`)** — DONE. Offseason banner ("season complete, the {champion} won the Cup, games return in October") + past-tense title. Past box scores remain evergreen.
+
+### Offseason NHL API realities (important)
+- `standings/now` → **empty body** once the season is fully over. Use `standings/{lastRegularSeasonDate}` instead (derive the date from a team's schedule).
+- `playoff-bracket/{season}` → **404s** in the offseason. Do NOT rely on it. Use `playoff-series/carousel/{season}` (works) for the bracket + champion.
+- `club-schedule-season/{team}/{season}` → reliable all year; the backbone for season-complete detection and final records.
+- Shared helpers: `lib/services/nhlOffseason.ts` (`getPlayoffsOutcome`, `getFinalStandings`), `lib/utils/seasonSummary.ts` (`getSeasonState`), `lib/utils/season.ts` (season-string formatting).
+
 ## Build checklist (for when we pick this up)
 
-- [ ] Add season-state detection (live / complete / preseason) driven by the NHL API.
-- [ ] Build the season-complete team-page view (final record, finish, playoff result, review).
+- [x] Add season-state detection (live / complete) driven by the NHL API. (preseason state still TODO for Phase 2)
+- [x] Build the season-complete team-page view (final record, finish, playoff result, review).
+- [x] Apply season-complete mode to the odds, bracket, and scores pages (see section above).
 - [ ] Confirm the NHL API exposes `20262027` schedule; wire team pages to the new season.
 - [ ] Build 2026-27 schedule grids + 5-game sets.
 - [ ] Add "way-too-early" preseason playoff odds (projection model off prior season + roster changes).

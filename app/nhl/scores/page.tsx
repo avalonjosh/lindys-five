@@ -1,27 +1,47 @@
 import type { Metadata } from 'next';
 import ScoresPageClient from '@/components/scores/ScoresPageClient';
+import { getCurrentNHLSeason, formatSeasonLabel } from '@/lib/utils/season';
+import { getPlayoffsOutcome } from '@/lib/services/nhlOffseason';
 
-export const metadata: Metadata = {
-  title: "NHL Scores Today — Live Results, Box Scores & Playoff Impact",
-  description: 'Live NHL scores, box scores, and game results for all 32 teams. See how each game impacts playoff odds and standings. Updated in real-time.',
-  openGraph: {
-    title: "NHL Scores Today — Live Results, Box Scores & Playoff Impact",
-    description: 'Live NHL scores and box scores for all 32 teams. See how each game impacts playoff odds and standings.',
-    type: 'website',
-    url: 'https://www.lindysfive.com/nhl/scores',
-    siteName: "Lindy's Five",
-  },
-  twitter: {
-    card: 'summary',
-    title: "NHL Scores Today — Live Results & Playoff Impact",
-    description: 'Live NHL scores for all 32 teams. See how each game impacts playoff odds.',
-  },
-  alternates: {
-    canonical: 'https://www.lindysfive.com/nhl/scores',
-  },
-};
+export const revalidate = 300;
 
-export default function ScoresPageWrapper() {
+export async function generateMetadata(): Promise<Metadata> {
+  const season = getCurrentNHLSeason();
+  const label = formatSeasonLabel(season);
+  const { complete } = await getPlayoffsOutcome(season);
+
+  const title = complete
+    ? `NHL Scores — ${label} Season Complete, Final Results`
+    : 'NHL Scores Today — Live Results, Box Scores & Playoff Impact';
+  const description = complete
+    ? `The ${label} NHL season is complete. Browse final game results and box scores; live scores return when next season begins in October.`
+    : 'Live NHL scores, box scores, and game results for all 32 teams. See how each game impacts playoff odds and standings. Updated in real-time.';
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      url: 'https://www.lindysfive.com/nhl/scores',
+      siteName: "Lindy's Five",
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+    },
+    alternates: {
+      canonical: 'https://www.lindysfive.com/nhl/scores',
+    },
+  };
+}
+
+export default async function ScoresPageWrapper() {
+  const season = getCurrentNHLSeason();
+  const seasonLabel = formatSeasonLabel(season);
+  const { complete: seasonComplete, championName } = await getPlayoffsOutcome(season);
   const breadcrumbLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -47,7 +67,11 @@ export default function ScoresPageWrapper() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
-      <ScoresPageClient />
+      <ScoresPageClient
+        seasonComplete={seasonComplete}
+        championName={championName}
+        seasonLabel={seasonLabel}
+      />
     </>
   );
 }

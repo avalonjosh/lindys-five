@@ -15,30 +15,43 @@ import { computeSeriesWinProbability } from '@/lib/utils/playoffProbability';
 import { buildCupOdds } from '@/lib/utils/cupOdds';
 import PlayoffBracketClient from '@/components/playoffs/PlayoffBracketClient';
 import GameTicker from '@/components/landing/GameTicker';
+import { getCurrentNHLSeason, formatSeasonEndYear } from '@/lib/utils/season';
+import { getPlayoffsOutcome, getFinalStandings } from '@/lib/services/nhlOffseason';
 
 export const revalidate = 60;
 
-export const metadata: Metadata = {
-  title: 'NHL Playoff Bracket 2026 — Live Results, Series Odds & Stanley Cup Predictions',
-  description:
-    'Live NHL playoff bracket with series win probabilities, Stanley Cup odds, and game results. Track every series in the 2026 Stanley Cup Playoffs.',
-  openGraph: {
-    title: 'NHL Playoff Bracket 2026 — Series Odds & Stanley Cup Predictions',
-    description:
-      'Live NHL playoff bracket with series win probabilities and Stanley Cup odds for all remaining teams.',
-    type: 'website',
-    url: 'https://www.lindysfive.com/playoffs',
-    siteName: "Lindy's Five",
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'NHL Playoff Bracket 2026 — Series Odds & Stanley Cup Predictions',
-    description: 'Live playoff bracket with series win probabilities and Stanley Cup odds.',
-  },
-  alternates: {
-    canonical: 'https://www.lindysfive.com/playoffs',
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const season = getCurrentNHLSeason();
+  const endYear = formatSeasonEndYear(season);
+  const { complete, championName } = await getPlayoffsOutcome(season);
+
+  const title = complete && championName
+    ? `${championName} Win the ${endYear} Stanley Cup — NHL Playoff Bracket`
+    : `NHL Playoff Bracket ${endYear} — Live Results, Series Odds & Stanley Cup Predictions`;
+  const description = complete && championName
+    ? `The ${championName} won the ${endYear} Stanley Cup. See the complete ${endYear} NHL playoff bracket, every series result, and the road to the Cup.`
+    : `Live NHL playoff bracket with series win probabilities, Stanley Cup odds, and game results. Track every series in the ${endYear} Stanley Cup Playoffs.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      url: 'https://www.lindysfive.com/playoffs',
+      siteName: "Lindy's Five",
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+    },
+    alternates: {
+      canonical: 'https://www.lindysfive.com/playoffs',
+    },
+  };
+}
 
 const NHL_API = 'https://api-web.nhle.com/v1';
 
@@ -90,7 +103,7 @@ function teamCfgByAbbrev(abbrev: string) {
 }
 
 async function fetchBracket(): Promise<PlayoffBracketResponse | null> {
-  const SEASON = '20252026';
+  const SEASON = getCurrentNHLSeason();
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
@@ -209,6 +222,31 @@ async function fetchStandings(): Promise<StandingsTeam[]> {
 function isPlayoffsActive(bracket: PlayoffBracketResponse | null): boolean {
   if (!bracket?.rounds) return false;
   return bracket.rounds.some(r => r.series && r.series.length > 0);
+}
+
+interface Champion {
+  name: string;
+  logo?: string;
+  runnerUp?: string;
+}
+
+// Returns the Stanley Cup champion from a completed bracket, or null if the
+// Final hasn't been decided yet.
+function getChampion(bracket: PlayoffBracketResponse | null): Champion | null {
+  const finalRound = bracket?.rounds?.find(r => r.roundNumber === 4);
+  const series = finalRound?.series?.[0];
+  if (!series) return null;
+  const top = series.matchupTeams?.find(t => t.seed?.isTop);
+  const bottom = series.matchupTeams?.find(t => !t.seed?.isTop);
+  const teamInfo = (mt?: PlayoffSeries['matchupTeams'][0]): string =>
+    mt?.team.commonName?.default || mt?.team.name?.default || mt?.team.abbrev || '';
+  if ((series.topSeedWins || 0) >= 4 && top) {
+    return { name: teamInfo(top), logo: top.team.logo, runnerUp: teamInfo(bottom) };
+  }
+  if ((series.bottomSeedWins || 0) >= 4 && bottom) {
+    return { name: teamInfo(bottom), logo: bottom.team.logo, runnerUp: teamInfo(top) };
+  }
+  return null;
 }
 
 // ── Real bracket helpers (when playoffs are active) ──
@@ -478,7 +516,8 @@ function buildProjectedBracket(standings: StandingsTeam[]): {
 function buildSportsEventSchema(
   eastern: ConferenceBracket,
   western: ConferenceBracket,
-  playoffsActive: boolean
+  playoffsActive: boolean,
+  endYear: string
 ): object[] {
   if (!playoffsActive) return [];
   const events: object[] = [];
@@ -489,7 +528,7 @@ function buildSportsEventSchema(
         events.push({
           '@context': 'https://schema.org',
           '@type': 'SportsEvent',
-          name: `${matchup.topSeed.name} vs ${matchup.bottomSeed.name} — NHL Playoffs 2026`,
+          name: `${matchup.topSeed.name} vs ${matchup.bottomSeed.name} — NHL Playoffs ${endYear}`,
           sport: 'Ice Hockey',
           homeTeam: { '@type': 'SportsTeam', name: matchup.topSeed.name },
           awayTeam: { '@type': 'SportsTeam', name: matchup.bottomSeed.name },
@@ -504,12 +543,23 @@ function buildSportsEventSchema(
 // ── Page component ──
 
 export default async function PlayoffsPage() {
-  const [bracket, standings] = await Promise.all([fetchBracket(), fetchStandings()]);
+  const season = getCurrentNHLSeason();
+  const endYear = formatSeasonEndYear(season);
+  const [bracket, liveStandings] = await Promise.all([fetchBracket(), fetchStandings()]);
+
+  // Offseason: standings/today and /now are both empty, which breaks conference
+  // routing (every series falls into the East). Fall back to final standings.
+  let standings = liveStandings;
+  if (standings.length === 0) {
+    standings = await getFinalStandings(season);
+  }
 
   const standingsMap = new Map<string, StandingsTeam>();
   standings.forEach(t => standingsMap.set(t.teamAbbrev.default, t));
 
   const playoffsActive = isPlayoffsActive(bracket);
+  const champion = getChampion(bracket);
+  const seasonComplete = !!champion;
 
   // Detect if regular season is over (postseason gap)
   const regularSeasonOver = standings.length > 0 &&
@@ -537,7 +587,7 @@ export default async function PlayoffsPage() {
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
           <div className="text-center text-white max-w-lg">
             <h1 className="text-4xl md:text-6xl font-bold mb-4" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-              Stanley Cup Playoffs 2026
+              Stanley Cup Playoffs {endYear}
             </h1>
             <p className="text-gray-400 mb-8 text-lg">
               Unable to load standings data. Please try again later.
@@ -565,8 +615,12 @@ export default async function PlayoffsPage() {
             {
               '@context': 'https://schema.org',
               '@type': 'WebPage',
-              name: 'NHL Playoff Bracket 2026',
-              description: 'NHL playoff bracket with series odds and Stanley Cup predictions.',
+              name: seasonComplete && champion
+                ? `${champion.name} Win the ${endYear} Stanley Cup — NHL Playoff Bracket`
+                : `NHL Playoff Bracket ${endYear}`,
+              description: seasonComplete && champion
+                ? `The ${champion.name} won the ${endYear} Stanley Cup. Complete ${endYear} NHL playoff bracket and every series result.`
+                : 'NHL playoff bracket with series odds and Stanley Cup predictions.',
               url: 'https://www.lindysfive.com/playoffs',
               dateModified: new Date().toISOString(),
               publisher: { '@type': 'Organization', name: 'JRR Apps' },
@@ -579,7 +633,7 @@ export default async function PlayoffsPage() {
                 { '@type': 'ListItem', position: 2, name: 'Playoffs', item: 'https://www.lindysfive.com/playoffs' },
               ],
             },
-            ...buildSportsEventSchema(eastern, western, playoffsActive),
+            ...buildSportsEventSchema(eastern, western, playoffsActive, endYear),
           ]),
         }}
       />
@@ -610,21 +664,49 @@ export default async function PlayoffsPage() {
               className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-3"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
-              {playoffsActive
-                ? 'Stanley Cup Playoffs 2026'
-                : regularSeasonOver
-                  ? 'Stanley Cup Playoffs 2026'
-                  : 'Projected Playoff Bracket 2026'}
+              {seasonComplete
+                ? `${endYear} Stanley Cup Playoffs`
+                : playoffsActive || regularSeasonOver
+                  ? `Stanley Cup Playoffs ${endYear}`
+                  : `Projected Playoff Bracket ${endYear}`}
             </h1>
             <p className="text-base md:text-lg text-white/80 max-w-2xl mx-auto">
-              {playoffsActive
-                ? 'Live bracket, series win probabilities, and Stanley Cup odds'
-                : regularSeasonOver
-                  ? 'Confirmed first-round matchups — series win probabilities and Stanley Cup odds'
-                  : 'If the season ended today — series win probabilities and Stanley Cup odds'}
+              {seasonComplete && champion
+                ? `${champion.name} won the ${endYear} Stanley Cup — see the complete bracket below`
+                : playoffsActive
+                  ? 'Live bracket, series win probabilities, and Stanley Cup odds'
+                  : regularSeasonOver
+                    ? 'Confirmed first-round matchups — series win probabilities and Stanley Cup odds'
+                    : 'If the season ended today — series win probabilities and Stanley Cup odds'}
             </p>
           </div>
         </header>
+
+        {/* Champion banner — shown once the Cup Final is decided */}
+        {seasonComplete && champion && (
+          <div className="max-w-7xl mx-auto px-4 pt-6">
+            <div
+              className="rounded-2xl border-2 px-5 py-5 text-center shadow-sm flex flex-col items-center gap-2"
+              style={{ backgroundColor: '#FBF5E6', borderColor: '#D4AF37' }}
+            >
+              {champion.logo && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={champion.logo} alt={`${champion.name} logo`} className="h-14 w-14 md:h-16 md:w-16" />
+              )}
+              <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#9A7B1F' }}>
+                🏆 {endYear} Stanley Cup Champions
+              </div>
+              <div className="text-2xl md:text-3xl font-bold" style={{ color: '#8a6d1b', fontFamily: 'Bebas Neue, sans-serif' }}>
+                {champion.name}
+              </div>
+              {champion.runnerUp && (
+                <div className="text-sm" style={{ color: '#9A7B1F' }}>
+                  defeated the {champion.runnerUp} in the Stanley Cup Final
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 pt-6 pb-16">
@@ -648,11 +730,13 @@ export default async function PlayoffsPage() {
           </div>
           <p>Lindy&apos;s Five &bull; {new Date().getFullYear()}</p>
           <p className="mt-1">
-            {playoffsActive
-              ? 'Data sourced from the NHL. Updated every 60 seconds.'
-              : regularSeasonOver
-                ? 'Matchups confirmed from final standings.'
-                : 'Projected from current standings. Updated every 5 minutes.'}
+            {seasonComplete
+              ? `Final ${endYear} bracket. Next season's playoffs will be tracked here.`
+              : playoffsActive
+                ? 'Data sourced from the NHL. Updated every 60 seconds.'
+                : regularSeasonOver
+                  ? 'Matchups confirmed from final standings.'
+                  : 'Projected from current standings. Updated every 5 minutes.'}
           </p>
         </footer>
       </div>

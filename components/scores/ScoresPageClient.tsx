@@ -40,7 +40,13 @@ const getFavoriteTeamAbbrev = (slug: string | null): string | null => {
   return team?.abbreviation || null;
 };
 
-export default function ScoresPageClient() {
+interface ScoresPageClientProps {
+  seasonComplete?: boolean;
+  championName?: string;
+  seasonLabel?: string;
+}
+
+export default function ScoresPageClient({ seasonComplete = false, championName, seasonLabel }: ScoresPageClientProps) {
   const [selectedDate, setSelectedDate] = useState(getTodayString());
   const [games, setGames] = useState<NHLGame[]>([]);
   const [loading, setLoading] = useState(true);
@@ -212,6 +218,20 @@ export default function ScoresPageClient() {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-8">
+        {/* Offseason banner */}
+        {seasonComplete && (
+          <div className="mb-6 rounded-xl border-2 px-4 py-4 text-center" style={{ backgroundColor: '#FBF5E6', borderColor: '#D4AF37' }}>
+            <p className="text-sm md:text-base font-semibold" style={{ color: '#8a6d1b' }}>
+              🏒 The {seasonLabel ?? ''} NHL season is complete{championName ? ` — the ${championName} won the Stanley Cup` : ''}.
+            </p>
+            <p className="mt-1 text-xs md:text-sm" style={{ color: '#9A7B1F' }}>
+              Regular-season games return in October. Use the date picker to browse past results, or see the{' '}
+              <Link href="/playoffs" className="underline">final playoff bracket</Link> and{' '}
+              <Link href="/nhl-playoff-odds" className="underline">final standings</Link>.
+            </p>
+          </div>
+        )}
+
         {/* Loading State */}
         {loading && (
           <div className="flex justify-center items-center py-12">
@@ -235,7 +255,9 @@ export default function ScoresPageClient() {
         {/* No Games State */}
         {!loading && !error && sortedGames.length === 0 && (
           <div className="text-center py-12 rounded-xl bg-gray-100 text-gray-600">
-            <p className="text-lg font-semibold">No games scheduled for this date</p>
+            <p className="text-lg font-semibold">
+              {seasonComplete ? 'No games — the NHL season is complete' : 'No games scheduled for this date'}
+            </p>
             <Link
               href="/playoffs"
               className="inline-block mt-4 text-blue-600 hover:text-blue-500 underline text-sm"
