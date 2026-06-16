@@ -36,7 +36,7 @@ const CONFERENCE_MAP: Record<string, string> = {
   Pacific: 'Western',
 };
 
-function TableHeader() {
+function TableHeader({ compact = false }: { compact?: boolean }) {
   return (
     <thead>
       <tr className="text-gray-500 text-xs uppercase border-b border-gray-200">
@@ -48,10 +48,10 @@ function TableHeader() {
           <span className="sm:hidden">W-L</span>
         </th>
         <th className="text-center py-2 px-2 font-bold text-gray-700">PTS</th>
-        <th className="text-center py-2 px-2 hidden xl:table-cell">PTS%</th>
+        <th className={`text-center py-2 px-2 ${compact ? 'hidden 2xl:table-cell' : 'hidden xl:table-cell'}`}>PTS%</th>
         <th className="text-center py-2 px-2">Pace</th>
         <th className="text-center py-2 px-2 font-bold text-gray-700">Odds</th>
-        <th className="text-center py-2 px-2 hidden 2xl:table-cell">Strk</th>
+        {!compact && <th className="text-center py-2 px-2 hidden 2xl:table-cell">Strk</th>}
       </tr>
     </thead>
   );
@@ -65,7 +65,7 @@ function ClinchBadge({ indicator }: { indicator?: string }) {
   return <span className="ml-1 w-4 h-4 inline-flex items-center justify-center text-[9px] font-bold uppercase rounded bg-gray-300 text-gray-900">{indicator.toUpperCase()}</span>;
 }
 
-function TeamRow({ team, rank }: { team: TeamData; rank: number }) {
+function TeamRow({ team, rank, compact = false }: { team: TeamData; rank: number; compact?: boolean }) {
   return (
     <tr
       className={`border-b border-gray-100 hover:bg-blue-50/50 transition-colors ${
@@ -88,7 +88,7 @@ function TeamRow({ team, rank }: { team: TeamData; rank: number }) {
         {team.wins}-{team.losses}-{team.otLosses}
       </td>
       <td className="py-2.5 px-2 text-center text-gray-900 font-bold">{team.points}</td>
-      <td className="py-2.5 px-2 text-center text-gray-500 hidden xl:table-cell">
+      <td className={`py-2.5 px-2 text-center text-gray-500 ${compact ? 'hidden 2xl:table-cell' : 'hidden xl:table-cell'}`}>
         {(team.pointPctg * 100).toFixed(1)}
       </td>
       <td className={`py-2.5 px-2 text-center font-semibold ${
@@ -101,14 +101,16 @@ function TeamRow({ team, rank }: { team: TeamData; rank: number }) {
       }`}>
         {team.odds}%
       </td>
-      <td className="py-2.5 px-2 text-center text-gray-500 hidden 2xl:table-cell whitespace-nowrap">
-        {team.streakCode}{team.streakCount}
-      </td>
+      {!compact && (
+        <td className="py-2.5 px-2 text-center text-gray-500 hidden 2xl:table-cell whitespace-nowrap">
+          {team.streakCode}{team.streakCount}
+        </td>
+      )}
     </tr>
   );
 }
 
-function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+function Section({ title, subtitle, compact = false, children }: { title: string; subtitle?: string; compact?: boolean; children: React.ReactNode }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
       <div className="px-4 py-3 border-b border-gray-200" style={{ background: '#003087' }}>
@@ -119,7 +121,7 @@ function Section({ title, subtitle, children }: { title: string; subtitle?: stri
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm min-w-0">
-          <TableHeader />
+          <TableHeader compact={compact} />
           <tbody>{children}</tbody>
         </table>
       </div>
@@ -160,7 +162,7 @@ function WildcardView({ teams }: { teams: TeamData[] }) {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-0">
-                <TableHeader />
+                <TableHeader compact />
                 <tbody>
                   {divSections.flatMap(({ divName, teams: divTeams }) => [
                     <tr key={`header-${divName}`}>
@@ -169,7 +171,7 @@ function WildcardView({ teams }: { teams: TeamData[] }) {
                       </td>
                     </tr>,
                     ...divTeams.map((team, idx) => (
-                      <TeamRow key={team.abbrev} team={team} rank={idx + 1} />
+                      <TeamRow key={team.abbrev} team={team} rank={idx + 1} compact />
                     )),
                   ])}
 
@@ -186,7 +188,7 @@ function WildcardView({ teams }: { teams: TeamData[] }) {
                         </td>
                       </tr>,
                     ] : []),
-                    <TeamRow key={team.abbrev} team={team} rank={idx + 1} />,
+                    <TeamRow key={team.abbrev} team={team} rank={idx + 1} compact />,
                   ])}
                 </tbody>
               </table>
@@ -217,9 +219,9 @@ function DivisionView({ teams }: { teams: TeamData[] }) {
           .sort((a, b) => a.divisionSequence - b.divisionSequence);
 
         return (
-          <Section key={divName} title={`${divName} Division`} subtitle={`${CONFERENCE_MAP[divName]} Conference`}>
+          <Section key={divName} title={`${divName} Division`} subtitle={`${CONFERENCE_MAP[divName]} Conference`} compact>
             {divTeams.map((team, idx) => (
-              <TeamRow key={team.abbrev} team={team} rank={idx + 1} />
+              <TeamRow key={team.abbrev} team={team} rank={idx + 1} compact />
             ))}
           </Section>
         );
@@ -237,9 +239,9 @@ function ConferenceView({ teams }: { teams: TeamData[] }) {
           .sort((a, b) => a.conferenceSequence - b.conferenceSequence);
 
         return (
-          <Section key={conf} title={`${conf} Conference`}>
+          <Section key={conf} title={`${conf} Conference`} compact>
             {confTeams.map((team, idx) => (
-              <TeamRow key={team.abbrev} team={team} rank={idx + 1} />
+              <TeamRow key={team.abbrev} team={team} rank={idx + 1} compact />
             ))}
           </Section>
         );
