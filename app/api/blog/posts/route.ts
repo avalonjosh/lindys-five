@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { jwtVerify } from 'jose';
 import { truncateAtWordBoundary } from '@/lib/fetchWithRetry';
+import { TEAMS } from '@/lib/teamConfig';
 
 // Helper to verify admin authentication
 async function verifyAdmin(request: NextRequest): Promise<boolean> {
@@ -181,13 +182,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate team
-    if (!['sabres', 'bills'].includes(team)) {
-      return NextResponse.json({ error: 'Invalid team. Must be sabres or bills' }, { status: 400 });
+    // Validate team: bills, or any NHL team slug (playoff/series recaps can belong to any team)
+    if (team !== 'bills' && !TEAMS[team]) {
+      return NextResponse.json({ error: 'Invalid team. Must be bills or an NHL team slug' }, { status: 400 });
     }
 
     // Validate type
-    if (!['game-recap', 'set-recap', 'custom', 'weekly-roundup', 'news-analysis'].includes(type)) {
+    if (!['game-recap', 'set-recap', 'custom', 'weekly-roundup', 'news-analysis', 'playoff-game-recap', 'series-recap'].includes(type)) {
       return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
     }
 

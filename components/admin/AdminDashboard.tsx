@@ -11,7 +11,7 @@ import type { BlogPost } from '@/lib/types';
 
 type FilterTeam = 'all' | 'sabres' | 'bills';
 type FilterStatus = 'all' | 'published' | 'draft';
-type FilterType = 'all' | 'game-recap' | 'set-recap' | 'news-analysis' | 'weekly-roundup' | 'custom';
+type FilterType = 'all' | 'game-recap' | 'set-recap' | 'news-analysis' | 'weekly-roundup' | 'custom' | 'playoff-game-recap' | 'series-recap';
 type SortDirection = 'desc' | 'asc';
 type SortField = 'date' | 'views';
 
@@ -28,6 +28,8 @@ type AutoPublishSettings = {
   'auto-publish-news': boolean;
   'auto-publish-game-recap': boolean;
   'auto-publish-set-recap': boolean;
+  'auto-publish-playoff-game-recap': boolean;
+  'auto-publish-series-recap': boolean;
   // Bills
   'auto-publish-bills-news': boolean;
   'auto-publish-bills-weekly': boolean;
@@ -47,6 +49,8 @@ export default function AdminDashboard() {
     'auto-publish-news': false,
     'auto-publish-game-recap': false,
     'auto-publish-set-recap': false,
+    'auto-publish-playoff-game-recap': false,
+    'auto-publish-series-recap': false,
     // Bills
     'auto-publish-bills-news': false,
     'auto-publish-bills-weekly': false,
@@ -265,7 +269,7 @@ export default function AdminDashboard() {
   }
 
   async function triggerCron(
-    type: 'weekly' | 'news' | 'game-recap' | 'set-recap' | 'bills-news' | 'bills-weekly' | 'bills-game-recap',
+    type: 'weekly' | 'news' | 'game-recap' | 'set-recap' | 'playoff-game-recap' | 'series-recap' | 'bills-news' | 'bills-weekly' | 'bills-game-recap',
     options?: { setNumber?: number; force?: boolean }
   ) {
     setTriggering(type);
@@ -290,7 +294,7 @@ export default function AdminDashboard() {
           type,
           success: true,
           message: data.results?.length
-            ? `Processed ${data.gamesProcessed} game(s): ${data.results.map((r: { title?: string }) => r.title).filter(Boolean).join(', ')}`
+            ? `Processed ${data.gamesProcessed ?? data.seriesProcessed ?? data.results.length} item(s): ${data.results.map((r: { title?: string; error?: string }) => r.title || r.error).filter(Boolean).join(', ')}`
             : data.post?.title
             ? `Created: "${data.post.title}"`
             : data.message || 'Triggered successfully',
@@ -446,6 +450,30 @@ export default function AdminDashboard() {
                   Generate Set Recap
                 </button>
               </div>
+              <button
+                onClick={() => triggerCron('playoff-game-recap')}
+                disabled={triggering !== null}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {triggering === 'playoff-game-recap' ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trophy className="w-4 h-4" />
+                )}
+                Generate Playoff Recaps
+              </button>
+              <button
+                onClick={() => triggerCron('series-recap')}
+                disabled={triggering !== null}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {triggering === 'series-recap' ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Layers className="w-4 h-4" />
+                )}
+                Generate Series Recaps
+              </button>
             </div>
             {triggerResult && (
               <div
@@ -460,6 +488,8 @@ export default function AdminDashboard() {
                   triggerResult.type === 'news' ? 'News Scan' :
                   triggerResult.type === 'set-recap' ? 'Set Recap' :
                   triggerResult.type === 'game-recap' ? 'Game Recap' :
+                  triggerResult.type === 'playoff-game-recap' ? 'Playoff Game Recap' :
+                  triggerResult.type === 'series-recap' ? 'Series Recap' :
                   triggerResult.type === 'bills-news' ? 'Bills News Scan' :
                   triggerResult.type === 'bills-weekly' ? 'Bills Weekly Roundup' :
                   triggerResult.type === 'bills-game-recap' ? 'Bills Game Recap' :
@@ -536,6 +566,38 @@ export default function AdminDashboard() {
                     />
                   </button>
                   <span className="text-slate-300 text-sm">Set Recaps</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <button
+                    onClick={() => toggleSetting('auto-publish-playoff-game-recap')}
+                    disabled={togglingSettings !== null}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      autoPublishSettings['auto-publish-playoff-game-recap'] ? 'bg-green-600' : 'bg-slate-500'
+                    } ${togglingSettings === 'auto-publish-playoff-game-recap' ? 'opacity-50' : ''}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                        autoPublishSettings['auto-publish-playoff-game-recap'] ? 'translate-x-5' : ''
+                      }`}
+                    />
+                  </button>
+                  <span className="text-slate-300 text-sm">Playoff Game Recaps</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <button
+                    onClick={() => toggleSetting('auto-publish-series-recap')}
+                    disabled={togglingSettings !== null}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      autoPublishSettings['auto-publish-series-recap'] ? 'bg-green-600' : 'bg-slate-500'
+                    } ${togglingSettings === 'auto-publish-series-recap' ? 'opacity-50' : ''}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                        autoPublishSettings['auto-publish-series-recap'] ? 'translate-x-5' : ''
+                      }`}
+                    />
+                  </button>
+                  <span className="text-slate-300 text-sm">Series Recaps</span>
                 </label>
               </div>
               <p className="text-slate-400 text-xs mt-2">
@@ -677,15 +739,23 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">News Scan</span>
-                        <span className="text-slate-300">Tue/Thu/Sat ~5-6 AM</span>
+                        <span className="text-slate-300">Tue/Fri ~6 AM</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Game Recap</span>
-                        <span className="text-slate-300">Daily ~11 PM</span>
+                        <span className="text-slate-300">Daily ~11 PM-12 AM</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Set Recap</span>
-                        <span className="text-slate-300">Sundays ~6-7 AM</span>
+                        <span className="text-slate-300">Sundays ~7 AM</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Playoff Game Recap</span>
+                        <span className="text-slate-300">Daily ~11 PM-12 AM</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Series Recap</span>
+                        <span className="text-slate-300">Daily ~8 AM</span>
                       </div>
                     </div>
                   </div>
@@ -699,7 +769,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">News Scan</span>
-                        <span className="text-slate-300">Mon/Wed/Fri ~5-6 AM</span>
+                        <span className="text-slate-300">Tue/Fri ~6 AM</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Game Recap</span>
@@ -789,6 +859,8 @@ export default function AdminDashboard() {
               >
                 <option value="all">All Types</option>
                 <option value="game-recap">Game Recap</option>
+                <option value="playoff-game-recap">Playoff Game Recap</option>
+                <option value="series-recap">Series Recap</option>
                 <option value="set-recap">Set Recap</option>
                 <option value="news-analysis">News</option>
                 <option value="weekly-roundup">Weekly Roundup</option>
@@ -922,6 +994,14 @@ export default function AdminDashboard() {
                           >
                             {post.status}
                           </span>
+                          {post.status === 'draft' && post.factCheck && !post.factCheck.passed && (
+                            <span
+                              className="px-1.5 py-0.5 bg-red-600/30 text-red-400 text-[10px] rounded font-semibold"
+                              title={post.factCheck.issues.join('; ')}
+                            >
+                              Fact-check blocked
+                            </span>
+                          )}
                           {post.pinned && (
                             <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-[10px] rounded font-semibold">
                               Pinned
@@ -1111,15 +1191,25 @@ export default function AdminDashboard() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-semibold ${
-                            post.status === 'published'
-                              ? 'bg-green-600 text-white'
-                              : 'bg-amber-500 text-black'
-                          }`}
-                        >
-                          {post.status}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-semibold ${
+                              post.status === 'published'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-amber-500 text-black'
+                            }`}
+                          >
+                            {post.status}
+                          </span>
+                          {post.status === 'draft' && post.factCheck && !post.factCheck.passed && (
+                            <span
+                              className="px-2 py-1 bg-red-600/30 text-red-400 text-xs rounded font-semibold whitespace-nowrap"
+                              title={post.factCheck.issues.join('; ')}
+                            >
+                              Fact-check blocked
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-slate-400 text-sm">
                         {post.views?.toLocaleString() ?? '0'}

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
-import { getAutoPublishSetting } from '@/app/api/blog/settings/route';
+import { getAutoPublishSetting } from '@/lib/blogSettings';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { sendSetRecapNewsletter } from '@/lib/email';
 import { generateAndUploadOgImage } from '@/lib/utils/ogImage';

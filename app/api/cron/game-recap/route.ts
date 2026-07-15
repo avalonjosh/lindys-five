@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
-import { getAutoPublishSetting } from '@/app/api/blog/settings/route';
+import { getAutoPublishSetting } from '@/lib/blogSettings';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { quickFactCheck } from '@/lib/factCheck';
 import { sendGameRecapNewsletter } from '@/lib/email';
@@ -195,7 +195,8 @@ async function createPost(postData: any) {
     createdAt: now, publishedAt: postData.status === 'published' ? now : null, updatedAt: now,
     gameId: postData.gameId, opponent: postData.opponent, gameDate: postData.gameDate,
     aiGenerated: true, aiModel: postData.aiModel, metaDescription: postData.metaDescription,
-    ...(postData.ogImage && { ogImage: postData.ogImage })
+    ...(postData.ogImage && { ogImage: postData.ogImage }),
+    ...(postData.factCheck && { factCheck: postData.factCheck })
   };
 
   await kv.set(`blog:post:${id}`, post);
@@ -274,7 +275,7 @@ export async function GET(request: NextRequest) {
         const factCheck = await quickFactCheck(anthropic, content, verifiedGameData);
         const shouldPublish = autoPublish && factCheck.passed;
         if (!factCheck.passed) {
-          console.warn(`Fact-check failed for game ${game.id}:`, factCheck.issues);
+          console.warn(`Fact-check failed for game ${game.id} — post will stay draft:`, factCheck.issues);
         }
 
         const title = generateTitle(isWin, sabresScore, oppScore, opponent, periodType);
@@ -304,10 +305,14 @@ export async function GET(request: NextRequest) {
           title, content, team: 'sabres', type: 'game-recap',
           status: shouldPublish ? 'published' : 'draft',
           gameId: game.id, opponent: oppAbbrev, gameDate: game.gameDate, metaDescription, aiModel: 'claude-sonnet-4-20250514',
-          ogImage
+          ogImage,
+          factCheck: { passed: factCheck.passed, issues: factCheck.issues, checkedAt: new Date().toISOString() }
         });
 
-        await markGameProcessed(game.id, post.id, { opponent: oppAbbrev, gameDate: game.gameDate, result: `${sabresScore}-${oppScore}` });
+        await markGameProcessed(game.id, post.id, {
+          opponent: oppAbbrev, gameDate: game.gameDate, result: `${sabresScore}-${oppScore}`,
+          autoPublish, factCheckPassed: factCheck.passed, factCheckIssues: factCheck.issues
+        });
 
         // Send newsletter and post to X if published
         if (post.status === 'published') {

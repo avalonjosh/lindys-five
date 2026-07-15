@@ -1,4 +1,4 @@
-import type { BlogPost } from '../types';
+import type { BlogPost, PostType } from '../types';
 
 const API_BASE = '/api/blog';
 
@@ -14,9 +14,9 @@ interface PostResponse {
 }
 
 export async function fetchPosts(options?: {
-  team?: 'sabres' | 'bills';
+  team?: string;
   status?: 'draft' | 'published';
-  type?: 'game-recap' | 'set-recap' | 'custom' | 'weekly-roundup' | 'news-analysis';
+  type?: PostType;
   limit?: number;
   offset?: number;
 }): Promise<PostsResponse> {
@@ -96,7 +96,7 @@ export async function deletePost(slug: string): Promise<{ success: boolean }> {
 // AI Article Generation
 interface GenerateArticleRequest {
   idea: string;
-  team: 'sabres' | 'bills';
+  team: string;
   title?: string;
   researchEnabled?: boolean;
   allowedDomains?: string[];
@@ -206,8 +206,8 @@ export interface FactCheckResponse {
 
 interface FactCheckRequest {
   content: string;
-  team: 'sabres' | 'bills';
-  type?: 'game-recap' | 'set-recap' | 'custom' | 'weekly-roundup' | 'news-analysis';
+  team: string;
+  type?: PostType;
   gameId?: number;
 }
 

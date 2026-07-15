@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
-import { getAutoPublishSetting } from '@/app/api/blog/settings/route';
+import { getAutoPublishSetting } from '@/lib/blogSettings';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { quickFactCheck } from '@/lib/factCheck';
 
@@ -281,7 +281,8 @@ async function createPost(postData: any) {
     gameDate: postData.gameDate,
     aiGenerated: true,
     aiModel: 'claude-sonnet-4-20250514',
-    metaDescription: postData.metaDescription
+    metaDescription: postData.metaDescription,
+    ...(postData.factCheck && { factCheck: postData.factCheck })
   };
 
   await kv.set(`blog:post:${id}`, post);
@@ -388,7 +389,7 @@ export async function GET(request: NextRequest) {
         const factCheck = await quickFactCheck(anthropic, content, verifiedGameData);
         const shouldPublish = autoPublish && factCheck.passed;
         if (!factCheck.passed) {
-          console.warn(`Fact-check failed for Bills game ${game.id}:`, factCheck.issues);
+          console.warn(`Fact-check failed for Bills game ${game.id} — post will stay draft:`, factCheck.issues);
         }
 
         const title = generateTitle(isWin, billsScore, oppScore, opponent);
@@ -401,13 +402,17 @@ export async function GET(request: NextRequest) {
           gameId: game.id,
           opponent: oppAbbrev,
           gameDate,
-          metaDescription
+          metaDescription,
+          factCheck: { passed: factCheck.passed, issues: factCheck.issues, checkedAt: new Date().toISOString() }
         });
 
         await markGameProcessed(game.id, post.id, {
           opponent: oppAbbrev,
           gameDate,
-          result: `${billsScore}-${oppScore}`
+          result: `${billsScore}-${oppScore}`,
+          autoPublish,
+          factCheckPassed: factCheck.passed,
+          factCheckIssues: factCheck.issues
         });
 
         results.push({

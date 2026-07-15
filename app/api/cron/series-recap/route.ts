@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
-import { getAutoPublishSetting } from '@/app/api/blog/settings/route';
+import { getAutoPublishSetting } from '@/lib/blogSettings';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { quickFactCheck } from '@/lib/factCheck';
 import { sendGameRecapNewsletter } from '@/lib/email';
@@ -56,6 +56,7 @@ async function createPost(postData: any) {
     team: postData.team, type: postData.type, status: postData.status,
     createdAt: now, publishedAt: postData.status === 'published' ? now : null, updatedAt: now,
     aiGenerated: true, aiModel: postData.aiModel, metaDescription: postData.metaDescription,
+    ...(postData.factCheck && { factCheck: postData.factCheck }),
   };
 
   await kv.set(`blog:post:${id}`, post);
@@ -72,6 +73,8 @@ export async function GET(request: NextRequest) {
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const force = request.nextUrl.searchParams.get('force') === 'true';
 
   try {
     const bracketRes = await fetchJsonWithRetry(`${NHL_API_BASE}/playoff-bracket/20252026`);
@@ -93,7 +96,7 @@ export async function GET(request: NextRequest) {
 
         const seriesKey = `${series.seriesLetter}-R${round.roundNumber}`;
         const processed = await kv.sismember('blog:series-recap:processed', seriesKey);
-        if (processed) continue;
+        if (processed && !force) continue;
 
         const topTeam = series.matchupTeams?.find((t: any) => t.seed?.isTop);
         const bottomTeam = series.matchupTeams?.find((t: any) => !t.seed?.isTop);
@@ -155,6 +158,9 @@ ${gameResults.join('\n')}
           const content = message.content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('\n');
           const factCheck = await quickFactCheck(anthropic, content, verifiedData);
           const shouldPublish = autoPublish && factCheck.passed;
+          if (!factCheck.passed) {
+            console.warn(`Fact-check failed for series ${seriesKey} — post will stay draft:`, factCheck.issues);
+          }
 
           const sweepOrLength = topWins + bottomWins <= 4 ? 'Sweep' :
             topWins + bottomWins <= 5 ? `Win in ${topWins + bottomWins}` :
@@ -170,12 +176,14 @@ ${gameResults.join('\n')}
             status: shouldPublish ? 'published' : 'draft',
             gameDate: new Date().toISOString().split('T')[0], metaDescription,
             aiModel: 'claude-sonnet-4-20250514',
+            factCheck: { passed: factCheck.passed, issues: factCheck.issues, checkedAt: new Date().toISOString() },
           });
 
           await kv.sadd('blog:series-recap:processed', seriesKey);
           await kv.set(`blog:series-recap:log:${seriesKey}`, {
             processedAt: new Date().toISOString(), postId: post.id,
             matchup: `${winnerAbbrev} vs ${loserAbbrev}`, result: finalScore,
+            autoPublish, factCheckPassed: factCheck.passed, factCheckIssues: factCheck.issues,
           });
 
           if (post.status === 'published') {

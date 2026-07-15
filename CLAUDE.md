@@ -101,6 +101,11 @@ All crons are configured in `vercel.json` and authorized via `CRON_SECRET` Beare
 |------|---------------|---------|
 | `game-recap` | `0 4 * * *` (4am daily) | Generate blog post for completed Sabres games (last 48h). Uses Claude to write 400-600 word recap from boxscore/play-by-play data. Auto fact-checks before publishing. |
 | `set-recap` | `0 11 * * 0` (11am Sundays) | Generate blog post for completed 5-game sets. 600-900 word analysis. Accepts optional `setNumber` and `force` params. |
+| `playoff-game-recap` | `0 4 * * *` (4am daily) | Generate recaps for ALL completed NHL playoff games (last 48h) from the playoff bracket. Fact-checked. Accepts `force`. |
+| `series-recap` | `0 12 * * *` (noon daily) | Generate recap when a playoff series completes (one team reaches 4 wins). Fact-checked. Accepts `force`. |
+| `weekly-digest` | `0 14 * * 4` (2pm Thursdays) | Weekly digest email program (gated by `weekly-digest-enabled` setting). |
+| `email-mlb-game-recap` | `0 13 * * *` (1pm daily) | MLB game recap emails (gated by `mlb-recap-enabled` setting). |
+| `email-mlb-set-recap` | `30 13 * * *` (1:30pm daily) | MLB set recap emails (gated by `mlb-set-recap-enabled` setting). |
 | `weekly-roundup` | `0 10 * * 1` (10am Mondays) | Generate 600-900 word weekly recap of Sabres games (Mon-Sun). |
 | `news-scan` | `0 10 * * 2,5` (10am Tue/Fri) | Search for Sabres news via Claude web search. Importance >= 7 only. Jaccard similarity (40%) for dedup against recent stories. |
 | `bills-game-recap` | `0 5,10 * * 1` (5am+10am Mon) | Bills game recaps from ESPN API data. |
@@ -151,7 +156,7 @@ All crons are configured in `vercel.json` and authorized via `CRON_SECRET` Beare
 | `blog:posts:type:{type}` | Sorted Set | None | Post IDs by type (game-recap, news-analysis, weekly-roundup, set-recap, custom) |
 | `blog:views:{postId}` | Integer | None | View counter |
 | `blog:pinned` | String | None | ID of pinned post |
-| `blog:settings:auto-publish-{type}` | Boolean | None | Auto-publish toggle per content type |
+| `blog:settings:auto-publish-{type}` | Boolean | None | Auto-publish toggle per content type. Type strings are NOT post types: `weekly`, `news`, `game-recap`, `set-recap`, `playoff-game-recap`, `series-recap`, `bills-news`, `bills-weekly`, `bills-game-recap`. Read via `getAutoPublishSetting()` in `lib/blogSettings.ts` (KV value, falling back to `AUTO_PUBLISH_*` env vars) |
 
 ### Cron Processing
 | Key Pattern | Type | Expiry | Purpose |

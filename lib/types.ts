@@ -145,7 +145,7 @@ export interface CutLineData {
 }
 
 // Blog System Types
-export type PostType = 'game-recap' | 'set-recap' | 'custom' | 'weekly-roundup' | 'news-analysis';
+export type PostType = 'game-recap' | 'set-recap' | 'custom' | 'weekly-roundup' | 'news-analysis' | 'playoff-game-recap' | 'series-recap';
 
 export interface BlogPost {
   id: string;
@@ -153,7 +153,8 @@ export interface BlogPost {
   title: string;
   content: string;           // Markdown content
   excerpt: string;           // First 200 chars for previews
-  team: 'sabres' | 'bills';
+  // Usually 'sabres' or 'bills'; playoff/series recaps may use any NHL team slug
+  team: string;
   type: PostType;
   status: 'draft' | 'published';
 
@@ -178,6 +179,13 @@ export interface BlogPost {
   // AI generation tracking
   aiGenerated: boolean;
   aiModel?: string;
+
+  // Auto fact-check result from cron generation (explains why a post stayed draft)
+  factCheck?: {
+    passed: boolean;
+    issues: string[];
+    checkedAt: string;
+  };
 
   // SEO
   metaDescription?: string;

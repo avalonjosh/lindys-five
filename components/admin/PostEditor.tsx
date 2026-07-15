@@ -24,8 +24,8 @@ interface GameOption {
 type PostFormData = {
   title: string;
   content: string;
-  team: 'sabres' | 'bills';
-  type: 'game-recap' | 'set-recap' | 'custom' | 'weekly-roundup' | 'news-analysis';
+  team: string;
+  type: 'game-recap' | 'set-recap' | 'custom' | 'weekly-roundup' | 'news-analysis' | 'playoff-game-recap' | 'series-recap';
   status: 'draft' | 'published';
   opponent: string;
   gameDate: string;
@@ -36,7 +36,7 @@ type PostFormData = {
   pinned: boolean;
 };
 
-const teamConfig = {
+const teamConfig: Record<string, { accent: string }> = {
   sabres: { accent: '#FCB514' },
   bills: { accent: '#C60C30' },
 };
@@ -671,7 +671,7 @@ export default function PostEditor() {
     );
   }
 
-  const accent = teamConfig[formData.team].accent;
+  const accent = (teamConfig[formData.team] || teamConfig.sabres).accent;
 
   return (
     <>

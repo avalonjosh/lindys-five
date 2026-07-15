@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import type { BlogPost } from '@/lib/types';
+import { TEAMS } from '@/lib/teamConfig';
 
 interface HeroCardProps {
   post: BlogPost;
 }
 
-const teamColors = {
+const teamColors: Record<string, { primary: string; accent: string }> = {
   sabres: {
     primary: '#003087',
     accent: '#FFB81C',
@@ -16,6 +17,13 @@ const teamColors = {
     accent: '#C60C30',
   },
 };
+
+function getTeamColors(team: string) {
+  if (teamColors[team]) return teamColors[team];
+  const nhlTeam = TEAMS[team];
+  if (nhlTeam) return { primary: nhlTeam.colors.primary, accent: nhlTeam.colors.accent };
+  return teamColors.sabres;
+}
 
 export default function HeroCard({ post }: HeroCardProps) {
   const formattedDate = post.publishedAt
@@ -32,9 +40,11 @@ export default function HeroCard({ post }: HeroCardProps) {
     'custom': 'Article',
     'weekly-roundup': 'Weekly Roundup',
     'news-analysis': 'News',
+    'playoff-game-recap': 'Playoff Recap',
+    'series-recap': 'Series Recap',
   }[post.type];
 
-  const colors = teamColors[post.team];
+  const colors = getTeamColors(post.team);
   const hasImage = !!post.ogImage;
 
   return (

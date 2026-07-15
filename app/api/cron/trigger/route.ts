@@ -6,6 +6,8 @@ import { GET as weeklyRoundupHandler } from '@/app/api/cron/weekly-roundup/route
 import { GET as newsScanHandler } from '@/app/api/cron/news-scan/route';
 import { GET as gameRecapHandler } from '@/app/api/cron/game-recap/route';
 import { GET as setRecapHandler } from '@/app/api/cron/set-recap/route';
+import { GET as playoffGameRecapHandler } from '@/app/api/cron/playoff-game-recap/route';
+import { GET as seriesRecapHandler } from '@/app/api/cron/series-recap/route';
 import { GET as billsNewsScanHandler } from '@/app/api/cron/bills-news-scan/route';
 import { GET as billsWeeklyRoundupHandler } from '@/app/api/cron/bills-weekly-roundup/route';
 import { GET as billsGameRecapHandler } from '@/app/api/cron/bills-game-recap/route';
@@ -32,6 +34,8 @@ const handlers: Record<string, (request: NextRequest) => Promise<NextResponse>> 
   'news': newsScanHandler,
   'game-recap': gameRecapHandler,
   'set-recap': setRecapHandler,
+  'playoff-game-recap': playoffGameRecapHandler,
+  'series-recap': seriesRecapHandler,
   // Bills
   'bills-news': billsNewsScanHandler,
   'bills-weekly': billsWeeklyRoundupHandler,
@@ -66,7 +70,7 @@ export async function POST(request: NextRequest) {
     if (type === 'set-recap' && setNumber) {
       url.searchParams.set('setNumber', String(setNumber));
     }
-    if (type === 'set-recap' && force) {
+    if (['set-recap', 'playoff-game-recap', 'series-recap'].includes(type) && force) {
       url.searchParams.set('force', 'true');
     }
     // Email-program crons: test sends to a single address; preview renders without sending.

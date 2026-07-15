@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowLeft, Calendar, Clock } from 'lucide-react';
 import { getPostBySlug } from '@/lib/kv';
+import { TEAMS } from '@/lib/teamConfig';
 import PostContent from '@/components/blog/PostContent';
 import AuthorByline from '@/components/blog/AuthorByline';
 import NextGameCTA from '@/components/blog/NextGameCTA';
@@ -13,7 +14,7 @@ import MerchCTA from '@/components/affiliate/MerchCTA';
 
 export const dynamic = 'force-dynamic';
 
-const teamConfig = {
+const teamConfig: Record<string, { displayName: string; primary: string; secondary: string; accent: string }> = {
   sabres: {
     displayName: 'Sabres',
     primary: '#003087',
@@ -27,6 +28,19 @@ const teamConfig = {
     accent: '#C60C30',
   },
 };
+
+// Playoff/series recaps can belong to any NHL team; derive their theme from teamConfig
+function getBlogTeamConfig(team: string) {
+  if (teamConfig[team]) return teamConfig[team];
+  const nhlTeam = TEAMS[team];
+  if (!nhlTeam) return null;
+  return {
+    displayName: nhlTeam.name,
+    primary: nhlTeam.colors.primary,
+    secondary: nhlTeam.colors.secondary,
+    accent: nhlTeam.colors.accent,
+  };
+}
 
 export async function generateMetadata({
   params,
@@ -73,7 +87,7 @@ export default async function BlogPostPage({
 }) {
   const { team, slug } = await params;
 
-  const config = teamConfig[team as keyof typeof teamConfig];
+  const config = getBlogTeamConfig(team);
   if (!config) {
     notFound();
   }
@@ -107,7 +121,7 @@ export default async function BlogPostPage({
     );
   }
 
-  const postConfig = teamConfig[post.team];
+  const postConfig = getBlogTeamConfig(post.team) || teamConfig.sabres;
 
   const formattedDate = post.publishedAt
     ? new Date(post.publishedAt).toLocaleDateString('en-US', {
@@ -125,6 +139,8 @@ export default async function BlogPostPage({
     'custom': 'Article',
     'weekly-roundup': 'Weekly Roundup',
     'news-analysis': 'News',
+    'playoff-game-recap': 'Playoff Recap',
+    'series-recap': 'Series Recap',
   }[post.type];
 
   const showTicketCTA =
@@ -302,7 +318,7 @@ export default async function BlogPostPage({
           {/* Next Game CTA - For Sabres articles */}
           {showTicketCTA && (
             <NextGameCTA
-              team={post.team}
+              team={post.team as 'sabres' | 'bills'}
               primaryColor={postConfig.primary}
               accentColor={postConfig.accent}
             />
