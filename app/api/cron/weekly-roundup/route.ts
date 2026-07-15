@@ -225,7 +225,7 @@ async function createPost(postData: any) {
     team: postData.team, type: postData.type, status: postData.status,
     createdAt: now, publishedAt: postData.status === 'published' ? now : null, updatedAt: now,
     weekStartDate: postData.weekStartDate, weekEndDate: postData.weekEndDate,
-    aiGenerated: true, aiModel: 'claude-sonnet-4-20250514', metaDescription: postData.metaDescription,
+    aiGenerated: true, aiModel: 'claude-sonnet-5', metaDescription: postData.metaDescription,
     ...(postData.ogImage && { ogImage: postData.ogImage })
   };
 
@@ -303,8 +303,8 @@ export async function GET(request: NextRequest) {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
+      model: 'claude-sonnet-5',
+      max_tokens: 8192,
       system: [{ type: 'text' as const, text: WEEKLY_ROUNDUP_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
       messages: [{ role: 'user', content: `Write the weekly roundup article based on this data:\n\n${context}` }]
     });

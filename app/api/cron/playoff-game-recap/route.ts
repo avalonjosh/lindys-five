@@ -280,8 +280,8 @@ export async function GET(request: NextRequest) {
             const verifiedGameData = formatPlayoffBoxScore(boxData.boxscore, boxData.playByPlay, boxData.landing, seriesInfo);
 
             const message = await anthropic.messages.create({
-              model: 'claude-sonnet-4-20250514',
-              max_tokens: 4096,
+              model: 'claude-sonnet-5',
+              max_tokens: 8192,
               system: [{ type: 'text' as const, text: PLAYOFF_RECAP_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
               messages: [{ role: 'user', content: `Write a playoff game recap based on the following verified box score data:\n\n${verifiedGameData}\n\nThe article should be 400-600 words.` }],
             });
@@ -329,7 +329,7 @@ export async function GET(request: NextRequest) {
               title, content, team: teamSlug, type: 'playoff-game-recap',
               status: shouldPublish ? 'published' : 'draft',
               gameId: game.id, opponent: homeAbbrev === teamSlug ? awayAbbrev : homeAbbrev,
-              gameDate: game.gameDate, metaDescription, aiModel: 'claude-sonnet-4-20250514',
+              gameDate: game.gameDate, metaDescription, aiModel: 'claude-sonnet-5',
               ogImage,
               factCheck: { passed: factCheck.passed, issues: factCheck.issues, checkedAt: new Date().toISOString() },
             });

@@ -264,7 +264,7 @@ export async function GET(request: NextRequest) {
         const periodType = game.gameOutcome?.lastPeriodType || 'REG';
 
         const message = await anthropic.messages.create({
-          model: 'claude-sonnet-4-20250514', max_tokens: 4096,
+          model: 'claude-sonnet-5', max_tokens: 8192,
           system: [{ type: 'text' as const, text: GAME_RECAP_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
           messages: [{ role: 'user', content: `Write a game recap for the Buffalo Sabres based on the following verified box score data:\n\n${verifiedGameData}\n\nThe article should be 400-600 words.` }]
         });
@@ -304,7 +304,7 @@ export async function GET(request: NextRequest) {
         const post = await createPost({
           title, content, team: 'sabres', type: 'game-recap',
           status: shouldPublish ? 'published' : 'draft',
-          gameId: game.id, opponent: oppAbbrev, gameDate: game.gameDate, metaDescription, aiModel: 'claude-sonnet-4-20250514',
+          gameId: game.id, opponent: oppAbbrev, gameDate: game.gameDate, metaDescription, aiModel: 'claude-sonnet-5',
           ogImage,
           factCheck: { passed: factCheck.passed, issues: factCheck.issues, checkedAt: new Date().toISOString() }
         });

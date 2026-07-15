@@ -282,7 +282,7 @@ async function createPost(postData: any) {
     opponent: postData.opponent,
     gameDate: postData.gameDate,
     aiGenerated: true,
-    aiModel: 'claude-sonnet-4-20250514',
+    aiModel: 'claude-sonnet-5',
     metaDescription: postData.metaDescription,
     ...(postData.ogImage && { ogImage: postData.ogImage }),
     ...(postData.factCheck && { factCheck: postData.factCheck })
@@ -374,8 +374,8 @@ export async function GET(request: NextRequest) {
         const gameDate = game.date;
 
         const message = await anthropic.messages.create({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 4096,
+          model: 'claude-sonnet-5',
+          max_tokens: 8192,
           system: [{ type: 'text' as const, text: GAME_RECAP_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
           messages: [{
             role: 'user',

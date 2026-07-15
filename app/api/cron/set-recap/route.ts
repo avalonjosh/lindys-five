@@ -212,7 +212,7 @@ export async function GET(request: NextRequest) {
     const autoPublish = await getAutoPublishSetting('set-recap');
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514', max_tokens: 4096,
+      model: 'claude-sonnet-5', max_tokens: 8192,
       system: [{ type: 'text' as const, text: SET_RECAP_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
       messages: [{ role: 'user', content: `Write a set recap for the Buffalo Sabres' Set #${targetSetNumber} of the 2025-26 season:\n\n${verifiedSetData}\n\nThe article should be 600-900 words.` }]
     });
@@ -241,7 +241,7 @@ export async function GET(request: NextRequest) {
       title, content, team: 'sabres', type: 'set-recap',
       status: autoPublish ? 'published' : 'draft',
       setNumber: targetSetNumber, setStartDate: stats.startDate, setEndDate: stats.endDate,
-      opponent: opponents, metaDescription, aiModel: 'claude-sonnet-4-20250514', ogImage
+      opponent: opponents, metaDescription, aiModel: 'claude-sonnet-5', ogImage
     });
 
     await markSetProcessed(targetSetNumber, post.id, { record: `${stats.wins}-${stats.losses}-${stats.otLosses}`, points: stats.points, startDate: stats.startDate, endDate: stats.endDate });

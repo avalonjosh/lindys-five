@@ -643,8 +643,8 @@ META: [A brief meta description for SEO, max 160 characters]
 The article should be 400-600 words and follow the style guidelines provided.`;
 
       const message = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
+        model: 'claude-sonnet-5',
+        max_tokens: 8192,
         system: [{ type: 'text' as const, text: GAME_RECAP_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
         messages: [{ role: 'user', content: recapPrompt }],
       });
@@ -663,7 +663,7 @@ The article should be 400-600 words and follow the style guidelines provided.`;
       const content = contentSplit.length > 1 ? contentSplit.slice(1).join('---\n').trim() : textContent;
 
       return NextResponse.json({
-        success: true, content, title: generatedTitle, metaDescription, model: 'claude-sonnet-4-20250514',
+        success: true, content, title: generatedTitle, metaDescription, model: 'claude-sonnet-5',
       });
     }
 
@@ -706,8 +706,8 @@ META: [A brief meta description for SEO, max 160 characters]
 The article should be 600-900 words and follow the style guidelines provided.`;
 
       const message = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
+        model: 'claude-sonnet-5',
+        max_tokens: 8192,
         system: [{ type: 'text' as const, text: SET_RECAP_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
         messages: [{ role: 'user', content: setRecapPrompt }],
       });
@@ -726,7 +726,7 @@ The article should be 600-900 words and follow the style guidelines provided.`;
       const content = contentSplit.length > 1 ? contentSplit.slice(1).join('---\n').trim() : textContent;
 
       return NextResponse.json({
-        success: true, content, title: generatedTitle, metaDescription, model: 'claude-sonnet-4-20250514',
+        success: true, content, title: generatedTitle, metaDescription, model: 'claude-sonnet-5',
       });
     }
 
@@ -789,8 +789,8 @@ The article should be 400-800 words and follow the style guidelines provided.`;
       : undefined;
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
+      model: 'claude-sonnet-5',
+      max_tokens: 8192,
       system: [{ type: 'text' as const, text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
       messages: [{ role: 'user', content: userPrompt }],
       ...(tools && { tools }),
@@ -810,7 +810,7 @@ The article should be 400-800 words and follow the style guidelines provided.`;
     const content = contentSplit.length > 1 ? contentSplit.slice(1).join('---\n').trim() : textContent;
 
     return NextResponse.json({
-      success: true, content, title: generatedTitle, metaDescription, model: 'claude-sonnet-4-20250514',
+      success: true, content, title: generatedTitle, metaDescription, model: 'claude-sonnet-5',
     });
   } catch (error: any) {
     console.error('Error generating article:', error);

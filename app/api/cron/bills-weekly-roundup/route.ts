@@ -98,7 +98,7 @@ async function createPost(postData: any) {
     team: 'bills', type: 'weekly-roundup', status: postData.status,
     createdAt: now, publishedAt: postData.status === 'published' ? now : null, updatedAt: now,
     weekStartDate: postData.weekStartDate, weekEndDate: postData.weekEndDate,
-    aiGenerated: true, aiModel: 'claude-sonnet-4-20250514', metaDescription: postData.metaDescription,
+    aiGenerated: true, aiModel: 'claude-sonnet-5', metaDescription: postData.metaDescription,
     ...(postData.ogImage && { ogImage: postData.ogImage })
   };
 
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
     const context = formatWeeklyContext(weekStart, weekEnd, newsTopics, billsContext);
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514', max_tokens: 4096,
+      model: 'claude-sonnet-5', max_tokens: 8192,
       system: [{ type: 'text' as const, text: WEEKLY_ROUNDUP_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
       tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       messages: [{ role: 'user', content: `Write the weekly roundup article for the Buffalo Bills based on this data. You may search for additional details if needed:\n\n${context}` }]

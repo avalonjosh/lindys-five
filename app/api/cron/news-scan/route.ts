@@ -195,7 +195,7 @@ async function createPost(postData: any) {
     team: 'sabres', type: 'news-analysis', status: postData.status,
     createdAt: now, publishedAt: postData.status === 'published' ? now : null, updatedAt: now,
     newsTopics: postData.newsTopics, sourceHeadlines: postData.sourceHeadlines,
-    aiGenerated: true, aiModel: 'claude-sonnet-4-20250514', metaDescription: postData.metaDescription,
+    aiGenerated: true, aiModel: 'claude-sonnet-5', metaDescription: postData.metaDescription,
     ...(postData.ogImage && { ogImage: postData.ogImage })
   };
 
@@ -259,7 +259,7 @@ export async function GET(request: NextRequest) {
       }
 
       const articleMessage = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514', max_tokens: 2048,
+        model: 'claude-sonnet-5', max_tokens: 4096,
         system: [{ type: 'text' as const, text: ARTICLE_GENERATION_PROMPT, cache_control: { type: 'ephemeral' as const } }],
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         messages: [{ role: 'user', content: `Write a factual news report about this topic:\n\nNEWS TOPIC: ${story.topic}\n\nUse this verified team data for context:\n${contextText}\n\nIMPORTANT: Use web search to verify specific details.` }]

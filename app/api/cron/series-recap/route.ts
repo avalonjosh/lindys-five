@@ -152,8 +152,8 @@ ${gameResults.join('\n')}
 
         try {
           const message = await anthropic.messages.create({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 4096,
+            model: 'claude-sonnet-5',
+            max_tokens: 8192,
             system: [{ type: 'text' as const, text: SERIES_RECAP_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
             messages: [{ role: 'user', content: `Write a series recap based on the following verified data:\n\n${verifiedData}\n\nThe article should be 600-900 words.` }],
           });
@@ -193,7 +193,7 @@ ${gameResults.join('\n')}
             title, content, team: teamSlug, type: 'series-recap',
             status: shouldPublish ? 'published' : 'draft',
             gameDate: new Date().toISOString().split('T')[0], metaDescription,
-            aiModel: 'claude-sonnet-4-20250514',
+            aiModel: 'claude-sonnet-5',
             ogImage,
             factCheck: { passed: factCheck.passed, issues: factCheck.issues, checkedAt: new Date().toISOString() },
           });
