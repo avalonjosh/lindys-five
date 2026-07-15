@@ -1,20 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
-import { jwtVerify } from 'jose';
 import { getDateKey } from '@/lib/analytics';
-import { fetchTopItems } from '@/lib/ga4';
-
-async function verifyAdmin(request: NextRequest): Promise<boolean> {
-  const token = request.cookies.get('admin_token')?.value;
-  if (!token) return false;
-  try {
-    const secret = new TextEncoder().encode(process.env.ADMIN_SESSION_SECRET);
-    await jwtVerify(token, secret);
-    return true;
-  } catch {
-    return false;
-  }
-}
+import { verifyAdmin } from '@/lib/adminAuth';
+import { fetchTopItems, hasGA4Credentials } from '@/lib/ga4';
 
 // Types that stay in KV (not available in GA4)
 const KV_TYPES = ['teams'];
@@ -45,12 +33,19 @@ export async function GET(request: NextRequest) {
   }
 
   // Everything else comes from GA4
+  if (!hasGA4Credentials()) {
+    return NextResponse.json({
+      error: 'GA4 credentials missing (GSC_CLIENT_EMAIL / GSC_PRIVATE_KEY / GA4_PROPERTY_ID)',
+      items: [],
+    });
+  }
+
   try {
     const data = await fetchTopItems(type, range, limit);
     return NextResponse.json(data);
   } catch (error) {
     console.error(`GA4 top ${type} error:`, error);
-    return NextResponse.json({ items: [] });
+    return NextResponse.json({ error: 'GA4 credentials missing or invalid', items: [] });
   }
 }
 

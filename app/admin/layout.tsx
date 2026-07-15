@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import AdminAuthWrapper from '@/components/admin/AdminAuthWrapper';
+import AdminShell from '@/components/admin/AdminShell';
 
 export const metadata: Metadata = {
   robots: {
@@ -15,7 +16,7 @@ export default function AdminLayout({
 }) {
   return (
     <AdminAuthWrapper>
-      {children}
+      <AdminShell>{children}</AdminShell>
     </AdminAuthWrapper>
   );
 }

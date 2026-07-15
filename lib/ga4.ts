@@ -2,6 +2,14 @@ import { google, analyticsdata_v1beta } from 'googleapis';
 
 type Schema$Row = analyticsdata_v1beta.Schema$Row;
 
+export function hasGA4Credentials(): boolean {
+  return Boolean(
+    process.env.GSC_CLIENT_EMAIL &&
+    process.env.GSC_PRIVATE_KEY &&
+    process.env.GA4_PROPERTY_ID
+  );
+}
+
 function getGA4Client() {
   const clientEmail = process.env.GSC_CLIENT_EMAIL;
   const privateKey = process.env.GSC_PRIVATE_KEY?.replace(/\\n/g, '\n');
@@ -239,42 +247,4 @@ export async function fetchTimeseries(range: string) {
   }
 
   return { labels, views, visitors, timezone: 'ET' };
-}
-
-export async function fetchRealtime() {
-  const { analyticsData, propertyId } = getGA4Client();
-  const property = `properties/${propertyId}`;
-
-  const [activeUsersRes, pagesRes] = await Promise.all([
-    analyticsData.properties.runRealtimeReport({
-      property,
-      requestBody: {
-        metrics: [{ name: 'activeUsers' }],
-      },
-    }),
-    analyticsData.properties.runRealtimeReport({
-      property,
-      requestBody: {
-        dimensions: [{ name: 'unifiedScreenName' }],
-        metrics: [{ name: 'activeUsers' }],
-        orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
-        limit: '10',
-      },
-    }),
-  ]);
-
-  const liveVisitors = parseInt(activeUsersRes.data.rows?.[0]?.metricValues?.[0]?.value || '0');
-
-  const activePages = (pagesRes.data.rows || []).map((row: Schema$Row) => ({
-    name: row.dimensionValues?.[0]?.value || '',
-    count: parseInt(row.metricValues?.[0]?.value || '0'),
-  }));
-
-  return {
-    liveVisitors,
-    activePages,
-    viewsThisHour: 0,
-    viewsLastHour: 0,
-    liveFeed: [],
-  };
 }

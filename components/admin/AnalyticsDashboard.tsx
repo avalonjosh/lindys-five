@@ -3,11 +3,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { countryFlag } from '@/lib/analytics';
 import { TEAMS } from '@/lib/teamConfig';
-import AdminNav from './AdminNav';
+import { Card, Badge, Button, Spinner, WarningBanner } from './ui';
+
+// Sabres gold theme token (#FFB81C) for SVG chart strokes/fills,
+// matching the `bg-sabres-gold` / `text-sabres-gold` utilities.
+const GOLD = '#FFB81C';
 
 type Range = 'today' | '7d' | '30d' | 'alltime';
 
 interface OverviewData {
+  error?: string;
   totalViews: number;
   uniqueVisitors: number | null;
   viewsChange: number | null;
@@ -185,19 +190,14 @@ export default function AnalyticsDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-700 to-slate-800">
-      <AdminNav activeTab="analytics" />
-
+    <>
       {/* Sticky header — stacks on mobile */}
-      <div className="sticky top-0 z-30 bg-slate-800/95 backdrop-blur-sm border-b border-slate-700">
+      <div className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3">
           {/* Row 1: title + timestamp (mobile), title + live + timestamp + picker (desktop) */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <h2
-                className="text-xl sm:text-2xl font-bold text-white"
-                style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-              >
+              <h2 className="font-display text-xl sm:text-2xl text-white tracking-wide">
                 Analytics
               </h2>
               {lastUpdated && (
@@ -207,17 +207,16 @@ export default function AnalyticsDashboard() {
               )}
             </div>
             {/* Range picker — desktop: inline. Mobile: shown below */}
-            <div className="hidden sm:flex gap-1 bg-slate-700 rounded-lg p-1">
+            <div className="hidden sm:flex gap-1 bg-slate-800 border border-slate-700 rounded-lg p-1">
               {rangeOptions.map((opt) => (
                 <button
                   key={opt.value}
                   onClick={() => setRange(opt.value)}
                   className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
                     range === opt.value
-                      ? 'text-slate-900'
+                      ? 'bg-sabres-gold text-black'
                       : 'text-slate-400 hover:text-white'
                   }`}
-                  style={range === opt.value ? { backgroundColor: '#FCB514' } : {}}
                 >
                   {opt.label}
                 </button>
@@ -225,17 +224,16 @@ export default function AnalyticsDashboard() {
             </div>
           </div>
           {/* Row 2: range picker on mobile only */}
-          <div className="flex sm:hidden gap-1 bg-slate-700 rounded-lg p-1 mt-2">
+          <div className="flex sm:hidden gap-1 bg-slate-800 border border-slate-700 rounded-lg p-1 mt-2">
             {rangeOptions.map((opt) => (
               <button
                 key={opt.value}
                 onClick={() => setRange(opt.value)}
                 className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${
                   range === opt.value
-                    ? 'text-slate-900'
+                    ? 'bg-sabres-gold text-black'
                     : 'text-slate-400 hover:text-white'
                 }`}
-                style={range === opt.value ? { backgroundColor: '#FCB514' } : {}}
               >
                 {opt.shortLabel}
               </button>
@@ -244,23 +242,32 @@ export default function AnalyticsDashboard() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-4 py-8">
         {error ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <p className="text-red-400 text-lg mb-3">{error}</p>
-            <button
+            <Button
+              variant="ghost"
               onClick={() => { setError(null); setLoading(true); fetchData(); }}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm"
             >
               Retry
-            </button>
+            </Button>
           </div>
         ) : loading && !overview ? (
           <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-700 border-t-[#FCB514]" />
+            <Spinner size="lg" />
           </div>
         ) : (
           <>
+            {/* GA4 credential / fetch failure warning */}
+            {overview?.error && (
+              <div className="mb-6">
+                <WarningBanner>
+                  Analytics data unavailable: {overview.error}. Check GSC_CLIENT_EMAIL / GSC_PRIVATE_KEY / GA4_PROPERTY_ID in Vercel.
+                </WarningBanner>
+              </div>
+            )}
+
             {/* Overview Cards */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
               <OverviewCard
@@ -364,15 +371,10 @@ export default function AnalyticsDashboard() {
               onToggle={() => toggleSection('content')}
             />
             {!collapsed['content'] && (
-              <>
-                <div className="grid md:grid-cols-2 gap-4 mb-6">
-                  <TopTable title="Top Pages" items={topPages} prettify={prettifyPath} />
-                  <BarList title="Team Popularity" items={topTeams} prettify={prettifyPath} />
-                </div>
-                <div className="grid md:grid-cols-2 gap-4 mb-6">
-                  <BarList title="Devices" items={topDevices} />
-                </div>
-              </>
+              <div className="grid md:grid-cols-2 gap-4 mb-6">
+                <TopTable title="Top Pages" items={topPages} prettify={prettifyPath} />
+                <BarList title="Team Popularity" items={topTeams} prettify={prettifyPath} />
+              </div>
             )}
 
             {/* ===== ACQUISITION SECTION ===== */}
@@ -383,12 +385,10 @@ export default function AnalyticsDashboard() {
               onToggle={() => toggleSection('acquisition')}
             />
             {!collapsed['acquisition'] && (
-              <>
-                <div className="grid md:grid-cols-2 gap-4 mb-6">
-                  <TopTable title="Referrers" items={topReferrers} emptyMessage="Share your link to start seeing referrer data" />
-                  <TopTable title="UTM Sources" items={utmSources} emptyMessage="Add ?utm_source=... to your links to track campaigns" />
-                </div>
-              </>
+              <div className="grid md:grid-cols-2 gap-4 mb-6">
+                <TopTable title="Referrers" items={topReferrers} emptyMessage="Share your link to start seeing referrer data" />
+                <TopTable title="UTM Sources" items={utmSources} emptyMessage="Add ?utm_source=... to your links to track campaigns" />
+              </div>
             )}
 
             {/* ===== AUDIENCE SECTION ===== */}
@@ -399,11 +399,10 @@ export default function AnalyticsDashboard() {
               onToggle={() => toggleSection('audience')}
             />
             {!collapsed['audience'] && (
-              <>
-                <div className="grid md:grid-cols-2 gap-4 mb-6">
-                  <TopTable title="Countries" items={topCountries} showFlags formatName={countryName} />
-                </div>
-              </>
+              <div className="grid md:grid-cols-2 gap-4 mb-6">
+                <TopTable title="Countries" items={topCountries} showFlags formatName={countryName} />
+                <BarList title="Devices" items={topDevices} />
+              </div>
             )}
 
             {/* ===== ENGAGEMENT SECTION ===== */}
@@ -425,9 +424,9 @@ export default function AnalyticsDashboard() {
 
             {/* Export */}
             <div className="mt-8 pt-6 border-t border-slate-700 flex items-center justify-between">
-              <span className="text-slate-500 text-xs">
+              <span className="flex items-center gap-2 text-slate-500 text-xs">
                 {lastUpdated && `Last updated ${lastUpdated.toLocaleTimeString()}`}
-                {range === 'today' && ' · Auto-refreshes every 2m'}
+                {range === 'today' && <Badge variant="success">Auto-refreshes every 2m</Badge>}
               </span>
               <ExportButton
                 topPages={topPages}
@@ -441,7 +440,7 @@ export default function AnalyticsDashboard() {
           </>
         )}
       </main>
-    </div>
+    </>
   );
 }
 
@@ -473,10 +472,7 @@ function SectionHeader({
       className="w-full flex items-center justify-between py-3 mb-3 border-b border-slate-600 group cursor-pointer"
     >
       <div className="text-left">
-        <h3
-          className="text-xl font-bold text-white"
-          style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-        >
+        <h3 className="font-display text-xl text-white tracking-wide">
           {title}
         </h3>
         <p className="text-slate-400 text-xs">{subtitle}</p>
@@ -490,9 +486,9 @@ function SectionHeader({
 
 function EmptyCard({ message, className = '' }: { message: string; className?: string }) {
   return (
-    <div className={`bg-slate-800/50 rounded-xl p-8 border border-slate-700/50 border-dashed text-center ${className}`}>
+    <Card padding={false} className={`p-8 border-dashed text-center ${className}`}>
       <p className="text-slate-500 text-sm">{message}</p>
-    </div>
+    </Card>
   );
 }
 
@@ -514,10 +510,9 @@ function OverviewCard({
   sentiment?: 'good' | 'neutral' | 'bad';
 }) {
   const sentimentColor = sentiment === 'good' ? 'text-green-400' : sentiment === 'bad' ? 'text-red-400' : 'text-slate-300';
-  const borderColor = sentiment === 'good' ? 'border-green-800/40' : sentiment === 'bad' ? 'border-red-800/40' : 'border-slate-700';
 
   return (
-    <div className={`bg-slate-800 rounded-xl p-4 border ${borderColor} relative overflow-hidden`}>
+    <Card padding={false} className="p-4 relative overflow-hidden">
       {sparkData && sparkData.length > 1 && <Sparkline data={sparkData} />}
       <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1 relative z-10">{label}</p>
       <p
@@ -533,7 +528,7 @@ function OverviewCard({
         </span>
       )}
       {sub && <p className="text-slate-500 text-[10px] mt-0.5 relative z-10">{sub}</p>}
-    </div>
+    </Card>
   );
 }
 
@@ -551,7 +546,7 @@ function Sparkline({ data }: { data: number[] }) {
 
   return (
     <svg className="absolute bottom-0 right-0 opacity-15" width={w} height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-      <polyline points={points} fill="none" stroke="#FCB514" strokeWidth={2} strokeLinejoin="round" />
+      <polyline points={points} fill="none" stroke={GOLD} strokeWidth={2} strokeLinejoin="round" />
     </svg>
   );
 }
@@ -565,12 +560,12 @@ function TimeseriesChart({ data, range }: { data: TimeseriesData; range: Range }
 
   if (count === 0) {
     return (
-      <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 mb-6">
-        <h3 className="text-lg font-bold text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+      <Card className="mb-6">
+        <h3 className="font-display text-lg text-white tracking-wide">
           Views Over Time <span className="text-xs font-normal text-slate-400 ml-1">(ET)</span>
         </h3>
         <p className="text-slate-500 text-sm mt-4">No data available for this period.</p>
-      </div>
+      </Card>
     );
   }
 
@@ -641,9 +636,9 @@ function TimeseriesChart({ data, range }: { data: TimeseriesData; range: Range }
   });
 
   return (
-    <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 mb-6">
+    <Card className="mb-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+        <h3 className="font-display text-lg text-white tracking-wide">
           Views Over Time <span className="text-xs font-normal text-slate-400 ml-1">(ET)</span>
         </h3>
         {data.visitors && (
@@ -683,16 +678,16 @@ function TimeseriesChart({ data, range }: { data: TimeseriesData; range: Range }
             data.views.map((v, i) => {
               const h = (v / max) * chartH;
               const x = PAD_LEFT + i * (barWidth + barGap);
-              return <rect key={i} x={x} y={PAD_TOP + chartH - h} width={barWidth} height={h} fill="#FCB514" opacity={0.85} rx={2} />;
+              return <rect key={i} x={x} y={PAD_TOP + chartH - h} width={barWidth} height={h} fill={GOLD} opacity={0.85} rx={2} />;
             })
           ) : (
             <>
-              <path d={toAreaPath(data.views)} fill="#FCB514" opacity={0.12} />
-              <polyline points={toPoints(data.views)} fill="none" stroke="#FCB514" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+              <path d={toAreaPath(data.views)} fill={GOLD} opacity={0.12} />
+              <polyline points={toPoints(data.views)} fill="none" stroke={GOLD} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
               {data.views.map((v, i) => {
                 const x = PAD_LEFT + (i / (count - 1)) * chartW;
                 const y = PAD_TOP + chartH - (v / max) * chartH;
-                return <circle key={`vd-${i}`} cx={x} cy={y} r={3} fill="#FCB514" />;
+                return <circle key={`vd-${i}`} cx={x} cy={y} r={3} fill={GOLD} />;
               })}
               {showVisitors && data.visitors && (
                 <>
@@ -717,8 +712,8 @@ function TimeseriesChart({ data, range }: { data: TimeseriesData; range: Range }
 
           {tooltip && (
             <>
-              <line x1={tooltip.x} x2={tooltip.x} y1={PAD_TOP} y2={PAD_TOP + chartH} stroke="#FCB514" strokeWidth={1} opacity={0.4} strokeDasharray="3,3" />
-              <circle cx={tooltip.x} cy={tooltip.y} r={5} fill="#FCB514" stroke="#1e293b" strokeWidth={2} />
+              <line x1={tooltip.x} x2={tooltip.x} y1={PAD_TOP} y2={PAD_TOP + chartH} stroke={GOLD} strokeWidth={1} opacity={0.4} strokeDasharray="3,3" />
+              <circle cx={tooltip.x} cy={tooltip.y} r={5} fill={GOLD} stroke="#1e293b" strokeWidth={2} />
             </>
           )}
         </svg>
@@ -728,7 +723,7 @@ function TimeseriesChart({ data, range }: { data: TimeseriesData; range: Range }
         <div className="mt-1 text-xs text-slate-300">
           <span className="text-white font-medium">{tooltip.label}</span>
           {' — '}
-          <span className="text-[#FCB514]">{tooltip.views.toLocaleString()} views</span>
+          <span className="text-sabres-gold">{tooltip.views.toLocaleString()} views</span>
           {tooltip.visitors != null && showVisitors && (
             <span className="text-blue-400 ml-2">{tooltip.visitors.toLocaleString()} visitors</span>
           )}
@@ -737,7 +732,7 @@ function TimeseriesChart({ data, range }: { data: TimeseriesData; range: Range }
 
       <div className="flex gap-4 mt-2 text-xs text-slate-400">
         <span className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: '#FCB514' }} />
+          <span className="w-3 h-3 rounded-sm inline-block bg-sabres-gold" />
           Views
         </span>
         {showVisitors && data.visitors && (
@@ -747,7 +742,7 @@ function TimeseriesChart({ data, range }: { data: TimeseriesData; range: Range }
           </span>
         )}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -771,8 +766,8 @@ function TopTable({
   const max = items.length > 0 ? items[0].count : 1;
 
   return (
-    <div className={`bg-slate-800 rounded-xl p-5 border border-slate-700 ${className}`}>
-      <h3 className="text-lg font-bold text-white mb-3" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+    <Card className={className}>
+      <h3 className="font-display text-lg text-white tracking-wide mb-3">
         {title}
       </h3>
       {items.length === 0 ? (
@@ -794,8 +789,8 @@ function TopTable({
                   </div>
                   <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${(item.count / max) * 100}%`, backgroundColor: '#FCB514' }}
+                      className="h-full rounded-full transition-all duration-500 bg-sabres-gold"
+                      style={{ width: `${(item.count / max) * 100}%` }}
                     />
                   </div>
                 </div>
@@ -804,7 +799,7 @@ function TopTable({
           })}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -824,8 +819,8 @@ function BarList({
   const max = items.length > 0 ? Math.max(...items.map((i) => i.count)) : 1;
 
   return (
-    <div className={`bg-slate-800 rounded-xl p-5 border border-slate-700 ${className}`}>
-      <h3 className="text-lg font-bold text-white mb-3" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+    <Card className={className}>
+      <h3 className="font-display text-lg text-white tracking-wide mb-3">
         {title}
       </h3>
       {items.length === 0 ? (
@@ -842,8 +837,8 @@ function BarList({
                 </div>
                 <div className="h-4 bg-slate-700 rounded overflow-hidden">
                   <div
-                    className="h-full rounded transition-all duration-500"
-                    style={{ width: `${(item.count / max) * 100}%`, backgroundColor: '#FCB514' }}
+                    className="h-full rounded transition-all duration-500 bg-sabres-gold"
+                    style={{ width: `${(item.count / max) * 100}%` }}
                   />
                 </div>
               </div>
@@ -851,7 +846,7 @@ function BarList({
           })}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -893,12 +888,9 @@ function ExportButton({
   };
 
   return (
-    <button
-      onClick={handleExport}
-      className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm rounded-lg border border-slate-600 transition-colors"
-    >
+    <Button variant="ghost" size="sm" onClick={handleExport}>
       Export CSV
-    </button>
+    </Button>
   );
 }
 
@@ -941,8 +933,8 @@ function GSCChart({ daily }: { daily: GSCData['daily'] }) {
   };
 
   return (
-    <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 mb-6">
-      <h3 className="text-lg font-bold text-white mb-4" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+    <Card className="mb-6">
+      <h3 className="font-display text-lg text-white tracking-wide mb-4">
         Search Performance
       </h3>
       <div className="overflow-x-auto">
@@ -1018,7 +1010,7 @@ function GSCChart({ daily }: { daily: GSCData['daily'] }) {
           Impressions
         </span>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -1030,8 +1022,8 @@ function GSCTable({
   rows: { name: string; clicks: number; impressions: number; ctr: number; position: number }[];
 }) {
   return (
-    <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 overflow-x-auto">
-      <h3 className="text-lg font-bold text-white mb-3" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+    <Card className="overflow-x-auto">
+      <h3 className="font-display text-lg text-white tracking-wide mb-3">
         {title}
       </h3>
       {rows.length === 0 ? (
@@ -1062,6 +1054,6 @@ function GSCTable({
           </div>
         </>
       )}
-    </div>
+    </Card>
   );
 }

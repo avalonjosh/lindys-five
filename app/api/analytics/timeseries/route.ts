@@ -1,18 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
-import { fetchTimeseries } from '@/lib/ga4';
+import { verifyAdmin } from '@/lib/adminAuth';
+import { fetchTimeseries, hasGA4Credentials } from '@/lib/ga4';
 
-async function verifyAdmin(request: NextRequest): Promise<boolean> {
-  const token = request.cookies.get('admin_token')?.value;
-  if (!token) return false;
-  try {
-    const secret = new TextEncoder().encode(process.env.ADMIN_SESSION_SECRET);
-    await jwtVerify(token, secret);
-    return true;
-  } catch {
-    return false;
-  }
-}
+const EMPTY_TIMESERIES = { labels: [], views: [], visitors: null, timezone: 'ET' };
 
 export async function GET(request: NextRequest) {
   if (!(await verifyAdmin(request))) {
@@ -21,11 +11,21 @@ export async function GET(request: NextRequest) {
 
   const range = request.nextUrl.searchParams.get('range') || 'today';
 
+  if (!hasGA4Credentials()) {
+    return NextResponse.json({
+      error: 'GA4 credentials missing (GSC_CLIENT_EMAIL / GSC_PRIVATE_KEY / GA4_PROPERTY_ID)',
+      ...EMPTY_TIMESERIES,
+    });
+  }
+
   try {
     const data = await fetchTimeseries(range);
     return NextResponse.json(data);
   } catch (error) {
     console.error('GA4 timeseries error:', error);
-    return NextResponse.json({ labels: [], views: [], visitors: null, timezone: 'ET' });
+    return NextResponse.json({
+      error: 'GA4 credentials missing or invalid',
+      ...EMPTY_TIMESERIES,
+    });
   }
 }

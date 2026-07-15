@@ -1,18 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
-import { jwtVerify } from 'jose';
-
-async function verifyAdmin(request: NextRequest): Promise<boolean> {
-  const token = request.cookies.get('admin_token')?.value;
-  if (!token) return false;
-  try {
-    const secret = new TextEncoder().encode(process.env.ADMIN_SESSION_SECRET);
-    await jwtVerify(token, secret);
-    return true;
-  } catch {
-    return false;
-  }
-}
+import { verifyAdmin } from '@/lib/adminAuth';
 
 function getSearchConsoleClient() {
   const clientEmail = process.env.GSC_CLIENT_EMAIL;

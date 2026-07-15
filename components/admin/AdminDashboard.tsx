@@ -3,10 +3,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, Edit, Trash2, Eye, FileText, RefreshCw, Newspaper, Calendar, Trophy, Layers, Pin, ChevronUp, ChevronDown, Filter, Clock, CheckSquare, Square, X, Share2 } from 'lucide-react';
-import AdminNav from './AdminNav';
+import { Plus, Edit, Trash2, Eye, FileText, Newspaper, Calendar, Trophy, Layers, Pin, ChevronUp, ChevronDown, Filter, Clock, CheckSquare, Square, X, Share2 } from 'lucide-react';
 import { fetchPosts, deletePost, updatePost } from '@/lib/services/blogApi';
 import ShareToXModal from './ShareToXModal';
+import { Card, SectionHeading, Button, Toggle, Badge, Spinner } from './ui';
 import type { BlogPost } from '@/lib/types';
 
 type FilterTeam = 'all' | 'sabres' | 'bills';
@@ -35,6 +35,34 @@ type AutoPublishSettings = {
   'auto-publish-bills-weekly': boolean;
   'auto-publish-bills-game-recap': boolean;
 };
+
+const TYPE_LABELS: Record<string, string> = {
+  'game-recap': 'Game Recap',
+  'playoff-game-recap': 'Playoff Recap',
+  'series-recap': 'Series Recap',
+  'set-recap': 'Set Recap',
+  'news-analysis': 'News',
+  'weekly-roundup': 'Weekly',
+  custom: 'Custom',
+};
+
+const TRIGGER_LABELS: Record<string, string> = {
+  weekly: 'Weekly Roundup',
+  news: 'News Scan',
+  'set-recap': 'Set Recap',
+  'game-recap': 'Game Recap',
+  'playoff-game-recap': 'Playoff Game Recap',
+  'series-recap': 'Series Recap',
+  'bills-news': 'Bills News Scan',
+  'bills-weekly': 'Bills Weekly Roundup',
+  'bills-game-recap': 'Bills Game Recap',
+};
+
+function teamBadgeColor(team: string) {
+  if (team === 'sabres') return '#003087';
+  if (team === 'bills') return '#C60C30';
+  return '#475569';
+}
 
 export default function AdminDashboard() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -335,971 +363,706 @@ export default function AdminDashboard() {
     });
   };
 
+  const triggerResultBanner = triggerResult && (
+    <div
+      className={`mt-4 p-3 rounded-lg text-sm ${
+        triggerResult.success ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'
+      }`}
+    >
+      <strong>{TRIGGER_LABELS[triggerResult.type] ?? triggerResult.type}:</strong>{' '}
+      {triggerResult.message}
+    </div>
+  );
+
+  const isBillsTrigger = triggerResult?.type.startsWith('bills-') ?? false;
+
+  const clearFilters = () => {
+    setFilterTeam('all');
+    setFilterStatus('all');
+    setFilterType('all');
+  };
+
+  const renderPostBadges = (post: BlogPost) => (
+    <>
+      <Badge variant={post.status === 'published' ? 'success' : 'warning'} className="capitalize">
+        {post.status}
+      </Badge>
+      {post.status === 'draft' && post.factCheck && !post.factCheck.passed && (
+        <Badge variant="error" title={post.factCheck.issues.join('; ')}>
+          Fact-check blocked
+        </Badge>
+      )}
+      {post.status === 'published' && post.xPost?.error && !post.xPost?.tweetId && (
+        <Badge variant="warning" title={post.xPost.error} className="!bg-orange-600/30 !text-orange-400">
+          X failed
+        </Badge>
+      )}
+      {post.pinned && <Badge variant="warning">Pinned</Badge>}
+    </>
+  );
+
+  const renderPostActions = (post: BlogPost, iconSize: string) => (
+    <>
+      <button
+        onClick={() => handlePin(post)}
+        disabled={pinning === post.id}
+        className={`p-1.5 rounded transition-colors disabled:opacity-50 ${
+          post.pinned ? 'text-amber-400 hover:text-amber-300' : 'text-slate-400 hover:text-amber-400'
+        }`}
+        title={post.pinned ? 'Unpin' : 'Pin to featured'}
+      >
+        {pinning === post.id ? (
+          <Spinner size="sm" />
+        ) : (
+          <Pin className={`${iconSize} ${post.pinned ? 'fill-current' : ''}`} />
+        )}
+      </button>
+      {post.status === 'published' && (
+        <a
+          href={`/blog/${post.team}/${post.slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-1.5 rounded text-slate-400 hover:text-white transition-colors"
+          title="View"
+        >
+          <Eye className={iconSize} />
+        </a>
+      )}
+      {post.status === 'published' && (
+        <button
+          onClick={() => setSharingPost(post)}
+          className="p-1.5 rounded text-slate-400 hover:text-white transition-colors"
+          title="Share to X"
+        >
+          <Share2 className={iconSize} />
+        </button>
+      )}
+      <Link
+        href={`/admin/posts/${post.slug}`}
+        className="p-1.5 rounded text-slate-400 hover:text-white transition-colors"
+        title="Edit"
+      >
+        <Edit className={iconSize} />
+      </Link>
+      <button
+        onClick={() => handleDelete(post)}
+        disabled={deleting === post.id}
+        className="p-1.5 rounded text-slate-400 hover:text-red-400 transition-colors disabled:opacity-50"
+        title="Delete"
+      >
+        {deleting === post.id ? <Spinner size="sm" /> : <Trash2 className={iconSize} />}
+      </button>
+    </>
+  );
+
+  const selectClasses =
+    'px-3 py-1.5 bg-slate-900 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-sabres-gold';
+
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-slate-700 to-slate-800">
-        <AdminNav activeTab="posts" />
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* Page header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="font-display text-3xl text-white tracking-wide">Posts</h2>
+            <p className="text-slate-400 text-sm mt-1">
+              {posts.length} post{posts.length !== 1 ? 's' : ''} total
+            </p>
+          </div>
+          <Link
+            href="/admin/posts/new"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold bg-sabres-gold hover:brightness-110 text-black transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            New Post
+          </Link>
+        </div>
 
-        <main className="max-w-7xl mx-auto px-4 py-8">
-          {/* Actions */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2
-                className="text-3xl font-bold text-white"
-                style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-              >
-                Posts
-              </h2>
-              <p className="text-slate-400 text-sm mt-1">
-                {posts.length} post{posts.length !== 1 ? 's' : ''} total
-              </p>
+        {/* Bulk Action Bar */}
+        {selectedSlugs.size > 0 && (
+          <div className="mb-6 p-4 bg-sabres-gold/10 border border-sabres-gold/50 rounded-xl flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2 text-white">
+              <CheckSquare className="w-5 h-5 text-sabres-gold" />
+              <span className="font-semibold">{selectedSlugs.size} selected</span>
             </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleBulkStatusChange('published')}
+                disabled={bulkOperating}
+              >
+                {bulkOperating ? 'Working...' : 'Publish'}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleBulkStatusChange('draft')}
+                disabled={bulkOperating}
+              >
+                {bulkOperating ? 'Working...' : 'Set Draft'}
+              </Button>
+              <Button variant="danger" size="sm" onClick={handleBulkDelete} disabled={bulkOperating}>
+                {bulkOperating ? 'Deleting...' : 'Delete'}
+              </Button>
+            </div>
+            <button
+              onClick={() => setSelectedSlugs(new Set())}
+              className="ml-auto text-slate-400 hover:text-white transition-colors flex items-center gap-1"
+            >
+              <X className="w-4 h-4" />
+              Clear selection
+            </button>
+          </div>
+        )}
+
+        {/* Filters */}
+        {posts.length > 0 && (
+          <Card className="mb-6 flex flex-wrap items-center gap-4 p-4" padding={false}>
+            <div className="flex items-center gap-2 text-slate-400">
+              <Filter className="w-4 h-4" />
+              <span className="text-sm font-medium">Filters:</span>
+            </div>
+            <select
+              value={filterTeam}
+              onChange={(e) => setFilterTeam(e.target.value as FilterTeam)}
+              className={selectClasses}
+            >
+              <option value="all">All Teams</option>
+              <option value="sabres">Sabres</option>
+              <option value="bills">Bills</option>
+            </select>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
+              className={selectClasses}
+            >
+              <option value="all">All Status</option>
+              <option value="published">Published</option>
+              <option value="draft">Draft</option>
+            </select>
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value as FilterType)}
+              className={selectClasses}
+            >
+              <option value="all">All Types</option>
+              <option value="game-recap">Game Recap</option>
+              <option value="playoff-game-recap">Playoff Game Recap</option>
+              <option value="series-recap">Series Recap</option>
+              <option value="set-recap">Set Recap</option>
+              <option value="news-analysis">News</option>
+              <option value="weekly-roundup">Weekly Roundup</option>
+              <option value="custom">Custom</option>
+            </select>
+            {(filterTeam !== 'all' || filterStatus !== 'all' || filterType !== 'all') && (
+              <button
+                onClick={clearFilters}
+                className="px-3 py-1.5 text-slate-400 hover:text-white text-sm transition-colors"
+              >
+                Clear filters
+              </button>
+            )}
+            <span className="ml-auto text-slate-400 text-sm">
+              {filteredPosts.length} of {posts.length} posts
+            </span>
+          </Card>
+        )}
+
+        {/* Posts list */}
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <Spinner size="lg" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-16">
+            <p className="text-red-400">{error}</p>
+          </div>
+        ) : filteredPosts.length === 0 && posts.length > 0 ? (
+          <Card className="text-center py-16 mb-8">
+            <FileText className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+            <p className="font-display text-slate-300 text-2xl mb-2">No Matching Posts</p>
+            <p className="text-slate-400 text-sm mb-6">Try adjusting your filters</p>
+            <Button variant="ghost" onClick={clearFilters}>
+              Clear Filters
+            </Button>
+          </Card>
+        ) : posts.length === 0 ? (
+          <Card className="text-center py-16 mb-8">
+            <FileText className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+            <p className="font-display text-slate-300 text-2xl mb-2">No Posts Yet</p>
+            <p className="text-slate-400 text-sm mb-6">Create your first post to get started</p>
             <Link
               href="/admin/posts/new"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-black shadow-lg transition-all duration-300 hover:scale-105"
-              style={{ backgroundColor: '#FCB514' }}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold bg-sabres-gold hover:brightness-110 text-black transition-colors"
             >
               <Plus className="w-5 h-5" />
-              New Post
+              Create First Post
             </Link>
-          </div>
-
-          {/* Sabres Automation Controls */}
-          <div className="mb-8 p-6 bg-slate-600/50 rounded-2xl border-2 border-slate-500 shadow-xl">
-            <h3
-              className="text-2xl font-semibold text-white mb-4 pb-2 border-b border-[#FCB514]/30"
-              style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-            >
-              Sabres Automation
-            </h3>
-            <div className="flex flex-wrap gap-4">
-              <button
-                onClick={() => triggerCron('weekly')}
-                disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {triggering === 'weekly' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Calendar className="w-4 h-4" />
-                )}
-                Generate Weekly Roundup
-              </button>
-              <button
-                onClick={() => triggerCron('news')}
-                disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {triggering === 'news' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Newspaper className="w-4 h-4" />
-                )}
-                Scan for News
-              </button>
-              <button
-                onClick={() => triggerCron('game-recap')}
-                disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {triggering === 'game-recap' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Trophy className="w-4 h-4" />
-                )}
-                Generate Game Recaps
-              </button>
-              {/* Set Recap with Dropdown */}
-              <div className="flex items-center gap-2">
-                <select
-                  value={selectedSetNumber ?? ''}
-                  onChange={(e) => setSelectedSetNumber(e.target.value ? parseInt(e.target.value, 10) : null)}
-                  disabled={triggering !== null || loadingSets || setOptions.length === 0}
-                  className="px-3 py-2 bg-slate-700 border border-slate-500 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-400 disabled:opacity-50"
-                >
-                  {loadingSets ? (
-                    <option value="">Loading...</option>
-                  ) : setOptions.length === 0 ? (
-                    <option value="">No sets available</option>
-                  ) : (
-                    setOptions.map((set) => (
-                      <option key={set.setNumber} value={set.setNumber}>
-                        Set {set.setNumber} {set.processed ? '✓' : ''}
-                      </option>
-                    ))
-                  )}
-                </select>
+          </Card>
+        ) : (
+          <Card className="overflow-hidden mb-8" padding={false}>
+            {/* Mobile card layout */}
+            <div className="md:hidden divide-y divide-slate-700">
+              <div className="bg-slate-900/50 px-4 py-3 flex items-center justify-between">
                 <button
-                  onClick={() => {
-                    if (selectedSetNumber) {
-                      const set = setOptions.find(s => s.setNumber === selectedSetNumber);
-                      triggerCron('set-recap', {
-                        setNumber: selectedSetNumber,
-                        force: set?.processed ?? false
-                      });
-                    }
-                  }}
-                  disabled={triggering !== null || !selectedSetNumber}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={toggleSelectAll}
+                  className="text-slate-400 hover:text-white transition-colors flex items-center gap-2 text-sm"
                 >
-                  {triggering === 'set-recap' ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  {selectedSlugs.size === filteredPosts.length && filteredPosts.length > 0 ? (
+                    <CheckSquare className="w-4 h-4" />
                   ) : (
-                    <Layers className="w-4 h-4" />
+                    <Square className="w-4 h-4" />
                   )}
-                  Generate Set Recap
+                  {selectedSlugs.size > 0 ? `${selectedSlugs.size} selected` : 'Select all'}
                 </button>
+                <span className="text-slate-400 text-xs">{filteredPosts.length} posts</span>
               </div>
-              <button
-                onClick={() => triggerCron('playoff-game-recap')}
-                disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {triggering === 'playoff-game-recap' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Trophy className="w-4 h-4" />
-                )}
-                Generate Playoff Recaps
-              </button>
-              <button
-                onClick={() => triggerCron('series-recap')}
-                disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {triggering === 'series-recap' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Layers className="w-4 h-4" />
-                )}
-                Generate Series Recaps
-              </button>
+              {filteredPosts.map((post) => (
+                <div
+                  key={post.id}
+                  className={`px-4 py-3 ${selectedSlugs.has(post.slug) ? 'bg-slate-700/40' : ''}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <button
+                      onClick={() => toggleSelection(post.slug)}
+                      className="text-slate-400 hover:text-white transition-colors mt-0.5 shrink-0"
+                    >
+                      {selectedSlugs.has(post.slug) ? (
+                        <CheckSquare className="w-4 h-4 text-sabres-gold" />
+                      ) : (
+                        <Square className="w-4 h-4" />
+                      )}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <Link
+                        href={`/admin/posts/${post.slug}`}
+                        className="text-white font-medium hover:text-sabres-gold transition-colors text-sm leading-snug block"
+                      >
+                        {post.title}
+                      </Link>
+                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                        <Badge
+                          className="uppercase"
+                          style={{ backgroundColor: teamBadgeColor(post.team), color: '#fff' }}
+                        >
+                          {post.team}
+                        </Badge>
+                        <Badge variant="info">{TYPE_LABELS[post.type] ?? post.type}</Badge>
+                        {renderPostBadges(post)}
+                        <span className="text-slate-500 text-xs">
+                          {post.views?.toLocaleString() ?? '0'} views
+                        </span>
+                      </div>
+                      <p className="text-slate-500 text-xs mt-1.5">
+                        {formatDate(post.publishedAt || post.createdAt)}
+                      </p>
+                      <div className="flex items-center gap-1 mt-2">
+                        {renderPostActions(post, 'w-3.5 h-3.5')}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-            {triggerResult && (
-              <div
-                className={`mt-4 p-3 rounded-lg text-sm ${
-                  triggerResult.success
-                    ? 'bg-green-900/30 text-green-400'
-                    : 'bg-red-900/30 text-red-400'
-                }`}
-              >
-                <strong>{
-                  triggerResult.type === 'weekly' ? 'Weekly Roundup' :
-                  triggerResult.type === 'news' ? 'News Scan' :
-                  triggerResult.type === 'set-recap' ? 'Set Recap' :
-                  triggerResult.type === 'game-recap' ? 'Game Recap' :
-                  triggerResult.type === 'playoff-game-recap' ? 'Playoff Game Recap' :
-                  triggerResult.type === 'series-recap' ? 'Series Recap' :
-                  triggerResult.type === 'bills-news' ? 'Bills News Scan' :
-                  triggerResult.type === 'bills-weekly' ? 'Bills Weekly Roundup' :
-                  triggerResult.type === 'bills-game-recap' ? 'Bills Game Recap' :
-                  triggerResult.type
-                }:</strong>{' '}
-                {triggerResult.message}
-              </div>
-            )}
 
-            {/* Auto-publish toggles */}
-            <div className="mt-6 pt-4 border-t border-slate-500">
-              <p className="text-slate-300 text-sm mb-3">Auto-publish settings:</p>
-              <div className="flex flex-wrap gap-6">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <button
-                    onClick={() => toggleSetting('auto-publish-weekly')}
-                    disabled={togglingSettings !== null}
-                    className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-weekly'] ? 'bg-green-600' : 'bg-slate-500'
-                    } ${togglingSettings === 'auto-publish-weekly' ? 'opacity-50' : ''}`}
+            {/* Desktop table layout */}
+            <table className="w-full hidden md:table">
+              <thead>
+                <tr className="bg-slate-900/50">
+                  <th className="w-12 px-4 py-3">
+                    <button
+                      onClick={toggleSelectAll}
+                      className="text-slate-400 hover:text-white transition-colors"
+                      title={selectedSlugs.size === filteredPosts.length ? 'Deselect all' : 'Select all'}
+                    >
+                      {selectedSlugs.size === filteredPosts.length && filteredPosts.length > 0 ? (
+                        <CheckSquare className="w-5 h-5" />
+                      ) : (
+                        <Square className="w-5 h-5" />
+                      )}
+                    </button>
+                  </th>
+                  <th className="text-left px-4 py-3 text-slate-400 text-xs uppercase tracking-wider font-semibold">
+                    Title
+                  </th>
+                  <th className="text-left px-4 py-3 text-slate-400 text-xs uppercase tracking-wider font-semibold">
+                    Team
+                  </th>
+                  <th className="text-left px-4 py-3 text-slate-400 text-xs uppercase tracking-wider font-semibold">
+                    Type
+                  </th>
+                  <th className="text-left px-4 py-3 text-slate-400 text-xs uppercase tracking-wider font-semibold">
+                    Status
+                  </th>
+                  <th className="text-left px-4 py-3 text-slate-400 text-xs uppercase tracking-wider font-semibold">
+                    <button
+                      onClick={() => {
+                        if (sortField === 'views') {
+                          setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
+                        } else {
+                          setSortField('views');
+                          setSortDirection('desc');
+                        }
+                      }}
+                      className="flex items-center gap-1 hover:text-white transition-colors uppercase tracking-wider"
+                    >
+                      Views
+                      {sortField === 'views' && (
+                        sortDirection === 'desc' ? (
+                          <ChevronDown className="w-4 h-4" />
+                        ) : (
+                          <ChevronUp className="w-4 h-4" />
+                        )
+                      )}
+                    </button>
+                  </th>
+                  <th className="text-left px-4 py-3 text-slate-400 text-xs uppercase tracking-wider font-semibold hidden lg:table-cell">
+                    <button
+                      onClick={() => {
+                        if (sortField === 'date') {
+                          setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
+                        } else {
+                          setSortField('date');
+                          setSortDirection('desc');
+                        }
+                      }}
+                      className="flex items-center gap-1 hover:text-white transition-colors uppercase tracking-wider"
+                    >
+                      Date
+                      {sortField === 'date' && (
+                        sortDirection === 'desc' ? (
+                          <ChevronDown className="w-4 h-4" />
+                        ) : (
+                          <ChevronUp className="w-4 h-4" />
+                        )
+                      )}
+                    </button>
+                  </th>
+                  <th className="text-right px-4 py-3 text-slate-400 text-xs uppercase tracking-wider font-semibold">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-700">
+                {filteredPosts.map((post) => (
+                  <tr
+                    key={post.id}
+                    className={`hover:bg-slate-700/40 transition-colors ${
+                      selectedSlugs.has(post.slug) ? 'bg-slate-700/30' : ''
+                    }`}
                   >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                        autoPublishSettings['auto-publish-weekly'] ? 'translate-x-5' : ''
-                      }`}
-                    />
-                  </button>
-                  <span className="text-slate-300 text-sm">Weekly Roundup</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <button
-                    onClick={() => toggleSetting('auto-publish-news')}
-                    disabled={togglingSettings !== null}
-                    className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-news'] ? 'bg-green-600' : 'bg-slate-500'
-                    } ${togglingSettings === 'auto-publish-news' ? 'opacity-50' : ''}`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                        autoPublishSettings['auto-publish-news'] ? 'translate-x-5' : ''
-                      }`}
-                    />
-                  </button>
-                  <span className="text-slate-300 text-sm">News Scan</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <button
-                    onClick={() => toggleSetting('auto-publish-game-recap')}
-                    disabled={togglingSettings !== null}
-                    className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-game-recap'] ? 'bg-green-600' : 'bg-slate-500'
-                    } ${togglingSettings === 'auto-publish-game-recap' ? 'opacity-50' : ''}`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                        autoPublishSettings['auto-publish-game-recap'] ? 'translate-x-5' : ''
-                      }`}
-                    />
-                  </button>
-                  <span className="text-slate-300 text-sm">Game Recaps</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <button
-                    onClick={() => toggleSetting('auto-publish-set-recap')}
-                    disabled={togglingSettings !== null}
-                    className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-set-recap'] ? 'bg-green-600' : 'bg-slate-500'
-                    } ${togglingSettings === 'auto-publish-set-recap' ? 'opacity-50' : ''}`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                        autoPublishSettings['auto-publish-set-recap'] ? 'translate-x-5' : ''
-                      }`}
-                    />
-                  </button>
-                  <span className="text-slate-300 text-sm">Set Recaps</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <button
-                    onClick={() => toggleSetting('auto-publish-playoff-game-recap')}
-                    disabled={togglingSettings !== null}
-                    className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-playoff-game-recap'] ? 'bg-green-600' : 'bg-slate-500'
-                    } ${togglingSettings === 'auto-publish-playoff-game-recap' ? 'opacity-50' : ''}`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                        autoPublishSettings['auto-publish-playoff-game-recap'] ? 'translate-x-5' : ''
-                      }`}
-                    />
-                  </button>
-                  <span className="text-slate-300 text-sm">Playoff Game Recaps</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <button
-                    onClick={() => toggleSetting('auto-publish-series-recap')}
-                    disabled={togglingSettings !== null}
-                    className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-series-recap'] ? 'bg-green-600' : 'bg-slate-500'
-                    } ${togglingSettings === 'auto-publish-series-recap' ? 'opacity-50' : ''}`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                        autoPublishSettings['auto-publish-series-recap'] ? 'translate-x-5' : ''
-                      }`}
-                    />
-                  </button>
-                  <span className="text-slate-300 text-sm">Series Recaps</span>
-                </label>
-              </div>
-              <p className="text-slate-400 text-xs mt-2">
-                Toggle on to auto-publish articles. Toggle off to create as drafts for review.
-              </p>
+                    <td className="w-12 px-4 py-3">
+                      <button
+                        onClick={() => toggleSelection(post.slug)}
+                        className="text-slate-400 hover:text-white transition-colors"
+                      >
+                        {selectedSlugs.has(post.slug) ? (
+                          <CheckSquare className="w-5 h-5 text-sabres-gold" />
+                        ) : (
+                          <Square className="w-5 h-5" />
+                        )}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/admin/posts/${post.slug}`}
+                          className="text-white font-medium hover:text-sabres-gold transition-colors"
+                        >
+                          {post.title}
+                        </Link>
+                        {post.pinned && (
+                          <Badge variant="warning" className="shrink-0">
+                            Pinned
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge
+                        className="uppercase"
+                        style={{ backgroundColor: teamBadgeColor(post.team), color: '#fff' }}
+                      >
+                        {post.team}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant="info">{TYPE_LABELS[post.type] ?? post.type}</Badge>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <Badge variant={post.status === 'published' ? 'success' : 'warning'} className="capitalize">
+                          {post.status}
+                        </Badge>
+                        {post.status === 'draft' && post.factCheck && !post.factCheck.passed && (
+                          <Badge variant="error" title={post.factCheck.issues.join('; ')}>
+                            Fact-check blocked
+                          </Badge>
+                        )}
+                        {post.status === 'published' && post.xPost?.error && !post.xPost?.tweetId && (
+                          <Badge variant="warning" title={post.xPost.error} className="!bg-orange-600/30 !text-orange-400">
+                            X failed
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-400 text-sm">
+                      {post.views?.toLocaleString() ?? '0'}
+                    </td>
+                    <td className="px-4 py-3 text-slate-400 text-sm hidden lg:table-cell">
+                      {formatDate(post.publishedAt || post.createdAt)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        {renderPostActions(post, 'w-4 h-4')}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        )}
+
+        {/* Automation */}
+        <Card className="mb-8">
+          {/* Sabres group */}
+          <SectionHeading accent="#FFB81C">Sabres Automation</SectionHeading>
+          <div className="flex flex-wrap gap-3">
+            <Button variant="secondary" onClick={() => triggerCron('weekly')} disabled={triggering !== null}>
+              {triggering === 'weekly' ? <Spinner size="sm" /> : <Calendar className="w-4 h-4" />}
+              Generate Weekly Roundup
+            </Button>
+            <Button variant="secondary" onClick={() => triggerCron('news')} disabled={triggering !== null}>
+              {triggering === 'news' ? <Spinner size="sm" /> : <Newspaper className="w-4 h-4" />}
+              Scan for News
+            </Button>
+            <Button variant="secondary" onClick={() => triggerCron('game-recap')} disabled={triggering !== null}>
+              {triggering === 'game-recap' ? <Spinner size="sm" /> : <Trophy className="w-4 h-4" />}
+              Generate Game Recaps
+            </Button>
+            {/* Set Recap with Dropdown */}
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedSetNumber ?? ''}
+                onChange={(e) => setSelectedSetNumber(e.target.value ? parseInt(e.target.value, 10) : null)}
+                disabled={triggering !== null || loadingSets || setOptions.length === 0}
+                className="px-3 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-400 disabled:opacity-50"
+              >
+                {loadingSets ? (
+                  <option value="">Loading...</option>
+                ) : setOptions.length === 0 ? (
+                  <option value="">No sets available</option>
+                ) : (
+                  setOptions.map((set) => (
+                    <option key={set.setNumber} value={set.setNumber}>
+                      Set {set.setNumber} {set.processed ? '✓' : ''}
+                    </option>
+                  ))
+                )}
+              </select>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  if (selectedSetNumber) {
+                    const set = setOptions.find(s => s.setNumber === selectedSetNumber);
+                    triggerCron('set-recap', {
+                      setNumber: selectedSetNumber,
+                      force: set?.processed ?? false
+                    });
+                  }
+                }}
+                disabled={triggering !== null || !selectedSetNumber}
+              >
+                {triggering === 'set-recap' ? <Spinner size="sm" /> : <Layers className="w-4 h-4" />}
+                Generate Set Recap
+              </Button>
             </div>
+            <Button variant="secondary" onClick={() => triggerCron('playoff-game-recap')} disabled={triggering !== null}>
+              {triggering === 'playoff-game-recap' ? <Spinner size="sm" /> : <Trophy className="w-4 h-4" />}
+              Generate Playoff Recaps
+            </Button>
+            <Button variant="secondary" onClick={() => triggerCron('series-recap')} disabled={triggering !== null}>
+              {triggering === 'series-recap' ? <Spinner size="sm" /> : <Layers className="w-4 h-4" />}
+              Generate Series Recaps
+            </Button>
+          </div>
+          {!isBillsTrigger && triggerResultBanner}
+
+          {/* Sabres auto-publish toggles */}
+          <div className="mt-6 pt-4 border-t border-slate-700">
+            <p className="text-slate-300 text-sm mb-3">Auto-publish settings:</p>
+            <div className="flex flex-wrap gap-6">
+              <Toggle
+                checked={autoPublishSettings['auto-publish-weekly']}
+                onChange={() => toggleSetting('auto-publish-weekly')}
+                disabled={togglingSettings !== null}
+                busy={togglingSettings === 'auto-publish-weekly'}
+                label="Weekly Roundup"
+              />
+              <Toggle
+                checked={autoPublishSettings['auto-publish-news']}
+                onChange={() => toggleSetting('auto-publish-news')}
+                disabled={togglingSettings !== null}
+                busy={togglingSettings === 'auto-publish-news'}
+                label="News Scan"
+              />
+              <Toggle
+                checked={autoPublishSettings['auto-publish-game-recap']}
+                onChange={() => toggleSetting('auto-publish-game-recap')}
+                disabled={togglingSettings !== null}
+                busy={togglingSettings === 'auto-publish-game-recap'}
+                label="Game Recaps"
+              />
+              <Toggle
+                checked={autoPublishSettings['auto-publish-set-recap']}
+                onChange={() => toggleSetting('auto-publish-set-recap')}
+                disabled={togglingSettings !== null}
+                busy={togglingSettings === 'auto-publish-set-recap'}
+                label="Set Recaps"
+              />
+              <Toggle
+                checked={autoPublishSettings['auto-publish-playoff-game-recap']}
+                onChange={() => toggleSetting('auto-publish-playoff-game-recap')}
+                disabled={togglingSettings !== null}
+                busy={togglingSettings === 'auto-publish-playoff-game-recap'}
+                label="Playoff Game Recaps"
+              />
+              <Toggle
+                checked={autoPublishSettings['auto-publish-series-recap']}
+                onChange={() => toggleSetting('auto-publish-series-recap')}
+                disabled={togglingSettings !== null}
+                busy={togglingSettings === 'auto-publish-series-recap'}
+                label="Series Recaps"
+              />
+            </div>
+            <p className="text-slate-400 text-xs mt-2">
+              Toggle on to auto-publish articles. Toggle off to create as drafts for review.
+            </p>
           </div>
 
-          {/* Bills Automation Controls */}
-          <div className="mb-8 p-6 bg-slate-600/50 rounded-2xl border-2 border-slate-500 shadow-xl">
-            <h3
-              className="text-2xl font-semibold text-white mb-4 pb-2 border-b border-[#C60C30]/30"
-              style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-            >
-              Bills Automation
-            </h3>
-            <div className="flex flex-wrap gap-4">
-              <button
-                onClick={() => triggerCron('bills-news')}
-                disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {triggering === 'bills-news' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Newspaper className="w-4 h-4" />
-                )}
+          {/* Bills group */}
+          <div className="mt-8">
+            <SectionHeading accent="#C60C30">Bills Automation</SectionHeading>
+            <div className="flex flex-wrap gap-3">
+              <Button variant="secondary" onClick={() => triggerCron('bills-news')} disabled={triggering !== null}>
+                {triggering === 'bills-news' ? <Spinner size="sm" /> : <Newspaper className="w-4 h-4" />}
                 Scan for Bills News
-              </button>
-              <button
-                onClick={() => triggerCron('bills-weekly')}
-                disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {triggering === 'bills-weekly' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Calendar className="w-4 h-4" />
-                )}
+              </Button>
+              <Button variant="secondary" onClick={() => triggerCron('bills-weekly')} disabled={triggering !== null}>
+                {triggering === 'bills-weekly' ? <Spinner size="sm" /> : <Calendar className="w-4 h-4" />}
                 Generate Bills Weekly Roundup
-              </button>
-              <button
-                onClick={() => triggerCron('bills-game-recap')}
-                disabled={triggering !== null}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {triggering === 'bills-game-recap' ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Trophy className="w-4 h-4" />
-                )}
+              </Button>
+              <Button variant="secondary" onClick={() => triggerCron('bills-game-recap')} disabled={triggering !== null}>
+                {triggering === 'bills-game-recap' ? <Spinner size="sm" /> : <Trophy className="w-4 h-4" />}
                 Generate Bills Game Recaps
-              </button>
+              </Button>
             </div>
+            {isBillsTrigger && triggerResultBanner}
 
-            {/* Bills Auto-publish toggles */}
-            <div className="mt-6 pt-4 border-t border-slate-500">
+            {/* Bills auto-publish toggles */}
+            <div className="mt-6 pt-4 border-t border-slate-700">
               <p className="text-slate-300 text-sm mb-3">Bills auto-publish settings:</p>
               <div className="flex flex-wrap gap-6">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <button
-                    onClick={() => toggleSetting('auto-publish-bills-news')}
-                    disabled={togglingSettings !== null}
-                    className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-bills-news'] ? 'bg-green-600' : 'bg-slate-500'
-                    } ${togglingSettings === 'auto-publish-bills-news' ? 'opacity-50' : ''}`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                        autoPublishSettings['auto-publish-bills-news'] ? 'translate-x-5' : ''
-                      }`}
-                    />
-                  </button>
-                  <span className="text-slate-300 text-sm">News Scan</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <button
-                    onClick={() => toggleSetting('auto-publish-bills-weekly')}
-                    disabled={togglingSettings !== null}
-                    className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-bills-weekly'] ? 'bg-green-600' : 'bg-slate-500'
-                    } ${togglingSettings === 'auto-publish-bills-weekly' ? 'opacity-50' : ''}`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                        autoPublishSettings['auto-publish-bills-weekly'] ? 'translate-x-5' : ''
-                      }`}
-                    />
-                  </button>
-                  <span className="text-slate-300 text-sm">Weekly Roundup</span>
-                </label>
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <button
-                    onClick={() => toggleSetting('auto-publish-bills-game-recap')}
-                    disabled={togglingSettings !== null}
-                    className={`relative w-11 h-6 rounded-full transition-colors ${
-                      autoPublishSettings['auto-publish-bills-game-recap'] ? 'bg-green-600' : 'bg-slate-500'
-                    } ${togglingSettings === 'auto-publish-bills-game-recap' ? 'opacity-50' : ''}`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                        autoPublishSettings['auto-publish-bills-game-recap'] ? 'translate-x-5' : ''
-                      }`}
-                    />
-                  </button>
-                  <span className="text-slate-300 text-sm">Game Recaps</span>
-                </label>
+                <Toggle
+                  checked={autoPublishSettings['auto-publish-bills-news']}
+                  onChange={() => toggleSetting('auto-publish-bills-news')}
+                  disabled={togglingSettings !== null}
+                  busy={togglingSettings === 'auto-publish-bills-news'}
+                  label="News Scan"
+                />
+                <Toggle
+                  checked={autoPublishSettings['auto-publish-bills-weekly']}
+                  onChange={() => toggleSetting('auto-publish-bills-weekly')}
+                  disabled={togglingSettings !== null}
+                  busy={togglingSettings === 'auto-publish-bills-weekly'}
+                  label="Weekly Roundup"
+                />
+                <Toggle
+                  checked={autoPublishSettings['auto-publish-bills-game-recap']}
+                  onChange={() => toggleSetting('auto-publish-bills-game-recap')}
+                  disabled={togglingSettings !== null}
+                  busy={togglingSettings === 'auto-publish-bills-game-recap'}
+                  label="Game Recaps"
+                />
               </div>
               <p className="text-slate-400 text-xs mt-2">
                 Toggle on to auto-publish Bills articles. Toggle off to create as drafts for review.
               </p>
             </div>
           </div>
+        </Card>
 
-          {/* Schedule Reference */}
-          <div className="mb-8">
-            <button
-              onClick={() => setShowSchedule(!showSchedule)}
-              className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors mb-2"
-            >
-              <Clock className="w-4 h-4" />
-              <span>Automation Schedule Reference</span>
-              {showSchedule ? (
-                <ChevronUp className="w-4 h-4" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
-            </button>
-            {showSchedule && (
-              <div className="p-4 bg-slate-600/30 rounded-xl border border-slate-500">
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Sabres Schedule */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-[#FCB514] mb-3">Sabres</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Weekly Roundup</span>
-                        <span className="text-slate-300">Mondays ~5-6 AM</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">News Scan</span>
-                        <span className="text-slate-300">Tue/Fri ~6 AM</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Game Recap</span>
-                        <span className="text-slate-300">Daily ~11 PM-12 AM</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Set Recap</span>
-                        <span className="text-slate-300">Sundays ~7 AM</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Playoff Game Recap</span>
-                        <span className="text-slate-300">Daily ~11 PM-12 AM</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Series Recap</span>
-                        <span className="text-slate-300">Daily ~8 AM</span>
-                      </div>
+        {/* Schedule Reference */}
+        <div className="mb-8">
+          <button
+            onClick={() => setShowSchedule(!showSchedule)}
+            className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors mb-2"
+          >
+            <Clock className="w-4 h-4" />
+            <span>Automation Schedule Reference</span>
+            {showSchedule ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+          {showSchedule && (
+            <Card>
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Sabres Schedule */}
+                <div>
+                  <h4 className="text-sm font-semibold text-sabres-gold mb-3">Sabres</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Weekly Roundup</span>
+                      <span className="text-slate-300">Mondays ~5-6 AM</span>
                     </div>
-                  </div>
-                  {/* Bills Schedule */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-[#C60C30] mb-3">Bills</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Weekly Roundup</span>
-                        <span className="text-slate-300">Mondays ~5-6 AM</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">News Scan</span>
-                        <span className="text-slate-300">Tue/Fri ~6 AM</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Game Recap</span>
-                        <span className="text-slate-300">Mondays ~12 AM & ~5 AM</span>
-                      </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">News Scan</span>
+                      <span className="text-slate-300">Tue/Fri ~6 AM</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Game Recap</span>
+                      <span className="text-slate-300">Daily ~11 PM-12 AM</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Set Recap</span>
+                      <span className="text-slate-300">Sundays ~7 AM</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Playoff Game Recap</span>
+                      <span className="text-slate-300">Daily ~11 PM-12 AM</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Series Recap</span>
+                      <span className="text-slate-300">Daily ~8 AM</span>
                     </div>
                   </div>
                 </div>
-                <p className="text-slate-500 text-xs mt-4 text-center">
-                  All times approximate Eastern. Cron jobs run on Vercel's schedule.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Bulk Action Bar */}
-          {selectedSlugs.size > 0 && (
-            <div className="mb-6 p-4 bg-[#FCB514]/10 border-2 border-[#FCB514]/50 rounded-xl flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2 text-white">
-                <CheckSquare className="w-5 h-5 text-[#FCB514]" />
-                <span className="font-semibold">
-                  {selectedSlugs.size} selected
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleBulkStatusChange('published')}
-                  disabled={bulkOperating}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
-                >
-                  {bulkOperating ? 'Working...' : 'Publish'}
-                </button>
-                <button
-                  onClick={() => handleBulkStatusChange('draft')}
-                  disabled={bulkOperating}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
-                >
-                  {bulkOperating ? 'Working...' : 'Set Draft'}
-                </button>
-                <button
-                  onClick={handleBulkDelete}
-                  disabled={bulkOperating}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
-                >
-                  {bulkOperating ? 'Deleting...' : 'Delete'}
-                </button>
-              </div>
-              <button
-                onClick={() => setSelectedSlugs(new Set())}
-                className="ml-auto text-slate-400 hover:text-white transition-colors flex items-center gap-1"
-              >
-                <X className="w-4 h-4" />
-                Clear selection
-              </button>
-            </div>
-          )}
-
-          {/* Filters */}
-          {posts.length > 0 && (
-            <div className="mb-6 p-4 bg-slate-600/30 rounded-xl border border-slate-500 flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2 text-slate-400">
-                <Filter className="w-4 h-4" />
-                <span className="text-sm font-medium">Filters:</span>
-              </div>
-              <select
-                value={filterTeam}
-                onChange={(e) => setFilterTeam(e.target.value as FilterTeam)}
-                className="px-3 py-1.5 bg-slate-700 border border-slate-500 rounded-lg text-white text-sm focus:outline-none focus:border-[#FCB514]"
-              >
-                <option value="all">All Teams</option>
-                <option value="sabres">Sabres</option>
-                <option value="bills">Bills</option>
-              </select>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
-                className="px-3 py-1.5 bg-slate-700 border border-slate-500 rounded-lg text-white text-sm focus:outline-none focus:border-[#FCB514]"
-              >
-                <option value="all">All Status</option>
-                <option value="published">Published</option>
-                <option value="draft">Draft</option>
-              </select>
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value as FilterType)}
-                className="px-3 py-1.5 bg-slate-700 border border-slate-500 rounded-lg text-white text-sm focus:outline-none focus:border-[#FCB514]"
-              >
-                <option value="all">All Types</option>
-                <option value="game-recap">Game Recap</option>
-                <option value="playoff-game-recap">Playoff Game Recap</option>
-                <option value="series-recap">Series Recap</option>
-                <option value="set-recap">Set Recap</option>
-                <option value="news-analysis">News</option>
-                <option value="weekly-roundup">Weekly Roundup</option>
-                <option value="custom">Custom</option>
-              </select>
-              {(filterTeam !== 'all' || filterStatus !== 'all' || filterType !== 'all') && (
-                <button
-                  onClick={() => {
-                    setFilterTeam('all');
-                    setFilterStatus('all');
-                    setFilterType('all');
-                  }}
-                  className="px-3 py-1.5 text-slate-400 hover:text-white text-sm transition-colors"
-                >
-                  Clear filters
-                </button>
-              )}
-              <span className="ml-auto text-slate-400 text-sm">
-                {filteredPosts.length} of {posts.length} posts
-              </span>
-            </div>
-          )}
-
-          {/* Content */}
-          {loading ? (
-            <div className="flex justify-center py-16">
-              <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-600 border-t-[#FCB514]"></div>
-            </div>
-          ) : error ? (
-            <div className="text-center py-16">
-              <p className="text-red-400">{error}</p>
-            </div>
-          ) : filteredPosts.length === 0 && posts.length > 0 ? (
-            <div className="text-center py-16 bg-slate-600/50 rounded-2xl border-2 border-slate-500 shadow-xl">
-              <FileText className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-              <p
-                className="text-slate-300 text-2xl mb-2"
-                style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-              >
-                No Matching Posts
-              </p>
-              <p className="text-slate-400 text-sm mb-6">
-                Try adjusting your filters
-              </p>
-              <button
-                onClick={() => {
-                  setFilterTeam('all');
-                  setFilterStatus('all');
-                  setFilterType('all');
-                }}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white bg-slate-600 hover:bg-slate-500 transition-colors"
-              >
-                Clear Filters
-              </button>
-            </div>
-          ) : posts.length === 0 ? (
-            <div className="text-center py-16 bg-slate-600/50 rounded-2xl border-2 border-slate-500 shadow-xl">
-              <FileText className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-              <p
-                className="text-slate-300 text-2xl mb-2"
-                style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-              >
-                No Posts Yet
-              </p>
-              <p className="text-slate-400 text-sm mb-6">
-                Create your first post to get started
-              </p>
-              <Link
-                href="/admin/posts/new"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-black shadow-lg transition-all duration-300 hover:scale-105"
-                style={{ backgroundColor: '#FCB514' }}
-              >
-                <Plus className="w-5 h-5" />
-                Create First Post
-              </Link>
-            </div>
-          ) : (
-            <div className="bg-slate-600/50 rounded-2xl border-2 border-slate-500 shadow-xl overflow-hidden">
-              {/* Mobile card layout */}
-              <div className="md:hidden">
-                <div className="bg-slate-700/50 border-b border-slate-500 px-4 py-3 flex items-center justify-between">
-                  <button
-                    onClick={toggleSelectAll}
-                    className="text-slate-400 hover:text-white transition-colors flex items-center gap-2 text-sm"
-                  >
-                    {selectedSlugs.size === filteredPosts.length && filteredPosts.length > 0 ? (
-                      <CheckSquare className="w-4 h-4" />
-                    ) : (
-                      <Square className="w-4 h-4" />
-                    )}
-                    {selectedSlugs.size > 0 ? `${selectedSlugs.size} selected` : 'Select all'}
-                  </button>
-                  <span className="text-slate-400 text-xs">{filteredPosts.length} posts</span>
-                </div>
-                {filteredPosts.map((post) => (
-                  <div
-                    key={post.id}
-                    className={`border-b border-slate-600 last:border-b-0 px-4 py-3 ${
-                      selectedSlugs.has(post.slug) ? 'bg-slate-500/20' : ''
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <button
-                        onClick={() => toggleSelection(post.slug)}
-                        className="text-slate-400 hover:text-white transition-colors mt-0.5 shrink-0"
-                      >
-                        {selectedSlugs.has(post.slug) ? (
-                          <CheckSquare className="w-4 h-4 text-[#FCB514]" />
-                        ) : (
-                          <Square className="w-4 h-4" />
-                        )}
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <Link
-                          href={`/admin/posts/${post.slug}`}
-                          className="text-white font-medium hover:text-[#FCB514] transition-colors text-sm leading-snug block"
-                        >
-                          {post.title}
-                        </Link>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span
-                            className="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase text-white"
-                            style={{ backgroundColor: post.team === 'sabres' ? '#003087' : '#C60C30' }}
-                          >
-                            {post.team}
-                          </span>
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-                              post.status === 'published' ? 'bg-green-600 text-white' : 'bg-amber-500 text-black'
-                            }`}
-                          >
-                            {post.status}
-                          </span>
-                          {post.status === 'draft' && post.factCheck && !post.factCheck.passed && (
-                            <span
-                              className="px-1.5 py-0.5 bg-red-600/30 text-red-400 text-[10px] rounded font-semibold"
-                              title={post.factCheck.issues.join('; ')}
-                            >
-                              Fact-check blocked
-                            </span>
-                          )}
-                          {post.status === 'published' && post.xPost?.error && !post.xPost?.tweetId && (
-                            <span
-                              className="px-1.5 py-0.5 bg-orange-600/30 text-orange-400 text-[10px] rounded font-semibold"
-                              title={post.xPost.error}
-                            >
-                              X failed
-                            </span>
-                          )}
-                          {post.pinned && (
-                            <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-[10px] rounded font-semibold">
-                              Pinned
-                            </span>
-                          )}
-                          <span className="text-slate-500 text-xs">{post.views?.toLocaleString() ?? '0'} views</span>
-                        </div>
-                        <div className="flex items-center gap-1 mt-2">
-                          <button
-                            onClick={() => handlePin(post)}
-                            disabled={pinning === post.id}
-                            className={`p-1.5 rounded transition-colors disabled:opacity-50 ${
-                              post.pinned ? 'text-amber-400' : 'text-slate-400 hover:text-amber-400'
-                            }`}
-                            title={post.pinned ? 'Unpin' : 'Pin'}
-                          >
-                            {pinning === post.id ? (
-                              <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-500 border-t-amber-400"></div>
-                            ) : (
-                              <Pin className={`w-3.5 h-3.5 ${post.pinned ? 'fill-current' : ''}`} />
-                            )}
-                          </button>
-                          {post.status === 'published' && (
-                            <a
-                              href={`/blog/${post.team}/${post.slug}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-1.5 rounded text-slate-400 hover:text-white transition-colors"
-                              title="View"
-                            >
-                              <Eye className="w-3.5 h-3.5" />
-                            </a>
-                          )}
-                          {post.status === 'published' && (
-                            <button
-                              onClick={() => setSharingPost(post)}
-                              className="p-1.5 rounded text-slate-400 hover:text-white transition-colors"
-                              title="Share"
-                            >
-                              <Share2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                          <Link
-                            href={`/admin/posts/${post.slug}`}
-                            className="p-1.5 rounded text-slate-400 hover:text-white transition-colors"
-                            title="Edit"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(post)}
-                            disabled={deleting === post.id}
-                            className="p-1.5 rounded text-slate-400 hover:text-red-400 transition-colors disabled:opacity-50"
-                            title="Delete"
-                          >
-                            {deleting === post.id ? (
-                              <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-slate-500 border-t-red-400"></div>
-                            ) : (
-                              <Trash2 className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
+                {/* Bills Schedule */}
+                <div>
+                  <h4 className="text-sm font-semibold text-[#C60C30] mb-3">Bills</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Weekly Roundup</span>
+                      <span className="text-slate-300">Mondays ~5-6 AM</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">News Scan</span>
+                      <span className="text-slate-300">Tue/Fri ~6 AM</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Game Recap</span>
+                      <span className="text-slate-300">Mondays ~12 AM & ~5 AM</span>
                     </div>
                   </div>
-                ))}
+                </div>
               </div>
-
-              {/* Desktop table layout */}
-              <table className="w-full hidden md:table">
-                <thead>
-                  <tr className="bg-slate-700/50 border-b border-slate-500">
-                    <th className="w-12 px-4 py-4">
-                      <button
-                        onClick={toggleSelectAll}
-                        className="text-slate-400 hover:text-white transition-colors"
-                        title={selectedSlugs.size === filteredPosts.length ? 'Deselect all' : 'Select all'}
-                      >
-                        {selectedSlugs.size === filteredPosts.length && filteredPosts.length > 0 ? (
-                          <CheckSquare className="w-5 h-5" />
-                        ) : (
-                          <Square className="w-5 h-5" />
-                        )}
-                      </button>
-                    </th>
-                    <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide">
-                      Title
-                    </th>
-                    <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide">
-                      Team
-                    </th>
-                    <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide">
-                      Status
-                    </th>
-                    <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide">
-                      <button
-                        onClick={() => {
-                          if (sortField === 'views') {
-                            setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
-                          } else {
-                            setSortField('views');
-                            setSortDirection('desc');
-                          }
-                        }}
-                        className="flex items-center gap-1 hover:text-white transition-colors"
-                      >
-                        Views
-                        {sortField === 'views' && (
-                          sortDirection === 'desc' ? (
-                            <ChevronDown className="w-4 h-4" />
-                          ) : (
-                            <ChevronUp className="w-4 h-4" />
-                          )
-                        )}
-                      </button>
-                    </th>
-                    <th className="text-left px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide hidden lg:table-cell">
-                      <button
-                        onClick={() => {
-                          if (sortField === 'date') {
-                            setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc');
-                          } else {
-                            setSortField('date');
-                            setSortDirection('desc');
-                          }
-                        }}
-                        className="flex items-center gap-1 hover:text-white transition-colors"
-                      >
-                        Date
-                        {sortField === 'date' && (
-                          sortDirection === 'desc' ? (
-                            <ChevronDown className="w-4 h-4" />
-                          ) : (
-                            <ChevronUp className="w-4 h-4" />
-                          )
-                        )}
-                      </button>
-                    </th>
-                    <th className="text-right px-6 py-4 text-slate-300 font-semibold text-sm uppercase tracking-wide">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPosts.map((post) => (
-                    <tr
-                      key={post.id}
-                      className={`border-b border-slate-600 last:border-b-0 hover:bg-slate-500/30 transition-colors ${
-                        selectedSlugs.has(post.slug) ? 'bg-slate-500/20' : ''
-                      }`}
-                    >
-                      <td className="w-12 px-4 py-4">
-                        <button
-                          onClick={() => toggleSelection(post.slug)}
-                          className="text-slate-400 hover:text-white transition-colors"
-                        >
-                          {selectedSlugs.has(post.slug) ? (
-                            <CheckSquare className="w-5 h-5 text-[#FCB514]" />
-                          ) : (
-                            <Square className="w-5 h-5" />
-                          )}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <Link
-                            href={`/admin/posts/${post.slug}`}
-                            className="text-white font-medium hover:text-[#FCB514] transition-colors"
-                          >
-                            {post.title}
-                          </Link>
-                          {post.pinned && (
-                            <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded font-semibold shrink-0">
-                              Pinned
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className="px-2 py-1 rounded text-xs font-semibold uppercase text-white"
-                          style={{
-                            backgroundColor: post.team === 'sabres' ? '#003087' : '#C60C30',
-                          }}
-                        >
-                          {post.team}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span
-                            className={`px-2 py-1 rounded text-xs font-semibold ${
-                              post.status === 'published'
-                                ? 'bg-green-600 text-white'
-                                : 'bg-amber-500 text-black'
-                            }`}
-                          >
-                            {post.status}
-                          </span>
-                          {post.status === 'draft' && post.factCheck && !post.factCheck.passed && (
-                            <span
-                              className="px-2 py-1 bg-red-600/30 text-red-400 text-xs rounded font-semibold whitespace-nowrap"
-                              title={post.factCheck.issues.join('; ')}
-                            >
-                              Fact-check blocked
-                            </span>
-                          )}
-                          {post.status === 'published' && post.xPost?.error && !post.xPost?.tweetId && (
-                            <span
-                              className="px-2 py-1 bg-orange-600/30 text-orange-400 text-xs rounded font-semibold whitespace-nowrap"
-                              title={post.xPost.error}
-                            >
-                              X failed
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-slate-400 text-sm">
-                        {post.views?.toLocaleString() ?? '0'}
-                      </td>
-                      <td className="px-6 py-4 text-slate-400 text-sm hidden lg:table-cell">
-                        {formatDate(post.publishedAt || post.createdAt)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handlePin(post)}
-                            disabled={pinning === post.id}
-                            className={`p-2 transition-colors disabled:opacity-50 ${
-                              post.pinned
-                                ? 'text-amber-400 hover:text-amber-300'
-                                : 'text-slate-400 hover:text-amber-400'
-                            }`}
-                            title={post.pinned ? 'Unpin' : 'Pin to featured'}
-                          >
-                            {pinning === post.id ? (
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-500 border-t-amber-400"></div>
-                            ) : (
-                              <Pin className={`w-4 h-4 ${post.pinned ? 'fill-current' : ''}`} />
-                            )}
-                          </button>
-                          {post.status === 'published' && (
-                            <a
-                              href={`/blog/${post.team}/${post.slug}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="p-2 text-slate-400 hover:text-white transition-colors"
-                              title="View"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </a>
-                          )}
-                          {post.status === 'published' && (
-                            <button
-                              onClick={() => setSharingPost(post)}
-                              className="p-2 text-slate-400 hover:text-white transition-colors"
-                              title="Share to X"
-                            >
-                              <Share2 className="w-4 h-4" />
-                            </button>
-                          )}
-                          <Link
-                            href={`/admin/posts/${post.slug}`}
-                            className="p-2 text-slate-400 hover:text-white transition-colors"
-                            title="Edit"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(post)}
-                            disabled={deleting === post.id}
-                            className="p-2 text-slate-400 hover:text-red-400 transition-colors disabled:opacity-50"
-                            title="Delete"
-                          >
-                            {deleting === post.id ? (
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-500 border-t-red-400"></div>
-                            ) : (
-                              <Trash2 className="w-4 h-4" />
-                            )}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+              <p className="text-slate-500 text-xs mt-4 text-center">
+                All times approximate Eastern. Cron jobs run on Vercel&apos;s schedule.
+              </p>
+            </Card>
           )}
-        </main>
-      </div>
+        </div>
+      </main>
 
       {/* Share to X Modal */}
       {sharingPost && (

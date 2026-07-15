@@ -8,6 +8,7 @@ import { fetchPost, createPost, updatePost, generateArticle, uploadImage, fetchI
 import { fetchSabresSchedule } from '@/lib/services/nhlApi';
 import { calculateChunks } from '@/lib/utils/chunkCalculator';
 import PostContent from '@/components/blog/PostContent';
+import { Card, SectionHeading, Button, Toggle, Badge, Spinner, ErrorBanner } from '@/components/admin/ui';
 import type { BlogPost, GameChunk } from '@/lib/types';
 
 // Game option for the selector dropdown
@@ -701,8 +702,8 @@ export default function PostEditor() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-600 border-t-[#FCB514]"></div>
+      <div className="flex items-center justify-center py-32">
+        <Spinner size="lg" />
       </div>
     );
   }
@@ -711,35 +712,23 @@ export default function PostEditor() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-slate-700 to-slate-800">
-        {/* Header */}
-        <header
-          className="shadow-xl border-b-4"
-          style={{
-            background: '#003087',
-            borderBottomColor: '#0A1128',
-          }}
-        >
-          <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link
-                href="/admin/posts"
-                className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back
-              </Link>
-              <h1
-                className="text-2xl font-bold text-white"
-                style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-              >
-                {isNew ? 'New Post' : 'Edit Post'}
-              </h1>
-            </div>
-            <button
-              onClick={() => setShowPreview(!showPreview)}
-              className="flex items-center gap-2 text-white/70 hover:text-white text-sm transition-colors"
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        {/* Sub-header */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/admin/posts"
+              className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
             >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Posts
+            </Link>
+            <h1 className="font-display text-2xl text-white tracking-wide">
+              {isNew ? 'New Post' : 'Edit Post'}
+            </h1>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="button" variant="ghost" onClick={() => setShowPreview(!showPreview)}>
               {showPreview ? (
                 <>
                   <EyeOff className="w-4 h-4" />
@@ -751,20 +740,43 @@ export default function PostEditor() {
                   Preview
                 </>
               )}
-            </button>
+            </Button>
+            {isNew ? (
+              <>
+                <Button type="submit" form="post-editor-form" variant="secondary" disabled={saving}>
+                  <Save className="w-4 h-4" />
+                  {saving ? 'Saving...' : 'Save Draft'}
+                </Button>
+                <Button
+                  type="submit"
+                  form="post-editor-form"
+                  variant="primary"
+                  disabled={saving}
+                  onClick={handlePublish}
+                >
+                  <Send className="w-4 h-4" />
+                  {saving ? 'Publishing...' : 'Publish'}
+                </Button>
+              </>
+            ) : (
+              <Button type="submit" form="post-editor-form" variant="primary" disabled={saving}>
+                <Save className="w-4 h-4" />
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            )}
           </div>
-        </header>
+        </div>
 
-        <main className="max-w-6xl mx-auto px-4 py-8">
-          {error && (
-            <div className="bg-red-900/30 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg mb-6">
-              {error}
-            </div>
-          )}
+        {error && (
+          <div className="mb-6">
+            <ErrorBanner>{error}</ErrorBanner>
+          </div>
+        )}
 
-          <div className={`grid gap-8 ${showPreview ? 'lg:grid-cols-2' : ''}`}>
-            {/* Editor */}
-            <form onSubmit={handleSubmit} className="space-y-6">
+        <div className={`grid gap-8 ${showPreview ? 'lg:grid-cols-2' : ''}`}>
+          {/* Editor */}
+          <form id="post-editor-form" onSubmit={handleSubmit} className="space-y-6">
+            <Card className="space-y-6">
               {/* Title */}
               <div>
                 <label className="block text-sm font-semibold text-slate-300 mb-2">
@@ -774,7 +786,7 @@ export default function PostEditor() {
                   type="text"
                   value={formData.title}
                   onChange={(e) => updateField('title', e.target.value)}
-                  className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-[#FCB514] transition-colors"
+                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-sabres-gold transition-colors"
                   placeholder="Post title"
                   required
                 />
@@ -792,7 +804,7 @@ export default function PostEditor() {
                       onChange={(e) =>
                         updateField('team', e.target.value as 'sabres' | 'bills')
                       }
-                      className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white focus:outline-none focus:border-[#FCB514] transition-colors"
+                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sabres-gold transition-colors"
                     >
                       <option value="sabres">Sabres</option>
                       <option value="bills">Bills</option>
@@ -810,7 +822,7 @@ export default function PostEditor() {
                           e.target.value as 'game-recap' | 'set-recap' | 'custom'
                         )
                       }
-                      className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white focus:outline-none focus:border-[#FCB514] transition-colors"
+                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sabres-gold transition-colors"
                     >
                       <option value="custom">Custom Article</option>
                       <option value="game-recap">Game Recap</option>
@@ -824,25 +836,15 @@ export default function PostEditor() {
               {isNew && formData.type === 'custom' && (
                 <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <h3 className="font-display text-xl text-white tracking-wide flex items-center gap-2">
                       <Sparkles className="w-5 h-5 text-indigo-400" />
                       AI Article Generator
                     </h3>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <span className="text-sm text-slate-400">Research</span>
-                      <div
-                        className={`relative w-11 h-6 rounded-full transition-colors ${
-                          researchEnabled ? 'bg-indigo-500' : 'bg-slate-500'
-                        }`}
-                        onClick={() => setResearchEnabled(!researchEnabled)}
-                      >
-                        <div
-                          className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                            researchEnabled ? 'translate-x-6' : 'translate-x-1'
-                          }`}
-                        />
-                      </div>
-                    </label>
+                    <Toggle
+                      checked={researchEnabled}
+                      onChange={() => setResearchEnabled(!researchEnabled)}
+                      label="Research"
+                    />
                   </div>
 
                   {/* Reference Date - Show when research is enabled */}
@@ -864,7 +866,7 @@ export default function PostEditor() {
                       value={articleIdea}
                       onChange={(e) => setArticleIdea(e.target.value)}
                       rows={4}
-                      className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400 transition-colors text-sm"
+                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-sabres-gold transition-colors text-sm"
                       placeholder="Describe what you want the article to cover. Be specific about topics, players, stats, comparisons, or themes you want included..."
                     />
                     <p className="text-slate-400 text-xs mt-1">
@@ -896,7 +898,7 @@ export default function PostEditor() {
                             value={customDomains}
                             onChange={(e) => setCustomDomains(e.target.value)}
                             rows={3}
-                            className="w-full px-3 py-2 bg-black/30 border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400 transition-colors text-xs font-mono"
+                            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-sabres-gold transition-colors text-xs font-mono"
                             placeholder="Enter domains (comma or newline separated)&#10;e.g., nhl.com, espn.com"
                           />
                           <p className="text-slate-400 text-xs mt-1">
@@ -906,12 +908,9 @@ export default function PostEditor() {
                       ) : (
                         <div className="flex flex-wrap gap-2">
                           {DEFAULT_RESEARCH_DOMAINS.map((domain) => (
-                            <span
-                              key={domain}
-                              className="px-2 py-1 bg-indigo-500/20 text-indigo-300 text-xs rounded-full"
-                            >
+                            <Badge key={domain} variant="info">
                               {domain}
-                            </span>
+                            </Badge>
                           ))}
                         </div>
                       )}
@@ -919,8 +918,8 @@ export default function PostEditor() {
                   )}
 
                   {generateError && (
-                    <div className="bg-red-900/30 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg mb-4 text-sm">
-                      {generateError}
+                    <div className="mb-4">
+                      <ErrorBanner>{generateError}</ErrorBanner>
                     </div>
                   )}
 
@@ -938,15 +937,15 @@ export default function PostEditor() {
                     </div>
                   )}
 
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
                     onClick={handleGenerateArticle}
                     disabled={generating || !articleIdea.trim()}
-                    className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {generating ? (
                       <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white" />
+                        <Spinner size="sm" />
                         Generating...
                       </>
                     ) : (
@@ -955,14 +954,14 @@ export default function PostEditor() {
                         Generate Draft
                       </>
                     )}
-                  </button>
+                  </Button>
                 </div>
               )}
 
               {/* Game Recap: Game Selector and AI Generator */}
               {isNew && formData.type === 'game-recap' && formData.team === 'sabres' && (
                 <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-6">
-                  <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
+                  <h3 className="font-display text-xl text-white tracking-wide flex items-center gap-2 mb-4">
                     <Sparkles className="w-5 h-5 text-indigo-400" />
                     AI Game Recap Generator
                   </h3>
@@ -974,14 +973,14 @@ export default function PostEditor() {
                     </label>
                     {loadingGames ? (
                       <div className="flex items-center gap-2 text-slate-400">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-500 border-t-indigo-400" />
+                        <Spinner size="sm" />
                         Loading recent games...
                       </div>
                     ) : recentGames.length > 0 ? (
                       <select
                         value={formData.gameId || ''}
                         onChange={(e) => handleGameSelect(e.target.value)}
-                        className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white focus:outline-none focus:border-indigo-400 transition-colors"
+                        className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sabres-gold transition-colors"
                       >
                         <option value="">Select a game...</option>
                         {recentGames.map((g) => (
@@ -1012,8 +1011,8 @@ export default function PostEditor() {
                   )}
 
                   {generateError && (
-                    <div className="bg-red-900/30 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg mb-4 text-sm">
-                      {generateError}
+                    <div className="mb-4">
+                      <ErrorBanner>{generateError}</ErrorBanner>
                     </div>
                   )}
 
@@ -1031,15 +1030,15 @@ export default function PostEditor() {
                     </div>
                   )}
 
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
                     onClick={handleGenerateRecap}
                     disabled={generating || !formData.gameId}
-                    className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {generating ? (
                       <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white" />
+                        <Spinner size="sm" />
                         Generating Recap...
                       </>
                     ) : (
@@ -1048,14 +1047,14 @@ export default function PostEditor() {
                         Generate Recap
                       </>
                     )}
-                  </button>
+                  </Button>
                 </div>
               )}
 
               {/* Set Recap: Set Selector and AI Generator */}
               {isNew && formData.type === 'set-recap' && formData.team === 'sabres' && (
                 <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-6">
-                  <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
+                  <h3 className="font-display text-xl text-white tracking-wide flex items-center gap-2 mb-4">
                     <Sparkles className="w-5 h-5 text-indigo-400" />
                     AI Set Recap Generator
                   </h3>
@@ -1067,14 +1066,14 @@ export default function PostEditor() {
                     </label>
                     {loadingSets ? (
                       <div className="flex items-center gap-2 text-slate-400">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-slate-500 border-t-indigo-400" />
+                        <Spinner size="sm" />
                         Loading completed sets...
                       </div>
                     ) : completedSets.length > 0 ? (
                       <select
                         value={formData.setNumber || ''}
                         onChange={(e) => handleSetSelect(e.target.value)}
-                        className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white focus:outline-none focus:border-indigo-400 transition-colors"
+                        className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sabres-gold transition-colors"
                       >
                         <option value="">Select a set...</option>
                         {completedSets.map((set) => {
@@ -1128,8 +1127,8 @@ export default function PostEditor() {
                   )}
 
                   {generateError && (
-                    <div className="bg-red-900/30 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg mb-4 text-sm">
-                      {generateError}
+                    <div className="mb-4">
+                      <ErrorBanner>{generateError}</ErrorBanner>
                     </div>
                   )}
 
@@ -1147,15 +1146,15 @@ export default function PostEditor() {
                     </div>
                   )}
 
-                  <button
+                  <Button
                     type="button"
+                    variant="secondary"
                     onClick={handleGenerateSetRecap}
                     disabled={generating || !formData.setNumber}
-                    className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {generating ? (
                       <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white" />
+                        <Spinner size="sm" />
                         Generating Set Recap...
                       </>
                     ) : (
@@ -1164,7 +1163,7 @@ export default function PostEditor() {
                         Generate Set Recap
                       </>
                     )}
-                  </button>
+                  </Button>
                 </div>
               )}
 
@@ -1179,7 +1178,7 @@ export default function PostEditor() {
                       type="text"
                       value={formData.opponent}
                       onChange={(e) => updateField('opponent', e.target.value)}
-                      className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-[#FCB514] transition-colors"
+                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-sabres-gold transition-colors"
                       placeholder="e.g., Rangers"
                     />
                   </div>
@@ -1191,7 +1190,7 @@ export default function PostEditor() {
                       type="date"
                       value={formData.gameDate}
                       onChange={(e) => updateField('gameDate', e.target.value)}
-                      className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white focus:outline-none focus:border-[#FCB514] transition-colors"
+                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sabres-gold transition-colors"
                     />
                   </div>
                 </div>
@@ -1206,7 +1205,7 @@ export default function PostEditor() {
                   value={formData.content}
                   onChange={(e) => updateField('content', e.target.value)}
                   rows={20}
-                  className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-[#FCB514] transition-colors font-mono text-sm"
+                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-sabres-gold transition-colors font-mono text-sm"
                   placeholder="Write your post content in Markdown..."
                   required
                 />
@@ -1280,14 +1279,16 @@ export default function PostEditor() {
                   onChange={(e) => updateField('metaDescription', e.target.value)}
                   rows={2}
                   maxLength={160}
-                  className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-[#FCB514] transition-colors text-sm"
+                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-sabres-gold transition-colors text-sm"
                   placeholder="Brief description for search results (max 160 chars)"
                 />
                 <p className="text-slate-400 text-xs mt-1">
                   {formData.metaDescription.length}/160 characters
                 </p>
               </div>
+            </Card>
 
+            <Card className="space-y-6">
               {/* Featured Image Section */}
               <div>
                 <label className="block text-sm font-semibold text-slate-300 mb-2">
@@ -1298,7 +1299,7 @@ export default function PostEditor() {
                     <img
                       src={featuredImage}
                       alt="Featured"
-                      className="w-full max-w-md h-auto rounded-lg border-2 border-[#FCB514]"
+                      className="w-full max-w-md h-auto rounded-lg border-2 border-sabres-gold"
                     />
                     <button
                       type="button"
@@ -1314,11 +1315,11 @@ export default function PostEditor() {
                     <p className="text-slate-400 text-sm italic">
                       No featured image set. Generate a card from the title, or upload an image below.
                     </p>
-                    <button
+                    <Button
                       type="button"
+                      variant="secondary"
                       onClick={handleGenerateCard}
                       disabled={generatingCard || !formData.title.trim()}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title={formData.title.trim() ? 'Generate a team-branded card image from the post title' : 'Enter a title first'}
                     >
                       {generatingCard ? (
@@ -1327,7 +1328,7 @@ export default function PostEditor() {
                         <ImageIcon className="w-4 h-4" />
                       )}
                       Generate Card from Title
-                    </button>
+                    </Button>
                     {cardError && <p className="text-red-400 text-sm">{cardError}</p>}
                   </div>
                 )}
@@ -1346,13 +1347,13 @@ export default function PostEditor() {
                   onDragLeave={handleDragLeave}
                   className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                     isDragging
-                      ? 'border-[#FCB514] bg-[#FCB514]/10'
+                      ? 'border-sabres-gold bg-sabres-gold/10'
                       : 'border-slate-500 hover:border-slate-400'
                   }`}
                 >
                   {uploading ? (
                     <div className="flex flex-col items-center gap-2">
-                      <div className="animate-spin rounded-full h-8 w-8 border-4 border-slate-600 border-t-[#FCB514]" />
+                      <Spinner size="lg" />
                       <span className="text-slate-400 text-sm">Uploading...</span>
                     </div>
                   ) : (
@@ -1372,14 +1373,10 @@ export default function PostEditor() {
                             className="hidden"
                           />
                         </label>
-                        <button
-                          type="button"
-                          onClick={openGallery}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors"
-                        >
+                        <Button type="button" variant="secondary" onClick={openGallery}>
                           <Images className="w-4 h-4" />
                           Browse Gallery
-                        </button>
+                        </Button>
                       </div>
                       <p className="text-slate-400 text-xs mt-2">
                         JPG, PNG, WebP, GIF - Max 5MB
@@ -1414,7 +1411,7 @@ export default function PostEditor() {
                           <img
                             src={url}
                             alt={`Uploaded ${index + 1}`}
-                            className="w-16 h-16 object-cover rounded border border-slate-500 cursor-pointer hover:border-[#FCB514] transition-colors"
+                            className="w-16 h-16 object-cover rounded border border-slate-500 cursor-pointer hover:border-sabres-gold transition-colors"
                             onClick={() => insertImageAtCursor(url, `Image ${index + 1}`)}
                             title="Click to insert into content"
                           />
@@ -1434,7 +1431,9 @@ export default function PostEditor() {
                   </div>
                 )}
               </div>
+            </Card>
 
+            <Card className="space-y-6">
               {/* Publish Date */}
               <div>
                 <label className="block text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
@@ -1445,7 +1444,7 @@ export default function PostEditor() {
                   type="datetime-local"
                   value={formData.publishedAt}
                   onChange={(e) => updateField('publishedAt', e.target.value)}
-                  className="w-full px-4 py-3 bg-black/30 border border-slate-500 rounded-lg text-white focus:outline-none focus:border-[#FCB514] transition-colors"
+                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sabres-gold transition-colors"
                 />
                 <p className="text-slate-400 text-xs mt-1">
                   Leave empty to use current time when publishing. Set a date to backdate or schedule.
@@ -1454,22 +1453,11 @@ export default function PostEditor() {
 
               {/* Pin to Featured */}
               <div className="flex items-center gap-4 p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg">
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <button
-                    type="button"
-                    onClick={() => updateField('pinned', !formData.pinned)}
-                    className={`relative w-11 h-6 rounded-full transition-colors ${
-                      formData.pinned ? 'bg-amber-500' : 'bg-slate-500'
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                        formData.pinned ? 'translate-x-5' : ''
-                      }`}
-                    />
-                  </button>
-                  <span className="text-slate-300 text-sm font-semibold">Pin to Featured Section</span>
-                </label>
+                <Toggle
+                  checked={formData.pinned}
+                  onChange={() => updateField('pinned', !formData.pinned)}
+                  label={<span className="font-semibold">Pin to Featured Section</span>}
+                />
                 <p className="text-slate-400 text-xs">
                   Pinned posts appear at the top of the blog. Only one post can be pinned at a time.
                 </p>
@@ -1496,166 +1484,121 @@ export default function PostEditor() {
                       onClick={() => updateField('status', 'published')}
                       className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                         formData.status === 'published'
-                          ? 'text-black'
+                          ? 'bg-sabres-gold text-black'
                           : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
                       }`}
-                      style={formData.status === 'published' ? { backgroundColor: accent } : {}}
                     >
                       Published
                     </button>
                   </div>
                   {formData.status !== existingPost.status && (
-                    <span className="text-amber-400 text-xs ml-auto">
+                    <Badge variant="warning" className="ml-auto">
                       Status will change on save
-                    </span>
+                    </Badge>
                   )}
                 </div>
               )}
+            </Card>
 
-              {/* Actions */}
-              <div className="flex items-center gap-4 pt-4 flex-wrap">
-                {isNew ? (
+            {/* Actions */}
+            <div className="flex items-center gap-4 pt-2 flex-wrap">
+              {/* Fact Check Button */}
+              <button
+                type="button"
+                onClick={handleFactCheck}
+                disabled={factChecking || !formData.content.trim()}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-emerald-700 hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
+                title="Verify facts against live data"
+              >
+                {factChecking ? (
                   <>
-                    <button
-                      type="submit"
-                      disabled={saving}
-                      className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-slate-600 hover:bg-slate-500 transition-colors disabled:opacity-50"
-                    >
-                      <Save className="w-5 h-5" />
-                      {saving ? 'Saving...' : 'Save Draft'}
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={saving}
-                      onClick={handlePublish}
-                      className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-black transition-all duration-300 hover:scale-105 disabled:opacity-50"
-                      style={{ backgroundColor: accent }}
-                    >
-                      <Send className="w-5 h-5" />
-                      {saving ? 'Publishing...' : 'Publish'}
-                    </button>
+                    <Spinner size="sm" />
+                    Checking...
                   </>
                 ) : (
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-black transition-all duration-300 hover:scale-105 disabled:opacity-50"
-                    style={{ backgroundColor: accent }}
-                  >
-                    <Save className="w-5 h-5" />
-                    {saving ? 'Saving...' : 'Save Changes'}
-                  </button>
+                  <>
+                    <ShieldCheck className="w-5 h-5" />
+                    Verify Facts
+                  </>
                 )}
+              </button>
+            </div>
 
-                {/* Fact Check Button */}
+            {/* Fact Check Error */}
+            {factCheckError && (
+              <div className="bg-red-900/30 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg flex items-center justify-between">
+                <span>{factCheckError}</span>
                 <button
                   type="button"
-                  onClick={handleFactCheck}
-                  disabled={factChecking || !formData.content.trim()}
-                  className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-white bg-emerald-700 hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
-                  title="Verify facts against live data"
+                  onClick={() => setFactCheckError(null)}
+                  className="text-red-400 hover:text-red-300"
                 >
-                  {factChecking ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white" />
-                      Checking...
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck className="w-5 h-5" />
-                      Verify Facts
-                    </>
-                  )}
+                  <X className="w-4 h-4" />
                 </button>
-              </div>
-
-              {/* Fact Check Error */}
-              {factCheckError && (
-                <div className="bg-red-900/30 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg flex items-center justify-between">
-                  <span>{factCheckError}</span>
-                  <button
-                    type="button"
-                    onClick={() => setFactCheckError(null)}
-                    className="text-red-400 hover:text-red-300"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-
-              {/* Fact Check Results Summary */}
-              {factCheckResults && !showFactCheckResults && (
-                <button
-                  type="button"
-                  onClick={() => setShowFactCheckResults(true)}
-                  className={`w-full p-4 rounded-lg border text-left transition-colors ${
-                    factCheckResults.issueCount > 0
-                      ? 'border-red-500/50 bg-red-900/20 hover:bg-red-900/30'
-                      : factCheckResults.warningCount > 0
-                      ? 'border-amber-500/50 bg-amber-900/20 hover:bg-amber-900/30'
-                      : 'border-green-500/50 bg-green-900/20 hover:bg-green-900/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    {factCheckResults.issueCount > 0 ? (
-                      <AlertCircle className="w-5 h-5 text-red-400" />
-                    ) : factCheckResults.warningCount > 0 ? (
-                      <AlertTriangle className="w-5 h-5 text-amber-400" />
-                    ) : (
-                      <CheckCircle2 className="w-5 h-5 text-green-400" />
-                    )}
-                    <div>
-                      <p className="font-semibold text-white">
-                        Fact Check Complete: {factCheckResults.issueCount} issue{factCheckResults.issueCount !== 1 ? 's' : ''}, {factCheckResults.warningCount} warning{factCheckResults.warningCount !== 1 ? 's' : ''}
-                      </p>
-                      <p className="text-slate-400 text-sm">{factCheckResults.summary}</p>
-                    </div>
-                    <span className="text-slate-400 ml-auto text-sm">Click to view details</span>
-                  </div>
-                </button>
-              )}
-            </form>
-
-            {/* Preview */}
-            {showPreview && (
-              <div className="bg-gradient-to-br from-[#002654] to-[#001a3d] rounded-2xl border-2 border-[#FCB514] p-6 overflow-auto max-h-[calc(100vh-200px)]">
-                <h2
-                  className="text-2xl font-bold text-white mb-4"
-                  style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-                >
-                  Preview
-                </h2>
-                {formData.title && (
-                  <h3
-                    className="text-3xl font-bold text-white mb-6"
-                    style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-                  >
-                    {formData.title}
-                  </h3>
-                )}
-                {formData.content ? (
-                  <PostContent content={formData.content} accent={accent} />
-                ) : (
-                  <p className="text-slate-400 italic">
-                    Start typing to see preview...
-                  </p>
-                )}
               </div>
             )}
-          </div>
-        </main>
-      </div>
+
+            {/* Fact Check Results Summary */}
+            {factCheckResults && !showFactCheckResults && (
+              <button
+                type="button"
+                onClick={() => setShowFactCheckResults(true)}
+                className={`w-full p-4 rounded-lg border text-left transition-colors ${
+                  factCheckResults.issueCount > 0
+                    ? 'border-red-500/50 bg-red-900/20 hover:bg-red-900/30'
+                    : factCheckResults.warningCount > 0
+                    ? 'border-amber-500/50 bg-amber-900/20 hover:bg-amber-900/30'
+                    : 'border-green-500/50 bg-green-900/20 hover:bg-green-900/30'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  {factCheckResults.issueCount > 0 ? (
+                    <AlertCircle className="w-5 h-5 text-red-400" />
+                  ) : factCheckResults.warningCount > 0 ? (
+                    <AlertTriangle className="w-5 h-5 text-amber-400" />
+                  ) : (
+                    <CheckCircle2 className="w-5 h-5 text-green-400" />
+                  )}
+                  <div>
+                    <p className="font-semibold text-white">
+                      Fact Check Complete: {factCheckResults.issueCount} issue{factCheckResults.issueCount !== 1 ? 's' : ''}, {factCheckResults.warningCount} warning{factCheckResults.warningCount !== 1 ? 's' : ''}
+                    </p>
+                    <p className="text-slate-400 text-sm">{factCheckResults.summary}</p>
+                  </div>
+                  <span className="text-slate-400 ml-auto text-sm">Click to view details</span>
+                </div>
+              </button>
+            )}
+          </form>
+
+          {/* Preview */}
+          {showPreview && (
+            <Card className="overflow-auto max-h-[calc(100vh-200px)] self-start">
+              <SectionHeading>Preview</SectionHeading>
+              {formData.title && (
+                <h3 className="font-display text-3xl text-white mb-6">
+                  {formData.title}
+                </h3>
+              )}
+              {formData.content ? (
+                <PostContent content={formData.content} accent={accent} />
+              ) : (
+                <p className="text-slate-400 italic">
+                  Start typing to see preview...
+                </p>
+              )}
+            </Card>
+          )}
+        </div>
+      </main>
 
       {/* Image Gallery Modal */}
       {showGallery && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-2xl border border-slate-600 w-full max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <div className="bg-slate-800 rounded-2xl border border-slate-700 w-full max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-4 border-b border-slate-600">
-              <h3
-                className="text-xl font-bold text-white"
-                style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-              >
+              <h3 className="font-display text-xl text-white tracking-wide">
                 Image Gallery
               </h3>
               <button
@@ -1671,20 +1614,16 @@ export default function PostEditor() {
             <div className="flex-1 overflow-y-auto p-4">
               {loadingGallery ? (
                 <div className="flex justify-center py-12">
-                  <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-600 border-t-[#FCB514]" />
+                  <Spinner size="lg" />
                 </div>
               ) : galleryError ? (
                 <div className="text-center py-12">
                   <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
                   <p className="text-red-400 font-semibold">Failed to load gallery</p>
                   <p className="text-slate-400 text-sm mt-1">{galleryError}</p>
-                  <button
-                    type="button"
-                    onClick={loadGalleryImages}
-                    className="mt-4 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors"
-                  >
+                  <Button type="button" variant="ghost" className="mt-4" onClick={loadGalleryImages}>
                     Try Again
-                  </button>
+                  </Button>
                 </div>
               ) : galleryImages.length === 0 ? (
                 <div className="text-center py-12">
@@ -1699,7 +1638,7 @@ export default function PostEditor() {
                   {galleryImages.map((image) => (
                     <div
                       key={image.url}
-                      className="relative group aspect-square rounded-lg overflow-hidden border border-slate-600 hover:border-[#FCB514] transition-colors cursor-pointer"
+                      className="relative group aspect-square rounded-lg overflow-hidden border border-slate-600 hover:border-sabres-gold transition-colors cursor-pointer"
                     >
                       <img
                         src={image.url}
@@ -1745,15 +1684,12 @@ export default function PostEditor() {
       {/* Fact Check Results Modal */}
       {showFactCheckResults && factCheckResults && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-2xl border border-slate-600 w-full max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+          <div className="bg-slate-800 rounded-2xl border border-slate-700 w-full max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-4 border-b border-slate-600">
               <div className="flex items-center gap-3">
                 <ShieldCheck className="w-6 h-6 text-emerald-400" />
-                <h3
-                  className="text-xl font-bold text-white"
-                  style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-                >
+                <h3 className="font-display text-xl text-white tracking-wide">
                   Fact Check Results
                 </h3>
               </div>
@@ -1817,14 +1753,16 @@ export default function PostEditor() {
                       {getCategoryIcon(finding.category)}
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-xs font-semibold uppercase px-2 py-0.5 rounded ${
-                            finding.category === 'verified' ? 'bg-green-500/20 text-green-400' :
-                            finding.category === 'issue' ? 'bg-red-500/20 text-red-400' :
-                            finding.category === 'warning' ? 'bg-amber-500/20 text-amber-400' :
-                            'bg-slate-500/20 text-slate-400'
-                          }`}>
+                          <Badge
+                            variant={
+                              finding.category === 'verified' ? 'success' :
+                              finding.category === 'issue' ? 'error' :
+                              finding.category === 'warning' ? 'warning' : 'neutral'
+                            }
+                            className="uppercase"
+                          >
                             {finding.category}
-                          </span>
+                          </Badge>
                         </div>
                         <p className="text-white text-sm mb-2">
                           <span className="text-slate-400">Claim: </span>
@@ -1849,13 +1787,9 @@ export default function PostEditor() {
               <p className="text-slate-400 text-sm">
                 {factCheckResults.findings.length} finding{factCheckResults.findings.length !== 1 ? 's' : ''} analyzed
               </p>
-              <button
-                type="button"
-                onClick={() => setShowFactCheckResults(false)}
-                className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg transition-colors"
-              >
+              <Button type="button" variant="ghost" onClick={() => setShowFactCheckResults(false)}>
                 Close
-              </button>
+              </Button>
             </div>
           </div>
         </div>

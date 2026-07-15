@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Plus, Trash2, Edit, Mail, Send, Filter, Download, Upload,
-  ChevronDown, ChevronUp, Search, X, Copy, Check, ExternalLink,
+  Plus, Trash2, Edit, Mail, Send, Download, Upload,
+  ChevronDown, ChevronUp, Search, X, Copy, Check,
   Users, MailCheck, MessageSquare, Radio
 } from 'lucide-react';
-import AdminNav from './AdminNav';
+import { Card, Button, Badge, Spinner, StatCard, ErrorBanner } from './ui';
 import { TEAMS } from '@/lib/teamConfig';
 
 interface OutreachContact {
@@ -58,10 +58,10 @@ const STATUS_COLORS: Record<string, string> = {
 const TEMPLATES = {
   cold: {
     name: 'Cold Outreach',
-    subject: 'Free tool for {{team_name}} coverage — NHL Tracker',
+    subject: "Free tool for {{team_name}} coverage — Lindy's Five",
     body: `Hi {{contact_name}},
 
-I'm a developer and hockey fan who built NHL Tracker — a free, real-time dashboard for every NHL team. I wanted to share it because I think it could be useful for your {{team_name}} coverage at {{outlet_name}}.
+I'm a developer and hockey fan who built Lindy's Five — a free, real-time dashboard for every NHL team. I wanted to share it because I think it could be useful for your {{team_name}} coverage at {{outlet_name}}.
 
 Here's the {{team_name}} page: {{team_url}}
 
@@ -77,11 +77,11 @@ It's completely free, no ads, and works great on mobile. Would love to hear what
 
 Best,
 Josh Rabenold
-NHL Tracker — {{team_url}}`,
+Lindy's Five — {{team_url}}`,
   },
   followup: {
     name: 'Follow-Up',
-    subject: 'Re: Free tool for {{team_name}} coverage — NHL Tracker',
+    subject: "Re: Free tool for {{team_name}} coverage — Lindy's Five",
     body: `Hi {{contact_name}},
 
 Just wanted to bump this in case it got buried — I built a free real-time dashboard for every NHL team and thought it might be useful for your {{team_name}} coverage.
@@ -103,7 +103,7 @@ Josh Rabenold`,
     subject: '{{team_name}} data tool — available for on-air use or guest spot',
     body: `Hi {{contact_name}},
 
-I'm a developer who built NHL Tracker, a free real-time dashboard for every NHL team. I've been listening to {{outlet_name}} and thought this could be a useful resource for your show.
+I'm a developer who built Lindy's Five, a free real-time dashboard for every NHL team. I've been listening to {{outlet_name}} and thought this could be a useful resource for your show.
 
 Here's the {{team_name}} page: {{team_url}}
 
@@ -118,11 +118,11 @@ The site is free, no login required, and works on any device. Would love to chat
 
 Best,
 Josh Rabenold
-NHL Tracker — {{team_url}}`,
+Lindy's Five — {{team_url}}`,
   },
 };
 
-const SITE_URL = 'https://nhltracker.com';
+const SITE_URL = 'https://www.lindysfive.com';
 
 function getTeamName(slug: string): string {
   const team = TEAMS[slug];
@@ -130,7 +130,7 @@ function getTeamName(slug: string): string {
 }
 
 function getTeamUrl(slug: string): string {
-  return `${SITE_URL}/${slug}`;
+  return `${SITE_URL}/nhl/${slug}`;
 }
 
 function fillTemplate(template: string, contact: OutreachContact): string {
@@ -261,14 +261,6 @@ export default function OutreachDashboard() {
   async function handleImportFromFile() {
     setImporting(true);
     try {
-      // Fetch the local JSON file
-      const fileRes = await fetch('/api/outreach/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ contacts: [] }), // placeholder
-      });
-      // Actually, let's load from the data file
       const dataRes = await fetch('/data/outreach-contacts.json');
       if (!dataRes.ok) throw new Error('Could not load contacts file');
       const jsonContacts = await dataRes.json();
@@ -317,17 +309,9 @@ export default function OutreachDashboard() {
     setTimeout(() => setCopiedId(null), 2000);
   }
 
-  // Teams that have contacts
-  const teamsWithContacts = useMemo(() => {
-    const teams = new Set(contacts.map(c => c.team));
-    return Object.keys(TEAMS).filter(k => teams.has(k)).sort();
-  }, [contacts]);
-
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
-      <AdminNav activeTab="outreach" />
-
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6">
+    <>
+      <main className="max-w-7xl mx-auto px-4 py-8 text-white">
         {/* Stats Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
           <StatCard icon={<Users className="w-4 h-4" />} label="Total" value={stats.total} />
@@ -340,26 +324,24 @@ export default function OutreachDashboard() {
 
         {/* Actions Bar */}
         <div className="flex flex-wrap gap-2 mb-4">
-          <button
+          <Button
+            variant="primary"
+            size="sm"
             onClick={() => { setEditingContact(null); setShowAddForm(true); }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded text-sm font-medium transition-colors"
-            style={{ background: '#FCB514', color: '#000' }}
           >
             <Plus className="w-4 h-4" /> Add Contact
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleImportFromFile}
             disabled={importing}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm font-medium transition-colors disabled:opacity-50"
           >
             <Upload className="w-4 h-4" /> {importing ? 'Importing...' : 'Import from JSON'}
-          </button>
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm font-medium transition-colors"
-          >
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleExportCSV}>
             <Download className="w-4 h-4" /> Export CSV
-          </button>
+          </Button>
         </div>
 
         {/* Filters */}
@@ -371,7 +353,7 @@ export default function OutreachDashboard() {
               placeholder="Search name, outlet, email..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="pl-8 pr-3 py-2 bg-slate-800 border border-slate-700 rounded text-sm text-white placeholder-slate-400 w-64 focus:outline-none focus:border-slate-500"
+              className="pl-8 pr-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white placeholder-slate-400 w-64 focus:outline-none focus:border-slate-400"
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery('')} className="absolute right-2 top-2.5">
@@ -382,7 +364,7 @@ export default function OutreachDashboard() {
           <select
             value={filterTeam}
             onChange={e => setFilterTeam(e.target.value)}
-            className="px-3 py-2 bg-slate-800 border border-slate-700 rounded text-sm text-white focus:outline-none focus:border-slate-500"
+            className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:border-slate-400"
           >
             <option value="all">All Teams</option>
             {Object.entries(TEAMS).sort((a, b) => a[1].city.localeCompare(b[1].city)).map(([slug, team]) => (
@@ -392,7 +374,7 @@ export default function OutreachDashboard() {
           <select
             value={filterType}
             onChange={e => setFilterType(e.target.value as FilterType)}
-            className="px-3 py-2 bg-slate-800 border border-slate-700 rounded text-sm text-white focus:outline-none focus:border-slate-500"
+            className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:border-slate-400"
           >
             <option value="all">All Types</option>
             {Object.entries(TYPE_LABELS).map(([k, v]) => (
@@ -402,7 +384,7 @@ export default function OutreachDashboard() {
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value as FilterStatus)}
-            className="px-3 py-2 bg-slate-800 border border-slate-700 rounded text-sm text-white focus:outline-none focus:border-slate-500"
+            className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:border-slate-400"
           >
             <option value="all">All Statuses</option>
             {Object.entries(STATUS_LABELS).map(([k, v]) => (
@@ -423,16 +405,18 @@ export default function OutreachDashboard() {
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded text-red-300 text-sm">
-            {error}
-            <button onClick={() => setError(null)} className="ml-2 underline">dismiss</button>
+          <div className="mb-4">
+            <ErrorBanner>
+              {error}
+              <button onClick={() => setError(null)} className="ml-2 underline">dismiss</button>
+            </ErrorBanner>
           </div>
         )}
 
         {/* Contact List */}
         {loading ? (
           <div className="flex justify-center py-20">
-            <div className="w-8 h-8 border-2 border-slate-600 border-t-yellow-500 rounded-full animate-spin" />
+            <Spinner size="lg" />
           </div>
         ) : filteredContacts.length === 0 ? (
           <div className="text-center py-20 text-slate-400">
@@ -461,7 +445,7 @@ export default function OutreachDashboard() {
             ))}
           </div>
         )}
-      </div>
+      </main>
 
       {/* Add/Edit Modal */}
       {showAddForm && (
@@ -484,18 +468,7 @@ export default function OutreachDashboard() {
           }}
         />
       )}
-    </div>
-  );
-}
-
-function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
-  return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
-      <div className="flex items-center gap-2 text-slate-400 text-xs mb-1">
-        {icon} {label}
-      </div>
-      <div className="text-2xl font-bold">{value}</div>
-    </div>
+    </>
   );
 }
 
@@ -521,10 +494,10 @@ function ContactRow({
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
+    <Card padding={false} className="overflow-hidden">
       {/* Main row */}
       <div
-        className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 cursor-pointer hover:bg-slate-750"
+        className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 cursor-pointer hover:bg-slate-700/40"
         onClick={() => setExpanded(!expanded)}
       >
         <button className="shrink-0 text-slate-400">
@@ -538,9 +511,7 @@ function ContactRow({
           </div>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <span className="text-xs text-slate-500">{getTeamName(contact.team)}</span>
-            <span className="text-xs px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">
-              {TYPE_LABELS[contact.type] || contact.type}
-            </span>
+            <Badge variant="neutral">{TYPE_LABELS[contact.type] || contact.type}</Badge>
           </div>
         </div>
 
@@ -554,7 +525,7 @@ function ContactRow({
           value={contact.status}
           onChange={e => { e.stopPropagation(); onStatusChange(e.target.value as OutreachContact['status']); }}
           onClick={e => e.stopPropagation()}
-          className={`text-xs px-2 py-1 rounded border-0 cursor-pointer focus:outline-none ${STATUS_COLORS[contact.status]}`}
+          className={`text-xs font-semibold px-2 py-1 rounded border-0 cursor-pointer focus:outline-none ${STATUS_COLORS[contact.status]}`}
           style={{ background: 'transparent' }}
         >
           {Object.entries(STATUS_LABELS).map(([k, v]) => (
@@ -648,7 +619,7 @@ function ContactRow({
               <button
                 key={key}
                 onClick={() => onPreviewTemplate(key as keyof typeof TEMPLATES)}
-                className="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded transition-colors"
+                className="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
               >
                 {tmpl.name}
               </button>
@@ -656,7 +627,7 @@ function ContactRow({
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -690,14 +661,16 @@ function ContactFormModal({
     onSave(form);
   };
 
+  const inputClasses = 'w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:border-slate-400';
+
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 text-white" onClick={onClose}>
       <div
         className="bg-slate-800 border border-slate-700 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
-          <h2 className="text-lg font-bold">{contact ? 'Edit Contact' : 'Add Contact'}</h2>
+          <h2 className="font-display text-2xl tracking-wide">{contact ? 'Edit Contact' : 'Add Contact'}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
         </div>
         <form onSubmit={handleSubmit} className="p-4 space-y-3">
@@ -708,7 +681,7 @@ function ContactFormModal({
                 required
                 value={form.name || ''}
                 onChange={e => setForm({ ...form, name: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-sm text-white focus:outline-none focus:border-slate-400"
+                className={inputClasses}
               />
             </div>
             <div>
@@ -717,7 +690,7 @@ function ContactFormModal({
                 required
                 value={form.outlet || ''}
                 onChange={e => setForm({ ...form, outlet: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-sm text-white focus:outline-none focus:border-slate-400"
+                className={inputClasses}
               />
             </div>
           </div>
@@ -727,7 +700,7 @@ function ContactFormModal({
               <select
                 value={form.team || 'sabres'}
                 onChange={e => setForm({ ...form, team: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-sm text-white focus:outline-none focus:border-slate-400"
+                className={inputClasses}
               >
                 {Object.entries(TEAMS).sort((a, b) => a[1].city.localeCompare(b[1].city)).map(([slug, team]) => (
                   <option key={slug} value={slug}>{team.city} {team.name}</option>
@@ -739,7 +712,7 @@ function ContactFormModal({
               <select
                 value={form.type || 'blog'}
                 onChange={e => setForm({ ...form, type: e.target.value as OutreachContact['type'] })}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-sm text-white focus:outline-none focus:border-slate-400"
+                className={inputClasses}
               >
                 {Object.entries(TYPE_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
@@ -753,7 +726,7 @@ function ContactFormModal({
               type="email"
               value={form.email || ''}
               onChange={e => setForm({ ...form, email: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-sm text-white focus:outline-none focus:border-slate-400"
+              className={inputClasses}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -763,7 +736,7 @@ function ContactFormModal({
                 value={form.twitter || ''}
                 onChange={e => setForm({ ...form, twitter: e.target.value })}
                 placeholder="@handle"
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-sm text-white focus:outline-none focus:border-slate-400"
+                className={inputClasses}
               />
             </div>
             <div>
@@ -772,7 +745,7 @@ function ContactFormModal({
                 value={form.website || ''}
                 onChange={e => setForm({ ...form, website: e.target.value })}
                 placeholder="https://..."
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-sm text-white focus:outline-none focus:border-slate-400"
+                className={inputClasses}
               />
             </div>
           </div>
@@ -782,7 +755,7 @@ function ContactFormModal({
               value={form.notes || ''}
               onChange={e => setForm({ ...form, notes: e.target.value })}
               rows={2}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-sm text-white focus:outline-none focus:border-slate-400 resize-none"
+              className={`${inputClasses} resize-none`}
             />
           </div>
           {contact && (
@@ -791,7 +764,7 @@ function ContactFormModal({
               <select
                 value={form.status || 'not_contacted'}
                 onChange={e => setForm({ ...form, status: e.target.value as OutreachContact['status'] })}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded text-sm text-white focus:outline-none focus:border-slate-400"
+                className={inputClasses}
               >
                 {Object.entries(STATUS_LABELS).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
@@ -800,21 +773,12 @@ function ContactFormModal({
             </div>
           )}
           <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors"
-            >
+            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-4 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50"
-              style={{ background: '#FCB514', color: '#000' }}
-            >
+            </Button>
+            <Button type="submit" variant="primary" size="sm" disabled={saving}>
               {saving ? 'Saving...' : contact ? 'Update' : 'Add Contact'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -851,14 +815,14 @@ function TemplatePreviewModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 text-white" onClick={onClose}>
       <div
         className="bg-slate-800 border border-slate-700 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
           <div>
-            <h2 className="text-lg font-bold">{template.name}</h2>
+            <h2 className="font-display text-2xl tracking-wide">{template.name}</h2>
             <p className="text-xs text-slate-400">To: {contact.name} ({contact.outlet})</p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
@@ -868,25 +832,18 @@ function TemplatePreviewModal({
             <span className="text-xs text-slate-400">Subject:</span>
             <p className="text-sm font-medium mt-0.5">{subject}</p>
           </div>
-          <div className="bg-slate-900 border border-slate-700 rounded p-4 text-sm whitespace-pre-wrap leading-relaxed">
+          <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 text-sm whitespace-pre-wrap leading-relaxed">
             {body}
           </div>
           <div className="flex gap-2 mt-4">
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm transition-colors"
-            >
+            <Button variant="ghost" size="sm" onClick={handleCopy}>
               {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
               {copied ? 'Copied!' : 'Copy to clipboard'}
-            </button>
+            </Button>
             {contact.email && (
-              <button
-                onClick={handleMailto}
-                className="flex items-center gap-1.5 px-3 py-2 rounded text-sm font-medium transition-colors"
-                style={{ background: '#FCB514', color: '#000' }}
-              >
+              <Button variant="primary" size="sm" onClick={handleMailto}>
                 <Mail className="w-4 h-4" /> Open in Mail
-              </button>
+              </Button>
             )}
           </div>
         </div>

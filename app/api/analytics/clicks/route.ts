@@ -1,19 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
-import { jwtVerify } from 'jose';
 import { getDateKey } from '@/lib/analytics';
-
-async function verifyAdmin(request: NextRequest): Promise<boolean> {
-  const token = request.cookies.get('admin_token')?.value;
-  if (!token) return false;
-  try {
-    const secret = new TextEncoder().encode(process.env.ADMIN_SESSION_SECRET);
-    await jwtVerify(token, secret);
-    return true;
-  } catch {
-    return false;
-  }
-}
+import { verifyAdmin } from '@/lib/adminAuth';
 
 export async function GET(request: NextRequest) {
   if (!(await verifyAdmin(request))) {
