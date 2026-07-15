@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
           awayScore: parseInt(searchParams.get('awayScore') || '2'),
           gameDate: searchParams.get('gameDate') || new Date().toISOString().split('T')[0],
           periodType: searchParams.get('periodType') || undefined,
+          label: searchParams.get('label') || undefined,
         };
         break;
       case 'set-recap':
@@ -61,6 +62,15 @@ export async function GET(request: NextRequest) {
           weekRecord: searchParams.get('weekRecord') || '2-1-0',
           weekStart: searchParams.get('weekStart') || '2026-03-17',
           weekEnd: searchParams.get('weekEnd') || '2026-03-23',
+        };
+        break;
+      case 'series-recap':
+        params = {
+          type: 'series-recap',
+          winnerAbbrev: searchParams.get('winnerAbbrev') || 'BUF',
+          loserAbbrev: searchParams.get('loserAbbrev') || 'TOR',
+          seriesResult: searchParams.get('seriesResult') || '4-2',
+          roundLabel: searchParams.get('roundLabel') || 'First Round',
         };
         break;
       case 'sport-hub': {

@@ -3,6 +3,7 @@ import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '@/lib/blogSettings';
 import { tweetPublishedPost } from '@/lib/utils/postToX';
+import { generateAndUploadOgImage } from '@/lib/utils/ogImage';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 
 const ESPN_API_BASE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
@@ -97,7 +98,8 @@ async function createPost(postData: any) {
     team: 'bills', type: 'weekly-roundup', status: postData.status,
     createdAt: now, publishedAt: postData.status === 'published' ? now : null, updatedAt: now,
     weekStartDate: postData.weekStartDate, weekEndDate: postData.weekEndDate,
-    aiGenerated: true, aiModel: 'claude-sonnet-4-20250514', metaDescription: postData.metaDescription
+    aiGenerated: true, aiModel: 'claude-sonnet-4-20250514', metaDescription: postData.metaDescription,
+    ...(postData.ogImage && { ogImage: postData.ogImage })
   };
 
   await kv.set(`blog:post:${id}`, post);
@@ -155,9 +157,22 @@ export async function GET(request: NextRequest) {
 
     const autoPublish = await getAutoPublishSetting('bills-weekly');
 
+    // Generate OG image (Bills headline card)
+    let ogImage: string | undefined;
+    try {
+      ogImage = await generateAndUploadOgImage({
+        type: 'news-analysis',
+        teamAbbrev: 'BILLS',
+        headline: title,
+      }, `bills-weekly-${weekStartStr}`);
+    } catch (imgError) {
+      console.error(`Failed to generate OG image for Bills weekly roundup ${weekStartStr}:`, imgError);
+    }
+
     const post = await createPost({
       title, content, status: autoPublish ? 'published' : 'draft',
-      weekStartDate: weekStart.toISOString(), weekEndDate: weekEnd.toISOString(), metaDescription
+      weekStartDate: weekStart.toISOString(), weekEndDate: weekEnd.toISOString(), metaDescription,
+      ogImage
     });
 
     await kv.set('blog:bills-weekly:last', weekStartStr);

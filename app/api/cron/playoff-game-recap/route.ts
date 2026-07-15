@@ -6,6 +6,7 @@ import { tweetPublishedPost } from '@/lib/utils/postToX';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { quickFactCheck } from '@/lib/factCheck';
 import { sendGameRecapNewsletter } from '@/lib/email';
+import { generateAndUploadOgImage } from '@/lib/utils/ogImage';
 import { TEAMS } from '@/lib/teamConfig';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
@@ -192,6 +193,7 @@ async function createPost(postData: any) {
     createdAt: now, publishedAt: postData.status === 'published' ? now : null, updatedAt: now,
     gameId: postData.gameId, opponent: postData.opponent, gameDate: postData.gameDate,
     aiGenerated: true, aiModel: postData.aiModel, metaDescription: postData.metaDescription,
+    ...(postData.ogImage && { ogImage: postData.ogImage }),
     ...(postData.factCheck && { factCheck: postData.factCheck }),
   };
 
@@ -305,11 +307,30 @@ export async function GET(request: NextRequest) {
             const awaySlug = abbrevToSlug[awayAbbrev] || '';
             const teamSlug = homeSlug || awaySlug || 'sabres';
 
+            // Generate OG image (playoff-labeled game recap card)
+            let ogImage: string | undefined;
+            try {
+              const imageSlug = `playoff-recap-${awayAbbrev.toLowerCase()}-vs-${homeAbbrev.toLowerCase()}-${game.gameDate}`;
+              ogImage = await generateAndUploadOgImage({
+                type: 'game-recap',
+                homeAbbrev,
+                awayAbbrev,
+                homeScore,
+                awayScore,
+                gameDate: game.gameDate,
+                periodType: periodType !== 'REG' ? periodType : undefined,
+                label: `${seriesInfo.roundLabel.toUpperCase()} — GAME RECAP`,
+              }, imageSlug);
+            } catch (imgError) {
+              console.error(`Failed to generate OG image for playoff game ${gameId}:`, imgError);
+            }
+
             const post = await createPost({
               title, content, team: teamSlug, type: 'playoff-game-recap',
               status: shouldPublish ? 'published' : 'draft',
               gameId: game.id, opponent: homeAbbrev === teamSlug ? awayAbbrev : homeAbbrev,
               gameDate: game.gameDate, metaDescription, aiModel: 'claude-sonnet-4-20250514',
+              ogImage,
               factCheck: { passed: factCheck.passed, issues: factCheck.issues, checkedAt: new Date().toISOString() },
             });
 

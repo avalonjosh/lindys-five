@@ -6,6 +6,7 @@ import { tweetPublishedPost } from '@/lib/utils/postToX';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { quickFactCheck } from '@/lib/factCheck';
 import { sendGameRecapNewsletter } from '@/lib/email';
+import { generateAndUploadOgImage } from '@/lib/utils/ogImage';
 import { TEAMS } from '@/lib/teamConfig';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
@@ -57,6 +58,7 @@ async function createPost(postData: any) {
     team: postData.team, type: postData.type, status: postData.status,
     createdAt: now, publishedAt: postData.status === 'published' ? now : null, updatedAt: now,
     aiGenerated: true, aiModel: postData.aiModel, metaDescription: postData.metaDescription,
+    ...(postData.ogImage && { ogImage: postData.ogImage }),
     ...(postData.factCheck && { factCheck: postData.factCheck }),
   };
 
@@ -172,11 +174,27 @@ ${gameResults.join('\n')}
 
           const teamSlug = abbrevToSlug[winnerAbbrev] || abbrevToSlug[loserAbbrev] || 'sabres';
 
+          // Generate OG image (series result card)
+          let ogImage: string | undefined;
+          try {
+            const imageSlug = `series-recap-${winnerAbbrev.toLowerCase()}-over-${loserAbbrev.toLowerCase()}-r${round.roundNumber}`;
+            ogImage = await generateAndUploadOgImage({
+              type: 'series-recap',
+              winnerAbbrev,
+              loserAbbrev,
+              seriesResult: finalScore,
+              roundLabel,
+            }, imageSlug);
+          } catch (imgError) {
+            console.error(`Failed to generate OG image for series ${seriesKey}:`, imgError);
+          }
+
           const post = await createPost({
             title, content, team: teamSlug, type: 'series-recap',
             status: shouldPublish ? 'published' : 'draft',
             gameDate: new Date().toISOString().split('T')[0], metaDescription,
             aiModel: 'claude-sonnet-4-20250514',
+            ogImage,
             factCheck: { passed: factCheck.passed, issues: factCheck.issues, checkedAt: new Date().toISOString() },
           });
 

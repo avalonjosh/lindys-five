@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Eye, EyeOff, Send, Sparkles, ImagePlus, X, Upload, Calendar, Images, ShieldCheck, AlertTriangle, CheckCircle2, HelpCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, Eye, EyeOff, Send, Sparkles, ImagePlus, X, Upload, Calendar, Images, ShieldCheck, AlertTriangle, CheckCircle2, HelpCircle, AlertCircle, RefreshCw, Image as ImageIcon } from 'lucide-react';
 import { fetchPost, createPost, updatePost, generateArticle, uploadImage, fetchImages, factCheckArticle, type FactCheckResponse, type FactCheckFinding } from '@/lib/services/blogApi';
 import { fetchSabresSchedule } from '@/lib/services/nhlApi';
 import { calculateChunks } from '@/lib/utils/chunkCalculator';
@@ -138,6 +138,8 @@ export default function PostEditor() {
   const [customizeResearch, setCustomizeResearch] = useState(false);
   const [customDomains, setCustomDomains] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [generatingCard, setGeneratingCard] = useState(false);
+  const [cardError, setCardError] = useState<string | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
 
   // Game recap state
@@ -327,6 +329,29 @@ export default function PostEditor() {
   async function handlePublish() {
     setFormData({ ...formData, status: 'published' });
     // Submit will be triggered by form
+  }
+
+  async function handleGenerateCard() {
+    if (!formData.title.trim()) return;
+    setGeneratingCard(true);
+    setCardError(null);
+    try {
+      const response = await fetch('/api/blog/generate-card', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ title: formData.title, team: formData.team }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to generate card');
+      }
+      setFeaturedImage(data.url);
+    } catch (err) {
+      setCardError(err instanceof Error ? err.message : 'Failed to generate card');
+    } finally {
+      setGeneratingCard(false);
+    }
   }
 
   function notifyTweetResult(tweet?: { success: boolean; tweetId?: string; error?: string; skipped?: string }) {
@@ -1285,9 +1310,26 @@ export default function PostEditor() {
                     </button>
                   </div>
                 ) : (
-                  <p className="text-slate-400 text-sm italic">
-                    No featured image set. Upload an image below - the first upload will become the featured image.
-                  </p>
+                  <div className="space-y-3">
+                    <p className="text-slate-400 text-sm italic">
+                      No featured image set. Generate a card from the title, or upload an image below.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleGenerateCard}
+                      disabled={generatingCard || !formData.title.trim()}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={formData.title.trim() ? 'Generate a team-branded card image from the post title' : 'Enter a title first'}
+                    >
+                      {generatingCard ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <ImageIcon className="w-4 h-4" />
+                      )}
+                      Generate Card from Title
+                    </button>
+                    {cardError && <p className="text-red-400 text-sm">{cardError}</p>}
+                  </div>
                 )}
               </div>
 

@@ -3,6 +3,7 @@ import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '@/lib/blogSettings';
 import { tweetPublishedPost } from '@/lib/utils/postToX';
+import { generateAndUploadOgImage } from '@/lib/utils/ogImage';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { quickFactCheck } from '@/lib/factCheck';
 
@@ -283,6 +284,7 @@ async function createPost(postData: any) {
     aiGenerated: true,
     aiModel: 'claude-sonnet-4-20250514',
     metaDescription: postData.metaDescription,
+    ...(postData.ogImage && { ogImage: postData.ogImage }),
     ...(postData.factCheck && { factCheck: postData.factCheck })
   };
 
@@ -396,6 +398,18 @@ export async function GET(request: NextRequest) {
         const title = generateTitle(isWin, billsScore, oppScore, opponent);
         const metaDescription = `Game recap: Buffalo Bills ${isWin ? 'defeat' : 'fall to'} ${opponent} ${billsScore}-${oppScore}. Full breakdown and analysis.`;
 
+        // Generate OG image (Bills headline card)
+        let ogImage: string | undefined;
+        try {
+          ogImage = await generateAndUploadOgImage({
+            type: 'news-analysis',
+            teamAbbrev: 'BILLS',
+            headline: title,
+          }, `bills-game-recap-${game.id}`);
+        } catch (imgError) {
+          console.error(`Failed to generate OG image for Bills game ${game.id}:`, imgError);
+        }
+
         const post = await createPost({
           title,
           content,
@@ -404,6 +418,7 @@ export async function GET(request: NextRequest) {
           opponent: oppAbbrev,
           gameDate,
           metaDescription,
+          ogImage,
           factCheck: { passed: factCheck.passed, issues: factCheck.issues, checkedAt: new Date().toISOString() }
         });
 

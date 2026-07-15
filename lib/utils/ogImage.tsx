@@ -12,6 +12,22 @@ function getTeamByAbbrev(abbrev: string): TeamConfig | undefined {
   return Object.values(TEAMS).find(t => t.abbreviation === abbrev);
 }
 
+// Pseudo-abbrev for the Bills (NFL, not in the NHL TEAMS config).
+// Pass teamAbbrev: 'BILLS' to the news/weekly templates for Bills content.
+const BILLS_OG_TEAM = {
+  city: 'Buffalo',
+  name: 'Bills',
+  logo: 'https://a.espncdn.com/i/teamlogos/nfl/500/buf.png',
+  colors: { primary: '#00338D', secondary: '#00338D', accent: '#C60C30' },
+};
+
+function getOgTeam(abbrev: string): { city: string; name: string; logo: string; colors: { primary: string; secondary: string; accent: string } } | undefined {
+  if (abbrev === 'BILLS') return BILLS_OG_TEAM;
+  const team = getTeamByAbbrev(abbrev);
+  if (!team) return undefined;
+  return { city: team.city, name: team.name, logo: team.logo, colors: team.colors };
+}
+
 function gameRecapTemplate({
   homeAbbrev,
   awayAbbrev,
@@ -19,6 +35,7 @@ function gameRecapTemplate({
   awayScore,
   gameDate,
   periodType,
+  label,
 }: {
   homeAbbrev: string;
   awayAbbrev: string;
@@ -26,6 +43,7 @@ function gameRecapTemplate({
   awayScore: number;
   gameDate: string;
   periodType?: string;
+  label?: string;
 }) {
   const homeTeam = getTeamByAbbrev(homeAbbrev);
   const awayTeam = getTeamByAbbrev(awayAbbrev);
@@ -80,7 +98,7 @@ function gameRecapTemplate({
           marginBottom: 24,
         }}
       >
-        GAME RECAP
+        {label || 'GAME RECAP'}
       </div>
 
       {/* Main matchup row */}
@@ -329,7 +347,7 @@ function newsTemplate({
   teamAbbrev: string;
   headline: string;
 }) {
-  const team = getTeamByAbbrev(teamAbbrev);
+  const team = getOgTeam(teamAbbrev);
   const primary = team?.colors.primary || '#333';
 
   return (
@@ -362,9 +380,9 @@ function newsTemplate({
       {/* Team logo */}
       <img
         src={team?.logo || `https://assets.nhle.com/logos/nhl/svg/${teamAbbrev}_light.svg`}
-        width={100}
-        height={100}
-        style={{ objectFit: 'contain', opacity: 0.3 }}
+        width={110}
+        height={110}
+        style={{ objectFit: 'contain', opacity: 0.9 }}
       />
 
       {/* Headline */}
@@ -410,7 +428,7 @@ function weeklyRoundupTemplate({
   weekStart: string;
   weekEnd: string;
 }) {
-  const team = getTeamByAbbrev(teamAbbrev);
+  const team = getOgTeam(teamAbbrev);
   const primary = team?.colors.primary || '#333';
 
   const formatDate = (d: string) =>
@@ -489,6 +507,142 @@ function weeklyRoundupTemplate({
         }}
       >
         {formatDate(weekStart)} – {formatDate(weekEnd)}
+      </div>
+
+      {/* Bottom branding */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 20,
+          display: 'flex',
+          fontSize: 16,
+          color: '#444',
+        }}
+      >
+        lindysfive.com
+      </div>
+    </div>
+  );
+}
+
+function seriesRecapTemplate({
+  winnerAbbrev,
+  loserAbbrev,
+  seriesResult,
+  roundLabel,
+}: {
+  winnerAbbrev: string;
+  loserAbbrev: string;
+  seriesResult: string;
+  roundLabel: string;
+}) {
+  const winner = getTeamByAbbrev(winnerAbbrev);
+  const loser = getTeamByAbbrev(loserAbbrev);
+  const winnerPrimary = winner?.colors.primary || '#333';
+  const loserPrimary = loser?.colors.primary || '#333';
+
+  return (
+    <div
+      style={{
+        width: OG_WIDTH,
+        height: OG_HEIGHT,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%)',
+        position: 'relative',
+      }}
+    >
+      {/* Top accent bar */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 6,
+          display: 'flex',
+        }}
+      >
+        <div style={{ flex: 1, background: winnerPrimary, display: 'flex' }} />
+        <div style={{ flex: 1, background: loserPrimary, display: 'flex' }} />
+      </div>
+
+      {/* Round label */}
+      <div
+        style={{
+          display: 'flex',
+          fontSize: 18,
+          fontWeight: 700,
+          color: '#888',
+          letterSpacing: 6,
+          textTransform: 'uppercase',
+          marginBottom: 24,
+        }}
+      >
+        {roundLabel} — SERIES RECAP
+      </div>
+
+      {/* Matchup row */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 48,
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <img
+            src={winner?.logo || `https://assets.nhle.com/logos/nhl/svg/${winnerAbbrev}_light.svg`}
+            width={150}
+            height={150}
+            style={{ objectFit: 'contain' }}
+          />
+          <div style={{ display: 'flex', fontSize: 24, fontWeight: 700, color: '#fff' }}>
+            {winner?.name || winnerAbbrev}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', fontSize: 88, fontWeight: 800, color: '#fff', lineHeight: 1 }}>
+            {seriesResult}
+          </div>
+          <div style={{ display: 'flex', fontSize: 20, color: '#888', letterSpacing: 2 }}>
+            SERIES
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <img
+            src={loser?.logo || `https://assets.nhle.com/logos/nhl/svg/${loserAbbrev}_light.svg`}
+            width={150}
+            height={150}
+            style={{ objectFit: 'contain', opacity: 0.5 }}
+          />
+          <div style={{ display: 'flex', fontSize: 24, fontWeight: 600, color: '#999' }}>
+            {loser?.name || loserAbbrev}
+          </div>
+        </div>
+      </div>
+
+      {/* Winner banner */}
+      <div
+        style={{
+          display: 'flex',
+          marginTop: 32,
+          padding: '8px 24px',
+          borderRadius: 8,
+          background: `${winnerPrimary}44`,
+          border: `2px solid ${winnerPrimary}`,
+          fontSize: 20,
+          fontWeight: 700,
+          color: '#fff',
+          letterSpacing: 2,
+        }}
+      >
+        {(winner?.name || winnerAbbrev).toUpperCase()} WIN THE SERIES
       </div>
 
       {/* Bottom branding */}
@@ -760,7 +914,7 @@ function psTeamTemplate(team: SharedTeam) {
   );
 }
 
-export type OgImageType = 'game-recap' | 'set-recap' | 'news-analysis' | 'weekly-roundup' | 'sport-hub' | 'ps-team';
+export type OgImageType = 'game-recap' | 'set-recap' | 'news-analysis' | 'weekly-roundup' | 'series-recap' | 'sport-hub' | 'ps-team';
 
 export interface GameRecapImageParams {
   type: 'game-recap';
@@ -770,6 +924,15 @@ export interface GameRecapImageParams {
   awayScore: number;
   gameDate: string;
   periodType?: string;
+  label?: string;
+}
+
+export interface SeriesRecapImageParams {
+  type: 'series-recap';
+  winnerAbbrev: string;
+  loserAbbrev: string;
+  seriesResult: string;
+  roundLabel: string;
 }
 
 export interface SetRecapImageParams {
@@ -808,7 +971,7 @@ export interface PsTeamImageParams {
   team: SharedTeam;
 }
 
-export type OgImageParams = GameRecapImageParams | SetRecapImageParams | NewsImageParams | WeeklyRoundupImageParams | SportHubImageParams | PsTeamImageParams;
+export type OgImageParams = GameRecapImageParams | SetRecapImageParams | NewsImageParams | WeeklyRoundupImageParams | SeriesRecapImageParams | SportHubImageParams | PsTeamImageParams;
 
 export function generateOgImageResponse(params: OgImageParams): ImageResponse {
   let element: React.JSX.Element;
@@ -825,6 +988,9 @@ export function generateOgImageResponse(params: OgImageParams): ImageResponse {
       break;
     case 'weekly-roundup':
       element = weeklyRoundupTemplate(params);
+      break;
+    case 'series-recap':
+      element = seriesRecapTemplate(params);
       break;
     case 'sport-hub':
       element = sportHubTemplate(params);
