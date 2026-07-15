@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '@/lib/blogSettings';
+import { tweetPublishedPost } from '@/lib/utils/postToX';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { quickFactCheck } from '@/lib/factCheck';
 
@@ -414,6 +415,14 @@ export async function GET(request: NextRequest) {
           factCheckPassed: factCheck.passed,
           factCheckIssues: factCheck.issues
         });
+
+        if (post.status === 'published') {
+          try {
+            await tweetPublishedPost(post);
+          } catch (tweetError) {
+            console.error(`Failed to tweet Bills game recap ${post.id}:`, tweetError);
+          }
+        }
 
         results.push({
           gameId: game.id,

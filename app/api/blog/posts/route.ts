@@ -3,6 +3,7 @@ import { kv } from '@vercel/kv';
 import { jwtVerify } from 'jose';
 import { truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { TEAMS } from '@/lib/teamConfig';
+import { tweetPublishedPost, type TweetPublishResult } from '@/lib/utils/postToX';
 
 // Helper to verify admin authentication
 async function verifyAdmin(request: NextRequest): Promise<boolean> {
@@ -261,7 +262,13 @@ export async function POST(request: NextRequest) {
     // Create slug -> id mapping for lookups
     await kv.set(`blog:slug:${slug}`, id);
 
-    return NextResponse.json({ success: true, post }, { status: 201 });
+    // Auto-post to X when created directly as published
+    let tweet: TweetPublishResult | undefined;
+    if (status === 'published') {
+      tweet = await tweetPublishedPost(post);
+    }
+
+    return NextResponse.json({ success: true, post, ...(tweet && { tweet }) }, { status: 201 });
   } catch (error) {
     console.error('Error creating post:', error);
     return NextResponse.json({ error: 'Failed to create post' }, { status: 500 });

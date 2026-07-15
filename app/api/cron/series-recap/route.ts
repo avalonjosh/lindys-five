@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '@/lib/blogSettings';
+import { tweetPublishedPost } from '@/lib/utils/postToX';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { quickFactCheck } from '@/lib/factCheck';
 import { sendGameRecapNewsletter } from '@/lib/email';
@@ -191,6 +192,12 @@ ${gameResults.join('\n')}
               await sendGameRecapNewsletter(post);
             } catch (emailError) {
               console.error(`Failed to send series recap newsletter for ${seriesKey}:`, emailError);
+            }
+
+            try {
+              await tweetPublishedPost(post);
+            } catch (tweetError) {
+              console.error(`Failed to tweet series recap for ${seriesKey}:`, tweetError);
             }
           }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { jwtVerify } from 'jose';
+import { tweetPublishedPost, type TweetPublishResult } from '@/lib/utils/postToX';
 
 // Helper to verify admin authentication
 async function verifyAdmin(request: NextRequest): Promise<boolean> {
@@ -194,7 +195,13 @@ export async function PUT(
       await kv.zadd(`blog:posts:type:${existingPost.type}`, { score: newScore, member: postId });
     }
 
-    return NextResponse.json({ success: true, post: updatedPost });
+    // Auto-post to X when a post transitions to published (approval flow)
+    let tweet: TweetPublishResult | undefined;
+    if (existingPost.status !== 'published' && updatedPost.status === 'published') {
+      tweet = await tweetPublishedPost(updatedPost);
+    }
+
+    return NextResponse.json({ success: true, post: updatedPost, ...(tweet && { tweet }) });
   } catch (error) {
     console.error('Error updating post:', error);
     return NextResponse.json({ error: 'Failed to update post' }, { status: 500 });

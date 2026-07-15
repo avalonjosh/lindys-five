@@ -50,7 +50,7 @@ export async function fetchPost(slug: string): Promise<PostResponse> {
   return response.json();
 }
 
-export async function createPost(post: Partial<BlogPost>): Promise<{ success: boolean; post: BlogPost }> {
+export async function createPost(post: Partial<BlogPost>): Promise<{ success: boolean; post: BlogPost; tweet?: { success: boolean; tweetId?: string; error?: string; skipped?: string } }> {
   const response = await fetch(`${API_BASE}/posts`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -65,7 +65,7 @@ export async function createPost(post: Partial<BlogPost>): Promise<{ success: bo
   return response.json();
 }
 
-export async function updatePost(slug: string, updates: Partial<BlogPost>): Promise<{ success: boolean; post: BlogPost }> {
+export async function updatePost(slug: string, updates: Partial<BlogPost>): Promise<{ success: boolean; post: BlogPost; tweet?: { success: boolean; tweetId?: string; error?: string; skipped?: string } }> {
   const response = await fetch(`${API_BASE}/posts/${slug}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

@@ -300,9 +300,10 @@ export default function PostEditor() {
           publishedAt: publishedAtISO,
           pinned: formData.pinned,
         });
+        notifyTweetResult(result.tweet);
         router.push(`/admin/posts/${result.post.slug}`);
       } else if (existingPost) {
-        await updatePost(existingPost.slug, {
+        const result = await updatePost(existingPost.slug, {
           title: formData.title,
           content: formData.content,
           status: formData.status,
@@ -313,6 +314,7 @@ export default function PostEditor() {
           publishedAt: publishedAtISO,
           pinned: formData.pinned,
         });
+        notifyTweetResult(result.tweet);
       }
       router.push('/admin/posts');
     } catch (err) {
@@ -325,6 +327,15 @@ export default function PostEditor() {
   async function handlePublish() {
     setFormData({ ...formData, status: 'published' });
     // Submit will be triggered by form
+  }
+
+  function notifyTweetResult(tweet?: { success: boolean; tweetId?: string; error?: string; skipped?: string }) {
+    if (!tweet || tweet.skipped) return;
+    if (tweet.success) {
+      alert('Post published and shared to X.');
+    } else {
+      alert(`Post published, but sharing to X failed: ${tweet.error || 'unknown error'}\n\nYou can share it manually from the posts list.`);
+    }
   }
 
   const updateField = <K extends keyof PostFormData>(

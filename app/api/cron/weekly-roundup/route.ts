@@ -4,7 +4,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '@/lib/blogSettings';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { generateAndUploadOgImage } from '@/lib/utils/ogImage';
-import { generateAndPostTweet } from '@/lib/utils/postToX';
+import { tweetPublishedPost } from '@/lib/utils/postToX';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
@@ -344,7 +344,7 @@ export async function GET(request: NextRequest) {
     // Post to X if published
     if (post.status === 'published') {
       try {
-        const tweetResult = await generateAndPostTweet(post);
+        const tweetResult = await tweetPublishedPost(post);
         if (tweetResult.success) {
           console.log(`Tweet posted for weekly roundup: ${tweetResult.tweetId}`);
         } else {

@@ -12,6 +12,9 @@ export default function ShareToXModal({ post, onClose }: ShareToXModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [tweetText, setTweetText] = useState('');
   const [copied, setCopied] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [postedTweetId, setPostedTweetId] = useState<string | null>(null);
+  const [postError, setPostError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Character count (X allows 280 characters)
@@ -60,10 +63,31 @@ export default function ShareToXModal({ post, onClose }: ShareToXModalProps) {
     }
   }
 
-  function handleShare() {
-    // URL encode the tweet text
+  async function handlePostToX() {
+    setPosting(true);
+    setPostError(null);
+    try {
+      const response = await fetch('/api/blog/post-to-x', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ slug: post.slug, fullTweet: tweetText }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to post to X');
+      }
+      setPostedTweetId(data.tweetId || 'posted');
+    } catch (err) {
+      setPostError(err instanceof Error ? err.message : 'Failed to post to X');
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  function handleOpenComposer() {
+    // Fallback: open X's compose window with the text pre-filled
     const encoded = encodeURIComponent(tweetText);
-    // Open X compose window
     const xUrl = `https://twitter.com/intent/tweet?text=${encoded}`;
     window.open(xUrl, '_blank', 'width=550,height=420');
   }
@@ -181,6 +205,31 @@ export default function ShareToXModal({ post, onClose }: ShareToXModalProps) {
               <p className="text-red-400/70 text-xs mt-1">A fallback tweet has been generated.</p>
             </div>
           )}
+
+          {/* Post result */}
+          {postedTweetId && (
+            <div className="mt-3 p-3 bg-green-900/30 border border-green-500/50 rounded-lg">
+              <p className="text-green-400 text-sm font-semibold">Posted to X!</p>
+              {postedTweetId !== 'posted' && (
+                <a
+                  href={`https://x.com/i/web/status/${postedTweetId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-green-400/80 text-xs underline hover:text-green-300"
+                >
+                  View tweet
+                </a>
+              )}
+            </div>
+          )}
+          {postError && (
+            <div className="mt-3 p-3 bg-red-900/30 border border-red-500/50 rounded-lg">
+              <p className="text-red-400 text-sm">{postError}</p>
+              <p className="text-red-400/70 text-xs mt-1">
+                You can still use &quot;Open composer&quot; to post manually.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -189,15 +238,30 @@ export default function ShareToXModal({ post, onClose }: ShareToXModalProps) {
             onClick={onClose}
             className="px-4 py-2 text-slate-400 hover:text-white font-medium transition-colors"
           >
-            Cancel
+            {postedTweetId ? 'Done' : 'Cancel'}
           </button>
           <button
-            onClick={handleShare}
+            onClick={handleOpenComposer}
             disabled={loading || isOverLimit}
+            className="flex items-center gap-2 px-4 py-2 border border-slate-500 text-slate-300 hover:text-white hover:border-slate-400 font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Open X's compose window to post manually"
+          >
+            <span>Open composer</span>
+            <ExternalLink className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handlePostToX}
+            disabled={loading || posting || isOverLimit || !!postedTweetId}
             className="flex items-center gap-2 px-5 py-2 bg-black hover:bg-zinc-900 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span>Post to X</span>
-            <ExternalLink className="w-4 h-4" />
+            {posting ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span>Posting...</span>
+              </>
+            ) : (
+              <span>{postedTweetId ? 'Posted' : 'Post to X'}</span>
+            )}
           </button>
         </div>
       </div>

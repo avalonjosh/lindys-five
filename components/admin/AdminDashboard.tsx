@@ -1002,6 +1002,14 @@ export default function AdminDashboard() {
                               Fact-check blocked
                             </span>
                           )}
+                          {post.status === 'published' && post.xPost?.error && !post.xPost?.tweetId && (
+                            <span
+                              className="px-1.5 py-0.5 bg-orange-600/30 text-orange-400 text-[10px] rounded font-semibold"
+                              title={post.xPost.error}
+                            >
+                              X failed
+                            </span>
+                          )}
                           {post.pinned && (
                             <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-[10px] rounded font-semibold">
                               Pinned
@@ -1207,6 +1215,14 @@ export default function AdminDashboard() {
                               title={post.factCheck.issues.join('; ')}
                             >
                               Fact-check blocked
+                            </span>
+                          )}
+                          {post.status === 'published' && post.xPost?.error && !post.xPost?.tweetId && (
+                            <span
+                              className="px-2 py-1 bg-orange-600/30 text-orange-400 text-xs rounded font-semibold whitespace-nowrap"
+                              title={post.xPost.error}
+                            >
+                              X failed
                             </span>
                           )}
                         </div>

@@ -187,6 +187,14 @@ export interface BlogPost {
     checkedAt: string;
   };
 
+  // X/Twitter auto-post outcome (set on publish)
+  xPost?: {
+    tweetId?: string;
+    tweetedAt?: string;
+    error?: string;
+    lastAttemptAt?: string;
+  };
+
   // SEO
   metaDescription?: string;
   ogImage?: string;

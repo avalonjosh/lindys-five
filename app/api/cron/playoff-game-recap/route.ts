@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '@/lib/blogSettings';
+import { tweetPublishedPost } from '@/lib/utils/postToX';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { quickFactCheck } from '@/lib/factCheck';
 import { sendGameRecapNewsletter } from '@/lib/email';
@@ -324,6 +325,12 @@ export async function GET(request: NextRequest) {
                 await sendGameRecapNewsletter(post);
               } catch (emailError) {
                 console.error(`Failed to send playoff recap newsletter for game ${gameId}:`, emailError);
+              }
+
+              try {
+                await tweetPublishedPost(post);
+              } catch (tweetError) {
+                console.error(`Failed to tweet playoff recap for game ${gameId}:`, tweetError);
               }
             }
 

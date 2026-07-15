@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '@/lib/blogSettings';
+import { tweetPublishedPost } from '@/lib/utils/postToX';
 import { fetchJsonWithRetry, calculateJaccardSimilarity, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 
 const ESPN_API_BASE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
@@ -246,6 +247,15 @@ export async function GET(request: NextRequest) {
       });
 
       await markStoryProcessed(storyKey, post.id, keywords);
+
+      if (post.status === 'published') {
+        try {
+          await tweetPublishedPost(post);
+        } catch (tweetError) {
+          console.error(`Failed to tweet Bills news post ${post.id}:`, tweetError);
+        }
+      }
+
       results.push({ storyKey, postId: post.id, postSlug: post.slug, status: post.status, importance: story.importance });
     }
 

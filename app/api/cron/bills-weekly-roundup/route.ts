@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
 import { getAutoPublishSetting } from '@/lib/blogSettings';
+import { tweetPublishedPost } from '@/lib/utils/postToX';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 
 const ESPN_API_BASE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
@@ -160,6 +161,14 @@ export async function GET(request: NextRequest) {
     });
 
     await kv.set('blog:bills-weekly:last', weekStartStr);
+
+    if (post.status === 'published') {
+      try {
+        await tweetPublishedPost(post);
+      } catch (tweetError) {
+        console.error(`Failed to tweet Bills weekly roundup ${post.id}:`, tweetError);
+      }
+    }
 
     return NextResponse.json({ success: true, postId: post.id, postSlug: post.slug, status: post.status, weekStart: weekStartStr, newsTopicsFound: newsTopics.length });
   } catch (error: any) {
