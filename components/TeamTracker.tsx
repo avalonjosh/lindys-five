@@ -864,6 +864,10 @@ export default function TeamTracker({
       record={whatIfBarRecord}
       projectedPoints={whatIfBarStats?.projectedPoints ?? 0}
       odds={whatIfProbability}
+      totalPoints={whatIfBarStats?.totalPoints ?? 0}
+      gamesPlayed={whatIfBarStats?.gamesPlayed ?? 0}
+      totalGames={whatIfBarStats?.totalGames ?? totalGames}
+      playoffTarget={whatIfBarStats?.playoffTarget ?? 0}
       projectionReady={!isPreseason || hypotheticalResults.size > 0}
       onReset={() => setHypotheticalResults(new Map())}
       onJumpToBox={scrollToProgressBox}
