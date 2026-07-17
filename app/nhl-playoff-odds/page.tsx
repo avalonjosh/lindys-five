@@ -13,10 +13,36 @@ import GameTicker from '@/components/landing/GameTicker';
 import GamePromo from '@/components/perfectseason/GamePromo';
 import { getCurrentNHLSeason, formatSeasonLabel, formatSeasonEndYear } from '@/lib/utils/season';
 import { getPlayoffsOutcome, getFinalStandings } from '@/lib/services/nhlOffseason';
+import { resolveSeasonContext } from '@/lib/utils/seasonContext';
+import NHLPreseasonOddsView from '@/components/nhl/NHLPreseasonOddsView';
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
 
 export async function generateMetadata(): Promise<Metadata> {
+  // Between seasons (last season done, next schedule out) preview next season.
+  const context = await resolveSeasonContext('BUF');
+  if (context.isPreseason) {
+    const label = context.seasonLabel;
+    const title = `NHL Playoff Odds ${label} — Way-Too-Early Projections for All 32 Teams`;
+    const description = `Way-too-early ${label} NHL playoff odds for all 32 teams, projected from last season's results. See each team's projected points and playoff probability ahead of opening night.`;
+    const ogTitle = `NHL Playoff Odds ${label} — Way-Too-Early`;
+    const ogImage = `/api/og?type=sport-hub&sport=nhl&title=${encodeURIComponent(ogTitle)}&subtitle=${encodeURIComponent('Way-Too-Early Projections for All 32 Teams')}`;
+    return {
+      title,
+      description,
+      openGraph: {
+        title: ogTitle,
+        description,
+        type: 'website',
+        url: 'https://www.lindysfive.com/nhl-playoff-odds',
+        siteName: "Lindy's Five",
+        images: [{ url: ogImage, width: 1200, height: 630, alt: `${ogTitle} — Lindy's Five` }],
+      },
+      twitter: { card: 'summary_large_image', title: ogTitle, description, images: [ogImage] },
+      alternates: { canonical: 'https://www.lindysfive.com/nhl-playoff-odds' },
+    };
+  }
+
   const season = getCurrentNHLSeason();
   const label = formatSeasonLabel(season);
   const endYear = formatSeasonEndYear(season);
@@ -243,6 +269,19 @@ function buildCupOddsFromStandings(standings: StandingsTeam[]): CupOddsTeam[] | 
 }
 
 export default async function NHLPlayoffOddsPage() {
+  // Preseason (last season complete, next schedule released): show the
+  // league-wide way-too-early odds instead of last season's final standings.
+  const context = await resolveSeasonContext('BUF');
+  if (context.isPreseason) {
+    return (
+      <NHLPreseasonOddsView
+        season={context.season}
+        seasonLabel={context.seasonLabel}
+        totalGames={context.totalGames}
+      />
+    );
+  }
+
   const season = getCurrentNHLSeason();
   const seasonLabel = formatSeasonLabel(season);
   const endYear = formatSeasonEndYear(season);
