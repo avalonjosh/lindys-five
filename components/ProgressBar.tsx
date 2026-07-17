@@ -53,6 +53,11 @@ interface ProgressBarProps {
   celebrateOverride?: boolean;
   inPlayoffs?: boolean;
   playoffFetchLoaded?: boolean;
+  // Preseason What-If simulation mode: the season hasn't started, so there are
+  // no live standings to fetch. The box is driven purely by the user's
+  // simulated games and the fixed Lindy's Five target.
+  preseasonSim?: boolean;
+  seasonLabel?: string;
 }
 
 // Helper function to render a season section
@@ -79,6 +84,9 @@ function SeasonSection({
   playoffFetchLoaded,
   collapsed,
   onCollapseToggle,
+  preseasonSim,
+  seasonLabel,
+  projectionReady = true,
 }: {
   stats: SeasonStats;
   isGoatMode: boolean;
@@ -102,6 +110,9 @@ function SeasonSection({
   playoffFetchLoaded?: boolean;
   collapsed?: boolean;
   onCollapseToggle?: () => void;
+  preseasonSim?: boolean;
+  seasonLabel?: string;
+  projectionReady?: boolean;
 }) {
   const { totalPoints, gamesPlayed, gamesRemaining, currentPace, projectedPoints, playoffTarget } = stats;
 
@@ -157,7 +168,7 @@ function SeasonSection({
           className={`text-xl md:text-2xl font-bold ${valueColor}`}
           style={valueStyle}
         >
-          {isLastYear ? `Last Year (${lastSeasonLabel})` : inPlayoffs ? 'Regular Season Progress' : 'Season Progress'}
+          {isLastYear ? `Last Year (${lastSeasonLabel})` : preseasonSim ? `${seasonLabel ?? ''} What-If` : inPlayoffs ? 'Regular Season Progress' : 'Season Progress'}
         </h3>
 
         {/* Collapse/expand chevron (only shown when onCollapseToggle is provided, i.e. playoff mode) */}
@@ -180,7 +191,7 @@ function SeasonSection({
           <div className="hidden md:flex absolute inset-0 justify-center items-center pointer-events-none">
             <PlayoffOddsPill
               label="Playoff Probability"
-              value={cutLineLoading && stats.gamesPlayed >= 10 ? '--%' : `${probability}%`}
+              value={!projectionReady ? '—' : cutLineLoading && stats.gamesPlayed >= 10 ? '--%' : `${probability}%`}
               expanded={!!playoffExpanded}
               onToggle={onPlayoffToggle}
               color={probabilityColor || ''}
@@ -224,6 +235,17 @@ function SeasonSection({
           <p className="relative text-lg sm:text-xl md:text-2xl font-black tracking-wide" style={{ color: '#FFB91D' }}>
             The 14-Year Drought Is Over!
           </p>
+        </div>
+      )}
+
+      {/* Preseason What-If: prompt to start simulating before any games are set */}
+      {preseasonSim && !projectionReady && (
+        <div
+          className={`mb-3 px-3 py-2 rounded-lg text-center text-sm font-semibold ${
+            isGoatMode ? 'bg-zinc-800/60 text-zinc-300 border border-zinc-700' : 'bg-blue-50 text-blue-700 border border-blue-200'
+          }`}
+        >
+          Click games in the sets below to simulate your {seasonLabel ?? ''} season.
         </div>
       )}
 
@@ -352,7 +374,7 @@ function SeasonSection({
         >
           <div className={`text-xs font-semibold uppercase tracking-wide mb-1 ${labelColor}`} style={labelStyle}>Projected</div>
           <div className={`text-2xl md:text-3xl font-bold flex items-center gap-2 ${valueColor}`} style={valueStyle}>
-            {projectedPoints}
+            {projectionReady ? projectedPoints : '—'}
             {isLastYear && projectedDiff !== 0 && (
               <span className={`text-sm font-semibold ${
                 teamId === 'sabres'
@@ -449,9 +471,16 @@ function SeasonSection({
       {/* Expandable Playoff Probability Section */}
       {!isLastYear && probability !== undefined && (
         <CollapsibleOddsPanel expanded={!!playoffExpanded} isGoatMode={isGoatMode}>
+          {preseasonSim && !projectionReady ? (
+            <p className={`text-sm text-center ${isGoatMode ? 'text-zinc-400' : 'text-gray-500'}`}>
+              Simulate games above to project your cut line and playoff odds.
+            </p>
+          ) : (
+          <>
           {/* Two-column layout for targets */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* Current Projected Cut Line - PRIMARY */}
+            {/* Current Projected Cut Line — hidden in preseason sim (no live standings yet) */}
+            {!preseasonSim && (
             <div
               className={`rounded-lg p-3 border ${
                 isGoatMode ? 'border-zinc-700 bg-zinc-800/50' : 'border-gray-200 bg-gray-50'
@@ -528,10 +557,11 @@ function SeasonSection({
                 )}
               </div>
             </div>
+            )}
 
-            {/* Lindy's Five Target */}
+            {/* Lindy's Five Target — spans full width in preseason sim (no cut-line tile beside it) */}
             <div
-              className={`rounded-lg p-3 border ${
+              className={`rounded-lg p-3 border ${preseasonSim ? 'md:col-span-2 ' : ''}${
                 isGoatMode ? 'border-zinc-700 bg-zinc-800/50' : 'border-gray-200 bg-gray-50'
               }`}
             >
@@ -591,8 +621,9 @@ function SeasonSection({
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
               {(() => {
-                // Dynamic range: span both cut line and projected points
-                const cutLine = cutLineData?.effectiveCutLine ?? 96;
+                // Dynamic range: span both cut line and projected points. In
+                // preseason sim there are no standings, so anchor on the target.
+                const cutLine = preseasonSim ? playoffTarget : cutLineData?.effectiveCutLine ?? 96;
                 const gap = Math.abs(projectedPoints - cutLine);
                 let start: number;
                 if (gap <= 5) {
@@ -634,6 +665,8 @@ function SeasonSection({
               })()}
             </div>
           </div>
+          </>
+          )}
         </CollapsibleOddsPanel>
       )}
 
@@ -644,7 +677,7 @@ function SeasonSection({
   );
 }
 
-export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearOverYearLoading, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors, teamId, showShareButton, teamName, teamAbbrev, onClinchDetected, celebrateOverride, inPlayoffs, playoffFetchLoaded }: ProgressBarProps) {
+export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearOverYearLoading, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors, teamId, showShareButton, teamName, teamAbbrev, onClinchDetected, celebrateOverride, inPlayoffs, playoffFetchLoaded, preseasonSim, seasonLabel }: ProgressBarProps) {
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [playoffExpanded, setPlayoffExpanded] = useState(false);
@@ -654,9 +687,14 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
   const [cutLineLoading, setCutLineLoading] = useState(false);
   const [cutLineError, setCutLineError] = useState(false);
 
-  // Fetch cut line data on mount (when enough games played)
+  // Preseason sim projects only once the user has simulated a game; before that
+  // Projected/Odds read "—" instead of a misleading 0-game extrapolation.
+  const projectionReady = !preseasonSim || stats.gamesPlayed > 0;
+
+  // Fetch cut line data on mount (when enough games played). Skipped in
+  // preseason sim: the coming season has no live standings to read.
   useEffect(() => {
-    if (!cutLineData && !cutLineLoading && stats.gamesPlayed >= 10) {
+    if (!preseasonSim && !cutLineData && !cutLineLoading && stats.gamesPlayed >= 10) {
       fetchCutLine();
     }
   }, [stats.gamesPlayed]);
@@ -952,6 +990,9 @@ ${teamUrl}
           playoffFetchLoaded={playoffFetchLoaded}
           collapsed={inPlayoffs ? sectionCollapsed : undefined}
           onCollapseToggle={inPlayoffs ? () => setSectionCollapsed((v) => !v) : undefined}
+          preseasonSim={preseasonSim}
+          seasonLabel={seasonLabel}
+          projectionReady={projectionReady}
         />
 
         {/* Share Button - positioned relative to current season section, hidden when playoff dropdown is open or in playoff mode */}

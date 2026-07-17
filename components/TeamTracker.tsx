@@ -397,8 +397,12 @@ export default function TeamTracker({
     ) || null;
   };
 
-  // Get sets available for What If mode (current set + next 2 sets)
+  // Get sets available for What If mode. In preseason the whole schedule is
+  // pending, so every set is editable — you can simulate the full season. In
+  // season we limit editing to the current set + next 2 sets.
   const getWhatIfSets = (): GameChunk[] => {
+    if (isPreseason) return chunks;
+
     const currentSet = getCurrentSet();
     if (!currentSet) return [];
 
@@ -774,7 +778,8 @@ export default function TeamTracker({
   ) : null;
 
   // In next-season preview mode this card replaces the live ProgressBar: opener
-  // countdown, schedule facts, and last season's finish as context.
+  // countdown, schedule facts, and last season's finish as context. In What If
+  // mode it is swapped for the live ProgressBar in preseason-sim mode (below).
   const preseasonCard = isPreseason && preseason ? (
     <PreseasonCard
       preseason={preseason}
@@ -783,6 +788,24 @@ export default function TeamTracker({
       darkModeColors={darkModeColors}
       isGoatMode={!useClassicStyling}
       teamName={team.name}
+    />
+  ) : null;
+
+  // What If in preseason: the preview morphs into the real Season Progress box,
+  // driven purely by the games the user simulates (all sets are editable).
+  const preseasonSimBar = isPreseason ? (
+    <ProgressBar
+      stats={calculateSeasonStats(getChunksWithHypotheticals(), totalGames)}
+      isGoatMode={!useClassicStyling}
+      teamColors={effectiveTeamColors}
+      darkModeColors={darkModeColors}
+      teamId={team.id}
+      teamName={`${team.city} ${team.name}`}
+      teamAbbrev={team.abbreviation}
+      preseasonSim={true}
+      seasonLabel={seasonLabel}
+      playoffFetchLoaded={true}
+      showShareButton={false}
     />
   ) : null;
 
@@ -991,7 +1014,7 @@ export default function TeamTracker({
 
     <main className="max-w-7xl mx-auto px-4 py-6">
       {/* Progress Bar — in playoff mode we move this below PlayoffJourney (see that branch) */}
-      {playoffSeries.length === 0 && (seasonComplete ? summaryCard : isPreseason ? preseasonCard : (stats && (
+      {playoffSeries.length === 0 && (seasonComplete ? summaryCard : isPreseason ? (whatIfMode ? preseasonSimBar : preseasonCard) : (stats && (
         <ProgressBar
           stats={whatIfMode && hypotheticalResults.size > 0 ? calculateSeasonStats(getChunksWithHypotheticals(), totalGames) : stats}
           isGoatMode={!useClassicStyling}
@@ -1049,7 +1072,7 @@ export default function TeamTracker({
           <div className="flex items-center justify-between gap-2">
             <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 flex-1 min-w-0">
               <span className="font-semibold text-sm md:text-base">What If Mode Active</span>
-              <span className="text-xs md:text-sm opacity-80"><span className="hidden md:inline">- </span>Simulate pending games in the next 3 sets</span>
+              <span className="text-xs md:text-sm opacity-80"><span className="hidden md:inline">- </span>{isPreseason ? 'Click any game to simulate the whole season' : 'Simulate pending games in the next 3 sets'}</span>
             </div>
             <button
               onClick={() => {
@@ -1142,9 +1165,9 @@ export default function TeamTracker({
           >
             Game Sets
           </h2>
-          {!seasonComplete && !isPreseason && (
+          {!seasonComplete && (
           <div className="flex items-center gap-1.5 md:gap-3">
-            {/* What If Toggle */}
+            {/* What If Toggle — available live and in the preseason preview */}
             <div className="flex items-center gap-1.5 md:gap-2">
               <span
                 className={`text-xs md:text-sm font-semibold ${
@@ -1189,7 +1212,8 @@ export default function TeamTracker({
               </button>
             </div>
 
-            {/* Hide Completed Button */}
+            {/* Hide Completed Button — pointless in preseason (nothing completed yet) */}
+            {!isPreseason && (
             <button
               onClick={() => setHideCompleted(!hideCompleted)}
               className={`px-2 md:px-4 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-semibold transition-all whitespace-nowrap ${
@@ -1210,6 +1234,7 @@ export default function TeamTracker({
               <span className="hidden sm:inline">{hideCompleted ? 'Show All Sets' : 'Hide Completed Sets'}</span>
               <span className="sm:hidden">{hideCompleted ? 'Show All' : 'Hide Done'}</span>
             </button>
+            )}
           </div>
           )}
         </div>
@@ -1233,7 +1258,7 @@ export default function TeamTracker({
                   isGoatMode={!useClassicStyling}
                   previousChunkStats={previousChunkStats}
                   onStatsCalculated={handleStatsCalculated}
-                  whatIfMode={!seasonComplete && !isPreseason && whatIfMode && isWhatIfSet}
+                  whatIfMode={!seasonComplete && whatIfMode && isWhatIfSet}
                   onGameClick={handleGameClick}
                   hypotheticalResults={hypotheticalResults}
                   teamId={team.nhlId}
