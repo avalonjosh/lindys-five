@@ -9,9 +9,11 @@ import { calculateChunks, calculateSeasonStats, calculateChunkStats } from '@/li
 import ChunkCard from '@/components/ChunkCard';
 import ProgressBar from '@/components/ProgressBar';
 import SeasonComplete from '@/components/SeasonComplete';
+import PreseasonCard from '@/components/PreseasonCard';
 import StandingsCard from '@/components/StandingsCard';
 import type { SeasonSummary } from '@/lib/utils/seasonSummary';
-import { getCurrentNHLSeason } from '@/lib/utils/season';
+import type { PreseasonInfo } from '@/lib/utils/seasonContext';
+import { getCurrentNHLSeason, getRegularSeasonGameCount, formatSeasonLabel } from '@/lib/utils/season';
 import TeamNav from '@/components/TeamNav';
 import type { TeamConfig } from '@/lib/teamConfig';
 import { getDarkModeColors } from '@/lib/teamConfig';
@@ -30,21 +32,54 @@ interface TeamTrackerProps {
   team: TeamConfig;
   seasonComplete?: boolean;
   seasonSummary?: SeasonSummary | null;
+  season?: string;
+  isPreseason?: boolean;
+  preseason?: PreseasonInfo | null;
+  lastSeasonSummary?: SeasonSummary | null;
 }
 
-export default function TeamTracker({ team, seasonComplete = false, seasonSummary = null }: TeamTrackerProps) {
+export default function TeamTracker({
+  team,
+  seasonComplete = false,
+  seasonSummary = null,
+  season: seasonProp,
+  isPreseason = false,
+  preseason = null,
+  lastSeasonSummary = null,
+}: TeamTrackerProps) {
   const router = useRouter();
-  const season = getCurrentNHLSeason();
+  // The season to display is resolved on the server (live/complete/preseason);
+  // fall back to the date-based season if a caller doesn't pass one.
+  const season = seasonProp ?? getCurrentNHLSeason();
+  const totalGames = getRegularSeasonGameCount(season);
+  const seasonLabel = formatSeasonLabel(season);
   const darkModeColors = getDarkModeColors(team);
   const [hasClinched, setHasClinched] = useState(false);
   const [celebrateOverride, setCelebrateOverride] = useState(false);
+  // The one-time confetti burst is separate from `hasClinched` (which persists
+  // and drives the steam effect): we only fire it once per clinch per browser,
+  // and never in preseason or season-complete mode.
+  const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('celebrate') === 'true') {
       setCelebrateOverride(true);
+      setShowConfetti(true);
     }
   }, []);
+
+  // Mark a clinch: keep the persistent flag, but only launch confetti the first
+  // time this browser sees this team clinch this season.
+  const handleClinchDetected = () => {
+    setHasClinched(true);
+    if (typeof window === 'undefined') return;
+    const key = `clinch-celebrated:${team.id}:${season}`;
+    if (!localStorage.getItem(key)) {
+      localStorage.setItem(key, '1');
+      setShowConfetti(true);
+    }
+  };
   const [chunks, setChunks] = useState<GameChunk[]>([]);
   const [stats, setStats] = useState<SeasonStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,8 +113,16 @@ export default function TeamTracker({ team, seasonComplete = false, seasonSummar
     setHasMounted(true);
   }, [team.id]);
 
-  // Fetch playoff bracket and build the team's journey (series per round)
+  // Fetch playoff bracket and build the team's journey (series per round).
+  // Skipped in next-season preview mode: the only bracket in the API then is
+  // last season's, which doesn't belong on a page previewing the coming season.
   useEffect(() => {
+    if (isPreseason) {
+      // Ensure no last-season journey lingers on a next-season preview page.
+      setPlayoffSeries([]);
+      setPlayoffFetchLoaded(true);
+      return;
+    }
     let cancelled = false;
     interface BracketSeries {
       seriesLetter: string;
@@ -254,7 +297,7 @@ export default function TeamTracker({ team, seasonComplete = false, seasonSummar
     return () => {
       cancelled = true;
     };
-  }, [team.abbreviation]);
+  }, [team.abbreviation, isPreseason]);
 
   // Poll live playoff games every 15s to update period/clock/score
   const playoffSeriesRef = useRef(playoffSeries);
@@ -466,10 +509,10 @@ export default function TeamTracker({ team, seasonComplete = false, seasonSummar
 
       // Only update if we got valid data (not empty array from error)
       if (schedule && schedule.length > 0) {
-        const calculatedChunks = calculateChunks(schedule);
+        const calculatedChunks = calculateChunks(schedule, totalGames);
         setChunks(calculatedChunks);
 
-        const seasonStats = calculateSeasonStats(calculatedChunks);
+        const seasonStats = calculateSeasonStats(calculatedChunks, totalGames);
         setStats(seasonStats);
 
         // Update refresh trigger to sync with TeamNav
@@ -526,14 +569,15 @@ export default function TeamTracker({ team, seasonComplete = false, seasonSummar
 
     loadData();
 
-    // No live polling once the season is complete — the data is frozen.
-    if (seasonComplete) return;
+    // No live polling when the season is complete or hasn't started yet — the
+    // schedule is frozen (all final, or all future) so there's nothing to refresh.
+    if (seasonComplete || isPreseason) return;
 
     // Auto-refresh with dynamic interval using ref
     const interval = setInterval(loadData, pollingIntervalRef.current);
 
     return () => clearInterval(interval);
-  }, [team, seasonComplete]); // REMOVED pollingInterval from dependencies
+  }, [team, seasonComplete, isPreseason, season]); // REMOVED pollingInterval from dependencies
 
   // Separate effect to handle polling interval changes
   useEffect(() => {
@@ -641,7 +685,7 @@ export default function TeamTracker({ team, seasonComplete = false, seasonSummar
     // "complete" then, so this would fan out detailed-stats fetches for all
     // ~16 sets at once and exhaust the NHL API rate limit. ChunkCards still
     // fetch their own stats lazily when a set is expanded.
-    if (!seasonComplete && chunks.length > 0) {
+    if (!seasonComplete && !isPreseason && chunks.length > 0) {
       calculateAllCompletedStats();
     }
 
@@ -729,6 +773,19 @@ export default function TeamTracker({ team, seasonComplete = false, seasonSummar
     />
   ) : null;
 
+  // In next-season preview mode this card replaces the live ProgressBar: opener
+  // countdown, schedule facts, and last season's finish as context.
+  const preseasonCard = isPreseason && preseason ? (
+    <PreseasonCard
+      preseason={preseason}
+      lastSeasonSummary={lastSeasonSummary}
+      teamColors={effectiveTeamColors}
+      darkModeColors={darkModeColors}
+      isGoatMode={!useClassicStyling}
+      teamName={team.name}
+    />
+  ) : null;
+
   return (
     <div
       className={`min-h-screen ${
@@ -738,7 +795,7 @@ export default function TeamTracker({ team, seasonComplete = false, seasonSummar
       }`}
     >
     {/* Clinch Celebration — suppressed once the team is in the playoffs, and kept off during the playoff-fetch load to avoid a flash */}
-    {playoffFetchLoaded && playoffSeries.length === 0 && (hasClinched || celebrateOverride) && (
+    {!seasonComplete && !isPreseason && playoffFetchLoaded && playoffSeries.length === 0 && showConfetti && (
       <ClinchCelebration teamColors={effectiveTeamColors} />
     )}
 
@@ -894,7 +951,7 @@ export default function TeamTracker({ team, seasonComplete = false, seasonSummar
             className={`text-xs md:text-2xl font-semibold mb-1 px-2 leading-tight whitespace-nowrap`}
             style={isGoatMode ? { color: (team.id === 'lightning' || team.id === 'penguins') ? team.colors.primary : isVintageJetsMode ? '#041E42' : darkModeColors.accent } : { color: team.id === 'sabres' ? team.colors.accent : team.colors.secondary }}
           >
-            {team.city} {team.name} Playoff Tracker 2025-2026
+            {team.city} {team.name} Playoff Tracker {seasonLabel}
           </h1>
           <p
             className={`text-xs md:text-base opacity-90 px-2 leading-tight ${
@@ -904,7 +961,9 @@ export default function TeamTracker({ team, seasonComplete = false, seasonSummar
           >
             {seasonComplete && seasonSummary
               ? `${seasonSummary.seasonLabel} Season Complete • Final Results`
-              : '5-Game Set Analysis • Target: 6+ points per set'}
+              : isPreseason
+                ? `${seasonLabel} Season Preview • Schedule & 5-Game Sets`
+                : '5-Game Set Analysis • Target: 6+ points per set'}
           </p>
           {hasTeamHistory(team.id) && playoffSeries.length === 0 && (
             <div className="sm:hidden mt-2">
@@ -932,9 +991,9 @@ export default function TeamTracker({ team, seasonComplete = false, seasonSummar
 
     <main className="max-w-7xl mx-auto px-4 py-6">
       {/* Progress Bar — in playoff mode we move this below PlayoffJourney (see that branch) */}
-      {playoffSeries.length === 0 && (seasonComplete ? summaryCard : (stats && (
+      {playoffSeries.length === 0 && (seasonComplete ? summaryCard : isPreseason ? preseasonCard : (stats && (
         <ProgressBar
-          stats={whatIfMode && hypotheticalResults.size > 0 ? calculateSeasonStats(getChunksWithHypotheticals()) : stats}
+          stats={whatIfMode && hypotheticalResults.size > 0 ? calculateSeasonStats(getChunksWithHypotheticals(), totalGames) : stats}
           isGoatMode={!useClassicStyling}
           yearOverYearMode={yearOverYearMode}
           yearOverYearLoading={yearOverYearLoading}
@@ -955,15 +1014,15 @@ export default function TeamTracker({ team, seasonComplete = false, seasonSummar
           showShareButton={true}
           teamName={`${team.city} ${team.name}`}
           teamAbbrev={team.abbreviation}
-          onClinchDetected={() => setHasClinched(true)}
+          onClinchDetected={handleClinchDetected}
           celebrateOverride={celebrateOverride}
           inPlayoffs={playoffSeries.length > 0}
           playoffFetchLoaded={playoffFetchLoaded}
         />
       )))}
 
-      {/* Standings Card — shown above the set grid during regular season; moved below Playoff Journey during playoffs. Hidden once the season is complete (final standings live in the summary card and the live standings feed is empty in the offseason). */}
-      {!seasonComplete && playoffSeries.length === 0 && (
+      {/* Standings Card — shown above the set grid during regular season; moved below Playoff Journey during playoffs. Hidden once the season is complete (final standings live in the summary card) and in preseason (no games played yet, standings feed is empty). */}
+      {!seasonComplete && !isPreseason && playoffSeries.length === 0 && (
         <StandingsCard
           teamAbbrev={team.abbreviation}
           isGoatMode={!useClassicStyling}
@@ -1053,7 +1112,7 @@ export default function TeamTracker({ team, seasonComplete = false, seasonSummar
               showShareButton={true}
               teamName={`${team.city} ${team.name}`}
               teamAbbrev={team.abbreviation}
-              onClinchDetected={() => setHasClinched(true)}
+              onClinchDetected={handleClinchDetected}
               celebrateOverride={celebrateOverride}
               inPlayoffs={true}
               playoffFetchLoaded={playoffFetchLoaded}
@@ -1083,7 +1142,7 @@ export default function TeamTracker({ team, seasonComplete = false, seasonSummar
           >
             Game Sets
           </h2>
-          {!seasonComplete && (
+          {!seasonComplete && !isPreseason && (
           <div className="flex items-center gap-1.5 md:gap-3">
             {/* What If Toggle */}
             <div className="flex items-center gap-1.5 md:gap-2">
@@ -1174,7 +1233,7 @@ export default function TeamTracker({ team, seasonComplete = false, seasonSummar
                   isGoatMode={!useClassicStyling}
                   previousChunkStats={previousChunkStats}
                   onStatsCalculated={handleStatsCalculated}
-                  whatIfMode={!seasonComplete && whatIfMode && isWhatIfSet}
+                  whatIfMode={!seasonComplete && !isPreseason && whatIfMode && isWhatIfSet}
                   onGameClick={handleGameClick}
                   hypotheticalResults={hypotheticalResults}
                   teamId={team.nhlId}

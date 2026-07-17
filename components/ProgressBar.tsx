@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { MoreHorizontal, X as XIcon, Link as LinkIcon, Check, ChevronDown } from 'lucide-react';
 import type { SeasonStats } from '@/lib/types';
 import { getProbabilityColor, probabilityForFinalPoints, computePositionAwareProbability } from '@/lib/utils/playoffProbability';
+import { PlayoffOddsPill, CollapsibleOddsPanel } from '@/components/PlayoffOddsToggle';
 import { trackClick } from '@/lib/analytics';
 
 const TOTAL_GAMES = 82;
@@ -177,20 +178,14 @@ function SeasonSection({
         {/* Desktop: Absolutely centered Playoff Probability text link */}
         {!isLastYear && !collapsed && probability !== undefined && onPlayoffToggle && (
           <div className="hidden md:flex absolute inset-0 justify-center items-center pointer-events-none">
-            <button
-              onClick={onPlayoffToggle}
-              className="flex items-center gap-1 text-sm font-semibold transition-all focus:outline-none pointer-events-auto"
-              style={{ color: probabilityColor }}
-              title={playoffExpanded ? 'Hide playoff details' : 'Show playoff details'}
-            >
-              <span className={playoffExpanded ? 'underline decoration-2 underline-offset-2' : ''}>
-                Playoff Probability: {cutLineLoading && stats.gamesPlayed >= 10 ? '--%' : `${probability}%`}
-              </span>
-              <ChevronDown
-                size={14}
-                className={`transition-transform duration-200 ${playoffExpanded ? 'rotate-180' : ''}`}
-              />
-            </button>
+            <PlayoffOddsPill
+              label="Playoff Probability"
+              value={cutLineLoading && stats.gamesPlayed >= 10 ? '--%' : `${probability}%`}
+              expanded={!!playoffExpanded}
+              onToggle={onPlayoffToggle}
+              color={probabilityColor || ''}
+              size="sm"
+            />
           </div>
         )}
       </div>
@@ -440,35 +435,20 @@ function SeasonSection({
       {/* Mobile: Centered Playoff Probability text link at bottom */}
       {!isLastYear && probability !== undefined && onPlayoffToggle && (
         <div className="flex md:hidden justify-center mt-3">
-          <button
-            onClick={onPlayoffToggle}
-            className="flex items-center gap-1 text-xs font-semibold transition-all focus:outline-none"
-            style={{ color: probabilityColor }}
-            title={playoffExpanded ? 'Hide playoff details' : 'Show playoff details'}
-          >
-            <span className={playoffExpanded ? 'underline decoration-2 underline-offset-2' : ''}>
-              Playoff Probability: {cutLineLoading && stats.gamesPlayed >= 10 ? '--%' : `${probability}%`}
-            </span>
-            <ChevronDown
-              size={12}
-              className={`transition-transform duration-200 ${playoffExpanded ? 'rotate-180' : ''}`}
-            />
-          </button>
+          <PlayoffOddsPill
+            label="Playoff Probability"
+            value={cutLineLoading && stats.gamesPlayed >= 10 ? '--%' : `${probability}%`}
+            expanded={!!playoffExpanded}
+            onToggle={onPlayoffToggle}
+            color={probabilityColor || ''}
+            size="xs"
+          />
         </div>
       )}
 
       {/* Expandable Playoff Probability Section */}
       {!isLastYear && probability !== undefined && (
-        <div
-          className={`overflow-hidden transition-all duration-300 ease-out ${
-            playoffExpanded ? 'max-h-[600px] opacity-100 mt-4' : 'max-h-0 opacity-0'
-          }`}
-        >
-          {/* Dashed divider */}
-          <div className={`border-t-2 border-dashed mb-4 ${
-            isGoatMode ? 'border-zinc-700' : 'border-gray-300'
-          }`}></div>
-
+        <CollapsibleOddsPanel expanded={!!playoffExpanded} isGoatMode={isGoatMode}>
           {/* Two-column layout for targets */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {/* Current Projected Cut Line - PRIMARY */}
@@ -654,7 +634,7 @@ function SeasonSection({
               })()}
             </div>
           </div>
-        </div>
+        </CollapsibleOddsPanel>
       )}
 
       </>

@@ -28,3 +28,21 @@ export function formatSeasonStartYear(season: string): string {
 export function formatSeasonEndYear(season: string): string {
   return season.slice(4, 8);
 }
+
+// "20252026" -> "20262027"
+export function nextNHLSeason(season: string): string {
+  const start = parseInt(season.slice(0, 4), 10) + 1;
+  return `${start}${start + 1}`;
+}
+
+// "20262027" -> "20252026"
+export function previousNHLSeason(season: string): string {
+  const start = parseInt(season.slice(0, 4), 10) - 1;
+  return `${start}${start + 1}`;
+}
+
+// Regular-season game count. The NHL's 2025 CBA expanded the schedule to 84
+// games starting with the 2026-27 season (start year 2026); prior seasons are 82.
+export function getRegularSeasonGameCount(season: string): number {
+  return parseInt(season.slice(0, 4), 10) >= 2026 ? 84 : 82;
+}

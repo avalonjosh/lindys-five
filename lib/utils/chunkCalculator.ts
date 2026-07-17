@@ -4,14 +4,23 @@ import { fetchDetailedGameStats } from '../services/nhlApi';
 const GAMES_PER_CHUNK = 5;
 const TOTAL_REGULAR_SEASON_GAMES = 82;
 const PLAYOFF_TARGET_POINTS = 96;
+// The Lindy's Five playoff target is ~1.17 points/game (96 over an 82-game
+// season). Scale it for other schedule lengths (e.g. 98 over 84 games) so the
+// "6+ points per set" philosophy holds as the season length changes.
+function playoffTargetFor(totalGames: number): number {
+  return Math.round((PLAYOFF_TARGET_POINTS / TOTAL_REGULAR_SEASON_GAMES) * totalGames);
+}
 
-export function calculateChunks(games: GameResult[]): GameChunk[] {
+export function calculateChunks(
+  games: GameResult[],
+  totalGames: number = TOTAL_REGULAR_SEASON_GAMES
+): GameChunk[] {
   const chunks: GameChunk[] = [];
-  const totalChunks = Math.ceil(TOTAL_REGULAR_SEASON_GAMES / GAMES_PER_CHUNK);
+  const totalChunks = Math.ceil(totalGames / GAMES_PER_CHUNK);
 
   for (let i = 0; i < totalChunks; i++) {
     const startIndex = i * GAMES_PER_CHUNK;
-    const endIndex = Math.min(startIndex + GAMES_PER_CHUNK, TOTAL_REGULAR_SEASON_GAMES);
+    const endIndex = Math.min(startIndex + GAMES_PER_CHUNK, totalGames);
     const chunkGames = games.slice(startIndex, endIndex);
     const gamesInChunk = endIndex - startIndex;
 
@@ -39,32 +48,36 @@ export function calculateChunks(games: GameResult[]): GameChunk[] {
   return chunks;
 }
 
-export function calculateSeasonStats(chunks: GameChunk[]): SeasonStats {
+export function calculateSeasonStats(
+  chunks: GameChunk[],
+  totalGames: number = TOTAL_REGULAR_SEASON_GAMES
+): SeasonStats {
+  const playoffTarget = playoffTargetFor(totalGames);
   const totalPoints = chunks.reduce((sum, chunk) => sum + chunk.points, 0);
   const gamesPlayed = chunks.reduce((sum, chunk) =>
     sum + chunk.games.filter(g => g.outcome !== 'PENDING').length, 0
   );
-  const gamesRemaining = TOTAL_REGULAR_SEASON_GAMES - gamesPlayed;
+  const gamesRemaining = totalGames - gamesPlayed;
 
   // Calculate current pace (points per game)
   const currentPace = gamesPlayed > 0 ? totalPoints / gamesPlayed : 0;
 
   // Project total points for the season based on current pace
   const projectedPoints = gamesPlayed > 0
-    ? Math.round(currentPace * TOTAL_REGULAR_SEASON_GAMES)
+    ? Math.round(currentPace * totalGames)
     : 0;
 
   // Calculate points above/below playoff target
-  const projectedDifference = projectedPoints - PLAYOFF_TARGET_POINTS;
+  const projectedDifference = projectedPoints - playoffTarget;
 
   return {
     totalPoints,
-    totalGames: TOTAL_REGULAR_SEASON_GAMES,
+    totalGames,
     gamesPlayed,
     gamesRemaining,
     currentPace,
     projectedPoints,
-    playoffTarget: PLAYOFF_TARGET_POINTS,
+    playoffTarget,
     pointsAboveBelow: projectedDifference,
   };
 }

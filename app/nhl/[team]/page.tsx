@@ -6,8 +6,9 @@ import NewsletterModal from '@/components/newsletter/NewsletterModal';
 import { fetchWithRetry, isRateLimitError } from '@/lib/services/nhlApi';
 import { calculateChunks, calculateSeasonStats } from '@/lib/utils/chunkCalculator';
 import { computePositionAwareProbability, getPlayoffStatusMessage } from '@/lib/utils/playoffProbability';
-import { getSeasonState, playoffResultText } from '@/lib/utils/seasonSummary';
-import { getCurrentNHLSeason, formatSeasonLabel, formatSeasonEndYear } from '@/lib/utils/season';
+import { playoffResultText } from '@/lib/utils/seasonSummary';
+import { formatSeasonEndYear, getRegularSeasonGameCount } from '@/lib/utils/season';
+import { resolveSeasonContext } from '@/lib/utils/seasonContext';
 import type { GameResult } from '@/lib/types';
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes for fresh data
@@ -71,23 +72,35 @@ export async function generateMetadata({ params }: TeamPageProps): Promise<Metad
   }
 
   const fullName = `${team.city} ${team.name}`;
-  const season = getCurrentNHLSeason();
-  const seasonLabel = formatSeasonLabel(season);
-  const { complete: seasonComplete } = await getSeasonState(team.abbreviation, season);
+  const { seasonLabel, seasonComplete, isPreseason } = await resolveSeasonContext(team.abbreviation);
 
   const title = seasonComplete
     ? `${fullName} ${seasonLabel} Season: Final Record, Standings & Playoff Results`
-    : `${fullName} Playoff Odds & Standings ${seasonLabel} — Chances & Projections`;
+    : isPreseason
+      ? `${fullName} ${seasonLabel} Schedule & Playoff Odds — Full Season Preview`
+      : `${fullName} Playoff Odds & Standings ${seasonLabel} — Chances & Projections`;
   const description = seasonComplete
     ? `${fullName} ${seasonLabel} season recap: final record, division and conference finish, and playoff result. See how the ${possessive(fullName)} season ended.`
-    : `${fullName} playoff odds, playoff chances, and Stanley Cup projections for ${seasonLabel}. Track ${possessive(fullName)} points pace, playoff picture, and playoff probability updated daily.`;
+    : isPreseason
+      ? `${fullName} ${seasonLabel} schedule, 5-game sets, opening night, and way-too-early playoff odds. Preview the ${possessive(fullName)} full ${seasonLabel} season.`
+      : `${fullName} playoff odds, playoff chances, and Stanley Cup projections for ${seasonLabel}. Track ${possessive(fullName)} points pace, playoff picture, and playoff probability updated daily.`;
 
   const ogTitle = seasonComplete
     ? `${fullName} ${seasonLabel} Season Recap — Final Record & Playoff Result`
-    : `${fullName} Playoff Odds ${seasonLabel} — Chances, Standings & Projections`;
+    : isPreseason
+      ? `${fullName} ${seasonLabel} Schedule & Season Preview`
+      : `${fullName} Playoff Odds ${seasonLabel} — Chances, Standings & Projections`;
   const ogDescription = seasonComplete
     ? `${fullName} ${seasonLabel} final record, standings finish, and playoff result.`
-    : `${fullName} playoff odds, chances, and Stanley Cup projections for the ${seasonLabel} NHL season. Points pace and playoff picture updated daily.`;
+    : isPreseason
+      ? `${fullName} ${seasonLabel} schedule, opening night, 5-game sets, and way-too-early playoff odds.`
+      : `${fullName} playoff odds, chances, and Stanley Cup projections for the ${seasonLabel} NHL season. Points pace and playoff picture updated daily.`;
+
+  const twitterTitle = seasonComplete
+    ? `${fullName} ${seasonLabel} Season Recap`
+    : isPreseason
+      ? `${fullName} ${seasonLabel} Schedule & Preview`
+      : `${fullName} Playoff Odds ${seasonLabel}`;
 
   return {
     title,
@@ -102,7 +115,7 @@ export async function generateMetadata({ params }: TeamPageProps): Promise<Metad
     },
     twitter: {
       card: 'summary',
-      title: seasonComplete ? `${fullName} ${seasonLabel} Season Recap` : `${fullName} Playoff Odds ${seasonLabel}`,
+      title: twitterTitle,
       description: ogDescription,
       images: [team.logo],
     },
@@ -121,27 +134,49 @@ export default async function TeamPage({ params }: TeamPageProps) {
   }
 
   const fullName = `${team.city} ${team.name}`;
-  const season = getCurrentNHLSeason();
-  const seasonLabel = formatSeasonLabel(season);
-  const endYear = formatSeasonEndYear(season);
 
-  // Detect a finished season (all games played) to flip the page into
-  // season-complete mode. Derived from the schedule, which stays reliable in
-  // the offseason.
-  const { complete: seasonComplete, summary: seasonSummary } = await getSeasonState(
-    team.abbreviation,
-    season
-  );
+  // Resolve which season to show and in what phase (live / complete / preseason)
+  // from the NHL API, so the page flips modes on its own as the schedule changes.
+  const {
+    season,
+    seasonLabel,
+    seasonComplete,
+    isPreseason,
+    summary: seasonSummary,
+    preseason,
+    lastSeasonSummary,
+  } = await resolveSeasonContext(team.abbreviation);
+  const endYear = formatSeasonEndYear(season);
+  const seasonGames = getRegularSeasonGameCount(season);
+
+  // Human-readable opening-night sentence for preseason metadata/FAQ/SEO copy.
+  const opener = preseason?.opener ?? null;
+  const openerOpponentName = opener
+    ? (Object.values(TEAMS).find((t) => t.abbreviation === opener.opponent)?.name ?? opener.opponent)
+    : '';
+  const openerText = opener
+    ? `The ${fullName} open the ${seasonLabel} season ${opener.isHome ? 'at home against' : 'on the road against'} the ${openerOpponentName} on ${new Date(`${opener.date}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}.`
+    : `The ${fullName} ${seasonLabel} schedule has been released.`;
+
+  // Way-too-early playoff odds sentence for preseason metadata/FAQ/SEO copy.
+  const preseasonOdds = preseason?.odds ?? null;
+  const oddsText = preseasonOdds
+    ? `Way-too-early ${seasonLabel} projection: the ${fullName} have roughly a ${preseasonOdds.playoffProbability}% chance to make the playoffs, projected for about ${preseasonOdds.projectedPoints} points (${preseasonOdds.tier.toLowerCase()}).`
+    : '';
 
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
     name: seasonComplete
       ? `${fullName} ${seasonLabel} Season: Final Record, Standings & Playoff Results`
-      : `${fullName} Playoff Odds & Standings ${seasonLabel}`,
+      : isPreseason
+        ? `${fullName} ${seasonLabel} Schedule & Season Preview`
+        : `${fullName} Playoff Odds & Standings ${seasonLabel}`,
     description: seasonComplete
       ? `${fullName} ${seasonLabel} season recap: final record, division and conference finish, and playoff result.`
-      : `${fullName} playoff odds, chances, and Stanley Cup projections for ${seasonLabel}. Track playoff probability, points pace, and playoff picture updated daily.`,
+      : isPreseason
+        ? `${fullName} ${seasonLabel} schedule, 5-game sets, opening night, and way-too-early playoff odds for the upcoming NHL season.`
+        : `${fullName} playoff odds, chances, and Stanley Cup projections for ${seasonLabel}. Track playoff probability, points pace, and playoff picture updated daily.`,
     url: `https://www.lindysfive.com/nhl/${team.id}`,
     dateModified: new Date().toISOString(),
     publisher: {
@@ -194,6 +229,35 @@ export default async function TeamPage({ params }: TeamPageProps) {
             acceptedAnswer: {
               '@type': 'Answer',
               text: `The NHL regular season typically opens in early October. ${possessive(fullName)} schedule and playoff odds for next season will be tracked here once the schedule is released.`,
+            },
+          },
+        ]
+      : isPreseason
+      ? [
+          {
+            '@type': 'Question',
+            name: `When do the ${fullName} play their first game in ${seasonLabel}?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `${openerText} See the full ${seasonLabel} schedule and 5-game sets on this page.`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: `How many games are in the ${fullName} ${seasonLabel} season?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: `The ${fullName} play a ${seasonGames}-game regular season in ${seasonLabel}, tracked here in ${Math.ceil(seasonGames / 5)} five-game sets.`,
+            },
+          },
+          {
+            '@type': 'Question',
+            name: `What are the ${possessive(fullName)} ${seasonLabel} playoff odds?`,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: preseasonOdds
+                ? `${oddsText} This is a preseason estimate projected from last season's results; live playoff odds update daily once the season begins.`
+                : `See the ${possessive(fullName)} way-too-early ${seasonLabel} playoff outlook on this page. Live playoff odds update daily once the season starts.`,
             },
           },
         ]
@@ -276,10 +340,34 @@ export default async function TeamPage({ params }: TeamPageProps) {
       `${possessive(fullName)} schedule and playoff odds for next season will be tracked here once the new NHL schedule is released.`
     );
     seoContent = parts.join(' ');
+  } else if (isPreseason) {
+    const parts: string[] = [];
+    parts.push(
+      `${fullName} ${seasonLabel} season preview: full schedule, ${seasonGames}-game regular season, and ${Math.ceil(seasonGames / 5)} five-game sets.`
+    );
+    parts.push(openerText);
+    if (lastSeasonSummary?.finalRecord) {
+      const r = lastSeasonSummary.finalRecord;
+      // Lowercase only the leading verb so opponent/round names stay capitalized
+      // ("...eliminated in the First Round by the Ducks", not "...the ducks").
+      const outcome = playoffResultText(lastSeasonSummary);
+      const outcomeLower = outcome.charAt(0).toLowerCase() + outcome.slice(1);
+      parts.push(
+        `Last season the ${fullName} finished ${r.wins}-${r.losses}-${r.otLosses} with ${r.points} points; ${outcomeLower}.`
+      );
+    }
+    if (oddsText) {
+      parts.push(oddsText);
+    }
+    parts.push(
+      `Full ${seasonLabel} schedule and 5-game set tracking are on this page, with live playoff probability updating daily once the season begins.`
+    );
+    seoContent = parts.join(' ');
   }
 
-  // Fetch live data server-side for SEO (direct NHL API, not proxy)
-  if (!seasonComplete) try {
+  // Fetch live data server-side for SEO (direct NHL API, not proxy).
+  // Skipped in preseason (no games played, standings feed is empty).
+  if (!seasonComplete && !isPreseason) try {
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
     const [scheduleRes, standingsRes] = await Promise.all([
       fetchWithRetry(`https://api-web.nhle.com/v1/club-schedule-season/${team.abbreviation}/${season}`, 1),
@@ -411,16 +499,28 @@ export default async function TeamPage({ params }: TeamPageProps) {
         <h1>
           {seasonComplete
             ? `${fullName} ${seasonLabel} Season: Final Record, Standings & Playoff Results`
-            : `${fullName} Playoff Odds & Standings ${seasonLabel}`}
+            : isPreseason
+              ? `${fullName} ${seasonLabel} Schedule, 5-Game Sets & Season Preview`
+              : `${fullName} Playoff Odds & Standings ${seasonLabel}`}
         </h1>
         <p>
           {seoContent ||
             (seasonComplete
               ? `${fullName} ${seasonLabel} season recap: final record, division and conference finish, and playoff result. Next season's schedule and playoff odds will be tracked here once released.`
-              : `${fullName} playoff odds, chances, and Stanley Cup projections for the ${seasonLabel} NHL season. Track ${possessive(fullName)} points pace, playoff picture, playoff probability, and wild card standings — updated daily.`)}
+              : isPreseason
+                ? `${fullName} ${seasonLabel} schedule and season preview: opening night, ${seasonGames}-game regular season, ${Math.ceil(seasonGames / 5)} five-game sets, and way-too-early playoff odds.`
+                : `${fullName} playoff odds, chances, and Stanley Cup projections for the ${seasonLabel} NHL season. Track ${possessive(fullName)} points pace, playoff picture, playoff probability, and wild card standings — updated daily.`)}
         </p>
       </div>
-      <TeamTracker team={team} seasonComplete={seasonComplete} seasonSummary={seasonSummary} />
+      <TeamTracker
+        team={team}
+        season={season}
+        seasonComplete={seasonComplete}
+        seasonSummary={seasonSummary}
+        isPreseason={isPreseason}
+        preseason={preseason}
+        lastSeasonSummary={lastSeasonSummary}
+      />
       <NewsletterModal
         team={teamSlug}
         teamDisplayName={team.name}
