@@ -18,6 +18,7 @@ import TeamNav from '@/components/TeamNav';
 import type { TeamConfig } from '@/lib/teamConfig';
 import { getDarkModeColors } from '@/lib/teamConfig';
 import ClinchCelebration from '@/components/ClinchCelebration';
+import WhatIfStickyBar from '@/components/WhatIfStickyBar';
 import SteamEffect from '@/components/SteamEffect';
 import MerchCTA from '@/components/affiliate/MerchCTA';
 import GamePromo from '@/components/perfectseason/GamePromo';
@@ -359,6 +360,10 @@ export default function TeamTracker({
 
   const [whatIfMode, setWhatIfMode] = useState(false);
   const [hypotheticalResults, setHypotheticalResults] = useState<Map<number, GameResult>>(new Map());
+  // Sticky What-If bar: mirrors the box's odds and shows once the box scrolls off.
+  const [whatIfProbability, setWhatIfProbability] = useState(0);
+  const [boxOffscreen, setBoxOffscreen] = useState(false);
+  const progressBoxRef = useRef<HTMLDivElement | null>(null);
   const [yearOverYearMode, setYearOverYearMode] = useState(false);
   const [lastSeasonData, setLastSeasonData] = useState<{ pointsLastYear: number; recordLastYear: string } | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(Date.now());
@@ -432,6 +437,28 @@ export default function TeamTracker({
 
     // Only hide if the next set's first game date has passed (or is today)
     return now >= firstGameDate;
+  };
+
+  // Show the sticky What-If bar only once the Season Progress box scrolls out of
+  // view, so it never doubles up with the box itself.
+  useEffect(() => {
+    if (!whatIfMode) {
+      setBoxOffscreen(false);
+      return;
+    }
+    const el = progressBoxRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setBoxOffscreen(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [whatIfMode]);
+
+  const scrollToProgressBox = () => {
+    const reduce = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    progressBoxRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
   };
 
   // Apply hypothetical results to chunks
@@ -806,8 +833,16 @@ export default function TeamTracker({
       seasonLabel={seasonLabel}
       playoffFetchLoaded={true}
       showShareButton={false}
+      onProbabilityComputed={setWhatIfProbability}
     />
   ) : null;
+
+  // Summary values for the sticky What-If bar (mirrors the box's numbers).
+  const whatIfHypos = [...hypotheticalResults.values()];
+  const whatIfBarStats = whatIfMode
+    ? (hypotheticalResults.size > 0 ? calculateSeasonStats(getChunksWithHypotheticals(), totalGames) : stats)
+    : null;
+  const whatIfBarRecord = `${whatIfHypos.filter(g => g.outcome === 'W').length}-${whatIfHypos.filter(g => g.outcome === 'OTL').length}-${whatIfHypos.filter(g => g.outcome === 'L').length}`;
 
   return (
     <div
@@ -821,6 +856,21 @@ export default function TeamTracker({
     {!seasonComplete && !isPreseason && playoffFetchLoaded && playoffSeries.length === 0 && showConfetti && (
       <ClinchCelebration teamColors={effectiveTeamColors} />
     )}
+
+    {/* Sticky What-If bar — follows the user down the page while simulating */}
+    <WhatIfStickyBar
+      show={whatIfMode && boxOffscreen && playoffSeries.length === 0}
+      gamesSimulated={hypotheticalResults.size}
+      record={whatIfBarRecord}
+      projectedPoints={whatIfBarStats?.projectedPoints ?? 0}
+      odds={whatIfProbability}
+      projectionReady={!isPreseason || hypotheticalResults.size > 0}
+      onReset={() => setHypotheticalResults(new Map())}
+      onJumpToBox={scrollToProgressBox}
+      isGoatMode={!useClassicStyling}
+      teamColors={effectiveTeamColors}
+      darkModeColors={darkModeColors}
+    />
 
     {/* Header */}
     <header
@@ -1013,9 +1063,12 @@ export default function TeamTracker({
     </header>
 
     <main className="max-w-7xl mx-auto px-4 py-6">
-      {/* Progress Bar — in playoff mode we move this below PlayoffJourney (see that branch) */}
+      {/* Progress Bar — in playoff mode we move this below PlayoffJourney (see that branch).
+          Wrapped in a ref'd container so the sticky What-If bar knows when it scrolls off. */}
+      <div ref={progressBoxRef}>
       {playoffSeries.length === 0 && (seasonComplete ? summaryCard : isPreseason ? (whatIfMode ? preseasonSimBar : preseasonCard) : (stats && (
         <ProgressBar
+          onProbabilityComputed={setWhatIfProbability}
           stats={whatIfMode && hypotheticalResults.size > 0 ? calculateSeasonStats(getChunksWithHypotheticals(), totalGames) : stats}
           isGoatMode={!useClassicStyling}
           yearOverYearMode={yearOverYearMode}
@@ -1043,6 +1096,7 @@ export default function TeamTracker({
           playoffFetchLoaded={playoffFetchLoaded}
         />
       )))}
+      </div>
 
       {/* Standings Card — shown above the set grid during regular season; moved below Playoff Journey during playoffs. Hidden once the season is complete (final standings live in the summary card) and in preseason (no games played yet, standings feed is empty). */}
       {!seasonComplete && !isPreseason && playoffSeries.length === 0 && (

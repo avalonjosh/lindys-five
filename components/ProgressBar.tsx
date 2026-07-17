@@ -58,6 +58,9 @@ interface ProgressBarProps {
   // simulated games and the fixed Lindy's Five target.
   preseasonSim?: boolean;
   seasonLabel?: string;
+  // Report the currently displayed playoff probability up so the sticky What-If
+  // bar can mirror the exact same number (live position-aware or preseason).
+  onProbabilityComputed?: (probability: number) => void;
 }
 
 // Helper function to render a season section
@@ -677,7 +680,7 @@ function SeasonSection({
   );
 }
 
-export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearOverYearLoading, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors, teamId, showShareButton, teamName, teamAbbrev, onClinchDetected, celebrateOverride, inPlayoffs, playoffFetchLoaded, preseasonSim, seasonLabel }: ProgressBarProps) {
+export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearOverYearLoading, onYearOverYearToggle, lastSeasonStats, teamColors, darkModeColors, teamId, showShareButton, teamName, teamAbbrev, onClinchDetected, celebrateOverride, inPlayoffs, playoffFetchLoaded, preseasonSim, seasonLabel, onProbabilityComputed }: ProgressBarProps) {
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [playoffExpanded, setPlayoffExpanded] = useState(false);
@@ -868,6 +871,13 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
   const probabilityColor = probabilityColorRaw === 'team'
     ? (isGoatMode ? darkModeColors.accent : teamColors.primary)
     : probabilityColorRaw;
+
+  // Mirror the displayed probability up to the sticky What-If bar. Same-value
+  // setState in the parent is a no-op, so this is safe to fire each change.
+  useEffect(() => {
+    onProbabilityComputed?.(probability);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [probability]);
 
   // Calculate the last season label dynamically
   // Current season is 2025-2026, so we get the start year (2025) and format as "24-25"
