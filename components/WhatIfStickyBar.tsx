@@ -77,11 +77,12 @@ export default function WhatIfStickyBar({
       }`}
       aria-hidden={!show}
     >
-      <div className="mx-auto max-w-7xl px-3">
+      {/* Edge-to-edge on mobile; a centered rounded pill on desktop. */}
+      <div className="mx-auto max-w-7xl md:px-3">
         {/* Safe-area padding lives inside the colored strip so the background
             reaches the screen edge (no dead gap below it on notched phones). */}
         <div
-          className="rounded-t-xl md:rounded-t-none md:rounded-b-xl px-4 pt-2.5 shadow-2xl border-t md:border-t-0 md:border-b border-white/10"
+          className="rounded-t-none md:rounded-b-xl px-4 pt-2.5 shadow-2xl border-t md:border-t-0 md:border-b border-white/10"
           style={{ backgroundColor: bg, paddingBottom: 'calc(0.625rem + env(safe-area-inset-bottom))' }}
         >
           <div className="flex items-center gap-3">

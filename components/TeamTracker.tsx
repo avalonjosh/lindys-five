@@ -842,7 +842,7 @@ export default function TeamTracker({
   const whatIfBarStats = whatIfMode
     ? (hypotheticalResults.size > 0 ? calculateSeasonStats(getChunksWithHypotheticals(), totalGames) : stats)
     : null;
-  const whatIfBarRecord = `${whatIfHypos.filter(g => g.outcome === 'W').length}-${whatIfHypos.filter(g => g.outcome === 'OTL').length}-${whatIfHypos.filter(g => g.outcome === 'L').length}`;
+  const whatIfBarRecord = `${whatIfHypos.filter(g => g.outcome === 'W').length}-${whatIfHypos.filter(g => g.outcome === 'L').length}-${whatIfHypos.filter(g => g.outcome === 'OTL').length}`;
 
   return (
     <div
