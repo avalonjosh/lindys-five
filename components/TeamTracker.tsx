@@ -371,6 +371,7 @@ export default function TeamTracker({
   const [yearOverYearLoading, setYearOverYearLoading] = useState(false);
   const [pollingInterval, setPollingInterval] = useState(60000); // Start with 60 seconds
   const pollingIntervalRef = useRef(60000); // Ref to avoid re-renders
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // Bounded initial-load retry
   const [recapSlugs, setRecapSlugs] = useState<Map<number, string>>(new Map()); // gameId -> slug mapping
 
   const toggleTheme = () => {
@@ -533,8 +534,23 @@ export default function TeamTracker({
     });
   };
 
-  const loadData = async () => {
+  // Retry the initial load when it fails transiently. Preseason and completed
+  // seasons don't poll (the schedule is frozen), so a single rate-limited first
+  // fetch would otherwise leave the schedule blank until a manual reload.
+  const MAX_INITIAL_RETRIES = 5;
+
+  const loadData = async (retryAttempt = 0) => {
     setLoading(true);
+    // The timer that scheduled this run (if any) has now fired — clear it so the
+    // finally-block spinner check and cleanup see an accurate pending state.
+    retryTimerRef.current = null;
+    const scheduleRetry = () => {
+      if (retryAttempt >= MAX_INITIAL_RETRIES) return false;
+      const delay = Math.min(1500 * 2 ** retryAttempt, 12000);
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = setTimeout(() => loadData(retryAttempt + 1), delay);
+      return true;
+    };
     try {
       const schedule = await fetchSabresSchedule(season, team.abbreviation, team.nhlId);
 
@@ -560,25 +576,28 @@ export default function TeamTracker({
         }
       } else {
         console.warn('Received empty schedule data, keeping existing data');
-        // Only show error if we have no existing data (initial load failure)
-        if (chunks.length === 0) {
+        // With no existing data this is an initial-load miss — retry before erroring.
+        if (chunks.length === 0 && !scheduleRetry()) {
           setError(true);
         }
       }
     } catch (err) {
       if (isRateLimitError(err)) {
         // Transient NHL 429 — skip noisy logging and keep any existing data on screen
-        console.warn('NHL rate-limited team schedule fetch — will retry on next poll');
+        console.warn('NHL rate-limited team schedule fetch — will retry');
       } else {
         console.error('Error loading data:', err);
       }
-      // Only show error if we have no existing data (initial load failure)
-      // Don't clear existing data on error during auto-refresh
-      if (chunks.length === 0 && !isRateLimitError(err)) {
+      // No existing data means the initial load failed — auto-retry (transient
+      // rate-limit/timeout) instead of leaving a blank schedule with no recovery.
+      // Only surface the error state once retries are exhausted, never blank.
+      if (chunks.length === 0 && !scheduleRetry()) {
         setError(true);
       }
     } finally {
-      setLoading(false);
+      // Keep the spinner up while a retry is pending so the schedule never
+      // flashes blank between attempts.
+      if (!retryTimerRef.current) setLoading(false);
     }
   };
 
@@ -600,14 +619,25 @@ export default function TeamTracker({
 
     loadData();
 
+    const clearRetry = () => {
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+
     // No live polling when the season is complete or hasn't started yet — the
     // schedule is frozen (all final, or all future) so there's nothing to refresh.
-    if (seasonComplete || isPreseason) return;
+    // Still clear any pending initial-load retry so it can't fire for a stale team.
+    if (seasonComplete || isPreseason) return clearRetry;
 
     // Auto-refresh with dynamic interval using ref
     const interval = setInterval(loadData, pollingIntervalRef.current);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      clearRetry();
+    };
   }, [team, seasonComplete, isPreseason, season]); // REMOVED pollingInterval from dependencies
 
   // Separate effect to handle polling interval changes
