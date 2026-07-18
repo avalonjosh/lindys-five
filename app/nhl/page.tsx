@@ -210,8 +210,6 @@ export default async function NHLLandingPage() {
           {/* Quick Links */}
           <div className="text-center mb-12">
             <div className="flex flex-wrap justify-center gap-4 text-sm">
-              <Link href="/playoffs" className="text-gray-400 hover:text-white transition-colors">Playoff Bracket</Link>
-              <span className="text-gray-600">|</span>
               <Link href="/nhl/scores" className="text-gray-400 hover:text-white transition-colors">NHL Scores Today</Link>
               <span className="text-gray-600">|</span>
               <Link href="/mlb/playoff-odds" className="text-gray-400 hover:text-white transition-colors">MLB Playoff Odds</Link>

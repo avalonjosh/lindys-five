@@ -254,7 +254,7 @@ export default function PreseasonOddsClient({
   totalGames: number;
   lastSeasonLabel: string;
 }) {
-  const [view, setView] = useState<ViewMode>('league');
+  const [view, setView] = useState<ViewMode>('picture');
 
   const views: { key: ViewMode; label: string }[] = [
     { key: 'league', label: 'League' },

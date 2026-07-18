@@ -545,15 +545,6 @@ export default async function NHLPlayoffOddsPage() {
               )}
             </Link>
           )}
-          <div className="mt-6 mb-4 text-center">
-            <Link
-              href="/playoffs"
-              className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-500 text-sm font-medium"
-            >
-              View {seasonComplete ? 'Final' : playoffsActive ? 'Full' : regularSeasonOver ? 'Confirmed' : 'Projected'} Playoff Bracket &rarr;
-            </Link>
-          </div>
-
           {playoffsActive && bracket ? (
             <StanleyCupOddsTable
               teams={buildCupOddsTeams(
