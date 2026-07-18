@@ -109,7 +109,7 @@ export default function PreseasonCard({
           {seasonLabel} Season Preview
         </h3>
         <span
-          className="inline-flex items-center gap-1.5 text-xs md:text-sm font-bold px-3 py-1 rounded-full whitespace-nowrap"
+          className="hidden md:inline-flex items-center gap-1.5 text-xs md:text-sm font-bold px-3 py-1 rounded-full whitespace-nowrap"
           style={{ backgroundColor: `${accent}1A`, color: accent }}
         >
           {countdownLabel}

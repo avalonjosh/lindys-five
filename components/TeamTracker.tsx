@@ -1042,16 +1042,6 @@ export default function TeamTracker({
                 ? `${seasonLabel} Season Preview • Schedule & 5-Game Sets`
                 : '5-Game Set Analysis • Target: 6+ points per set'}
           </p>
-          {hasTeamHistory(team.id) && playoffSeries.length === 0 && (
-            <div className="sm:hidden mt-2">
-              <Link
-                href={`/nhl/${team.id}/history`}
-                className="inline-block text-xs font-medium text-white/70 hover:text-white underline underline-offset-4 transition-colors"
-              >
-                Playoff History →
-              </Link>
-            </div>
-          )}
           <div className="mt-2">
             <MerchCTA
               teamCity={team.city}
