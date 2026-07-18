@@ -16,6 +16,22 @@ const getTodayString = (): string => {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 };
 
+// Whole calendar days from today (Eastern) until a YYYY-MM-DD date.
+const daysUntil = (dateStr: string): number => {
+  const todayEastern = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  const today = Date.parse(`${todayEastern}T00:00:00Z`);
+  const target = Date.parse(`${dateStr}T00:00:00Z`);
+  return Math.round((target - today) / 86_400_000);
+};
+
+// Render a calendar date without timezone drift by pinning to noon UTC.
+const formatOpenerDate = (dateStr: string): string =>
+  new Date(`${dateStr}T12:00:00Z`).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+
 // Get favorite team slug from localStorage
 const getFavoriteTeamSlug = (): string | null => {
   if (typeof window === 'undefined') return null;
@@ -44,10 +60,23 @@ interface ScoresPageClientProps {
   seasonComplete?: boolean;
   championName?: string;
   seasonLabel?: string;
+  preseason?: boolean;
+  upcomingSeasonLabel?: string;
+  openingDate?: string;
 }
 
-export default function ScoresPageClient({ seasonComplete = false, championName, seasonLabel }: ScoresPageClientProps) {
-  const [selectedDate, setSelectedDate] = useState(getTodayString());
+export default function ScoresPageClient({
+  seasonComplete = false,
+  championName,
+  seasonLabel,
+  preseason = false,
+  upcomingSeasonLabel,
+  openingDate,
+}: ScoresPageClientProps) {
+  // During the preseason, open on Opening Night's slate instead of an empty summer date.
+  const [selectedDate, setSelectedDate] = useState(
+    preseason && openingDate ? openingDate : getTodayString()
+  );
   const [games, setGames] = useState<NHLGame[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -166,6 +195,16 @@ export default function ScoresPageClient({ seasonComplete = false, championName,
     setLoading(true);
   };
 
+  const daysToOpen = preseason && openingDate ? daysUntil(openingDate) : null;
+  const countdownLabel =
+    daysToOpen === null
+      ? ''
+      : daysToOpen <= 0
+        ? 'season under way'
+        : daysToOpen === 1
+          ? '1 day to puck drop'
+          : `${daysToOpen} days to puck drop`;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Blue Header Section */}
@@ -218,19 +257,31 @@ export default function ScoresPageClient({ seasonComplete = false, championName,
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* Offseason banner */}
-        {seasonComplete && (
+        {/* Preseason banner — new season's schedule is out */}
+        {preseason && openingDate ? (
+          <div className="mb-6 rounded-xl border-2 px-4 py-4 text-center" style={{ backgroundColor: '#FBF5E6', borderColor: '#D4AF37' }}>
+            <p className="text-sm md:text-base font-semibold" style={{ color: '#8a6d1b' }}>
+              🏒 The {upcomingSeasonLabel ?? ''} NHL season opens {formatOpenerDate(openingDate)}
+              {countdownLabel ? ` — ${countdownLabel}` : ''}.
+            </p>
+            <p className="mt-1 text-xs md:text-sm" style={{ color: '#9A7B1F' }}>
+              The full schedule is out — browse any date below. Meanwhile, see the{' '}
+              <Link href="/nhl-playoff-odds" className="underline">way-too-early playoff odds</Link> and{' '}
+              <Link href="/nhl" className="underline">team trackers</Link>.
+            </p>
+          </div>
+        ) : seasonComplete ? (
+          /* Offseason banner — season over, next schedule not yet published */
           <div className="mb-6 rounded-xl border-2 px-4 py-4 text-center" style={{ backgroundColor: '#FBF5E6', borderColor: '#D4AF37' }}>
             <p className="text-sm md:text-base font-semibold" style={{ color: '#8a6d1b' }}>
               🏒 The {seasonLabel ?? ''} NHL season is complete{championName ? ` — the ${championName} won the Stanley Cup` : ''}.
             </p>
             <p className="mt-1 text-xs md:text-sm" style={{ color: '#9A7B1F' }}>
               Regular-season games return in October. Use the date picker to browse past results, or see the{' '}
-              <Link href="/playoffs" className="underline">final playoff bracket</Link> and{' '}
               <Link href="/nhl-playoff-odds" className="underline">final standings</Link>.
             </p>
           </div>
-        )}
+        ) : null}
 
         {/* Loading State */}
         {loading && (
@@ -256,14 +307,23 @@ export default function ScoresPageClient({ seasonComplete = false, championName,
         {!loading && !error && sortedGames.length === 0 && (
           <div className="text-center py-12 rounded-xl bg-gray-100 text-gray-600">
             <p className="text-lg font-semibold">
-              {seasonComplete ? 'No games — the NHL season is complete' : 'No games scheduled for this date'}
+              {seasonComplete && !preseason ? 'No games — the NHL season is complete' : 'No games scheduled for this date'}
             </p>
-            <Link
-              href="/playoffs"
-              className="inline-block mt-4 text-blue-600 hover:text-blue-500 underline text-sm"
-            >
-              View Playoff Bracket
-            </Link>
+            {preseason && openingDate && selectedDate !== openingDate ? (
+              <button
+                onClick={() => handleDateChange(openingDate)}
+                className="inline-block mt-4 text-blue-600 hover:text-blue-500 underline text-sm"
+              >
+                Jump to Opening Night ({formatOpenerDate(openingDate)}) →
+              </button>
+            ) : (
+              <Link
+                href="/nhl-playoff-odds"
+                className="inline-block mt-4 text-blue-600 hover:text-blue-500 underline text-sm"
+              >
+                {seasonComplete || preseason ? 'View playoff odds' : 'View standings'}
+              </Link>
+            )}
           </div>
         )}
 

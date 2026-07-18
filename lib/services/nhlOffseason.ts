@@ -1,6 +1,7 @@
 import { fetchWithRetry } from '@/lib/services/nhlApi';
 import { TEAMS } from '@/lib/teamConfig';
 import type { StandingsTeam } from '@/lib/types/boxscore';
+import { nextNHLSeason, formatSeasonLabel } from '@/lib/utils/season';
 
 // Offseason data helpers for league-wide NHL pages (playoff odds, bracket).
 //
@@ -83,6 +84,44 @@ export async function getPlayoffsOutcome(season: string): Promise<PlayoffsOutcom
     };
   } catch {
     return { complete: false };
+  }
+}
+
+export interface UpcomingSeasonInfo {
+  // True once the upcoming season's schedule has been published.
+  scheduled: boolean;
+  season: string;
+  seasonLabel: string;
+  openingDate?: string; // YYYY-MM-DD — league-wide regular-season opening night
+  endDate?: string; // YYYY-MM-DD — regular-season finale
+}
+
+// The upcoming season's opening night, once its schedule is posted. In the
+// offseason `schedule/now` is empty, so we probe a fixed in-season date (Oct 1 of
+// the season's start year) and read the league `regularSeasonStartDate` off the
+// response. Returns { scheduled: false } until the schedule exists.
+export async function getUpcomingSeasonInfo(currentSeason: string): Promise<UpcomingSeasonInfo> {
+  const season = nextNHLSeason(currentSeason);
+  const startYear = season.slice(0, 4);
+  const base: UpcomingSeasonInfo = {
+    scheduled: false,
+    season,
+    seasonLabel: formatSeasonLabel(season),
+  };
+  try {
+    const res = await fetchWithRetry(`${NHL_API}/schedule/${startYear}-10-01`, 1);
+    if (!res.ok) return base;
+    const data = await res.json();
+    const openingDate: string | undefined = data.regularSeasonStartDate;
+    if (!openingDate) return base;
+    return {
+      ...base,
+      scheduled: true,
+      openingDate,
+      endDate: data.regularSeasonEndDate,
+    };
+  } catch {
+    return base;
   }
 }
 
