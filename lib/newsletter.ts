@@ -37,6 +37,18 @@ async function sendVerificationToken(subscriberId: string, email: string): Promi
  * confirmation email (use when the email was just actively given via a checkbox
  * or a subscribe button). Otherwise double opt-in (send a verification link).
  */
+/** The subscriber record for an email, or null. Linear scan — the list is small
+ * and there is no email→id index; same approach as ensureSubscriber below. */
+export async function findSubscriberByEmail(email: string): Promise<NewsletterSubscriber | null> {
+  const lower = email.toLowerCase();
+  const ids = await kv.smembers<string[]>('email:subscribers');
+  for (const id of ids ?? []) {
+    const sub = await kv.get<NewsletterSubscriber>(`email:subscriber:${id}`);
+    if (sub?.email === lower) return sub;
+  }
+  return null;
+}
+
 export async function ensureSubscriber(
   email: string,
   teams: string[],

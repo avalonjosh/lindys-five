@@ -57,6 +57,13 @@ interface NewsletterModalProps {
   accentColor?: string;
 }
 
+/** Signed-in, not-yet-subscribed account info from /api/newsletter/status. */
+interface AccountStatus {
+  email: string;
+  username: string;
+  favoriteTeam: string | null;
+}
+
 export default function NewsletterModal({
   team,
   teamDisplayName,
@@ -69,6 +76,7 @@ export default function NewsletterModal({
   const [selectedTeam, setSelectedTeam] = useState('');
   const [showTeamPicker, setShowTeamPicker] = useState(false);
   const [starredName, setStarredName] = useState('');
+  const [account, setAccount] = useState<AccountStatus | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
@@ -81,43 +89,76 @@ export default function NewsletterModal({
       sessionStorage.getItem('newsletterSubscribed') === '1' ||
       localStorage.getItem('newsletter-subscribed') === '1';
 
-    // Returning subscriber or within dismiss cooldown — never show modal
-    if (isSuppressed()) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
 
-    // For generic mode, load favorites from localStorage
-    if (isGeneric && !timerShown()) {
-      let hasFavorites = false;
+    // Resolve the signed-in account's newsletter standing first, so a
+    // subscriber never sees the popup even on a fresh browser/cleared cache.
+    const init = async () => {
+      let acct: AccountStatus | null = null;
       try {
-        const stored = localStorage.getItem('favorite-teams');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setTeams(parsed);
-            hasFavorites = true;
+        const res = await fetch('/api/newsletter/status', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.signedIn) {
+            if (data.subscribed) {
+              // Cache the suppression locally too (covers the star trigger and
+              // future visits while signed out on this browser).
+              try { localStorage.setItem('newsletter-subscribed', '1'); } catch { /* ignore */ }
+              return; // opted in — never show
+            }
+            acct = { email: data.email, username: data.username, favoriteTeam: data.favoriteTeam };
           }
         }
       } catch {
-        // ignore
+        // Network hiccup: fall through to the anonymous behavior.
       }
-      if (!hasFavorites) {
-        setShowTeamPicker(true);
-      }
-    }
+      if (cancelled) return;
+      if (acct) setAccount(acct);
 
-    // Timer-based trigger (2.5s delay, once per session)
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    if (!timerShown()) {
-      timer = setTimeout(() => {
-        // Re-check at fire time: the suppression flag may have been set after
-        // mount (e.g. NewsletterVerified writing it on ?newsletter=success).
-        if (isSuppressed()) return;
-        // Mark shown at fire time (not just on dismiss) so the auto-popup is
-        // once per session across navigations — avoids repeat interstitials
-        // when the same visitor browses several team/odds pages.
-        sessionStorage.setItem('newsletterModalShown', '1');
-        setVisible(true);
-      }, 2500);
-    }
+      // Returning subscriber or within dismiss cooldown — never show modal
+      if (isSuppressed()) return;
+
+      // For generic mode, prefill teams: local favorites, then account favorite
+      if (isGeneric && !timerShown()) {
+        let hasFavorites = false;
+        try {
+          const stored = localStorage.getItem('favorite-teams');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setTeams(parsed);
+              hasFavorites = true;
+            }
+          }
+        } catch {
+          // ignore
+        }
+        if (!hasFavorites && acct?.favoriteTeam) {
+          setTeams([acct.favoriteTeam]);
+          hasFavorites = true;
+        }
+        if (!hasFavorites) {
+          setShowTeamPicker(true);
+        }
+      }
+
+      // Timer-based trigger (2.5s delay, once per session)
+      if (!timerShown()) {
+        timer = setTimeout(() => {
+          if (cancelled) return;
+          // Re-check at fire time: the suppression flag may have been set after
+          // mount (e.g. NewsletterVerified writing it on ?newsletter=success).
+          if (isSuppressed()) return;
+          // Mark shown at fire time (not just on dismiss) so the auto-popup is
+          // once per session across navigations — avoids repeat interstitials
+          // when the same visitor browses several team/odds pages.
+          sessionStorage.setItem('newsletterModalShown', '1');
+          setVisible(true);
+        }, 2500);
+      }
+    };
+    init();
 
     // Star-based trigger: always fires unless user already subscribed
     function handleTeamStarred(e: Event) {
@@ -141,6 +182,7 @@ export default function NewsletterModal({
     window.addEventListener('team-starred', handleTeamStarred);
 
     return () => {
+      cancelled = true;
       if (timer) clearTimeout(timer);
       window.removeEventListener('team-starred', handleTeamStarred);
     };
@@ -161,7 +203,8 @@ export default function NewsletterModal({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email || status === 'loading') return;
+    const submitEmail = account?.email ?? email;
+    if (!submitEmail || status === 'loading') return;
 
     const submitTeams = showTeamPicker
       ? (selectedTeam ? [selectedTeam] : [])
@@ -178,7 +221,11 @@ export default function NewsletterModal({
       const res = await fetch('/api/newsletter/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, teams: submitTeams, source: isGeneric ? 'odds-modal' : 'team-modal' }),
+        body: JSON.stringify({
+          email: submitEmail,
+          teams: submitTeams,
+          source: account ? 'account-modal' : isGeneric ? 'odds-modal' : 'team-modal',
+        }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -250,9 +297,17 @@ export default function NewsletterModal({
             </div>
           ) : (
             <>
-              <p className="text-gray-500 text-sm mb-4">
-                Get {label !== 'NHL' ? `${label} ` : ''}game recaps and set analyses delivered to your inbox. Free, no spam.
-              </p>
+              {account ? (
+                <p className="text-gray-500 text-sm mb-4">
+                  You&apos;re signed in as <span className="font-semibold text-gray-700">{account.username}</span>.
+                  Want {label !== 'NHL' ? `${label} ` : ''}game recaps and set analyses sent to{' '}
+                  <span className="font-semibold text-gray-700">{account.email}</span>? Free, no spam.
+                </p>
+              ) : (
+                <p className="text-gray-500 text-sm mb-4">
+                  Get {label !== 'NHL' ? `${label} ` : ''}game recaps and set analyses delivered to your inbox. Free, no spam.
+                </p>
+              )}
               <form onSubmit={handleSubmit} className="space-y-3">
                 {showTeamPicker && (
                   <select
@@ -270,26 +325,30 @@ export default function NewsletterModal({
                   </select>
                 )}
                 <div className="flex gap-2">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  required
-                  autoFocus
-                  className="flex-1 px-4 py-2.5 rounded-lg text-sm border-2 border-gray-200 focus:outline-none transition-colors"
-                  style={{ '--tw-ring-color': primaryColor } as React.CSSProperties}
-                  onFocus={(e) => (e.target.style.borderColor = primaryColor)}
-                  onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
-                />
+                {!account && (
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    required
+                    autoFocus
+                    className="flex-1 px-4 py-2.5 rounded-lg text-sm border-2 border-gray-200 focus:outline-none transition-colors"
+                    style={{ '--tw-ring-color': primaryColor } as React.CSSProperties}
+                    onFocus={(e) => (e.target.style.borderColor = primaryColor)}
+                    onBlur={(e) => (e.target.style.borderColor = '#e5e7eb')}
+                  />
+                )}
                 <button
                   type="submit"
                   disabled={status === 'loading'}
-                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-all hover:scale-105 disabled:opacity-50 shrink-0"
+                  className={`px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-all hover:scale-105 disabled:opacity-50 shrink-0 ${account ? 'flex-1' : ''}`}
                   style={{ background: primaryColor }}
                 >
                   {status === 'loading' ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                  ) : account ? (
+                    'Email Me Recaps'
                   ) : (
                     'Subscribe'
                   )}
