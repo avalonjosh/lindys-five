@@ -14,6 +14,7 @@ import { NHL_TEAMS, MLB_TEAMS, findTeam, getTeamUrl } from '@/lib/teamConfig';
 import { formatSeasonLabel } from '@/lib/utils/season';
 import PicksChart from './PicksChart';
 import SettingsTab from './SettingsTab';
+import FavoriteTeamCard from './FavoriteTeamCard';
 import type { WhatIfSave, WhatIfPick } from '@/lib/whatif/types';
 import type { GameResult } from '@/lib/types';
 import type { ProfileResponse, ProfileBoard } from '@/app/api/account/profile/route';
@@ -233,6 +234,31 @@ export default function AccountPage() {
     () => (saves && saves.length ? saves.reduce((a, b) => (b.savedAt > a.savedAt ? b : a)) : null),
     [saves]
   );
+
+  // Merged event feed for the Overview activity strip: What-If saves + daily plays.
+  const activity = useMemo(() => {
+    const items: { key: string; date: string; label: string; kind: 'save' | 'daily'; href: string }[] = [];
+    for (const save of saves ?? []) {
+      const team = findTeam(save.teamId);
+      items.push({
+        key: `save:${save.sport}:${save.teamId}:${save.savedDate}`,
+        date: save.savedDate,
+        label: `Saved ${team ? `${team.city} ${team.name}` : save.teamId} picks`,
+        kind: 'save',
+        href: getTeamUrl(save.teamId),
+      });
+    }
+    for (const play of profile?.perfectSeason.recentDaily ?? []) {
+      items.push({
+        key: `daily:${play.sport}:${play.date}`,
+        date: play.date,
+        label: `Played the ${play.sport === 'mlb' ? '162-0' : '82-0'} daily puzzle`,
+        kind: 'daily',
+        href: play.sport === 'mlb' ? '/162-0' : '/82-0',
+      });
+    }
+    return items.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+  }, [saves, profile]);
 
   // One schedule fetch per team group, to grade picks against real results.
   useEffect(() => {
@@ -459,7 +485,14 @@ export default function AccountPage() {
 
       {/* Today's puzzles — the daily hook */}
       <section className="mb-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-        <h3 className="mb-3 text-sm font-bold text-gray-900">Today&apos;s Daily Puzzles</h3>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h3 className="text-sm font-bold text-gray-900">Today&apos;s Daily Puzzles</h3>
+          {(profile?.perfectSeason.daily.streak.current ?? 0) >= 2 && (
+            <span className="flex-shrink-0 rounded-full bg-orange-50 px-2 py-0.5 text-xs font-bold text-orange-600">
+              🔥 {profile!.perfectSeason.daily.streak.current}-day streak
+            </span>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-3">
           {([
             { label: '82-0', sport: 'NHL', href: '/82-0', played: profile?.perfectSeason.daily.playedToday.nhl ?? false },
@@ -484,8 +517,11 @@ export default function AccountPage() {
         </div>
       </section>
 
+      {/* Favorite team snapshot — record, odds, next game */}
+      {user.favoriteTeam && <FavoriteTeamCard teamSlug={user.favoriteTeam} />}
+
       {/* Summary cards — less than the tabs show, so "View all" has a reason to exist */}
-      <div className="mb-8 grid gap-4 sm:grid-cols-2">
+      <div className="mb-4 grid gap-4 sm:grid-cols-2">
         {/* Perfect Season summary */}
         <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <div className="mb-2 flex items-center justify-between gap-2">
@@ -570,6 +606,26 @@ export default function AccountPage() {
           )}
         </section>
       </div>
+
+      {/* Recent activity — merged saves + daily plays, newest first */}
+      {activity.length > 0 && (
+        <section className="mb-8 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <h3 className="mb-1 text-sm font-bold text-gray-900">Recent Activity</h3>
+          <ul className="divide-y divide-gray-100">
+            {activity.map(item => (
+              <li key={item.key}>
+                <Link href={item.href} className="flex items-center gap-3 py-2 text-sm transition-colors hover:bg-gray-50">
+                  <span className="w-14 flex-shrink-0 text-xs text-gray-400">{pickDateLabel(item.date)}</span>
+                  <span className="min-w-0 flex-1 truncate text-gray-700">{item.label}</span>
+                  <span className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${item.kind === 'save' ? 'bg-blue-50 text-sabres-blue' : 'bg-gray-100 text-gray-500'}`}>
+                    {item.kind === 'save' ? 'Picks' : 'Daily'}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
         </>
       )}
 

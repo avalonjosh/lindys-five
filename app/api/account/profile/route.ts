@@ -37,8 +37,46 @@ export interface ProfileResponse {
   perfectSeason: {
     boards: ProfileBoard[];
     /** Daily plays only keep a composite score in the boards hash; entries expire. */
-    daily: { count: number; bestRating: number | null; playedToday: { nhl: boolean; mlb: boolean } };
+    daily: {
+      count: number;
+      bestRating: number | null;
+      playedToday: { nhl: boolean; mlb: boolean };
+      /** Consecutive-day play streak (any sport), derived from board keys. */
+      streak: { current: number; best: number };
+    };
+    /** Recent daily plays (unique sport+date), newest first, for the activity feed. */
+    recentDaily: { date: string; sport: string }[];
   };
+}
+
+/** YYYY-MM-DD arithmetic without timezone drift. */
+function addDays(iso: string, delta: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + delta)).toISOString().slice(0, 10);
+}
+
+/** Current and best consecutive-day runs. Current counts back from today, and
+ * survives if today just hasn't been played yet (yesterday keeps it alive). */
+function computeStreak(dates: Set<string>, today: string): { current: number; best: number } {
+  let current = 0;
+  let day = dates.has(today) ? today : addDays(today, -1);
+  while (dates.has(day)) {
+    current += 1;
+    day = addDays(day, -1);
+  }
+
+  let best = 0;
+  for (const date of dates) {
+    if (dates.has(addDays(date, -1))) continue; // not a run start
+    let run = 0;
+    let cursor = date;
+    while (dates.has(cursor)) {
+      run += 1;
+      cursor = addDays(cursor, 1);
+    }
+    if (run > best) best = run;
+  }
+  return { current, best };
 }
 
 export async function GET(request: NextRequest) {
@@ -54,6 +92,8 @@ export async function GET(request: NextRequest) {
   const today = easternDateString();
   const playedToday = { nhl: false, mlb: false };
   const dailyComposites: number[] = [];
+  const dailyDates = new Set<string>();
+  const dailyPlays = new Map<string, { date: string; sport: string }>(); // `${sport}:${date}` dedup
   const persistentBoards: string[] = [];
   for (const board of Object.keys(boardsHash)) {
     if (board.startsWith('daily:')) {
@@ -61,10 +101,17 @@ export async function GET(request: NextRequest) {
       // daily:{sport}:{variant}:{date}
       const [, sport, , date] = board.split(':');
       if (date === today && (sport === 'nhl' || sport === 'mlb')) playedToday[sport] = true;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        dailyDates.add(date);
+        dailyPlays.set(`${sport}:${date}`, { date, sport });
+      }
     } else {
       persistentBoards.push(board);
     }
   }
+  const recentDaily = [...dailyPlays.values()]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 10);
 
   const boards: ProfileBoard[] = (
     await Promise.all(
@@ -110,7 +157,9 @@ export async function GET(request: NextRequest) {
           ? Math.round(Math.max(...dailyComposites) / 100) / 10
           : null,
         playedToday,
+        streak: computeStreak(dailyDates, today),
       },
+      recentDaily,
     },
   };
 
