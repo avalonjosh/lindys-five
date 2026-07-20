@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronDown, ChevronUp, Check, X, Minus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Check, X, Minus, Pencil } from 'lucide-react';
 import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
 import AuthModal from '@/components/perfectseason/board/AuthModal';
 import { logout } from '@/lib/perfectseason/account';
 import { fetchWhatIfSaves } from '@/lib/whatif/client';
 import { fetchSabresSchedule } from '@/lib/services/nhlApi';
-import { NHL_TEAMS, MLB_TEAMS, findTeam } from '@/lib/teamConfig';
+import { NHL_TEAMS, MLB_TEAMS, findTeam, getTeamUrl } from '@/lib/teamConfig';
 import { formatSeasonLabel } from '@/lib/utils/season';
 import PicksChart from './PicksChart';
 import type { WhatIfSave, WhatIfPick } from '@/lib/whatif/types';
@@ -323,16 +323,26 @@ export default function AccountPage() {
                     </optgroup>
                   </select>
                 ) : favTeam ? (
-                  <button
-                    type="button"
-                    onClick={() => setEditingFavorite(true)}
-                    title="Change favorite team"
-                    className="flex items-center gap-1.5 rounded-full bg-white/15 py-1 pl-1.5 pr-2.5 text-xs font-semibold text-white transition-colors hover:bg-white/25"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={favTeam.logo} alt="" className="h-4 w-4 object-contain" />
-                    {favTeam.city} {favTeam.name}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <Link
+                      href={getTeamUrl(user.favoriteTeam!)}
+                      title={`Go to the ${favTeam.city} ${favTeam.name} tracker`}
+                      className="flex items-center gap-1.5 rounded-full bg-white/15 py-1 pl-1.5 pr-2.5 text-xs font-semibold text-white transition-colors hover:bg-white/25"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={favTeam.logo} alt="" className="h-4 w-4 object-contain" />
+                      {favTeam.city} {favTeam.name}
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setEditingFavorite(true)}
+                      title="Change favorite team"
+                      aria-label="Change favorite team"
+                      className="flex h-6 w-6 items-center justify-center rounded-full bg-white/15 text-white/70 transition-colors hover:bg-white/25 hover:text-white"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  </div>
                 ) : (
                   <button
                     type="button"
