@@ -76,6 +76,31 @@ function maskEmail(email: string): string {
   return `${local.slice(0, 1)}•••@${domain}`;
 }
 
+function adjustColor(hex: string, amount: number): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const r = Math.max(0, Math.min(255, (num >> 16) + amount));
+  const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00ff) + amount));
+  const b = Math.max(0, Math.min(255, (num & 0x0000ff) + amount));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
+function gradeClasses(grade: string): string {
+  switch (grade.charAt(0).toUpperCase()) {
+    case 'A': case 'S': return 'bg-green-100 text-green-700';
+    case 'B': return 'bg-emerald-50 text-emerald-700';
+    case 'C': return 'bg-yellow-100 text-yellow-700';
+    case 'D': return 'bg-orange-100 text-orange-700';
+    default: return 'bg-red-100 text-red-600';
+  }
+}
+
+function rankBadge(rank: number): string {
+  if (rank === 1) return 'bg-amber-100 text-amber-700';
+  if (rank === 2) return 'bg-slate-200 text-slate-600';
+  if (rank === 3) return 'bg-orange-100 text-orange-800';
+  return 'text-gray-900';
+}
+
 const BOARD_KIND_LABELS: Record<ProfileBoard['kind'], string> = {
   alltime: 'All-Time Daily Best',
   free: 'Free Play',
@@ -166,6 +191,22 @@ export default function AccountPage() {
     );
   }, [saves]);
 
+  // Overall exact-pick accuracy across every graded save, for the stat tiles.
+  const overall = useMemo(() => {
+    let graded = 0;
+    let exact = 0;
+    for (const group of groups) {
+      const actuals = actualsByTeam.get(group.key);
+      if (!actuals) continue;
+      for (const save of group.saves) {
+        const g = gradeSave(save, actuals);
+        graded += g.graded;
+        exact += g.exact;
+      }
+    }
+    return { graded, exact };
+  }, [groups, actualsByTeam]);
+
   // One schedule fetch per team group, to grade picks against real results.
   useEffect(() => {
     for (const group of groups) {
@@ -219,92 +260,137 @@ export default function AccountPage() {
     );
   }
 
+  const favTeam = user.favoriteTeam ? findTeam(user.favoriteTeam) : undefined;
+  const heroColor = favTeam?.colors.primary ?? '#003087';
+  const bestRank = profile?.perfectSeason.boards.reduce<number | null>(
+    (best, b) => (b.rank != null && (best == null || b.rank < best) ? b.rank : best),
+    null
+  ) ?? null;
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold uppercase tracking-wide text-sabres-navy" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-            {user.username}
-          </h1>
-          <p className="text-sm text-gray-500">
-            {profile ? (
-              <>
-                {maskEmail(profile.email)}
-                {' · '}Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-              </>
-            ) : (
-              'Your profile'
-            )}
-          </p>
-          {/* Favorite team */}
-          <div className="mt-2">
-            {editingFavorite ? (
-              <select
-                autoFocus
-                disabled={savingFavorite}
-                value={user.favoriteTeam ?? ''}
-                onChange={(e) => changeFavorite(e.target.value)}
-                onBlur={() => setEditingFavorite(false)}
-                className="rounded-lg border-2 border-gray-200 bg-gray-50 px-2 py-1.5 text-sm outline-none focus:border-sabres-blue"
-              >
-                <option value="">No favorite</option>
-                <optgroup label="NHL">
-                  {NHL_OPTIONS.map((t) => (
-                    <option key={t.slug} value={t.slug}>{t.label}</option>
-                  ))}
-                </optgroup>
-                <optgroup label="MLB">
-                  {MLB_OPTIONS.map((t) => (
-                    <option key={t.slug} value={t.slug}>{t.label}</option>
-                  ))}
-                </optgroup>
-              </select>
-            ) : user.favoriteTeam && findTeam(user.favoriteTeam) ? (
-              <button
-                type="button"
-                onClick={() => setEditingFavorite(true)}
-                title="Change favorite team"
-                className="flex items-center gap-1.5 rounded-full bg-gray-100 py-1 pl-1.5 pr-2.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-200"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={findTeam(user.favoriteTeam)!.logo} alt="" className="h-4 w-4 object-contain" />
-                {findTeam(user.favoriteTeam)!.city} {findTeam(user.favoriteTeam)!.name}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setEditingFavorite(true)}
-                className="text-xs font-bold text-sabres-blue hover:underline"
-              >
-                Set your favorite team
-              </button>
-            )}
+      {/* Hero — themed to the favorite team, like the team tracker headers */}
+      <div
+        className="relative mb-4 overflow-hidden rounded-2xl px-5 py-6 shadow-md sm:px-6"
+        style={{ background: `linear-gradient(135deg, ${heroColor} 0%, ${adjustColor(heroColor, -35)} 100%)` }}
+      >
+        {favTeam && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={favTeam.logo} alt="" aria-hidden className="pointer-events-none absolute -right-8 -top-10 h-44 w-44 select-none object-contain opacity-10" />
+        )}
+        <div className="relative flex items-start justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-4">
+            <div
+              className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-white text-3xl shadow-sm"
+              style={{ color: heroColor, fontFamily: 'Bebas Neue, sans-serif' }}
+            >
+              {user.username.charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <h1 className="truncate text-3xl font-bold uppercase tracking-wide text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                {user.username}
+              </h1>
+              <p className="text-xs text-white/70">
+                {profile ? (
+                  <>
+                    {maskEmail(profile.email)}
+                    {' · '}Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </>
+                ) : (
+                  'Your profile'
+                )}
+              </p>
+              <div className="mt-2">
+                {editingFavorite ? (
+                  <select
+                    autoFocus
+                    disabled={savingFavorite}
+                    value={user.favoriteTeam ?? ''}
+                    onChange={(e) => changeFavorite(e.target.value)}
+                    onBlur={() => setEditingFavorite(false)}
+                    className="rounded-lg border-2 border-white/30 bg-white px-2 py-1.5 text-sm text-gray-800 outline-none"
+                  >
+                    <option value="">No favorite</option>
+                    <optgroup label="NHL">
+                      {NHL_OPTIONS.map((t) => (
+                        <option key={t.slug} value={t.slug}>{t.label}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="MLB">
+                      {MLB_OPTIONS.map((t) => (
+                        <option key={t.slug} value={t.slug}>{t.label}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                ) : favTeam ? (
+                  <button
+                    type="button"
+                    onClick={() => setEditingFavorite(true)}
+                    title="Change favorite team"
+                    className="flex items-center gap-1.5 rounded-full bg-white/15 py-1 pl-1.5 pr-2.5 text-xs font-semibold text-white transition-colors hover:bg-white/25"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={favTeam.logo} alt="" className="h-4 w-4 object-contain" />
+                    {favTeam.city} {favTeam.name}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setEditingFavorite(true)}
+                    className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold text-white transition-colors hover:bg-white/25"
+                  >
+                    Set your favorite team
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              await logout();
+              setUser(null);
+            }}
+            className="flex-shrink-0 rounded-lg border border-white/30 px-3 py-1.5 text-xs font-semibold text-white/90 transition-colors hover:bg-white/10"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+
+      {/* Stat tiles — the top-line numbers, no expanding required */}
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm">
+          <div className="text-2xl font-bold text-gray-900">{saves?.length ?? '—'}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Saved Picks</div>
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm">
+          <div className="text-2xl font-bold" style={{ color: overall.graded > 0 ? heroColor : undefined }}>
+            {overall.graded > 0 ? `${Math.round((overall.exact / overall.graded) * 100)}%` : '—'}
+          </div>
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+            {overall.graded > 0 ? `Exact · ${overall.exact}/${overall.graded} graded` : 'Exact Accuracy'}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={async () => {
-            await logout();
-            setUser(null);
-          }}
-          className="rounded-lg border-2 border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:border-gray-300 hover:bg-gray-50"
-        >
-          Sign Out
-        </button>
+        <div className="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm">
+          <div className="text-2xl font-bold text-gray-900">{bestRank != null ? `#${bestRank}` : '—'}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Best Rank</div>
+        </div>
+        <div className="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm">
+          <div className="text-2xl font-bold text-gray-900">{profile?.perfectSeason.daily.count ?? '—'}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Daily Puzzles</div>
+        </div>
       </div>
 
       {/* Perfect Season — leaderboard bests from 82-0 / 162-0 */}
-      <section className="mb-8 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between gap-2 border-b border-gray-100 p-4">
-          <div>
-            <h2 className="font-bold text-gray-900">Perfect Season</h2>
-            <p className="text-xs text-gray-500">Your best results in 82-0 and 162-0</p>
-          </div>
-          <div className="flex gap-2 text-xs font-bold">
-            <Link href="/82-0" className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-gray-700 transition-colors hover:bg-gray-200">82-0</Link>
-            <Link href="/162-0" className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-gray-700 transition-colors hover:bg-gray-200">162-0</Link>
-          </div>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="font-bold text-gray-900">Perfect Season</h2>
+        <div className="flex gap-2 text-xs font-bold">
+          <Link href="/82-0" className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-gray-700 transition-colors hover:bg-gray-200">82-0</Link>
+          <Link href="/162-0" className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-gray-700 transition-colors hover:bg-gray-200">162-0</Link>
         </div>
+      </div>
+      <section className="mb-8 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         {profile == null ? (
           <div className="p-4 text-sm text-gray-400">Loading…</div>
         ) : profile.perfectSeason.boards.length === 0 && profile.perfectSeason.daily.count === 0 ? (
@@ -335,9 +421,13 @@ export default function AccountPage() {
                     </div>
                     <div className="text-xs text-gray-500">{b.wins}-{b.losses} · rating {b.rating.toFixed(1)}</div>
                   </div>
-                  <span className="flex-shrink-0 rounded-lg bg-gray-100 px-2 py-1 text-sm font-bold text-gray-800">{b.grade}</span>
+                  <span className={`flex-shrink-0 rounded-lg px-2 py-1 text-sm font-bold ${gradeClasses(b.grade)}`}>{b.grade}</span>
                   {b.rank != null && (
-                    <span className="w-14 flex-shrink-0 text-right text-sm font-bold text-gray-900">#{b.rank}</span>
+                    b.rank <= 3 ? (
+                      <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-sm font-bold ${rankBadge(b.rank)}`}>#{b.rank}</span>
+                    ) : (
+                      <span className="w-14 flex-shrink-0 text-right text-sm font-bold text-gray-900">#{b.rank}</span>
+                    )
                   )}
                 </li>
               ))}
@@ -346,7 +436,12 @@ export default function AccountPage() {
         )}
       </section>
 
-      <h2 className="mb-3 font-bold text-gray-900">My What-If Picks</h2>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="font-bold text-gray-900">My What-If Picks</h2>
+        <Link href="/nhl" className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200">
+          Make Picks
+        </Link>
+      </div>
       {saves == null ? (
         <div className="py-12 text-center text-gray-400">Loading your picks…</div>
       ) : groups.length === 0 ? (
@@ -365,6 +460,15 @@ export default function AccountPage() {
             const team = NHL_TEAMS[group.teamId];
             if (!team) return null;
             const actuals = actualsByTeam.get(group.key);
+            const groupGrade = actuals
+              ? group.saves.reduce(
+                  (acc, save) => {
+                    const g = gradeSave(save, actuals);
+                    return { graded: acc.graded + g.graded, exact: acc.exact + g.exact };
+                  },
+                  { graded: 0, exact: 0 }
+                )
+              : null;
             return (
               <section key={group.key} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
                 {/* Team header */}
@@ -378,10 +482,20 @@ export default function AccountPage() {
                       {formatSeasonLabel(group.season)} · {group.saves.length} save{group.saves.length === 1 ? '' : 's'}
                     </div>
                   </div>
+                  {groupGrade && groupGrade.graded > 0 && (
+                    <div className="flex-shrink-0 text-right">
+                      <div className="text-lg font-bold leading-tight" style={{ color: team.colors.primary }}>
+                        {Math.round((groupGrade.exact / groupGrade.graded) * 100)}%
+                      </div>
+                      <div className="text-[10px] uppercase tracking-wide text-gray-400">
+                        {groupGrade.exact}/{groupGrade.graded} exact
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Trend charts — one measure per chart (no dual axis) */}
-                {group.saves.length >= 1 && (
+                {group.saves.length >= 2 ? (
                   <div className="grid gap-4 border-b border-gray-100 p-4 sm:grid-cols-2">
                     <PicksChart
                       title="Projected Points by Save"
@@ -394,6 +508,10 @@ export default function AccountPage() {
                       color={team.colors.primary}
                       unit="%"
                     />
+                  </div>
+                ) : (
+                  <div className="border-b border-gray-100 px-4 py-2.5 text-xs text-gray-500">
+                    Save picks again on a future date to start your trend charts.
                   </div>
                 )}
 
