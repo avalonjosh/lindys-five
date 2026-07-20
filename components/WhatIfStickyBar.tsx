@@ -30,6 +30,7 @@ interface WhatIfStickyBarProps {
   playoffTarget: number;
   projectionReady: boolean; // false before the first game is simulated
   onReset: () => void;
+  onSave: () => void;
   onJumpToBox: () => void;
   isGoatMode: boolean;
   teamColors: TeamColors;
@@ -56,6 +57,7 @@ export default function WhatIfStickyBar({
   playoffTarget,
   projectionReady,
   onReset,
+  onSave,
   onJumpToBox,
   isGoatMode,
   teamColors,
@@ -109,13 +111,23 @@ export default function WhatIfStickyBar({
               </span>
             </button>
             {gamesSimulated > 0 && (
-              <button
-                type="button"
-                onClick={onReset}
-                className="flex-shrink-0 rounded-md bg-white/15 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-white/25"
-              >
-                Reset
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={onSave}
+                  className="flex-shrink-0 rounded-md bg-white px-3 py-1 text-xs font-bold transition-opacity hover:opacity-90"
+                  style={{ color: isGoatMode ? darkModeColors.accent : teamColors.primary }}
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={onReset}
+                  className="flex-shrink-0 rounded-md bg-white/15 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-white/25"
+                >
+                  Reset
+                </button>
+              </>
             )}
           </div>
 

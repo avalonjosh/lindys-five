@@ -532,7 +532,7 @@ function Shell({
             </Link>
             {user ? (
               <div className="flex items-center gap-1.5">
-                <span className="max-w-[90px] truncate text-xs font-bold text-white" title={user.username}>{user.username}</span>
+                <Link href="/account" className="max-w-[90px] truncate text-xs font-bold text-white transition-colors hover:text-white/80 hover:underline" title="My account">{user.username}</Link>
                 <button type="button" onClick={onLogout} aria-label="Sign out" title="Sign out" className="flex items-center text-white/70 transition-colors hover:text-white">
                   <LogOut className="h-4 w-4" />
                 </button>

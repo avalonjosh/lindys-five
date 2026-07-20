@@ -35,6 +35,7 @@ export default function SiteFooter() {
           <Link href="/82-0" className="transition-colors hover:text-white">82-0</Link>
           <Link href="/162-0" className="transition-colors hover:text-white">162-0</Link>
           <Link href="/blog" className="transition-colors hover:text-white">Blog</Link>
+          <Link href="/account" className="transition-colors hover:text-white">My Account</Link>
           <Link href="/feed.xml" className="transition-colors hover:text-white">RSS</Link>
         </nav>
 

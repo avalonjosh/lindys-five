@@ -24,6 +24,11 @@ import MerchCTA from '@/components/affiliate/MerchCTA';
 import GamePromo from '@/components/perfectseason/GamePromo';
 import PlayoffJourney, { type JourneySeries } from '@/components/playoffs/PlayoffJourney';
 import { hasTeamHistory } from '@/lib/data/teamHistory';
+import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
+import AuthModal from '@/components/perfectseason/board/AuthModal';
+import SavePicksModal from '@/components/whatif/SavePicksModal';
+import { fetchLatestWhatIfSave } from '@/lib/whatif/client';
+import type { WhatIfSave, WhatIfSubmission } from '@/lib/whatif/types';
 import {
   saveChunkStatsToCache,
   loadChunkStatsFromCache
@@ -362,6 +367,12 @@ export default function TeamTracker({
   const [hypotheticalResults, setHypotheticalResults] = useState<Map<number, GameResult>>(new Map());
   // Sticky What-If bar: mirrors the box's odds and shows once the box scrolls off.
   const [whatIfProbability, setWhatIfProbability] = useState(0);
+  // Saved-picks flow: opt-in account (shared with Perfect Season), save modal,
+  // and the user's most recent save for this team (for the restore prompt).
+  const { user, setUser } = useCurrentUser();
+  const [authOpen, setAuthOpen] = useState(false);
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [latestSave, setLatestSave] = useState<WhatIfSave | null>(null);
   const [boxOffscreen, setBoxOffscreen] = useState(false);
   const progressBoxRef = useRef<HTMLDivElement | null>(null);
   const [yearOverYearMode, setYearOverYearMode] = useState(false);
@@ -532,6 +543,98 @@ export default function TeamTracker({
       newMap.set(gameId, hypotheticalGame);
       return newMap;
     });
+  };
+
+  // Fetch the user's most recent save for this team when What If mode turns on,
+  // to power the "load my last picks" prompt.
+  useEffect(() => {
+    if (!whatIfMode || !user) {
+      setLatestSave(null);
+      return;
+    }
+    let cancelled = false;
+    fetchLatestWhatIfSave('nhl', team.id, season).then(save => {
+      if (!cancelled) setLatestSave(save);
+    });
+    return () => { cancelled = true; };
+  }, [whatIfMode, user, team.id, season]);
+
+  // Snapshot the current What-If state as a save payload. Recomputes the stats
+  // the same way the sticky bar does so the saved summary matches the screen.
+  const buildWhatIfSubmission = (): WhatIfSubmission => {
+    const hypos = [...hypotheticalResults.values()];
+    const simStats = hypotheticalResults.size > 0
+      ? calculateSeasonStats(getChunksWithHypotheticals(), totalGames)
+      : stats;
+    const picks = chunks.flatMap(chunk =>
+      chunk.games
+        .filter(g => g.gameId != null && hypotheticalResults.has(g.gameId))
+        .map(g => {
+          const hypo = hypotheticalResults.get(g.gameId!)!;
+          return {
+            gameId: g.gameId!,
+            date: g.date,
+            opponentAbbrev: g.opponentAbbreviation || g.opponent,
+            isHome: g.isHome,
+            outcome: hypo.outcome as 'W' | 'OTL' | 'L',
+          };
+        })
+    );
+    const setsCovered = chunks
+      .map(chunk => ({
+        set: chunk.chunkNumber,
+        picked: chunk.games.filter(g => g.gameId != null && hypotheticalResults.has(g.gameId)).length,
+        of: chunk.games.length,
+      }))
+      .filter(s => s.picked > 0);
+    return {
+      sport: 'nhl',
+      teamId: team.id,
+      season,
+      picks,
+      summary: {
+        gamesPicked: picks.length,
+        record: `${hypos.filter(g => g.outcome === 'W').length}-${hypos.filter(g => g.outcome === 'L').length}-${hypos.filter(g => g.outcome === 'OTL').length}`,
+        projectedPoints: simStats?.projectedPoints ?? 0,
+        playoffOdds: whatIfProbability,
+        totalPoints: simStats?.totalPoints ?? 0,
+        gamesPlayed: stats?.gamesPlayed ?? 0,
+        setsCovered,
+      },
+    };
+  };
+
+  const handleSaveClick = () => {
+    if (hypotheticalResults.size === 0) return;
+    if (!user) {
+      setAuthOpen(true);
+      return;
+    }
+    setSaveModalOpen(true);
+  };
+
+  // Re-apply a previous save: only games that are still pending and still inside
+  // the editable What-If sets take effect; everything else silently drops.
+  const handleRestorePicks = () => {
+    if (!latestSave) return;
+    const whatIfSets = getWhatIfSets();
+    const editableIds = new Set(
+      whatIfSets.flatMap(set => set.games.filter(g => g.outcome === 'PENDING').map(g => g.gameId))
+    );
+    const restored = new Map<number, GameResult>();
+    for (const pick of latestSave.picks) {
+      if (!editableIds.has(pick.gameId)) continue;
+      const game = chunks.flatMap(c => c.games).find(g => g.gameId === pick.gameId);
+      if (!game) continue;
+      restored.set(pick.gameId, {
+        ...game,
+        outcome: pick.outcome,
+        points: pick.outcome === 'W' ? 2 : pick.outcome === 'OTL' ? 1 : 0,
+        sabresScore: pick.outcome === 'W' ? 3 : pick.outcome === 'OTL' ? 2 : 1,
+        opponentScore: pick.outcome === 'W' ? 2 : 3,
+      });
+    }
+    setHypotheticalResults(restored);
   };
 
   // Retry the initial load when it fails transiently. Preseason and completed
@@ -900,6 +1003,7 @@ export default function TeamTracker({
       playoffTarget={whatIfBarStats?.playoffTarget ?? 0}
       projectionReady={!isPreseason || hypotheticalResults.size > 0}
       onReset={() => setHypotheticalResults(new Map())}
+      onSave={handleSaveClick}
       onJumpToBox={scrollToProgressBox}
       isGoatMode={!useClassicStyling}
       teamColors={effectiveTeamColors}
@@ -1152,26 +1256,68 @@ export default function TeamTracker({
               <span className="font-semibold text-sm md:text-base">What If Mode Active</span>
               <span className="text-xs md:text-sm opacity-80"><span className="hidden md:inline">- </span>{isPreseason ? 'Click any game to simulate the whole season' : 'Simulate pending games in the next 3 sets'}</span>
             </div>
-            <button
-              onClick={() => {
-                setHypotheticalResults(new Map());
-              }}
-              className={`px-3 py-1 rounded text-sm font-semibold transition-all whitespace-nowrap text-white`}
-              style={isGoatMode ? {
-                backgroundColor: darkModeColors.accent,
-              } : {
-                backgroundColor: team.colors.primary,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = '0.9';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '1';
-              }}
-            >
-              Reset
-            </button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {hypotheticalResults.size > 0 && (
+                <button
+                  onClick={handleSaveClick}
+                  className={`px-3 py-1 rounded text-sm font-semibold transition-all whitespace-nowrap text-white`}
+                  style={isGoatMode ? {
+                    backgroundColor: darkModeColors.accent,
+                  } : {
+                    backgroundColor: team.colors.primary,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '0.9';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                >
+                  Save Picks
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setHypotheticalResults(new Map());
+                }}
+                className={`px-3 py-1 rounded text-sm font-semibold transition-all whitespace-nowrap border-2`}
+                style={isGoatMode ? {
+                  borderColor: darkModeColors.accent,
+                  color: darkModeColors.accent,
+                } : {
+                  borderColor: team.colors.primary,
+                  color: team.colors.primary,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.8';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+              >
+                Reset
+              </button>
+            </div>
           </div>
+          {/* Restore prompt: signed-in user with a previous save and a clean slate */}
+          {latestSave && hypotheticalResults.size === 0 && (
+            <div className="mt-2 pt-2 border-t border-current/20 flex items-center justify-between gap-2 text-xs md:text-sm">
+              <span className="opacity-80 min-w-0 truncate">
+                You saved picks on {new Date(`${latestSave.savedDate}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ({latestSave.summary.gamesPicked} games, {latestSave.summary.record})
+              </span>
+              <button
+                onClick={handleRestorePicks}
+                className="font-bold underline whitespace-nowrap hover:opacity-80"
+              >
+                Load my last picks
+              </button>
+            </div>
+          )}
+          {user && (
+            <div className="mt-1.5 text-xs opacity-70">
+              <Link href="/account" className="underline hover:opacity-80">My Picks</Link>
+            </div>
+          )}
         </div>
       )}
 
@@ -1370,6 +1516,28 @@ export default function TeamTracker({
         </p>
       </footer>
     </main>
+
+    {/* Saved-picks flow: sign in (shared opt-in account), then confirm the snapshot */}
+    {authOpen && (
+      <AuthModal
+        initialMode="signup"
+        reason="Create a free account to save your What-If picks and track your predictions over time."
+        onClose={() => setAuthOpen(false)}
+        onSuccess={(u) => {
+          setUser(u);
+          setAuthOpen(false);
+          setSaveModalOpen(true);
+        }}
+      />
+    )}
+    {saveModalOpen && (
+      <SavePicksModal
+        onClose={() => setSaveModalOpen(false)}
+        submission={buildWhatIfSubmission()}
+        teamName={team.name}
+        totalGames={totalGames}
+      />
+    )}
     </div>
   );
 }
