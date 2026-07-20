@@ -49,6 +49,17 @@ export async function findSubscriberByEmail(email: string): Promise<NewsletterSu
   return null;
 }
 
+/** Soft-delete a subscription: mark unsubscribed and drop the team indexes.
+ * Same behavior as the email unsubscribe link. No-op if not subscribed. */
+export async function unsubscribeByEmail(email: string): Promise<void> {
+  const sub = await findSubscriberByEmail(email);
+  if (!sub || sub.unsubscribedAt) return;
+  await kv.set(`email:subscriber:${sub.id}`, { ...sub, unsubscribedAt: new Date().toISOString() });
+  for (const team of sub.teams ?? []) {
+    await kv.srem(`email:subscribers:team:${team}`, sub.id);
+  }
+}
+
 export async function ensureSubscriber(
   email: string,
   teams: string[],

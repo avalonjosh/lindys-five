@@ -12,6 +12,7 @@ import { fetchSabresSchedule } from '@/lib/services/nhlApi';
 import { NHL_TEAMS, MLB_TEAMS, findTeam, getTeamUrl } from '@/lib/teamConfig';
 import { formatSeasonLabel } from '@/lib/utils/season';
 import PicksChart from './PicksChart';
+import SettingsTab from './SettingsTab';
 import type { WhatIfSave, WhatIfPick } from '@/lib/whatif/types';
 import type { GameResult } from '@/lib/types';
 import type { ProfileResponse, ProfileBoard } from '@/app/api/account/profile/route';
@@ -122,6 +123,14 @@ const teamOptions = (teams: Record<string, { city: string; name: string }>) =>
 const NHL_OPTIONS = teamOptions(NHL_TEAMS);
 const MLB_OPTIONS = teamOptions(MLB_TEAMS);
 
+type AccountTab = 'overview' | 'picks' | 'settings';
+
+const TABS: { id: AccountTab; label: string }[] = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'picks', label: 'My Picks' },
+  { id: 'settings', label: 'Settings' },
+];
+
 export default function AccountPage() {
   const { user, loading, setUser } = useCurrentUser();
   const [authOpen, setAuthOpen] = useState(false);
@@ -131,6 +140,7 @@ export default function AccountPage() {
   const [expanded, setExpanded] = useState<string | null>(null); // `${group.key}:${savedDate}`
   const [editingFavorite, setEditingFavorite] = useState(false);
   const [savingFavorite, setSavingFavorite] = useState(false);
+  const [tab, setTab] = useState<AccountTab>('overview');
 
   const changeFavorite = async (slug: string) => {
     if (!user || savingFavorite) return;
@@ -368,6 +378,32 @@ export default function AccountPage() {
         </div>
       </div>
 
+      {/* Tab bar — Overview / My Picks / Settings */}
+      <div className="mb-6 flex gap-1 rounded-xl bg-gray-200/70 p-1">
+        {TABS.map(t => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={`flex-1 rounded-lg py-2 text-xs font-bold uppercase tracking-wide transition-colors sm:text-sm ${
+              tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'settings' && (
+        <SettingsTab
+          email={profile?.email ?? null}
+          onEmailChanged={(email) => setProfile(prev => (prev ? { ...prev, email } : prev))}
+          onDeleted={() => setUser(null)}
+        />
+      )}
+
+      {tab === 'overview' && (
+        <>
       {/* Stat tiles — the top-line numbers, no expanding required */}
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm">
@@ -445,7 +481,11 @@ export default function AccountPage() {
           </div>
         )}
       </section>
+        </>
+      )}
 
+      {tab === 'picks' && (
+        <>
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="font-bold text-gray-900">My What-If Picks</h2>
         <Link href="/nhl" className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200">
@@ -610,6 +650,8 @@ export default function AccountPage() {
             );
           })}
         </div>
+      )}
+        </>
       )}
     </div>
   );
