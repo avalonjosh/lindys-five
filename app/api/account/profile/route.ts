@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { getUserId } from '@/lib/perfectseason/server/session';
+import { easternDateString } from '@/lib/perfectseason/seed';
 import { findTeam } from '@/lib/teamConfig';
 import {
   userKey,
@@ -36,7 +37,7 @@ export interface ProfileResponse {
   perfectSeason: {
     boards: ProfileBoard[];
     /** Daily plays only keep a composite score in the boards hash; entries expire. */
-    daily: { count: number; bestRating: number | null };
+    daily: { count: number; bestRating: number | null; playedToday: { nhl: boolean; mlb: boolean } };
   };
 }
 
@@ -50,11 +51,19 @@ export async function GET(request: NextRequest) {
   // Board hash: `${board}` -> composite score (rating×1000 + wins tiebreak).
   const boardsHash = (await kv.hgetall<Record<string, number>>(userBoardsKey(userId))) ?? {};
 
+  const today = easternDateString();
+  const playedToday = { nhl: false, mlb: false };
   const dailyComposites: number[] = [];
   const persistentBoards: string[] = [];
   for (const board of Object.keys(boardsHash)) {
-    if (board.startsWith('daily:')) dailyComposites.push(Number(boardsHash[board]));
-    else persistentBoards.push(board);
+    if (board.startsWith('daily:')) {
+      dailyComposites.push(Number(boardsHash[board]));
+      // daily:{sport}:{variant}:{date}
+      const [, sport, , date] = board.split(':');
+      if (date === today && (sport === 'nhl' || sport === 'mlb')) playedToday[sport] = true;
+    } else {
+      persistentBoards.push(board);
+    }
   }
 
   const boards: ProfileBoard[] = (
@@ -100,6 +109,7 @@ export async function GET(request: NextRequest) {
         bestRating: dailyComposites.length
           ? Math.round(Math.max(...dailyComposites) / 100) / 10
           : null,
+        playedToday,
       },
     },
   };

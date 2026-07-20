@@ -123,11 +123,12 @@ const teamOptions = (teams: Record<string, { city: string; name: string }>) =>
 const NHL_OPTIONS = teamOptions(NHL_TEAMS);
 const MLB_OPTIONS = teamOptions(MLB_TEAMS);
 
-type AccountTab = 'overview' | 'picks' | 'settings';
+type AccountTab = 'overview' | 'picks' | 'perfectseason' | 'settings';
 
 const TABS: { id: AccountTab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'picks', label: 'My Picks' },
+  { id: 'perfectseason', label: 'Perfect Season' },
   { id: 'settings', label: 'Settings' },
 ];
 
@@ -216,6 +217,12 @@ export default function AccountPage() {
     }
     return { graded, exact };
   }, [groups, actualsByTeam]);
+
+  // Most recent save across every team, for the Overview summary card.
+  const latestSave = useMemo(
+    () => (saves && saves.length ? saves.reduce((a, b) => (b.savedAt > a.savedAt ? b : a)) : null),
+    [saves]
+  );
 
   // One schedule fetch per team group, to grade picks against real results.
   useEffect(() => {
@@ -385,7 +392,7 @@ export default function AccountPage() {
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`flex-1 rounded-lg py-2 text-xs font-bold uppercase tracking-wide transition-colors sm:text-sm ${
+            className={`flex-1 rounded-lg px-1 py-2 text-[10px] font-bold uppercase tracking-wide transition-colors sm:text-sm ${
               tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -428,6 +435,124 @@ export default function AccountPage() {
         </div>
       </div>
 
+      {/* Today's puzzles — the daily hook */}
+      <section className="mb-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <h3 className="mb-3 text-sm font-bold text-gray-900">Today&apos;s Daily Puzzles</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {([
+            { label: '82-0', sport: 'NHL', href: '/82-0', played: profile?.perfectSeason.daily.playedToday.nhl ?? false },
+            { label: '162-0', sport: 'MLB', href: '/162-0', played: profile?.perfectSeason.daily.playedToday.mlb ?? false },
+          ] as const).map(p => (
+            <div key={p.label} className="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2.5">
+              <div>
+                <div className="text-sm font-bold text-gray-900">{p.label}</div>
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{p.sport}</div>
+              </div>
+              {p.played ? (
+                <span className="flex items-center gap-1 text-xs font-bold text-green-600">
+                  <Check className="h-3.5 w-3.5" /> Played
+                </span>
+              ) : (
+                <Link href={p.href} className="rounded-lg bg-sabres-blue px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-sabres-light">
+                  Play
+                </Link>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Summary cards — less than the tabs show, so "View all" has a reason to exist */}
+      <div className="mb-8 grid gap-4 sm:grid-cols-2">
+        {/* Perfect Season summary */}
+        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-bold text-gray-900">Perfect Season</h3>
+            <button type="button" onClick={() => setTab('perfectseason')} className="text-xs font-bold text-sabres-blue hover:underline">
+              View all →
+            </button>
+          </div>
+          {profile == null ? (
+            <p className="text-sm text-gray-400">Loading…</p>
+          ) : profile.perfectSeason.boards.length === 0 && profile.perfectSeason.daily.count === 0 ? (
+            <p className="text-sm text-gray-500">
+              No games played yet. Try today&apos;s puzzle at{' '}
+              <Link href="/82-0" className="font-bold text-sabres-blue hover:underline">82-0</Link>.
+            </p>
+          ) : (
+            <>
+              <ul className="divide-y divide-gray-100">
+                {profile.perfectSeason.boards.slice(0, 3).map(b => (
+                  <li key={b.board} className="flex items-center gap-2 py-2">
+                    <span className="min-w-0 flex-1 truncate text-xs font-semibold text-gray-700">{boardLabel(b)}</span>
+                    <span className={`flex-shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold ${gradeClasses(b.grade)}`}>{b.grade}</span>
+                    {b.rank != null && (
+                      <span className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-xs font-bold ${rankBadge(b.rank)}`}>#{b.rank}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {profile.perfectSeason.daily.count > 0 && (
+                <p className="mt-1 text-xs text-gray-500">
+                  {profile.perfectSeason.daily.count} daily puzzle{profile.perfectSeason.daily.count === 1 ? '' : 's'} played
+                  {profile.perfectSeason.daily.bestRating != null && (
+                    <> · best {profile.perfectSeason.daily.bestRating.toFixed(1)}</>
+                  )}
+                </p>
+              )}
+            </>
+          )}
+        </section>
+
+        {/* My Picks summary */}
+        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h3 className="text-sm font-bold text-gray-900">My What-If Picks</h3>
+            <button type="button" onClick={() => setTab('picks')} className="text-xs font-bold text-sabres-blue hover:underline">
+              View all →
+            </button>
+          </div>
+          {saves == null ? (
+            <p className="text-sm text-gray-400">Loading…</p>
+          ) : latestSave == null ? (
+            <p className="text-sm text-gray-500">
+              No saved picks yet. Turn on What If mode on any{' '}
+              <Link href="/nhl" className="font-bold text-sabres-blue hover:underline">team page</Link> and hit Save Picks.
+            </p>
+          ) : (
+            <>
+              {(() => {
+                const team = NHL_TEAMS[latestSave.teamId];
+                return (
+                  <div className="flex items-center gap-2.5">
+                    {team && <Image src={team.logo} alt="" width={32} height={32} className="h-8 w-8 flex-shrink-0" unoptimized />}
+                    <div className="min-w-0">
+                      <div className="truncate text-xs font-bold text-gray-900">
+                        {team ? `${team.city} ${team.name}` : latestSave.teamId} · {longDate(latestSave.savedDate)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {latestSave.summary.gamesPicked} picked ({latestSave.summary.record}) · {latestSave.summary.playoffOdds.toFixed(1)}% odds
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+              <p className="mt-2 text-xs text-gray-500">
+                {overall.graded > 0 ? (
+                  <>Exact accuracy <span className="font-bold text-gray-700">{Math.round((overall.exact / overall.graded) * 100)}%</span> · {overall.exact}/{overall.graded} graded</>
+                ) : (
+                  'Grading starts once games are played.'
+                )}
+              </p>
+            </>
+          )}
+        </section>
+      </div>
+        </>
+      )}
+
+      {tab === 'perfectseason' && (
+        <>
       {/* Perfect Season — leaderboard bests from 82-0 / 162-0 */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="font-bold text-gray-900">Perfect Season</h2>
