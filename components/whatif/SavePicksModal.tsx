@@ -2,9 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { X, Lock, Check } from 'lucide-react';
+import { X, Lock, Check, Mail } from 'lucide-react';
 import { saveWhatIfPicks } from '@/lib/whatif/client';
 import type { WhatIfSubmission } from '@/lib/whatif/types';
+
+/** Whether the newsletter ask is suppressed on this browser (subscribed or recently declined). */
+function newsletterSuppressed(): boolean {
+  try {
+    if (localStorage.getItem('newsletter-subscribed') === '1') return true;
+    return Number(localStorage.getItem('newsletter-dismissed-until') || 0) > Date.now();
+  } catch {
+    return false;
+  }
+}
 
 interface SavePicksModalProps {
   onClose: () => void;
@@ -18,12 +28,38 @@ export default function SavePicksModal({ onClose, submission, teamName, totalGam
   const [status, setStatus] = useState<'idle' | 'saving' | 'done' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [replacedToday, setReplacedToday] = useState(false);
+  const [accountEmail, setAccountEmail] = useState<string | null>(null);
+  const [nlStatus, setNlStatus] = useState<'idle' | 'sending' | 'done' | 'error' | 'dismissed'>('idle');
+  const [nlMessage, setNlMessage] = useState('');
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+
+  // Resolve the newsletter ask up front so it's ready the moment a save lands.
+  // Saving requires being signed in, so status normally comes back signedIn.
+  useEffect(() => {
+    if (newsletterSuppressed()) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/newsletter/status', { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || !data.signedIn) return;
+        if (data.subscribed) {
+          try { localStorage.setItem('newsletter-subscribed', '1'); } catch { /* ignore */ }
+          return;
+        }
+        setAccountEmail(data.email);
+      } catch {
+        // Network hiccup: just skip the ask.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const dateLabel = new Date().toLocaleDateString('en-US', {
     timeZone: 'America/New_York',
@@ -47,6 +83,48 @@ export default function SavePicksModal({ onClose, submission, teamName, totalGam
       setError(result.error);
       setStatus('error');
     }
+  };
+
+  const subscribeToRecaps = async () => {
+    if (!accountEmail || nlStatus === 'sending') return;
+    setNlStatus('sending');
+    try {
+      const res = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: accountEmail,
+          teams: [submission.teamId],
+          source: 'post-save-prompt',
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setNlMessage(data.message || 'Check your inbox to confirm your subscription.');
+        setNlStatus('done');
+        try {
+          localStorage.setItem('newsletter-subscribed', '1');
+          sessionStorage.setItem('newsletterSubscribed', '1');
+        } catch { /* ignore */ }
+      } else {
+        setNlMessage(data.error || 'Something went wrong');
+        setNlStatus('error');
+      }
+    } catch {
+      setNlMessage('Network error. Please try again.');
+      setNlStatus('error');
+    }
+  };
+
+  const declineRecaps = () => {
+    setNlStatus('dismissed');
+    try {
+      // Same 30-day cooldown the newsletter popup uses, so declining here
+      // quiets the ask everywhere instead of re-prompting on the next save.
+      if (localStorage.getItem('newsletter-subscribed') !== '1') {
+        localStorage.setItem('newsletter-dismissed-until', String(Date.now() + 30 * 24 * 60 * 60 * 1000));
+      }
+    } catch { /* ignore */ }
   };
 
   return (
@@ -73,6 +151,40 @@ export default function SavePicksModal({ onClose, submission, teamName, totalGam
             <p className="text-sm text-gray-500">
               Save again on a future date to build your prediction history and see how your picks change over time.
             </p>
+            {accountEmail && nlStatus !== 'dismissed' && (
+              <div className="rounded-lg border-2 border-gray-100 p-3">
+                {nlStatus === 'done' ? (
+                  <div className="flex items-center gap-2 text-sm font-semibold text-green-700">
+                    <Check className="h-5 w-5 shrink-0" />
+                    <span>{nlMessage}</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mb-1 flex items-center gap-1.5 text-sm font-bold text-gray-800">
+                      <Mail className="h-4 w-4 shrink-0 text-sabres-blue" />
+                      <span>Want {teamName} game recaps by email?</span>
+                    </div>
+                    <p className="mb-3 text-xs text-gray-500">
+                      We&apos;ll send recaps to <span className="font-semibold text-gray-700">{accountEmail}</span> after every game. Free, unsubscribe anytime.
+                    </p>
+                    {nlStatus === 'error' && <p className="mb-2 text-xs font-semibold text-sabres-red">{nlMessage}</p>}
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={subscribeToRecaps}
+                        disabled={nlStatus === 'sending'}
+                        className="rounded-lg bg-sabres-blue px-4 py-2 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-sabres-light disabled:opacity-60"
+                      >
+                        {nlStatus === 'sending' ? 'Sending…' : 'Email Me Recaps'}
+                      </button>
+                      <button type="button" onClick={declineRecaps} className="text-xs font-semibold text-gray-400 hover:text-gray-600">
+                        No thanks
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
             <Link
               href="/account"
               className="w-full rounded-xl bg-sabres-blue py-3 text-center text-sm font-bold uppercase tracking-wide text-white shadow-md transition-colors hover:bg-sabres-light"
