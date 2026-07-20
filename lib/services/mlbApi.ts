@@ -77,6 +77,7 @@ export async function fetchMLBSchedule(teamId: number, season: number): Promise<
 
       const result: MLBGameResult = {
         date: dateStr,
+        isoDate: gameDate.toLocaleDateString('en-CA', { timeZone: 'America/New_York' }),
         startTime: timeStr,
         opponent: opponentAbbrev,
         opponentLogo: `https://www.mlbstatic.com/team-logos/${opponentId}.svg`,

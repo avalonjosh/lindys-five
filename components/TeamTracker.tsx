@@ -28,7 +28,7 @@ import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
 import AuthModal from '@/components/perfectseason/board/AuthModal';
 import SavePicksModal from '@/components/whatif/SavePicksModal';
 import { fetchLatestWhatIfSave } from '@/lib/whatif/client';
-import type { WhatIfSave, WhatIfSubmission } from '@/lib/whatif/types';
+import { normalizePickDate, type WhatIfSave, type WhatIfSubmission } from '@/lib/whatif/types';
 import {
   saveChunkStatsToCache,
   loadChunkStatsFromCache
@@ -573,7 +573,8 @@ export default function TeamTracker({
           const hypo = hypotheticalResults.get(g.gameId!)!;
           return {
             gameId: g.gameId!,
-            date: g.date,
+            // GameResult dates are display-formatted MM/DD/YYYY; store ISO.
+            date: normalizePickDate(g.date),
             opponentAbbrev: g.opponentAbbreviation || g.opponent,
             isHome: g.isHome,
             outcome: hypo.outcome as 'W' | 'OTL' | 'L',

@@ -218,7 +218,7 @@ export default function SavePicksModal({ onClose, submission, teamName, totalGam
                   <dd className="font-bold">{summary.record}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt>Projected points</dt>
+                  <dt>{submission.sport === 'mlb' ? 'Projected wins' : 'Projected points'}</dt>
                   <dd className="font-bold">{summary.projectedPoints}</dd>
                 </div>
                 <div className="flex justify-between">

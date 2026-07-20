@@ -9,6 +9,7 @@ import AuthModal from '@/components/perfectseason/board/AuthModal';
 import { logout } from '@/lib/perfectseason/account';
 import { fetchWhatIfSaves } from '@/lib/whatif/client';
 import { fetchSabresSchedule } from '@/lib/services/nhlApi';
+import { fetchMLBSchedule } from '@/lib/services/mlbApi';
 import { NHL_TEAMS, MLB_TEAMS, findTeam, getTeamUrl } from '@/lib/teamConfig';
 import { formatSeasonLabel } from '@/lib/utils/season';
 import PicksChart from './PicksChart';
@@ -21,6 +22,7 @@ type ActualOutcome = 'W' | 'OTL' | 'L';
 
 interface TeamGroup {
   key: string; // `${sport}:${teamId}:${season}`
+  sport: string;
   teamId: string;
   season: string;
   saves: WhatIfSave[]; // oldest first
@@ -46,7 +48,9 @@ function outcomeOf(game: GameResult): ActualOutcome | null {
   return game.outcome === 'PENDING' ? null : game.outcome;
 }
 
-const pts = (o: ActualOutcome) => (o === 'W' ? 2 : o === 'OTL' ? 1 : 0);
+/** Value of an outcome in the save's sport: NHL standings points, MLB wins. */
+const pts = (o: ActualOutcome, sport: string) =>
+  sport === 'mlb' ? (o === 'W' ? 1 : 0) : o === 'W' ? 2 : o === 'OTL' ? 1 : 0;
 
 function gradeSave(save: WhatIfSave, actuals: Map<number, ActualOutcome>): SaveGrade {
   const picks: PickGrade[] = save.picks.map(pick => {
@@ -60,14 +64,20 @@ function gradeSave(save: WhatIfSave, actuals: Map<number, ActualOutcome>): SaveG
     graded: graded.length,
     exact: graded.filter(p => p.exact).length,
     simpleRight: graded.filter(p => p.simpleRight).length,
-    predictedPoints: graded.reduce((s, p) => s + pts(p.pick.outcome), 0),
-    earnedPoints: graded.reduce((s, p) => s + pts(p.actual!), 0),
+    predictedPoints: graded.reduce((s, p) => s + pts(p.pick.outcome, save.sport), 0),
+    earnedPoints: graded.reduce((s, p) => s + pts(p.actual!, save.sport), 0),
     picks,
   };
 }
 
 function longDate(date: string): string {
   return new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+/** Pick dates are YYYY-MM-DD on new saves but MM/DD/YYYY on early NHL ones. */
+function pickDateLabel(date: string): string {
+  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T12:00:00`) : new Date(date);
+  return isNaN(parsed.getTime()) ? date : parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 /** j•••@gmail.com — enough to recognize your own address, nothing more. */
@@ -190,7 +200,7 @@ export default function AccountPage() {
     const map = new Map<string, TeamGroup>();
     for (const save of saves) {
       const key = `${save.sport}:${save.teamId}:${save.season}`;
-      if (!map.has(key)) map.set(key, { key, teamId: save.teamId, season: save.season, saves: [] });
+      if (!map.has(key)) map.set(key, { key, sport: save.sport, teamId: save.teamId, season: save.season, saves: [] });
       map.get(key)!.saves.push(save);
     }
     for (const group of map.values()) {
@@ -228,6 +238,18 @@ export default function AccountPage() {
   useEffect(() => {
     for (const group of groups) {
       if (actualsByTeam.has(group.key)) continue;
+      if (group.sport === 'mlb') {
+        const team = MLB_TEAMS[group.teamId];
+        if (!team) continue;
+        fetchMLBSchedule(team.mlbId, Number(group.season)).then(schedule => {
+          const actuals = new Map<number, ActualOutcome>();
+          for (const game of schedule) {
+            if (game.gameId != null && game.outcome !== 'PENDING') actuals.set(game.gameId, game.outcome);
+          }
+          setActualsByTeam(prev => new Map(prev).set(group.key, actuals));
+        });
+        continue;
+      }
       const team = NHL_TEAMS[group.teamId];
       if (!team) continue;
       fetchSabresSchedule(group.season, team.abbreviation, team.nhlId).then(schedule => {
@@ -522,7 +544,7 @@ export default function AccountPage() {
           ) : (
             <>
               {(() => {
-                const team = NHL_TEAMS[latestSave.teamId];
+                const team = findTeam(latestSave.teamId);
                 return (
                   <div className="flex items-center gap-2.5">
                     {team && <Image src={team.logo} alt="" width={32} height={32} className="h-8 w-8 flex-shrink-0" unoptimized />}
@@ -632,7 +654,7 @@ export default function AccountPage() {
       ) : (
         <div className="flex flex-col gap-8">
           {groups.map(group => {
-            const team = NHL_TEAMS[group.teamId];
+            const team = group.sport === 'mlb' ? MLB_TEAMS[group.teamId] : NHL_TEAMS[group.teamId];
             if (!team) return null;
             const actuals = actualsByTeam.get(group.key);
             const groupGrade = actuals
@@ -650,11 +672,11 @@ export default function AccountPage() {
                 <div className="flex items-center gap-3 border-b border-gray-100 p-4" style={{ backgroundColor: `${team.colors.primary}0d` }}>
                   <Image src={team.logo} alt="" width={40} height={40} className="h-10 w-10" unoptimized />
                   <div className="min-w-0 flex-1">
-                    <Link href={`/nhl/${team.id}`} className="font-bold text-gray-900 hover:underline">
+                    <Link href={getTeamUrl(group.teamId)} className="font-bold text-gray-900 hover:underline">
                       {team.city} {team.name}
                     </Link>
                     <div className="text-xs text-gray-500">
-                      {formatSeasonLabel(group.season)} · {group.saves.length} save{group.saves.length === 1 ? '' : 's'}
+                      {group.sport === 'mlb' ? group.season : formatSeasonLabel(group.season)} · {group.saves.length} save{group.saves.length === 1 ? '' : 's'}
                     </div>
                   </div>
                   {groupGrade && groupGrade.graded > 0 && (
@@ -673,7 +695,7 @@ export default function AccountPage() {
                 {group.saves.length >= 2 ? (
                   <div className="grid gap-4 border-b border-gray-100 p-4 sm:grid-cols-2">
                     <PicksChart
-                      title="Projected Points by Save"
+                      title={group.sport === 'mlb' ? 'Projected Wins by Save' : 'Projected Points by Save'}
                       data={group.saves.map(s => ({ date: s.savedDate, value: s.summary.projectedPoints }))}
                       color={team.colors.primary}
                     />
@@ -706,7 +728,7 @@ export default function AccountPage() {
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-bold text-gray-900">{longDate(save.savedDate)}</div>
                             <div className="text-xs text-gray-500">
-                              {save.summary.gamesPicked} games picked ({save.summary.record}) · Proj {save.summary.projectedPoints} pts · {save.summary.playoffOdds.toFixed(1)}% odds
+                              {save.summary.gamesPicked} games picked ({save.summary.record}) · Proj {save.summary.projectedPoints} {save.sport === 'mlb' ? 'wins' : 'pts'} · {save.summary.playoffOdds.toFixed(1)}% odds
                             </div>
                           </div>
                           {grade && grade.graded > 0 && (
@@ -726,25 +748,29 @@ export default function AccountPage() {
                         {open && (
                           <div className="bg-gray-50 px-4 pb-4">
                             {grade && grade.graded > 0 && (
-                              <div className="mb-3 grid grid-cols-3 gap-2 pt-3 text-center">
+                              // MLB has no OTL, so "exact" and "win vs loss" are the
+                              // same measure — show two tiles instead of three.
+                              <div className={`mb-3 grid gap-2 pt-3 text-center ${save.sport === 'mlb' ? 'grid-cols-2' : 'grid-cols-3'}`}>
                                 <div className="rounded-lg bg-white p-2">
                                   <div className="text-sm font-bold text-gray-900">{grade.exact}/{grade.graded}</div>
-                                  <div className="text-[10px] uppercase tracking-wide text-gray-400">Exact (W/OTL/L)</div>
+                                  <div className="text-[10px] uppercase tracking-wide text-gray-400">{save.sport === 'mlb' ? 'Correct (W/L)' : 'Exact (W/OTL/L)'}</div>
                                 </div>
-                                <div className="rounded-lg bg-white p-2">
-                                  <div className="text-sm font-bold text-gray-900">{grade.simpleRight}/{grade.graded}</div>
-                                  <div className="text-[10px] uppercase tracking-wide text-gray-400">Win vs Loss</div>
-                                </div>
+                                {save.sport !== 'mlb' && (
+                                  <div className="rounded-lg bg-white p-2">
+                                    <div className="text-sm font-bold text-gray-900">{grade.simpleRight}/{grade.graded}</div>
+                                    <div className="text-[10px] uppercase tracking-wide text-gray-400">Win vs Loss</div>
+                                  </div>
+                                )}
                                 <div className="rounded-lg bg-white p-2">
                                   <div className="text-sm font-bold text-gray-900">{grade.earnedPoints}/{grade.predictedPoints}</div>
-                                  <div className="text-[10px] uppercase tracking-wide text-gray-400">Pts Earned vs Picked</div>
+                                  <div className="text-[10px] uppercase tracking-wide text-gray-400">{save.sport === 'mlb' ? 'Wins Earned vs Picked' : 'Pts Earned vs Picked'}</div>
                                 </div>
                               </div>
                             )}
                             <ul className="flex flex-col gap-1 pt-1">
                               {(grade?.picks ?? save.picks.map(pick => ({ pick, actual: null as ActualOutcome | null, exact: false, simpleRight: false }))).map(({ pick, actual, exact }) => (
                                 <li key={pick.gameId} className="flex items-center gap-2 rounded-md bg-white px-2.5 py-1.5 text-xs">
-                                  <span className="w-14 flex-shrink-0 text-gray-400">{new Date(`${pick.date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                                  <span className="w-14 flex-shrink-0 text-gray-400">{pickDateLabel(pick.date)}</span>
                                   <span className="min-w-0 flex-1 truncate font-semibold text-gray-700">
                                     {pick.isHome ? 'vs' : '@'} {pick.opponentAbbrev}
                                   </span>

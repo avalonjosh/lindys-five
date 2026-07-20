@@ -4,27 +4,38 @@
  * imports here — mirrors lib/perfectseason/leaderboard.ts.
  */
 
-export type WhatIfSport = 'nhl'; // 'mlb' / 'nfl' are planned follow-ups
-export type WhatIfOutcome = 'W' | 'OTL' | 'L';
+export type WhatIfSport = 'nhl' | 'mlb'; // 'nfl' is a planned follow-up
+export type WhatIfOutcome = 'W' | 'OTL' | 'L'; // MLB saves never use 'OTL'
 
 /** One simulated game inside a save. Enough to render history without a schedule fetch. */
 export interface WhatIfPick {
   gameId: number;
-  date: string; // game date, YYYY-MM-DD
+  date: string; // game date, YYYY-MM-DD (older NHL saves may hold MM/DD/YYYY)
   opponentAbbrev: string;
   isHome: boolean;
   outcome: WhatIfOutcome;
 }
 
-/** Snapshot of what the tracker showed at save time. */
+/**
+ * Snapshot of what the tracker showed at save time. The "points" fields are
+ * sport-relative: NHL saves store standings points, MLB saves store wins
+ * (projectedPoints = projected wins, totalPoints = current wins).
+ */
 export interface WhatIfSummary {
   gamesPicked: number;
-  record: string; // "8-2-1" W-L-OTL of the picks themselves
+  record: string; // picks' own record: "8-2-1" W-L-OTL (NHL) or "8-2" W-L (MLB)
   projectedPoints: number;
   playoffOdds: number; // 0-100, whatIfProbability at save time
   totalPoints: number;
   gamesPlayed: number; // real games played at save time
   setsCovered: { set: number; picked: number; of: number }[];
+}
+
+/** Normalize a tracker date string (MM/DD/YYYY or already-ISO) to YYYY-MM-DD. */
+export function normalizePickDate(date: string): string {
+  const us = date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (us) return `${us[3]}-${us[1]}-${us[2]}`;
+  return date;
 }
 
 export interface WhatIfSave {

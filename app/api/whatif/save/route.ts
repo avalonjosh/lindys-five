@@ -3,7 +3,7 @@ import { kv } from '@vercel/kv';
 import { getUserId } from '@/lib/perfectseason/server/session';
 import { rateLimit } from '@/lib/perfectseason/server/ratelimit';
 import { easternDateString } from '@/lib/perfectseason/seed';
-import { NHL_TEAMS } from '@/lib/teamConfig';
+import { NHL_TEAMS, MLB_TEAMS } from '@/lib/teamConfig';
 import {
   whatIfSaveKey,
   whatIfIndexKey,
@@ -12,22 +12,26 @@ import {
   type WhatIfSubmission,
 } from '@/lib/whatif/types';
 
-const OUTCOMES = new Set(['W', 'OTL', 'L']);
-const SEASON_RE = /^\d{8}$/;
-const MAX_PICKS = 84;
+// Per-sport rules: NHL seasons are "20262027" with W/OTL/L outcomes; MLB
+// seasons are "2026" with W/L only.
+const SPORT_RULES = {
+  nhl: { teams: NHL_TEAMS, seasonRe: /^\d{8}$/, outcomes: new Set(['W', 'OTL', 'L']), maxPicks: 84 },
+  mlb: { teams: MLB_TEAMS, seasonRe: /^\d{4}$/, outcomes: new Set(['W', 'L']), maxPicks: 162 },
+} as const;
 
 function validate(sub: WhatIfSubmission): string | null {
-  if (sub.sport !== 'nhl') return 'Unsupported sport';
-  if (!NHL_TEAMS[sub.teamId]) return 'Unknown team';
-  if (!SEASON_RE.test(sub.season)) return 'Invalid season';
+  const rules = SPORT_RULES[sub.sport];
+  if (!rules) return 'Unsupported sport';
+  if (!rules.teams[sub.teamId]) return 'Unknown team';
+  if (!rules.seasonRe.test(sub.season)) return 'Invalid season';
   if (!Array.isArray(sub.picks) || sub.picks.length === 0) return 'No picks to save';
-  if (sub.picks.length > MAX_PICKS) return 'Too many picks';
+  if (sub.picks.length > rules.maxPicks) return 'Too many picks';
   const seen = new Set<number>();
   for (const p of sub.picks) {
     if (typeof p.gameId !== 'number' || !Number.isFinite(p.gameId)) return 'Invalid pick';
     if (seen.has(p.gameId)) return 'Duplicate pick';
     seen.add(p.gameId);
-    if (!OUTCOMES.has(p.outcome)) return 'Invalid pick';
+    if (!rules.outcomes.has(p.outcome)) return 'Invalid pick';
     if (typeof p.date !== 'string' || typeof p.opponentAbbrev !== 'string' || typeof p.isHome !== 'boolean') {
       return 'Invalid pick';
     }

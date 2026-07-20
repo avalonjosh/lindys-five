@@ -26,6 +26,8 @@ interface MLBProgressBarProps {
   onYearOverYearToggle?: () => void;
   lastSeasonStats?: MLBSeasonStats;
   showShareButton?: boolean;
+  /** Mirrors the displayed playoff probability up to the What-If save flow. */
+  onProbabilityComputed?: (probability: number) => void;
 }
 
 interface CutLineState {
@@ -74,6 +76,25 @@ function deriveCutLineState(team: MLBStandingsTeam, standings: MLBStandingsTeam[
     effectiveCutLine: activePath === 'division' ? divCutLine : wcCutLine,
     divBubbleAbbrev: divBubble?.teamAbbrev || '',
     wcBubbleAbbrev: wcBubble?.teamAbbrev || '',
+  };
+}
+
+/**
+ * What-If support: overlay simulated wins/losses onto the team's standings row
+ * so the probability model sees the simulated record. Runs are scaled to the
+ * simulated game count so the Pythagorean blend keeps its per-game rates.
+ */
+function withSimulatedRecord(team: MLBStandingsTeam, stats: MLBSeasonStats): MLBStandingsTeam {
+  const realGames = team.wins + team.losses;
+  const simGames = stats.totalWins + stats.totalLosses;
+  if (realGames === 0 || (stats.totalWins === team.wins && stats.totalLosses === team.losses)) return team;
+  const scale = simGames / realGames;
+  return {
+    ...team,
+    wins: stats.totalWins,
+    losses: stats.totalLosses,
+    runsScored: Math.round(team.runsScored * scale),
+    runsAllowed: Math.round(team.runsAllowed * scale),
   };
 }
 
@@ -140,6 +161,7 @@ export default function MLBProgressBar({
   onYearOverYearToggle,
   lastSeasonStats,
   showShareButton,
+  onProbabilityComputed,
 }: MLBProgressBarProps) {
   const { totalWins, totalLosses, gamesPlayed, gamesRemaining, winPct, projectedWins, playoffTarget, totalGames } = stats;
 
@@ -171,9 +193,20 @@ export default function MLBProgressBar({
   }, [teamAbbrev, gamesPlayed, standings.length, standingsLoading, standingsError]);
 
   const userTeam = teamAbbrev ? standings.find(t => t.teamAbbrev === teamAbbrev) : undefined;
-  const cutLineData: CutLineState | null = userTeam ? deriveCutLineState(userTeam, standings) : null;
+  // In What-If mode the stats prop carries the simulated record; fold it into
+  // the standings row so the probability reacts to the user's picks.
+  const probTeam = userTeam ? withSimulatedRecord(userTeam, stats) : undefined;
+  const cutLineData: CutLineState | null = probTeam ? deriveCutLineState(probTeam, standings) : null;
   const clinchState: ClinchState | null = userTeam ? deriveClinchState(userTeam) : null;
   const probability = cutLineData?.probability;
+
+  // Mirror the displayed probability up to the What-If save flow (same pattern
+  // as the NHL ProgressBar). Same-value setState in the parent is a no-op.
+  useEffect(() => {
+    if (probability !== undefined) onProbabilityComputed?.(probability);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [probability]);
+
   const showProbabilityRow = teamAbbrev && gamesPlayed >= 10;
   const probabilityLabel = standingsLoading
     ? '--%'

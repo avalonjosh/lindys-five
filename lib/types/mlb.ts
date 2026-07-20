@@ -1,5 +1,7 @@
 export interface MLBGameResult {
   date: string;
+  /** YYYY-MM-DD Eastern, for saved What-If picks (`date` is display-formatted). */
+  isoDate?: string;
   startTime?: string;
   opponent: string;
   opponentLogo: string;
