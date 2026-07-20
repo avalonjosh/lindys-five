@@ -22,6 +22,8 @@ export interface User {
   passwordHash: string;
   createdAt: string;
   authProvider: 'password';
+  /** Primary favorite team slug (NHL or MLB), picked at signup or on the profile page. */
+  favoriteTeam?: string;
   // Reserved for a later Google OAuth follow-up:
   googleId?: string;
 }
@@ -30,6 +32,7 @@ export interface User {
 export interface PublicUser {
   id: string;
   username: string;
+  favoriteTeam?: string;
 }
 
 export const userKey = (id: string) => `ps:user:${id}`;

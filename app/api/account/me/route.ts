@@ -10,5 +10,5 @@ export async function GET(request: NextRequest) {
   const user = await kv.get<User>(userKey(userId));
   if (!user) return NextResponse.json({ user: null }, { status: 401 });
 
-  return NextResponse.json({ user: { id: user.id, username: user.username } });
+  return NextResponse.json({ user: { id: user.id, username: user.username, favoriteTeam: user.favoriteTeam } });
 }

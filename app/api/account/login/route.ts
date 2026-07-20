@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   if (!user?.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) return invalid;
 
   const token = await signUserToken(user.id);
-  const res = NextResponse.json({ user: { id: user.id, username: user.username } });
+  const res = NextResponse.json({ user: { id: user.id, username: user.username, favoriteTeam: user.favoriteTeam } });
   res.cookies.set(USER_COOKIE, token, userCookieOptions);
   return res;
 }

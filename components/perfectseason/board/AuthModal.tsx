@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { login, signup } from '@/lib/perfectseason/account';
 import type { PublicUser } from '@/lib/perfectseason/leaderboard';
+import { NHL_TEAMS, MLB_TEAMS, findTeam } from '@/lib/teamConfig';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -11,22 +12,63 @@ interface AuthModalProps {
   initialMode?: 'signin' | 'signup';
   /** Optional context line, e.g. "Sign in to save your score to the leaderboard". */
   reason?: string;
+  /** Team slug to preselect as favorite when localStorage has none (e.g. the page's team). */
+  defaultFavoriteTeam?: string;
 }
+
+/** First locally-favorited team that still maps to a real team config. */
+function storedFavorite(): string | null {
+  try {
+    const saved = JSON.parse(localStorage.getItem('favorite-teams') ?? '[]');
+    if (Array.isArray(saved)) {
+      for (const slug of saved) if (typeof slug === 'string' && findTeam(slug)) return slug;
+    }
+  } catch {
+    // Ignore malformed localStorage.
+  }
+  return null;
+}
+
+/** Keep the hamburger/home-grid favorites in sync with the account's favorite. */
+function mergeFavoriteIntoLocalStorage(slug: string | undefined) {
+  if (!slug || !findTeam(slug)) return;
+  try {
+    const saved = JSON.parse(localStorage.getItem('favorite-teams') ?? '[]');
+    const list = Array.isArray(saved) ? saved : [];
+    if (!list.includes(slug)) localStorage.setItem('favorite-teams', JSON.stringify([slug, ...list]));
+  } catch {
+    localStorage.setItem('favorite-teams', JSON.stringify([slug]));
+  }
+}
+
+const teamOptions = (teams: Record<string, { city: string; name: string }>) =>
+  Object.entries(teams)
+    .map(([slug, t]) => ({ slug, label: `${t.city} ${t.name}` }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+const NHL_OPTIONS = teamOptions(NHL_TEAMS);
+const MLB_OPTIONS = teamOptions(MLB_TEAMS);
 
 const inputClass =
   'w-full rounded-lg border-2 border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none transition-colors focus:border-sabres-blue focus:bg-white';
 const labelClass = 'mb-1 block text-[11px] font-bold uppercase tracking-wide text-gray-500';
 
 /** Sign In / Sign Up sheet for opt-in leaderboard accounts. Styled like ShareTeamModal. */
-export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', reason }: AuthModalProps) {
+export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', reason, defaultFavoriteTeam }: AuthModalProps) {
   const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
   const [emailOrUsername, setEmailOrUsername] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [subscribe, setSubscribe] = useState(false);
+  // Favorite team: prefer an existing local favorite, then the page's team.
+  const [favoriteTeam, setFavoriteTeam] = useState<string>(() =>
+    storedFavorite() ?? (defaultFavoriteTeam && findTeam(defaultFavoriteTeam) ? defaultFavoriteTeam : '')
+  );
+  const [pickingTeam, setPickingTeam] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const favorite = favoriteTeam ? findTeam(favoriteTeam) : undefined;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -39,10 +81,16 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
     if (submitting) return;
     setSubmitting(true);
     setError(null);
-    const result = mode === 'signin' ? await login(emailOrUsername, password) : await signup(email, username, password, subscribe);
+    const result = mode === 'signin'
+      ? await login(emailOrUsername, password)
+      : await signup(email, username, password, subscribe, favoriteTeam || undefined);
     setSubmitting(false);
-    if (result.ok) onSuccess(result.user);
-    else setError(result.error);
+    if (result.ok) {
+      // Sync the account favorite into local favorites at explicit auth moments
+      // only (never on passive page loads), so local removals stick.
+      mergeFavoriteIntoLocalStorage(result.user.favoriteTeam);
+      onSuccess(result.user);
+    } else setError(result.error);
   };
 
   return (
@@ -83,6 +131,46 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
             <label className={labelClass} htmlFor="auth-password">Password</label>
             <input id="auth-password" type="password" className={inputClass} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} />
           </div>
+
+          {mode === 'signup' && (
+            <div>
+              <label className={labelClass} htmlFor="auth-favorite">Favorite team <span className="font-normal normal-case text-gray-400">(optional)</span></label>
+              {favorite && !pickingTeam ? (
+                <div className="flex items-center gap-2 rounded-lg border-2 border-gray-200 bg-gray-50 px-3 py-2">
+                  {'logo' in favorite && favorite.logo && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={favorite.logo} alt="" className="h-6 w-6 shrink-0 object-contain" />
+                  )}
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-800">{favorite.city} {favorite.name}</span>
+                  <button type="button" onClick={() => setPickingTeam(true)} className="shrink-0 text-xs font-bold text-sabres-blue hover:underline">
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <select
+                  id="auth-favorite"
+                  className={inputClass}
+                  value={favoriteTeam}
+                  onChange={(e) => {
+                    setFavoriteTeam(e.target.value);
+                    setPickingTeam(false);
+                  }}
+                >
+                  <option value="">No favorite</option>
+                  <optgroup label="NHL">
+                    {NHL_OPTIONS.map((t) => (
+                      <option key={t.slug} value={t.slug}>{t.label}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="MLB">
+                    {MLB_OPTIONS.map((t) => (
+                      <option key={t.slug} value={t.slug}>{t.label}</option>
+                    ))}
+                  </optgroup>
+                </select>
+              )}
+            </div>
+          )}
 
           {mode === 'signup' && (
             <label className="flex cursor-pointer items-start gap-2 text-xs text-gray-600">

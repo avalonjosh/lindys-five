@@ -5,13 +5,14 @@ import { signUserToken, userCookieOptions, USER_COOKIE } from '@/lib/perfectseas
 import { rateLimit, clientIp } from '@/lib/perfectseason/server/ratelimit';
 import { ensureSubscriber } from '@/lib/newsletter';
 import { userKey, userEmailKey, userNameKey, type User } from '@/lib/perfectseason/leaderboard';
+import { findTeam } from '@/lib/teamConfig';
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 // A tiny denylist; usernames are public on the leaderboard.
 const DENY = /(admin|moderator|f[u\*]ck|sh[i\*]t|n[i1]gg|c[u\*]nt|rape)/i;
 
 export async function POST(request: NextRequest) {
-  let body: { email?: string; username?: string; password?: string; subscribe?: boolean };
+  let body: { email?: string; username?: string; password?: string; subscribe?: boolean; favoriteTeam?: string };
   try {
     body = await request.json();
   } catch {
@@ -35,6 +36,10 @@ export async function POST(request: NextRequest) {
   if (await kv.get<string>(userEmailKey(email))) return NextResponse.json({ error: 'An account with that email already exists' }, { status: 409 });
   if (await kv.get<string>(userNameKey(username))) return NextResponse.json({ error: 'That username is taken' }, { status: 409 });
 
+  // Optional favorite team: silently dropped if it isn't a real team slug.
+  const favoriteTeam =
+    typeof body.favoriteTeam === 'string' && findTeam(body.favoriteTeam) ? body.favoriteTeam : undefined;
+
   const id = crypto.randomUUID();
   const user: User = {
     id,
@@ -44,6 +49,7 @@ export async function POST(request: NextRequest) {
     passwordHash: await bcrypt.hash(password, 10),
     createdAt: new Date().toISOString(),
     authProvider: 'password',
+    ...(favoriteTeam ? { favoriteTeam } : {}),
   };
 
   await Promise.all([
@@ -63,7 +69,7 @@ export async function POST(request: NextRequest) {
   }
 
   const token = await signUserToken(id);
-  const res = NextResponse.json({ user: { id, username } });
+  const res = NextResponse.json({ user: { id, username, favoriteTeam } });
   res.cookies.set(USER_COOKIE, token, userCookieOptions);
   return res;
 }

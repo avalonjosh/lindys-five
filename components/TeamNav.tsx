@@ -8,6 +8,8 @@ import { MLB_TEAMS } from '@/lib/teamConfig/mlbTeams';
 import { fetchMLBStandings } from '@/lib/services/mlbApi';
 import type { MLBStandingsTeam } from '@/lib/types/mlb';
 import AboutModal from './AboutModal';
+import { CircleUserRound } from 'lucide-react';
+import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
 
 interface DarkModeColors {
   background: string;
@@ -34,6 +36,7 @@ interface TeamNavProps {
 export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, teamColors, refreshTrigger }: TeamNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const { user } = useCurrentUser();
   const [favorites, setFavorites] = useState<string[]>(() => {
     if (typeof window === 'undefined') return [];
     const saved = localStorage.getItem('favorite-teams');
@@ -511,6 +514,21 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                 </button>
               </>
             )}
+
+            {/* Account — "My Account" signed in, "Sign In" signed out (/account handles both) */}
+            <button
+              onClick={() => handleNavigation('/account')}
+              className={`w-full text-left px-4 py-3 rounded-lg mb-2 font-semibold transition-all flex items-center gap-2 ${
+                useClassicStyling ? 'hover:bg-zinc-800 text-white' : 'hover:bg-blue-50 text-gray-900'
+              }`}
+            >
+              <CircleUserRound className="w-4 h-4 flex-shrink-0 opacity-70" />
+              {user ? (
+                <>My Account <span className="text-xs font-normal opacity-60 truncate">· {user.username}</span></>
+              ) : (
+                'Sign In'
+              )}
+            </button>
 
             {/* Divider */}
             <div className={`my-4 border-t ${

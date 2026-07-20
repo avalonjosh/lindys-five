@@ -23,8 +23,8 @@ async function postAuth(path: string, body: unknown): Promise<AuthResult> {
   }
 }
 
-export const signup = (email: string, username: string, password: string, subscribe: boolean) =>
-  postAuth('/api/account/signup', { email, username, password, subscribe });
+export const signup = (email: string, username: string, password: string, subscribe: boolean, favoriteTeam?: string) =>
+  postAuth('/api/account/signup', { email, username, password, subscribe, favoriteTeam });
 
 export const login = (emailOrUsername: string, password: string) =>
   postAuth('/api/account/login', { emailOrUsername, password });

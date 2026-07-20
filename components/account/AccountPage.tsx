@@ -9,11 +9,12 @@ import AuthModal from '@/components/perfectseason/board/AuthModal';
 import { logout } from '@/lib/perfectseason/account';
 import { fetchWhatIfSaves } from '@/lib/whatif/client';
 import { fetchSabresSchedule } from '@/lib/services/nhlApi';
-import { NHL_TEAMS } from '@/lib/teamConfig';
+import { NHL_TEAMS, MLB_TEAMS, findTeam } from '@/lib/teamConfig';
 import { formatSeasonLabel } from '@/lib/utils/season';
 import PicksChart from './PicksChart';
 import type { WhatIfSave, WhatIfPick } from '@/lib/whatif/types';
 import type { GameResult } from '@/lib/types';
+import type { ProfileResponse, ProfileBoard } from '@/app/api/account/profile/route';
 
 type ActualOutcome = 'W' | 'OTL' | 'L';
 
@@ -68,19 +69,84 @@ function longDate(date: string): string {
   return new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+/** j•••@gmail.com — enough to recognize your own address, nothing more. */
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@');
+  if (!domain) return email;
+  return `${local.slice(0, 1)}•••@${domain}`;
+}
+
+const BOARD_KIND_LABELS: Record<ProfileBoard['kind'], string> = {
+  alltime: 'All-Time Daily Best',
+  free: 'Free Play',
+  tank: 'Tank Mode',
+  franchise: 'Franchise',
+};
+
+function boardLabel(b: ProfileBoard): string {
+  const kind = BOARD_KIND_LABELS[b.kind] ?? b.kind;
+  const franchise = b.franchiseId ? ` · ${b.franchiseId}` : '';
+  return `${b.sport.toUpperCase()} ${kind}${franchise}`;
+}
+
+const teamOptions = (teams: Record<string, { city: string; name: string }>) =>
+  Object.entries(teams)
+    .map(([slug, t]) => ({ slug, label: `${t.city} ${t.name}` }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+const NHL_OPTIONS = teamOptions(NHL_TEAMS);
+const MLB_OPTIONS = teamOptions(MLB_TEAMS);
+
 export default function AccountPage() {
   const { user, loading, setUser } = useCurrentUser();
   const [authOpen, setAuthOpen] = useState(false);
+  const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [saves, setSaves] = useState<WhatIfSave[] | null>(null);
   const [actualsByTeam, setActualsByTeam] = useState<Map<string, Map<number, ActualOutcome>>>(new Map());
   const [expanded, setExpanded] = useState<string | null>(null); // `${group.key}:${savedDate}`
+  const [editingFavorite, setEditingFavorite] = useState(false);
+  const [savingFavorite, setSavingFavorite] = useState(false);
+
+  const changeFavorite = async (slug: string) => {
+    if (!user || savingFavorite) return;
+    setSavingFavorite(true);
+    try {
+      const res = await fetch('/api/account/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ favoriteTeam: slug || null }),
+        credentials: 'include',
+      });
+      if (res.ok) {
+        setUser({ ...user, favoriteTeam: slug || undefined });
+        // Keep the hamburger/home-grid favorites in step.
+        if (slug) {
+          try {
+            const saved = JSON.parse(localStorage.getItem('favorite-teams') ?? '[]');
+            const list = Array.isArray(saved) ? saved : [];
+            if (!list.includes(slug)) localStorage.setItem('favorite-teams', JSON.stringify([slug, ...list]));
+          } catch {
+            localStorage.setItem('favorite-teams', JSON.stringify([slug]));
+          }
+        }
+      }
+    } finally {
+      setSavingFavorite(false);
+      setEditingFavorite(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) {
       setSaves(null);
+      setProfile(null);
       return;
     }
     fetchWhatIfSaves().then(setSaves);
+    fetch('/api/account/profile', { credentials: 'include' })
+      .then(res => (res.ok ? res.json() : null))
+      .then(setProfile)
+      .catch(() => setProfile(null));
   }, [user]);
 
   const groups = useMemo<TeamGroup[]>(() => {
@@ -160,7 +226,60 @@ export default function AccountPage() {
           <h1 className="text-3xl font-bold uppercase tracking-wide text-sabres-navy" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
             {user.username}
           </h1>
-          <p className="text-sm text-gray-500">Your saved What-If picks</p>
+          <p className="text-sm text-gray-500">
+            {profile ? (
+              <>
+                {maskEmail(profile.email)}
+                {' · '}Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </>
+            ) : (
+              'Your profile'
+            )}
+          </p>
+          {/* Favorite team */}
+          <div className="mt-2">
+            {editingFavorite ? (
+              <select
+                autoFocus
+                disabled={savingFavorite}
+                value={user.favoriteTeam ?? ''}
+                onChange={(e) => changeFavorite(e.target.value)}
+                onBlur={() => setEditingFavorite(false)}
+                className="rounded-lg border-2 border-gray-200 bg-gray-50 px-2 py-1.5 text-sm outline-none focus:border-sabres-blue"
+              >
+                <option value="">No favorite</option>
+                <optgroup label="NHL">
+                  {NHL_OPTIONS.map((t) => (
+                    <option key={t.slug} value={t.slug}>{t.label}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="MLB">
+                  {MLB_OPTIONS.map((t) => (
+                    <option key={t.slug} value={t.slug}>{t.label}</option>
+                  ))}
+                </optgroup>
+              </select>
+            ) : user.favoriteTeam && findTeam(user.favoriteTeam) ? (
+              <button
+                type="button"
+                onClick={() => setEditingFavorite(true)}
+                title="Change favorite team"
+                className="flex items-center gap-1.5 rounded-full bg-gray-100 py-1 pl-1.5 pr-2.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-200"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={findTeam(user.favoriteTeam)!.logo} alt="" className="h-4 w-4 object-contain" />
+                {findTeam(user.favoriteTeam)!.city} {findTeam(user.favoriteTeam)!.name}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setEditingFavorite(true)}
+                className="text-xs font-bold text-sabres-blue hover:underline"
+              >
+                Set your favorite team
+              </button>
+            )}
+          </div>
         </div>
         <button
           type="button"
@@ -174,6 +293,60 @@ export default function AccountPage() {
         </button>
       </div>
 
+      {/* Perfect Season — leaderboard bests from 82-0 / 162-0 */}
+      <section className="mb-8 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between gap-2 border-b border-gray-100 p-4">
+          <div>
+            <h2 className="font-bold text-gray-900">Perfect Season</h2>
+            <p className="text-xs text-gray-500">Your best results in 82-0 and 162-0</p>
+          </div>
+          <div className="flex gap-2 text-xs font-bold">
+            <Link href="/82-0" className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-gray-700 transition-colors hover:bg-gray-200">82-0</Link>
+            <Link href="/162-0" className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-gray-700 transition-colors hover:bg-gray-200">162-0</Link>
+          </div>
+        </div>
+        {profile == null ? (
+          <div className="p-4 text-sm text-gray-400">Loading…</div>
+        ) : profile.perfectSeason.boards.length === 0 && profile.perfectSeason.daily.count === 0 ? (
+          <div className="p-4 text-sm text-gray-500">
+            No games played yet. Try the daily puzzle at{' '}
+            <Link href="/82-0" className="font-bold text-sabres-blue hover:underline">82-0</Link> (NHL) or{' '}
+            <Link href="/162-0" className="font-bold text-sabres-blue hover:underline">162-0</Link> (MLB).
+          </div>
+        ) : (
+          <div>
+            {profile.perfectSeason.daily.count > 0 && (
+              <div className="border-b border-gray-100 px-4 py-3 text-sm text-gray-700">
+                <span className="font-bold">{profile.perfectSeason.daily.count}</span> daily puzzle{profile.perfectSeason.daily.count === 1 ? '' : 's'} played
+                {profile.perfectSeason.daily.bestRating != null && (
+                  <> · best rating <span className="font-bold">{profile.perfectSeason.daily.bestRating.toFixed(1)}</span></>
+                )}
+              </div>
+            )}
+            <ul className="divide-y divide-gray-100">
+              {profile.perfectSeason.boards.map(b => (
+                <li key={b.board} className="flex items-center gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-bold text-gray-900">
+                      {boardLabel(b)}
+                      {b.variant === 'blind' && (
+                        <span className="ml-1.5 rounded-full bg-gray-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-gray-500">Blind</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500">{b.wins}-{b.losses} · rating {b.rating.toFixed(1)}</div>
+                  </div>
+                  <span className="flex-shrink-0 rounded-lg bg-gray-100 px-2 py-1 text-sm font-bold text-gray-800">{b.grade}</span>
+                  {b.rank != null && (
+                    <span className="w-14 flex-shrink-0 text-right text-sm font-bold text-gray-900">#{b.rank}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
+
+      <h2 className="mb-3 font-bold text-gray-900">My What-If Picks</h2>
       {saves == null ? (
         <div className="py-12 text-center text-gray-400">Loading your picks…</div>
       ) : groups.length === 0 ? (

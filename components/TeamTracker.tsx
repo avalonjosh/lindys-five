@@ -1522,6 +1522,7 @@ export default function TeamTracker({
       <AuthModal
         initialMode="signup"
         reason="Create a free account to save your What-If picks and track your predictions over time."
+        defaultFavoriteTeam={team.id}
         onClose={() => setAuthOpen(false)}
         onSuccess={(u) => {
           setUser(u);
