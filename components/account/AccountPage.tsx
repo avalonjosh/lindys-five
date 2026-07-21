@@ -778,7 +778,8 @@ export default function AccountPage() {
                     </div>
                   )}
                   <Link
-                    href={getTeamUrl(group.teamId)}
+                    // NHL/MLB trackers open with What If mode already on; NFL pick pages are always pick mode.
+                    href={group.sport === 'nfl' ? getTeamUrl(group.teamId) : `${getTeamUrl(group.teamId)}?whatif=1`}
                     className="flex-shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90"
                     style={{ backgroundColor: team.colors.primary }}
                   >

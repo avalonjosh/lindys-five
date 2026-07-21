@@ -130,6 +130,15 @@ export default function MLBTeamTracker({ team }: MLBTeamTrackerProps) {
   // MLB seasons are a single calendar year (the same year loadData fetches).
   const season = String(new Date().getFullYear());
 
+  // Arriving with ?whatif=1 (e.g. the account page's "Pick the {Team}" button)
+  // turns What If mode on immediately. window-read, not useSearchParams, to
+  // avoid a Suspense boundary on these ISR pages.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('whatif') === '1') {
+      setWhatIfMode(true);
+    }
+  }, []);
+
   // Show the sticky What-If bar only once the Season Progress box scrolls out of
   // view, so it never doubles up with the box itself.
   useEffect(() => {

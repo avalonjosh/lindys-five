@@ -546,6 +546,15 @@ export default function TeamTracker({
     });
   };
 
+  // Arriving with ?whatif=1 (e.g. the account page's "Pick the {Team}" button)
+  // turns What If mode on immediately. window-read, not useSearchParams, to
+  // avoid a Suspense boundary on these ISR pages.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('whatif') === '1') {
+      setWhatIfMode(true);
+    }
+  }, []);
+
   // Fetch the user's most recent save for this team when What If mode turns on,
   // to power the "load my last picks" prompt.
   useEffect(() => {
