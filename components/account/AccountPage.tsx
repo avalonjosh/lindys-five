@@ -132,9 +132,8 @@ function SaveDiffPanel({ latest, prev, color, className }: { latest: WhatIfSave;
   const outcomeColor = (o: string) => (o === 'W' ? 'text-green-600' : o === 'OTL' ? 'text-yellow-600' : 'text-red-500');
 
   return (
-    // Distinct white card with a team-color spine so it can't be mistaken for
-    // the pick list below it.
-    <div className={`rounded-lg border border-l-4 border-gray-200 bg-white p-3 ${className ?? ''}`} style={{ borderLeftColor: color }}>
+    // Darker slab than the white picks table below, so the two can't be mixed up.
+    <div className={`rounded-lg bg-gray-100 p-3 ${className ?? ''}`}>
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
         <h4 className="text-sm font-bold" style={{ color }}>What Changed</h4>
         <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
@@ -148,7 +147,7 @@ function SaveDiffPanel({ latest, prev, color, className }: { latest: WhatIfSave;
           {changed.length > 0 && (
             <ul className="grid max-h-44 gap-1.5 overflow-y-auto sm:grid-cols-2 xl:grid-cols-3">
               {changed.map(({ pick, from }) => (
-                <li key={pick.gameId} className="flex items-center gap-2 rounded-md bg-gray-50 px-2.5 py-2 text-xs">
+                <li key={pick.gameId} className="flex items-center gap-2 rounded-md bg-white px-2.5 py-2 text-xs">
                   {opponentLogo(latest.sport, pick.opponentAbbrev) && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={opponentLogo(latest.sport, pick.opponentAbbrev)!} alt="" className="h-6 w-6 flex-shrink-0 object-contain" />
