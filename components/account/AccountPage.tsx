@@ -389,20 +389,53 @@ export default function AccountPage() {
 
   if (!user) {
     return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <h1 className="mb-2 text-3xl font-bold uppercase tracking-wide text-sabres-navy" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-          My Account
-        </h1>
-        <p className="mb-6 text-sm text-gray-500">
-          Sign in to see your saved What-If picks, how they&apos;ve changed over time, and how accurate they turned out.
-        </p>
-        <button
-          type="button"
-          onClick={() => setAuthOpen(true)}
-          className="rounded-xl bg-sabres-blue px-8 py-3 text-sm font-bold uppercase tracking-wide text-white shadow-md transition-colors hover:bg-sabres-light"
-        >
-          Sign In / Sign Up
-        </button>
+      <div>
+        {/* Signed-out banner — same tracker header, default navy/gold, so the
+            hamburger and brand keep the page navigable after sign-out */}
+        <header className="border-b-4 shadow-xl" style={{ background: '#003087', borderBottomColor: '#FFB81C' }}>
+          <div className="mx-auto max-w-7xl px-4 py-3 md:py-4">
+            <div className="relative flex flex-col items-center text-center">
+              <div className="absolute left-0 top-0">
+                <MLBTeamNav
+                  currentTeamId=""
+                  teamColors={{ primary: '#003087', secondary: '#FFB81C', accent: '#FFB81C' }}
+                  defaultTab="nhl"
+                />
+              </div>
+              <Link
+                href="/"
+                title="Back to Home"
+                className="rounded-lg transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2"
+              >
+                <p
+                  className="mb-2 text-4xl font-bold tracking-wider text-white md:text-6xl"
+                  style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+                >
+                  Lindy&apos;s Five
+                </p>
+              </Link>
+              <h1 className="mb-1 px-2 text-lg font-semibold leading-tight md:text-2xl" style={{ color: '#FFB81C' }}>
+                My Account
+              </h1>
+              <p className="px-2 text-xs leading-tight text-white opacity-90 md:text-base">
+                Save picks, track accuracy, join the leaderboards
+              </p>
+            </div>
+          </div>
+        </header>
+
+        <main className="mx-auto max-w-md px-4 py-12 text-center">
+          <p className="mb-6 text-sm text-gray-500">
+            Sign in to see your saved picks, how they&apos;ve changed over time, and how accurate they turned out.
+          </p>
+          <button
+            type="button"
+            onClick={() => setAuthOpen(true)}
+            className="rounded-xl bg-sabres-blue px-8 py-3 text-sm font-bold uppercase tracking-wide text-white shadow-md transition-colors hover:bg-sabres-light"
+          >
+            Sign In / Sign Up
+          </button>
+        </main>
         {authOpen && (
           <AuthModal
             onClose={() => setAuthOpen(false)}
