@@ -456,26 +456,28 @@ export default function AccountPage() {
                   </button>
                 )}
             </div>
-
-            {/* Tabs — frosted pills docked into the header's bottom edge */}
-            <div className="mt-3 flex w-full max-w-md gap-1 rounded-xl bg-black/10 p-1 md:mt-4">
-              {TABS.map(t => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setTab(t.id)}
-                  className={`flex-1 rounded-lg px-1 py-2 text-[10px] font-bold uppercase tracking-wide transition-colors sm:text-sm ${
-                    tab === t.id ? 'bg-white shadow-sm' : 'text-white/70 hover:bg-white/10 hover:text-white'
-                  }`}
-                  style={tab === t.id ? { color: heroColor } : undefined}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       </header>
+
+      {/* Section tabs — sticky white sub-nav under the banner, team-color underline */}
+      <nav className="sticky top-0 z-40 border-b border-gray-200 bg-white shadow-sm">
+        <div className="mx-auto flex max-w-3xl px-4">
+          {TABS.map(t => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={`flex-1 border-b-2 px-1 py-3 text-[11px] font-bold uppercase tracking-wide transition-colors sm:text-sm ${
+                tab === t.id ? '' : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+              style={tab === t.id ? { color: heroColor, borderColor: heroColor } : undefined}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </nav>
 
       <main className="mx-auto max-w-3xl px-4 py-6">
       {tab === 'settings' && (
