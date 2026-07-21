@@ -97,14 +97,6 @@ function maskEmail(email: string): string {
   return `${local.slice(0, 1)}•••@${domain}`;
 }
 
-function adjustColor(hex: string, amount: number): string {
-  const num = parseInt(hex.replace('#', ''), 16);
-  const r = Math.max(0, Math.min(255, (num >> 16) + amount));
-  const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00ff) + amount));
-  const b = Math.max(0, Math.min(255, (num & 0x0000ff) + amount));
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
-}
-
 function gradeClasses(grade: string): string {
   switch (grade.charAt(0).toUpperCase()) {
     case 'A': case 'S': return 'bg-green-100 text-green-700';
@@ -350,45 +342,68 @@ export default function AccountPage() {
 
   const favTeam = user.favoriteTeam ? findTeam(user.favoriteTeam) : undefined;
   const heroColor = favTeam?.colors.primary ?? '#003087';
+  // Tracker header trims: secondary drives the bottom border, and the username
+  // line uses the same name-color logic as the tracker team-name line.
+  const heroSecondary = favTeam?.colors.secondary ?? '#FFB81C';
+  const nameColor = favTeam
+    ? favTeam.colors.accent !== favTeam.colors.primary
+      ? favTeam.colors.accent
+      : favTeam.colors.secondary !== '#FFFFFF'
+        ? favTeam.colors.secondary
+        : '#FFFFFF'
+    : '#FFB81C';
   const bestRank = profile?.perfectSeason.boards.reduce<number | null>(
     (best, b) => (b.rank != null && (best == null || b.rank < best) ? b.rank : best),
     null
   ) ?? null;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      {/* Hero — themed to the favorite team, like the team tracker headers */}
-      <div
-        className="relative mb-6 overflow-hidden rounded-2xl px-5 py-6 shadow-md sm:px-6"
-        style={{ background: `linear-gradient(135deg, ${heroColor} 0%, ${adjustColor(heroColor, -35)} 100%)` }}
-      >
-        {favTeam && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={favTeam.logo} alt="" aria-hidden className="pointer-events-none absolute -right-8 -top-10 h-44 w-44 select-none object-contain opacity-10" />
-        )}
-        <div className="relative flex items-start justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-4">
+    <div>
+      {/* Header — the team tracker header, wearing the user's identity */}
+      <header className="border-b-4 shadow-xl" style={{ background: heroColor, borderBottomColor: heroSecondary }}>
+        <div className="mx-auto max-w-7xl px-4 py-3 md:py-4">
+          <div className="relative flex flex-col items-center text-center">
+            {/* Sign Out — corner control, like the tracker's toggle slot */}
+            <div className="absolute right-0 top-0">
+              <button
+                type="button"
+                onClick={async () => {
+                  await logout();
+                  setUser(null);
+                }}
+                className="rounded-lg border border-white/30 px-2.5 py-1 text-xs font-semibold text-white/90 transition-colors hover:bg-white/10 md:px-3 md:py-1.5"
+              >
+                Sign Out
+              </button>
+            </div>
+
+            {/* Monogram avatar in the tracker's logo slot */}
             <div
-              className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-white text-3xl shadow-sm"
+              className="mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-white text-4xl shadow-sm md:mb-3 md:h-24 md:w-24 md:text-6xl"
               style={{ color: heroColor, fontFamily: 'Bebas Neue, sans-serif' }}
             >
               {user.username.charAt(0).toUpperCase()}
             </div>
-            <div className="min-w-0">
-              <h1 className="truncate text-3xl font-bold uppercase tracking-wide text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-                {user.username}
-              </h1>
-              <p className="text-xs text-white/70">
-                {profile ? (
-                  <>
-                    {maskEmail(profile.email)}
-                    {' · '}Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                  </>
-                ) : (
-                  'Your profile'
-                )}
-              </p>
-              <div className="mt-2">
+            <p
+              className="mb-2 text-4xl font-bold tracking-wider text-white md:text-6xl"
+              style={{ fontFamily: 'Bebas Neue, sans-serif' }}
+            >
+              Lindy&apos;s Five
+            </p>
+            <h1 className="mb-1 px-2 text-lg font-semibold leading-tight md:text-2xl" style={{ color: nameColor }}>
+              {user.username}
+            </h1>
+            <p className="px-2 text-xs leading-tight text-white opacity-90 md:text-base">
+              {profile ? (
+                <>
+                  {maskEmail(profile.email)}
+                  {' · '}Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </>
+              ) : (
+                'Your profile'
+              )}
+            </p>
+            <div className="mt-2">
                 {editingFavorite ? (
                   <select
                     autoFocus
@@ -440,39 +455,29 @@ export default function AccountPage() {
                     Set your favorite team
                   </button>
                 )}
-              </div>
+            </div>
+
+            {/* Tabs — frosted pills docked into the header's bottom edge */}
+            <div className="mt-3 flex w-full max-w-md gap-1 rounded-xl bg-black/10 p-1 md:mt-4">
+              {TABS.map(t => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTab(t.id)}
+                  className={`flex-1 rounded-lg px-1 py-2 text-[10px] font-bold uppercase tracking-wide transition-colors sm:text-sm ${
+                    tab === t.id ? 'bg-white shadow-sm' : 'text-white/70 hover:bg-white/10 hover:text-white'
+                  }`}
+                  style={tab === t.id ? { color: heroColor } : undefined}
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={async () => {
-              await logout();
-              setUser(null);
-            }}
-            className="flex-shrink-0 rounded-lg border border-white/30 px-3 py-1.5 text-xs font-semibold text-white/90 transition-colors hover:bg-white/10"
-          >
-            Sign Out
-          </button>
         </div>
+      </header>
 
-        {/* Tabs — frosted pills docked into the hero's bottom edge */}
-        <div className="relative mt-5 flex gap-1 rounded-xl bg-black/10 p-1">
-          {TABS.map(t => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              className={`flex-1 rounded-lg px-1 py-2 text-[10px] font-bold uppercase tracking-wide transition-colors sm:text-sm ${
-                tab === t.id ? 'bg-white shadow-sm' : 'text-white/70 hover:bg-white/10 hover:text-white'
-              }`}
-              style={tab === t.id ? { color: heroColor } : undefined}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
+      <main className="mx-auto max-w-3xl px-4 py-6">
       {tab === 'settings' && (
         <SettingsTab
           email={profile?.email ?? null}
@@ -915,6 +920,7 @@ export default function AccountPage() {
       )}
         </>
       )}
+      </main>
     </div>
   );
 }
