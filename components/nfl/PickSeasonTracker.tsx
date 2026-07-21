@@ -32,7 +32,6 @@ interface PickSeasonTrackerProps {
 export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
   const router = useRouter();
   const [games, setGames] = useState<NFLGameResult[]>([]);
-  const [byeWeek, setByeWeek] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [picks, setPicks] = useState<Map<number, Pick>>(new Map());
@@ -55,7 +54,6 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
       setError(false);
       const data = await fetchNFLSchedule(team.abbreviation, Number(season));
       setGames(data.games);
-      setByeWeek(data.byeWeek);
     } catch (err) {
       console.error('Failed to load NFL schedule:', err);
       setError(true);
@@ -378,7 +376,11 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
           </div>
           <ul className="divide-y divide-gray-100">
             {Array.from({ length: 18 }, (_, i) => i + 1).map(week => {
-              if (week === byeWeek) {
+              const game = games.find(g => g.week === week);
+              // Bye = a week with no game. Derived from the schedule itself —
+              // ESPN's byeWeek field can disagree with the actual game list
+              // (2026 Bills: byeWeek said 5, the gameless week was 7).
+              if (!game) {
                 return (
                   <li key={`bye-${week}`} className="flex items-center gap-3 px-4 py-2.5 bg-gray-50">
                     <span className="w-12 flex-shrink-0 text-xs font-bold uppercase tracking-wide text-gray-400">Wk {week}</span>
@@ -386,8 +388,6 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
                   </li>
                 );
               }
-              const game = games.find(g => g.week === week);
-              if (!game) return null;
               const pick = picks.get(game.gameId);
               const final = game.outcome !== 'PENDING';
               return (

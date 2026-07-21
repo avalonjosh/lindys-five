@@ -103,6 +103,9 @@ export async function fetchNFLSchedule(teamAbbrev: string, season: number): Prom
 
   const result: NFLScheduleData = {
     games,
+    // Caution: ESPN's byeWeek can disagree with the game list (2026 Bills:
+    // byeWeek said 5, the gameless week was 7). Derive byes from `games`
+    // for anything user-facing; this is informational only.
     byeWeek: typeof data.byeWeek === 'number' ? data.byeWeek : null,
   };
   setCache(cacheKey, result);
