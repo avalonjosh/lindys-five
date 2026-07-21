@@ -546,15 +546,6 @@ export default function TeamTracker({
     });
   };
 
-  // Arriving with ?whatif=1 (e.g. the account page's "Pick the {Team}" button)
-  // turns What If mode on immediately. window-read, not useSearchParams, to
-  // avoid a Suspense boundary on these ISR pages.
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('whatif') === '1') {
-      setWhatIfMode(true);
-    }
-  }, []);
-
   // Fetch the user's most recent save for this team when What If mode turns on,
   // to power the "load my last picks" prompt.
   useEffect(() => {
@@ -716,11 +707,14 @@ export default function TeamTracker({
   };
 
   useEffect(() => {
-    // Reset all team-specific state when team changes
+    // Reset all team-specific state when team changes. What If mode starts on
+    // when arriving with ?whatif=1 (the account page's "Pick the {Team}"
+    // button) — a window read, not useSearchParams, to avoid a Suspense
+    // boundary on these ISR pages.
     setChunks([]);
     setStats(null);
     setChunkStatsCache(new Map());
-    setWhatIfMode(false);
+    setWhatIfMode(new URLSearchParams(window.location.search).get('whatif') === '1');
     setHypotheticalResults(new Map());
     setYearOverYearMode(false);
     setLastSeasonData(null);
