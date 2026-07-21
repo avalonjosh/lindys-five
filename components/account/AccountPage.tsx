@@ -166,6 +166,7 @@ export default function AccountPage() {
   const changeFavorite = async (slug: string) => {
     if (!user || savingFavorite) return;
     setSavingFavorite(true);
+    const previous = user.favoriteTeam;
     try {
       const res = await fetch('/api/account/profile', {
         method: 'PATCH',
@@ -175,15 +176,16 @@ export default function AccountPage() {
       });
       if (res.ok) {
         setUser({ ...user, favoriteTeam: slug || undefined });
-        // Keep the hamburger/home-grid favorites in step.
-        if (slug) {
-          try {
-            const saved = JSON.parse(localStorage.getItem('favorite-teams') ?? '[]');
-            const list = Array.isArray(saved) ? saved : [];
-            if (!list.includes(slug)) localStorage.setItem('favorite-teams', JSON.stringify([slug, ...list]));
-          } catch {
-            localStorage.setItem('favorite-teams', JSON.stringify([slug]));
-          }
+        // Keep the hamburger/home-grid favorites in step: this is a switch, so
+        // the old favorite is replaced in the list, not accumulated.
+        try {
+          const saved = JSON.parse(localStorage.getItem('favorite-teams') ?? '[]');
+          const list: string[] = Array.isArray(saved) ? saved : [];
+          const withoutOld = previous ? list.filter(t => t !== previous) : list;
+          const next = slug ? [slug, ...withoutOld.filter(t => t !== slug)] : withoutOld;
+          localStorage.setItem('favorite-teams', JSON.stringify(next));
+        } catch {
+          if (slug) localStorage.setItem('favorite-teams', JSON.stringify([slug]));
         }
       }
     } finally {
