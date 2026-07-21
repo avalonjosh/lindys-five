@@ -91,6 +91,19 @@ function pickDateLabel(date: string): string {
   return isNaN(parsed.getTime()) ? date : parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+// Opponent logos, derived from the abbreviations stored in picks. MLB logos
+// are keyed by numeric id, so map abbrev -> id via the team config.
+const MLB_ABBREV_TO_ID: Record<string, number> = Object.fromEntries(
+  Object.values(MLB_TEAMS).map(t => [t.abbreviation.toUpperCase(), t.mlbId])
+);
+
+function opponentLogo(sport: string, abbrev: string): string | null {
+  if (sport === 'nfl') return `https://a.espncdn.com/i/teamlogos/nfl/500/${abbrev.toLowerCase()}.png`;
+  if (sport === 'nhl') return `https://assets.nhle.com/logos/nhl/svg/${abbrev.toUpperCase()}_light.svg`;
+  const id = MLB_ABBREV_TO_ID[abbrev.toUpperCase()];
+  return id ? `https://www.mlbstatic.com/team-logos/${id}.svg` : null;
+}
+
 /** Total flips + additions + drops between a save and the one before it. */
 function countChanges(current: WhatIfSave, prev: WhatIfSave): number {
   const prevBy = new Map(prev.picks.map(p => [p.gameId, p]));
@@ -133,9 +146,13 @@ function SaveDiffPanel({ latest, prev, color, className }: { latest: WhatIfSave;
       ) : (
         <>
           {changed.length > 0 && (
-            <ul className="flex max-h-44 flex-col gap-1 overflow-y-auto">
+            <ul className="grid max-h-44 gap-1.5 overflow-y-auto sm:grid-cols-2 xl:grid-cols-3">
               {changed.map(({ pick, from }) => (
-                <li key={pick.gameId} className="flex items-center gap-2 rounded-md bg-gray-50 px-2.5 py-1.5 text-xs">
+                <li key={pick.gameId} className="flex items-center gap-2 rounded-md bg-gray-50 px-2.5 py-2 text-xs">
+                  {opponentLogo(latest.sport, pick.opponentAbbrev) && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={opponentLogo(latest.sport, pick.opponentAbbrev)!} alt="" className="h-6 w-6 flex-shrink-0 object-contain" />
+                  )}
                   <span className="min-w-0 flex-1 truncate font-semibold text-gray-700">{gameLabel(pick)}</span>
                   <span className="flex-shrink-0 font-bold text-gray-400 line-through">{from}</span>
                   <span className="flex-shrink-0 text-gray-400">→</span>
@@ -958,10 +975,14 @@ export default function AccountPage() {
                             <h4 className="pt-3 text-sm font-bold" style={{ color: team.colors.primary }}>
                               All Picks ({save.picks.length})
                             </h4>
-                            <ul className="flex flex-col gap-1 pt-1.5">
+                            <ul className="grid gap-1.5 pt-1.5 sm:grid-cols-2 xl:grid-cols-3">
                               {(grade?.picks ?? save.picks.map(pick => ({ pick, actual: null as ActualOutcome | null, exact: false, simpleRight: false, excluded: false }))).map(({ pick, actual, exact, excluded }) => (
-                                <li key={pick.gameId} className="flex items-center gap-2 rounded-md bg-white px-2.5 py-1.5 text-xs">
-                                  <span className="w-14 flex-shrink-0 text-gray-400">{pick.week ? `Wk ${pick.week}` : pickDateLabel(pick.date)}</span>
+                                <li key={pick.gameId} className="flex items-center gap-2 rounded-md bg-white px-2.5 py-2 text-xs">
+                                  <span className="w-11 flex-shrink-0 text-gray-400">{pick.week ? `Wk ${pick.week}` : pickDateLabel(pick.date)}</span>
+                                  {opponentLogo(save.sport, pick.opponentAbbrev) && (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={opponentLogo(save.sport, pick.opponentAbbrev)!} alt="" className="h-6 w-6 flex-shrink-0 object-contain" />
+                                  )}
                                   <span className="min-w-0 flex-1 truncate font-semibold text-gray-700">
                                     {pick.isHome ? 'vs' : '@'} {pick.opponentAbbrev}
                                   </span>
