@@ -1,10 +1,14 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { MLB_TEAMS } from '@/lib/teamConfig';
 import MLBTeamTracker from '@/components/mlb/MLBTeamTracker';
 import NewsletterModal from '@/components/newsletter/NewsletterModal';
+import SiteFooter from '@/components/SiteFooter';
 import { fetchMLBSchedule, fetchMLBStandings } from '@/lib/services/mlbApi';
 import { calculateMLBChunks, calculateMLBSeasonStats } from '@/lib/utils/mlbChunkCalculator';
+import type { MLBGameResult } from '@/lib/types/mlb';
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes for fresh data
 
@@ -151,14 +155,18 @@ export default async function MLBTeamPage({ params }: MLBTeamPageProps) {
     ],
   };
 
-  // Fetch live data server-side for SEO
-  let seoContent: string | null = null;
+  // Fetch live data server-side: the schedule seeds the tracker's SSR HTML, and
+  // the standings power a visible per-team summary + division table. This is
+  // the crawlable content that differentiates the 30 MLB pages.
+  let initialGames: MLBGameResult[] | undefined;
+  let serverSummary: ReactNode = null;
   try {
     const season = new Date().getFullYear();
     const [games, standings] = await Promise.all([
       fetchMLBSchedule(team.mlbId, season),
       fetchMLBStandings(season),
     ]);
+    if (games.length > 0) initialGames = games;
 
     const chunks = calculateMLBChunks(games);
     const seasonStats = calculateMLBSeasonStats(chunks);
@@ -170,32 +178,74 @@ export default async function MLBTeamPage({ params }: MLBTeamPageProps) {
       const lastGame = playedGames[playedGames.length - 1];
       const nextGame = games.find(g => g.outcome === 'PENDING');
 
-      const lines: string[] = [];
-      lines.push(`${fullName} ${season} Season: ${teamStanding.wins}-${teamStanding.losses} (${teamStanding.winPct.toFixed(3)}) through ${seasonStats.gamesPlayed} games.`);
-      lines.push(`${ordinal(teamStanding.divisionRank)} in the ${teamStanding.division}. ${teamStanding.gamesBack === 0 ? 'Leading the division.' : teamStanding.gamesBack + ' games back.'}`);
+      const summaryText = [
+        `The ${fullName} are ${teamStanding.wins}-${teamStanding.losses} (${teamStanding.winPct.toFixed(3).replace(/^0/, '')}) through ${seasonStats.gamesPlayed} games of the ${season} season — ${ordinal(teamStanding.divisionRank)} in the ${teamStanding.division}${teamStanding.gamesBack === 0 ? ', leading the division' : `, ${teamStanding.gamesBack} games back`}${teamStanding.wildCardRank ? `, and ${ordinal(teamStanding.wildCardRank)} in the wild card race${teamStanding.wildCardGamesBack > 0 ? ` (${teamStanding.wildCardGamesBack} GB)` : ''}` : ''}.`,
+        `At their current pace they project to ${Math.round(seasonStats.projectedWins)} wins, ${seasonStats.winsAboveBelow >= 0 ? `${seasonStats.winsAboveBelow} above` : `${Math.abs(seasonStats.winsAboveBelow)} below`} the ${seasonStats.playoffTarget}-win playoff target.`,
+        `They're ${teamStanding.streak.startsWith('W') ? 'riding' : 'on'} a ${teamStanding.streak} streak, ${teamStanding.last10} over their last 10, with a ${teamStanding.runDifferential >= 0 ? '+' : ''}${teamStanding.runDifferential} run differential (${teamStanding.runsScored} scored, ${teamStanding.runsAllowed} allowed) — ${teamStanding.homeRecord} at home, ${teamStanding.awayRecord} on the road.`,
+        currentChunk ? `Current 5-game set (Set ${currentChunk.chunkNumber}): ${currentChunk.wins}-${currentChunk.losses}.` : '',
+      ].filter(Boolean).join(' ');
 
-      if (teamStanding.wildCardRank) {
-        lines.push(`Wild card rank: ${ordinal(teamStanding.wildCardRank)}${teamStanding.wildCardGamesBack > 0 ? ', ' + teamStanding.wildCardGamesBack + ' GB' : ''}.`);
-      }
+      const divisionRows = standings
+        .filter(t => t.division === teamStanding.division)
+        .sort((a, b) => a.divisionRank - b.divisionRank);
+      const slugByMlbId = new Map(Object.values(MLB_TEAMS).map(t => [t.mlbId, t.id]));
 
-      lines.push(`${Math.round(seasonStats.projectedWins)} projected wins at current pace — ${seasonStats.winsAboveBelow >= 0 ? seasonStats.winsAboveBelow + ' above' : Math.abs(seasonStats.winsAboveBelow) + ' below'} the ${seasonStats.playoffTarget}-win playoff target.`);
+      serverSummary = (
+        <section className="mt-8 rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-xl md:p-6">
+          <h2 className="mb-2 text-lg font-bold md:text-2xl" style={{ color: team.colors.primary }}>
+            {team.name} Season So Far
+          </h2>
+          <p className="text-sm leading-relaxed text-gray-700">{summaryText}</p>
 
-      lines.push(`Streak: ${teamStanding.streak}. Last 10: ${teamStanding.last10}. Run differential: ${teamStanding.runDifferential >= 0 ? '+' : ''}${teamStanding.runDifferential} (${teamStanding.runsScored} RS, ${teamStanding.runsAllowed} RA).`);
-      lines.push(`Home: ${teamStanding.homeRecord}. Away: ${teamStanding.awayRecord}.`);
+          <h3 className="mb-2 mt-5 text-xs font-bold uppercase tracking-wide text-gray-500">
+            {teamStanding.division} Standings
+          </h3>
+          <div className="overflow-hidden rounded-lg border border-gray-100">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50 text-left text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                  <th className="px-3 py-2 font-bold">Team</th>
+                  <th className="w-14 px-2 py-2 text-right font-bold">W</th>
+                  <th className="w-14 px-2 py-2 text-right font-bold">L</th>
+                  <th className="w-16 px-2 py-2 text-right font-bold">PCT</th>
+                  <th className="w-14 px-3 py-2 text-right font-bold">GB</th>
+                </tr>
+              </thead>
+              <tbody>
+                {divisionRows.map(row => {
+                  const slug = slugByMlbId.get(row.teamId);
+                  const isCurrent = row.teamId === team.mlbId;
+                  return (
+                    <tr key={row.teamId} className={isCurrent ? 'bg-blue-50/60' : 'even:bg-gray-50'}>
+                      <td className={`px-3 py-2 ${isCurrent ? 'font-bold text-gray-900' : 'text-gray-700'}`}>
+                        {slug && !isCurrent ? (
+                          <Link href={`/mlb/${slug}`} className="hover:underline" style={{ color: team.colors.primary }}>
+                            {row.teamName}
+                          </Link>
+                        ) : (
+                          row.teamName
+                        )}
+                      </td>
+                      <td className="px-2 py-2 text-right text-gray-700">{row.wins}</td>
+                      <td className="px-2 py-2 text-right text-gray-700">{row.losses}</td>
+                      <td className="px-2 py-2 text-right text-gray-700">{row.winPct.toFixed(3).replace(/^0/, '')}</td>
+                      <td className="px-3 py-2 text-right text-gray-700">{row.gamesBack === 0 ? '—' : row.gamesBack}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-      if (currentChunk) {
-        lines.push(`Current 5-game set (Set ${currentChunk.chunkNumber}): ${currentChunk.wins}-${currentChunk.losses}.`);
-      }
-
-      if (lastGame) {
-        const lastScore = `${lastGame.teamScore}-${lastGame.opponentScore}`;
-        lines.push(`Last game: ${lastGame.outcome} ${lastScore} ${lastGame.isHome ? 'vs' : 'at'} ${lastGame.opponent} (${lastGame.date}).`);
-      }
-      if (nextGame) {
-        lines.push(`Next game: ${nextGame.isHome ? 'vs' : 'at'} ${nextGame.opponent}, ${nextGame.date}${nextGame.startTime ? ' at ' + nextGame.startTime : ''}.`);
-      }
-
-      seoContent = lines.join(' ');
+          {(lastGame || nextGame) && (
+            <p className="mt-3 text-xs text-gray-500">
+              {lastGame && `Last game: ${lastGame.outcome} ${lastGame.teamScore}-${lastGame.opponentScore} ${lastGame.isHome ? 'vs' : 'at'} ${lastGame.opponent} (${lastGame.date}).`}
+              {lastGame && nextGame && ' '}
+              {nextGame && `Next game: ${nextGame.isHome ? 'vs' : 'at'} ${nextGame.opponent}, ${nextGame.date}${nextGame.startTime ? ` at ${nextGame.startTime}` : ''}.`}
+            </p>
+          )}
+        </section>
+      );
     }
   } catch (e) {
     console.error(`SEO data fetch failed for ${team.abbreviation}:`, e);
@@ -215,14 +265,15 @@ export default async function MLBTeamPage({ params }: MLBTeamPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
       />
-      {/* Server-rendered SEO summary for crawlers — live data refreshed via ISR */}
-      <div className="sr-only" aria-hidden="false">
-        <h1>{fullName} Playoff Odds &amp; Standings 2026</h1>
-        <p>
-          {seoContent || `${fullName} playoff odds and projections for the 2026 MLB season. Track ${possessive(fullName)} win pace, playoff picture, and probability — updated daily.`}
+      {/* Fallback crawler line only when live data was unavailable (offseason/
+          fetch error) — otherwise the visible serverSummary carries the content. */}
+      {!serverSummary && (
+        <p className="sr-only">
+          {`${fullName} playoff odds and projections for the 2026 MLB season. Track ${possessive(fullName)} win pace, playoff picture, and probability — updated daily.`}
         </p>
-      </div>
-      <MLBTeamTracker team={team} />
+      )}
+      <MLBTeamTracker team={team} initialGames={initialGames} serverSummary={serverSummary} />
+      <SiteFooter />
       <NewsletterModal
         team={teamSlug}
         teamDisplayName={team.name}

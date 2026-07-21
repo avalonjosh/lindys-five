@@ -328,4 +328,4 @@ The interactive odds tables (`PlayoffOddsClient`, `MLBPlayoffOddsClient`) are cl
 
 ### Known opportunities (from SEO/GEO audit, not yet done)
 - `/playoffs` has footer cross-links but no top Home > Playoffs trail; could add one if desired.
-- Differentiate MLB team-page visible content so Google stops treating them as thin/duplicate ("crawled, currently not indexed"); request indexing in GSC after deploys.
+- ~~Differentiate MLB team-page visible content~~ — DONE (July 2026): MLB team pages now SSR the tracker's initial schedule (`initialGames` prop), render a visible "Season So Far" summary + division standings table with rival links (`serverSummary` prop), and include SiteFooter — served HTML went from ~106 visible chars / 0 links to ~7,300 chars / 74 links. The sr-only block was removed (fallback `<p>` only when data unavailable). Still Josh's move: request indexing in GSC after deploys and watch coverage. Note from diagnosis: NHL team pages are equally thin in served HTML (and their `/api/v1` data fetch is robots-blocked for rendering) but index anyway on age/links/authority — left untouched deliberately.

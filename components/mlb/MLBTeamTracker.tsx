@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { MLBGameChunk, MLBSeasonStats, MLBGameResult } from '@/lib/types/mlb';
@@ -26,13 +26,23 @@ const mlbBgTeamIds = ['orioles', 'reds', 'cardinals', 'angels', 'phillies', 'nat
 
 interface MLBTeamTrackerProps {
   team: MLBTeamConfig;
+  /** Server-fetched season schedule (ISR snapshot) so the full tracker is in
+   * the served HTML for crawlers; refreshed by the mount-time loadData(). */
+  initialGames?: MLBGameResult[];
+  /** Server-rendered SEO section (season summary + division table), shown above the footer. */
+  serverSummary?: ReactNode;
 }
 
-export default function MLBTeamTracker({ team }: MLBTeamTrackerProps) {
+export default function MLBTeamTracker({ team, initialGames, serverSummary }: MLBTeamTrackerProps) {
   const router = useRouter();
-  const [chunks, setChunks] = useState<MLBGameChunk[]>([]);
-  const [stats, setStats] = useState<MLBSeasonStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const hasInitial = Boolean(initialGames && initialGames.length > 0);
+  const [chunks, setChunks] = useState<MLBGameChunk[]>(() =>
+    hasInitial ? calculateMLBChunks(initialGames!) : []
+  );
+  const [stats, setStats] = useState<MLBSeasonStats | null>(() =>
+    hasInitial ? calculateMLBSeasonStats(calculateMLBChunks(initialGames!)) : null
+  );
+  const [loading, setLoading] = useState(!hasInitial);
   const [error, setError] = useState(false);
   const [hideCompleted, setHideCompleted] = useState(true);
   const [whatIfMode, setWhatIfMode] = useState(false);
@@ -612,6 +622,9 @@ export default function MLBTeamTracker({ team }: MLBTeamTrackerProps) {
         <div className="mt-8 max-w-2xl mx-auto">
           <GamePromo sport="mlb" />
         </div>
+
+        {/* Server-rendered season summary + division standings (SEO content) */}
+        {serverSummary}
 
         {/* Footer — matches NHL */}
         <footer className="text-center text-sm mt-8 pb-8 text-gray-500">
