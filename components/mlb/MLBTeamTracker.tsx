@@ -495,7 +495,7 @@ export default function MLBTeamTracker({ team }: MLBTeamTrackerProps) {
             {latestSave && hypotheticalResults.size === 0 && (
               <div className="mt-2 pt-2 border-t border-current/20 flex items-center justify-between gap-2 text-xs md:text-sm">
                 <span className="opacity-80 min-w-0 truncate">
-                  You saved picks on {new Date(`${latestSave.savedDate}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ({latestSave.summary.gamesPicked} games, {latestSave.summary.record})
+                  You saved picks on {new Date(`${latestSave.savedDate}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}{latestSave.label ? ` — “${latestSave.label}”` : ''} ({latestSave.summary.gamesPicked} games, {latestSave.summary.record})
                 </span>
                 <button
                   onClick={handleRestorePicks}

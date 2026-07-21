@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { findTeam, getTeamUrl } from '@/lib/teamConfig';
 import { fetchSabresSchedule } from '@/lib/services/nhlApi';
 import { fetchMLBSchedule, fetchMLBStandings } from '@/lib/services/mlbApi';
+import { fetchNFLSchedule } from '@/lib/services/nflApi';
 import { getMLBPlayoffProbability } from '@/lib/utils/mlbStandingsCalc';
 import { getCurrentNHLSeason, nextNHLSeason, formatSeasonLabel } from '@/lib/utils/season';
 
@@ -19,6 +20,7 @@ type Snapshot =
   | { kind: 'loading' }
   | { kind: 'unavailable' }
   | { kind: 'mlb'; wins: number; losses: number; probability: number | null; next: NextGame | null }
+  | { kind: 'nfl'; wins: number; losses: number; next: NextGame | null }
   | { kind: 'nhl-live'; wins: number; losses: number; otl: number; points: number; next: NextGame | null }
   | { kind: 'nhl-preseason'; seasonLabel: string; opener: NextGame | null; daysUntil: number | null }
   | { kind: 'nhl-complete'; seasonLabel: string; wins: number; losses: number; otl: number; points: number };
@@ -77,6 +79,29 @@ export default function FavoriteTeamCard({ teamSlug }: { teamSlug: string }) {
             wins,
             losses,
             probability: row ? getMLBPlayoffProbability(row, standings).probability : null,
+            next: nextGame ? { date: nextGame.date, opponent: nextGame.opponent, isHome: nextGame.isHome } : null,
+          });
+        }
+
+        if ('espnId' in team) {
+          // NFL favorite: record + next game. Pre-season shows the opener countdown.
+          const { games } = await fetchNFLSchedule(team.abbreviation, new Date().getFullYear());
+          if (games.length === 0) return done({ kind: 'unavailable' });
+          const wins = games.filter(g => g.outcome === 'W').length;
+          const losses = games.filter(g => g.outcome === 'L').length;
+          const nextGame = games.find(g => g.outcome === 'PENDING');
+          if (wins + losses === 0 && nextGame) {
+            return done({
+              kind: 'nhl-preseason',
+              seasonLabel: '2026 NFL',
+              opener: { date: nextGame.date, opponent: nextGame.opponent, isHome: nextGame.isHome },
+              daysUntil: daysUntil(nextGame.isoDate),
+            });
+          }
+          return done({
+            kind: 'nfl',
+            wins,
+            losses,
             next: nextGame ? { date: nextGame.date, opponent: nextGame.opponent, isHome: nextGame.isHome } : null,
           });
         }
@@ -154,6 +179,11 @@ export default function FavoriteTeamCard({ teamSlug }: { teamSlug: string }) {
         <div className="grid grid-cols-3 gap-3">
           <Stat label="Record" value={`${snap.wins}-${snap.losses}`} />
           <Stat label="Playoff Odds" value={snap.probability != null ? `${snap.probability}%` : '—'} color={team.colors.primary} />
+          <Stat label="Next Game" value={snap.next ? nextGameLabel(snap.next) : '—'} />
+        </div>
+      ) : snap.kind === 'nfl' ? (
+        <div className="grid grid-cols-2 gap-3">
+          <Stat label="Record" value={`${snap.wins}-${snap.losses}`} color={team.colors.primary} />
           <Stat label="Next Game" value={snap.next ? nextGameLabel(snap.next) : '—'} />
         </div>
       ) : snap.kind === 'nhl-live' ? (

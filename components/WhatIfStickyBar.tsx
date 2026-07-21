@@ -22,6 +22,8 @@ interface WhatIfStickyBarProps {
   record: string; // "8-4-3"
   projectedPoints: number;
   odds: number;
+  /** Hide the odds segment (NFL has no probability model yet). Default true. */
+  showOdds?: boolean;
   // Progress-bar inputs, mirroring the Season Progress box: current points
   // toward the target, plus the expected-pace marker from games played.
   totalPoints: number;
@@ -51,6 +53,7 @@ export default function WhatIfStickyBar({
   record,
   projectedPoints,
   odds,
+  showOdds = true,
   totalPoints,
   gamesPlayed,
   totalGames,
@@ -102,8 +105,12 @@ export default function WhatIfStickyBar({
                   <>
                     {gamesSimulated > 0 && <span className="text-white/80 font-semibold">{record} · </span>}
                     Proj {projectedPoints}
-                    {' · '}
-                    <span style={{ color: oddsColor(odds) }}>{odds}%</span>
+                    {showOdds && (
+                      <>
+                        {' · '}
+                        <span style={{ color: oddsColor(odds) }}>{odds}%</span>
+                      </>
+                    )}
                   </>
                 ) : (
                   <span className="text-white/80 font-semibold">Tap games below to simulate</span>

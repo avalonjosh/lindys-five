@@ -4,8 +4,8 @@
  * imports here — mirrors lib/perfectseason/leaderboard.ts.
  */
 
-export type WhatIfSport = 'nhl' | 'mlb'; // 'nfl' is a planned follow-up
-export type WhatIfOutcome = 'W' | 'OTL' | 'L'; // MLB saves never use 'OTL'
+export type WhatIfSport = 'nhl' | 'mlb' | 'nfl';
+export type WhatIfOutcome = 'W' | 'OTL' | 'L'; // MLB/NFL saves never use 'OTL'
 
 /** One simulated game inside a save. Enough to render history without a schedule fetch. */
 export interface WhatIfPick {
@@ -14,6 +14,8 @@ export interface WhatIfPick {
   opponentAbbrev: string;
   isHome: boolean;
   outcome: WhatIfOutcome;
+  /** NFL only: the week number, for display on the account page. */
+  week?: number;
 }
 
 /**
@@ -45,6 +47,11 @@ export interface WhatIfSave {
   season: string; // e.g. '20262027'
   savedDate: string; // YYYY-MM-DD Eastern — the locked date; one save per team per day
   savedAt: number; // ms timestamp; last write wins on same-day overwrite
+  /** Optional user-chosen name for this save, e.g. "McDavid Traded". */
+  label?: string;
+  /** True when the save was entered after the fact (backdate flow, NFL only).
+   * Picks for games already final at entry time are excluded from accuracy. */
+  backdated?: boolean;
   picks: WhatIfPick[];
   summary: WhatIfSummary;
 }
@@ -54,6 +61,11 @@ export interface WhatIfSubmission {
   sport: WhatIfSport;
   teamId: string;
   season: string;
+  /** Optional name for the save (≤60 chars). */
+  label?: string;
+  /** NFL only: record these picks under a past date (YYYY-MM-DD, before today ET).
+   * The save is marked `backdated` — used to import existing pick history. */
+  backdate?: string;
   picks: WhatIfPick[];
   summary: WhatIfSummary;
 }

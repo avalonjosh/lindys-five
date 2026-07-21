@@ -17,6 +17,12 @@ const nextConfig = {
         source: '/api/v1/:path*',
         destination: '/api/nhl-api/:path*',
       },
+      // Next.js can't declare partial dynamic segments (pick-the-[team]), so
+      // the pretty NFL pick URLs rewrite to an internal dynamic route.
+      {
+        source: '/pick-the-:team',
+        destination: '/nfl/pick/:team',
+      },
     ];
   },
   async redirects() {

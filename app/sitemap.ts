@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { kv } from '@vercel/kv';
+import { NFL_TEAMS } from '@/lib/teamConfig/nflTeams';
 
 const NHL_TEAM_ROUTES = [
   'sabres', 'canadiens', 'redwings', 'senators', 'panthers', 'mapleleafs',
@@ -116,6 +117,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     urls.push({ url: `${BASE_URL}/mlb/${team}`, lastModified: now, changeFrequency: 'daily', priority: 0.85 });
     urls.push({ url: `${BASE_URL}/mlb/${team}/gear`, lastModified: now, changeFrequency: 'weekly', priority: 0.5 });
     urls.push({ url: `${BASE_URL}/mlb/${team}/tickets`, lastModified: now, changeFrequency: 'weekly', priority: 0.5 });
+  }
+
+  // All 32 NFL Pick the {Team} pages (Bills boosted — the flagship)
+  for (const team of Object.values(NFL_TEAMS)) {
+    urls.push({
+      url: `${BASE_URL}/pick-the-${team.pickSlug}`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: team.id === 'bills' ? 0.8 : 0.7,
+    });
   }
 
   // Blog pages

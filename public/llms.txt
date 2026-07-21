@@ -96,6 +96,13 @@ Each MLB team page shows current record, division and wild card rank, projected 
 - [82-0: The Perfect Season (NHL)](https://www.lindysfive.com/82-0): Free daily NHL roster puzzle. Draft an all-time team from decade and franchise spins, then see if it can go 82-0. Daily, all-time, and per-franchise leaderboards at /82-0/leaderboard.
 - [162-0: The Perfect Season (MLB)](https://www.lindysfive.com/162-0): Free daily MLB roster puzzle. Draft an all-time team and chase a 162-0 season. Leaderboards at /162-0/leaderboard.
 
+## NFL — Pick the Team
+
+Predict the winner of every game of a team's NFL regular season, save dated picks with a free account, and track accuracy as real results come in. One page per team at /pick-the-{team}, e.g.:
+
+- [Pick the Bills](https://www.lindysfive.com/pick-the-bills): Buffalo Bills season picks — the flagship page.
+- All 32 teams follow the same pattern: /pick-the-chiefs, /pick-the-eagles, /pick-the-cowboys, /pick-the-jets, /pick-the-giants, /pick-the-panthers, /pick-the-cardinals, /pick-the-49ers, and so on (team nicknames).
+
 ## Blog
 
 - [Sabres Blog](https://www.lindysfive.com/blog/sabres): Buffalo Sabres game recaps, 5-game set recaps, news analysis, and weekly roundups.
