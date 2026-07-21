@@ -162,17 +162,22 @@ export default function FavoriteTeamCard({ teamSlug }: { teamSlug: string }) {
   if (!team || snap.kind === 'unavailable') return null;
 
   return (
-    <section className="mb-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between gap-2">
+    <section className="mb-4 overflow-hidden rounded-xl bg-white shadow-lg">
+      {/* Team-tinted header strip, same treatment as the picks group headers */}
+      <div
+        className="flex items-center justify-between gap-2 border-b border-gray-100 px-4 py-3"
+        style={{ backgroundColor: `${team.colors.primary}0d` }}
+      >
         <div className="flex min-w-0 items-center gap-2">
           <Image src={team.logo} alt="" width={24} height={24} className="h-6 w-6 flex-shrink-0" unoptimized />
           <h3 className="truncate text-sm font-bold text-gray-900">{team.city} {team.name}</h3>
         </div>
-        <Link href={getTeamUrl(teamSlug)} className="flex-shrink-0 text-xs font-bold text-sabres-blue hover:underline">
+        <Link href={getTeamUrl(teamSlug)} className="flex-shrink-0 text-xs font-bold hover:underline" style={{ color: team.colors.primary }}>
           View tracker →
         </Link>
       </div>
 
+      <div className="p-4">
       {snap.kind === 'loading' ? (
         <p className="text-sm text-gray-400">Loading…</p>
       ) : snap.kind === 'mlb' ? (
@@ -213,6 +218,7 @@ export default function FavoriteTeamCard({ teamSlug }: { teamSlug: string }) {
           <Stat label="Status" value="Season complete" />
         </div>
       )}
+      </div>
     </section>
   );
 }

@@ -5,6 +5,8 @@ import { changeEmail, changePassword, setNewsletterSubscribed, deleteAccount } f
 
 interface SettingsTabProps {
   email: string | null; // null while the profile is loading
+  /** Favorite-team primary color for buttons (falls back to Sabres navy). */
+  accent: string;
   onEmailChanged: (email: string) => void;
   onDeleted: () => void;
 }
@@ -20,7 +22,7 @@ function StatusLine({ status }: { status: FormStatus }) {
   return null;
 }
 
-export default function SettingsTab({ email, onEmailChanged, onDeleted }: SettingsTabProps) {
+export default function SettingsTab({ email, accent, onEmailChanged, onDeleted }: SettingsTabProps) {
   // Email
   const [emailOpen, setEmailOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
@@ -113,7 +115,7 @@ export default function SettingsTab({ email, onEmailChanged, onDeleted }: Settin
   return (
     <div className="flex flex-col gap-4">
       {/* Email */}
-      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <section className="rounded-xl bg-white p-4 shadow-lg">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h3 className="text-sm font-bold text-gray-900">Email</h3>
@@ -147,7 +149,8 @@ export default function SettingsTab({ email, onEmailChanged, onDeleted }: Settin
               type="button"
               onClick={submitEmail}
               disabled={emailStatus.state === 'saving' || !newEmail || !emailPassword}
-              className="self-start rounded-lg bg-sabres-blue px-4 py-2 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-sabres-light disabled:opacity-50"
+              className="self-start rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wide text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ backgroundColor: accent }}
             >
               {emailStatus.state === 'saving' ? 'Saving…' : 'Save Email'}
             </button>
@@ -157,7 +160,7 @@ export default function SettingsTab({ email, onEmailChanged, onDeleted }: Settin
       </section>
 
       {/* Password */}
-      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <section className="rounded-xl bg-white p-4 shadow-lg">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold text-gray-900">Password</h3>
@@ -191,7 +194,8 @@ export default function SettingsTab({ email, onEmailChanged, onDeleted }: Settin
               type="button"
               onClick={submitPassword}
               disabled={passwordStatus.state === 'saving' || !currentPassword || newPassword.length < 8}
-              className="self-start rounded-lg bg-sabres-blue px-4 py-2 text-xs font-bold uppercase tracking-wide text-white transition-colors hover:bg-sabres-light disabled:opacity-50"
+              className="self-start rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wide text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ backgroundColor: accent }}
             >
               {passwordStatus.state === 'saving' ? 'Saving…' : 'Save Password'}
             </button>
@@ -201,7 +205,7 @@ export default function SettingsTab({ email, onEmailChanged, onDeleted }: Settin
       </section>
 
       {/* Newsletter */}
-      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <section className="rounded-xl bg-white p-4 shadow-lg">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h3 className="text-sm font-bold text-gray-900">Email Recaps</h3>
@@ -217,11 +221,12 @@ export default function SettingsTab({ email, onEmailChanged, onDeleted }: Settin
             type="button"
             onClick={toggleNewsletter}
             disabled={subscribed == null || nlStatus.state === 'saving'}
-            className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors disabled:opacity-50 ${
+            className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold disabled:opacity-50 ${
               subscribed
-                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                : 'bg-sabres-blue text-white hover:bg-sabres-light'
+                ? 'bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200'
+                : 'text-white transition-opacity hover:opacity-90'
             }`}
+            style={subscribed ? undefined : { backgroundColor: accent }}
           >
             {nlStatus.state === 'saving' ? 'Saving…' : subscribed ? 'Unsubscribe' : 'Subscribe'}
           </button>
@@ -230,7 +235,7 @@ export default function SettingsTab({ email, onEmailChanged, onDeleted }: Settin
       </section>
 
       {/* Danger zone */}
-      <section className="rounded-xl border border-red-200 bg-white p-4 shadow-sm">
+      <section className="rounded-xl border border-red-200 bg-white p-4 shadow-lg">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold text-red-600">Delete Account</h3>

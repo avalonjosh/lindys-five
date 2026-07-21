@@ -359,7 +359,7 @@ export default function AccountPage() {
     <div className="mx-auto max-w-3xl px-4 py-8">
       {/* Hero — themed to the favorite team, like the team tracker headers */}
       <div
-        className="relative mb-4 overflow-hidden rounded-2xl px-5 py-6 shadow-md sm:px-6"
+        className="relative mb-6 overflow-hidden rounded-2xl px-5 py-6 shadow-md sm:px-6"
         style={{ background: `linear-gradient(135deg, ${heroColor} 0%, ${adjustColor(heroColor, -35)} 100%)` }}
       >
         {favTeam && (
@@ -454,27 +454,29 @@ export default function AccountPage() {
             Sign Out
           </button>
         </div>
-      </div>
 
-      {/* Tab bar — Overview / My Picks / Settings */}
-      <div className="mb-6 flex gap-1 rounded-xl bg-gray-200/70 p-1">
-        {TABS.map(t => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id)}
-            className={`flex-1 rounded-lg px-1 py-2 text-[10px] font-bold uppercase tracking-wide transition-colors sm:text-sm ${
-              tab === t.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+        {/* Tabs — frosted pills docked into the hero's bottom edge */}
+        <div className="relative mt-5 flex gap-1 rounded-xl bg-black/10 p-1">
+          {TABS.map(t => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={`flex-1 rounded-lg px-1 py-2 text-[10px] font-bold uppercase tracking-wide transition-colors sm:text-sm ${
+                tab === t.id ? 'bg-white shadow-sm' : 'text-white/70 hover:bg-white/10 hover:text-white'
+              }`}
+              style={tab === t.id ? { color: heroColor } : undefined}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {tab === 'settings' && (
         <SettingsTab
           email={profile?.email ?? null}
+          accent={heroColor}
           onEmailChanged={(email) => setProfile(prev => (prev ? { ...prev, email } : prev))}
           onDeleted={() => setUser(null)}
         />
@@ -482,34 +484,35 @@ export default function AccountPage() {
 
       {tab === 'overview' && (
         <>
-      {/* Stat tiles — the top-line numbers, no expanding required */}
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm">
-          <div className="text-2xl font-bold text-gray-900">{saves?.length ?? '—'}</div>
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Saved Picks</div>
+      {/* Stat tiles — tracker StatCard vocabulary (gradient, team-color labels) */}
+      <div className="mb-8 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+        <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2 md:p-3">
+          <div className="mb-1 text-xs font-semibold uppercase tracking-wide" style={{ color: heroColor }}>Saved Picks</div>
+          <div className="text-2xl font-bold text-gray-900 md:text-3xl">{saves?.length ?? '—'}</div>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm">
-          <div className="text-2xl font-bold" style={{ color: overall.graded > 0 ? heroColor : undefined }}>
+        <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2 md:p-3">
+          <div className="mb-1 text-xs font-semibold uppercase tracking-wide" style={{ color: heroColor }}>Exact Accuracy</div>
+          <div className="text-2xl font-bold text-gray-900 md:text-3xl">
             {overall.graded > 0 ? `${Math.round((overall.exact / overall.graded) * 100)}%` : '—'}
           </div>
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-            {overall.graded > 0 ? `Exact · ${overall.exact}/${overall.graded} graded` : 'Exact Accuracy'}
-          </div>
+          {overall.graded > 0 && (
+            <div className="mt-1 text-xs text-gray-600">{overall.exact}/{overall.graded} graded</div>
+          )}
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm">
-          <div className="text-2xl font-bold text-gray-900">{bestRank != null ? `#${bestRank}` : '—'}</div>
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Best Rank</div>
+        <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2 md:p-3">
+          <div className="mb-1 text-xs font-semibold uppercase tracking-wide" style={{ color: heroColor }}>Best Rank</div>
+          <div className="text-2xl font-bold text-gray-900 md:text-3xl">{bestRank != null ? `#${bestRank}` : '—'}</div>
         </div>
-        <div className="rounded-xl border border-gray-200 bg-white p-3 text-center shadow-sm">
-          <div className="text-2xl font-bold text-gray-900">{profile?.perfectSeason.daily.count ?? '—'}</div>
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Daily Puzzles</div>
+        <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2 md:p-3">
+          <div className="mb-1 text-xs font-semibold uppercase tracking-wide" style={{ color: heroColor }}>Daily Puzzles</div>
+          <div className="text-2xl font-bold text-gray-900 md:text-3xl">{profile?.perfectSeason.daily.count ?? '—'}</div>
         </div>
       </div>
 
       {/* Today's puzzles — the daily hook */}
-      <section className="mb-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <section className="mb-4 rounded-xl bg-white p-4 shadow-lg">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h3 className="text-sm font-bold text-gray-900">Today&apos;s Daily Puzzles</h3>
+          <h3 className="text-base font-bold uppercase tracking-wide" style={{ color: heroColor, fontFamily: 'Bebas Neue, sans-serif' }}>Today&apos;s Daily Puzzles</h3>
           {(profile?.perfectSeason.daily.streak.current ?? 0) >= 2 && (
             <span className="flex-shrink-0 rounded-full bg-orange-50 px-2 py-0.5 text-xs font-bold text-orange-600">
               🔥 {profile!.perfectSeason.daily.streak.current}-day streak
@@ -531,7 +534,7 @@ export default function AccountPage() {
                   <Check className="h-3.5 w-3.5" /> Played
                 </span>
               ) : (
-                <Link href={p.href} className="rounded-lg bg-sabres-blue px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-sabres-light">
+                <Link href={p.href} className="rounded-lg px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90" style={{ backgroundColor: heroColor }}>
                   Play
                 </Link>
               )}
@@ -546,10 +549,10 @@ export default function AccountPage() {
       {/* Summary cards — less than the tabs show, so "View all" has a reason to exist */}
       <div className="mb-4 grid gap-4 sm:grid-cols-2">
         {/* Perfect Season summary */}
-        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <section className="rounded-xl bg-white p-4 shadow-lg">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <h3 className="text-sm font-bold text-gray-900">Perfect Season</h3>
-            <button type="button" onClick={() => setTab('perfectseason')} className="text-xs font-bold text-sabres-blue hover:underline">
+            <h3 className="text-base font-bold uppercase tracking-wide" style={{ color: heroColor, fontFamily: 'Bebas Neue, sans-serif' }}>Perfect Season</h3>
+            <button type="button" onClick={() => setTab('perfectseason')} className="text-xs font-bold hover:underline" style={{ color: heroColor }}>
               View all →
             </button>
           </div>
@@ -558,7 +561,7 @@ export default function AccountPage() {
           ) : profile.perfectSeason.boards.length === 0 && profile.perfectSeason.daily.count === 0 ? (
             <p className="text-sm text-gray-500">
               No games played yet. Try today&apos;s puzzle at{' '}
-              <Link href="/82-0" className="font-bold text-sabres-blue hover:underline">82-0</Link>.
+              <Link href="/82-0" className="font-bold hover:underline" style={{ color: heroColor }}>82-0</Link>.
             </p>
           ) : (
             <>
@@ -586,10 +589,10 @@ export default function AccountPage() {
         </section>
 
         {/* My Picks summary */}
-        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <section className="rounded-xl bg-white p-4 shadow-lg">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <h3 className="text-sm font-bold text-gray-900">My Picks</h3>
-            <button type="button" onClick={() => setTab('picks')} className="text-xs font-bold text-sabres-blue hover:underline">
+            <h3 className="text-base font-bold uppercase tracking-wide" style={{ color: heroColor, fontFamily: 'Bebas Neue, sans-serif' }}>My Picks</h3>
+            <button type="button" onClick={() => setTab('picks')} className="text-xs font-bold hover:underline" style={{ color: heroColor }}>
               View all →
             </button>
           </div>
@@ -598,7 +601,7 @@ export default function AccountPage() {
           ) : latestSave == null ? (
             <p className="text-sm text-gray-500">
               No saved picks yet. Turn on What If mode on any{' '}
-              <Link href="/nhl" className="font-bold text-sabres-blue hover:underline">team page</Link> and hit Save Picks.
+              <Link href="/nhl" className="font-bold hover:underline" style={{ color: heroColor }}>team page</Link> and hit Save Picks.
             </p>
           ) : (
             <>
@@ -633,15 +636,18 @@ export default function AccountPage() {
 
       {/* Recent activity — merged saves + daily plays, newest first */}
       {activity.length > 0 && (
-        <section className="mb-8 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <h3 className="mb-1 text-sm font-bold text-gray-900">Recent Activity</h3>
+        <section className="mb-8 rounded-xl bg-white p-4 shadow-lg">
+          <h3 className="mb-1 text-base font-bold uppercase tracking-wide" style={{ color: heroColor, fontFamily: 'Bebas Neue, sans-serif' }}>Recent Activity</h3>
           <ul className="divide-y divide-gray-100">
             {activity.map(item => (
               <li key={item.key}>
                 <Link href={item.href} className="flex items-center gap-3 py-2 text-sm transition-colors hover:bg-gray-50">
                   <span className="w-14 flex-shrink-0 text-xs text-gray-400">{pickDateLabel(item.date)}</span>
                   <span className="min-w-0 flex-1 truncate text-gray-700">{item.label}</span>
-                  <span className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${item.kind === 'save' ? 'bg-blue-50 text-sabres-blue' : 'bg-gray-100 text-gray-500'}`}>
+                  <span
+                    className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${item.kind === 'save' ? '' : 'bg-gray-100 text-gray-500'}`}
+                    style={item.kind === 'save' ? { backgroundColor: `${heroColor}14`, color: heroColor } : undefined}
+                  >
                     {item.kind === 'save' ? 'Picks' : 'Daily'}
                   </span>
                 </Link>
@@ -657,20 +663,20 @@ export default function AccountPage() {
         <>
       {/* Perfect Season — leaderboard bests from 82-0 / 162-0 */}
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="font-bold text-gray-900">Perfect Season</h2>
+        <h2 className="text-lg font-bold uppercase tracking-wide md:text-xl" style={{ color: heroColor, fontFamily: 'Bebas Neue, sans-serif' }}>Perfect Season</h2>
         <div className="flex gap-2 text-xs font-bold">
           <Link href="/82-0" className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-gray-700 transition-colors hover:bg-gray-200">82-0</Link>
           <Link href="/162-0" className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-gray-700 transition-colors hover:bg-gray-200">162-0</Link>
         </div>
       </div>
-      <section className="mb-8 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      <section className="mb-8 overflow-hidden rounded-xl bg-white shadow-lg">
         {profile == null ? (
           <div className="p-4 text-sm text-gray-400">Loading…</div>
         ) : profile.perfectSeason.boards.length === 0 && profile.perfectSeason.daily.count === 0 ? (
           <div className="p-4 text-sm text-gray-500">
             No games played yet. Try the daily puzzle at{' '}
-            <Link href="/82-0" className="font-bold text-sabres-blue hover:underline">82-0</Link> (NHL) or{' '}
-            <Link href="/162-0" className="font-bold text-sabres-blue hover:underline">162-0</Link> (MLB).
+            <Link href="/82-0" className="font-bold hover:underline" style={{ color: heroColor }}>82-0</Link> (NHL) or{' '}
+            <Link href="/162-0" className="font-bold hover:underline" style={{ color: heroColor }}>162-0</Link> (MLB).
           </div>
         ) : (
           <div>
@@ -714,7 +720,7 @@ export default function AccountPage() {
       {tab === 'picks' && (
         <>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="font-bold text-gray-900">My Picks</h2>
+        <h2 className="text-lg font-bold uppercase tracking-wide md:text-xl" style={{ color: heroColor, fontFamily: 'Bebas Neue, sans-serif' }}>My Picks</h2>
         <Link href="/nhl" className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200">
           Make Picks
         </Link>
@@ -727,7 +733,7 @@ export default function AccountPage() {
           <p className="mb-4 text-sm text-gray-500">
             Turn on What If mode on any team page, simulate some games, and hit Save Picks.
           </p>
-          <Link href="/nhl" className="text-sm font-bold text-sabres-blue hover:underline">
+          <Link href="/nhl" className="text-sm font-bold hover:underline" style={{ color: heroColor }}>
             Browse NHL teams →
           </Link>
         </div>
@@ -750,7 +756,7 @@ export default function AccountPage() {
                 )
               : null;
             return (
-              <section key={group.key} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+              <section key={group.key} className="overflow-hidden rounded-xl bg-white shadow-lg">
                 {/* Team header */}
                 <div className="flex items-center gap-3 border-b border-gray-100 p-4" style={{ backgroundColor: `${team.colors.primary}0d` }}>
                   <Image src={team.logo} alt="" width={40} height={40} className="h-10 w-10" unoptimized />
