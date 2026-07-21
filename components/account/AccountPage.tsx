@@ -907,13 +907,15 @@ export default function AccountPage() {
                         <button
                           type="button"
                           onClick={() => setExpanded(open ? null : rowKey)}
-                          className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-gray-50"
+                          className="flex w-full items-center gap-2 p-3 text-left transition-colors hover:bg-gray-50 sm:gap-3 sm:p-4"
                         >
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 text-sm font-bold text-gray-900">
-                              <span>{longDate(save.savedDate)}</span>
+                            {/* Title wraps as a unit: unbreakable date, label truncating
+                                on its own line when squeezed, badge flowing along. */}
+                            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm font-bold text-gray-900">
+                              <span className="whitespace-nowrap">{longDate(save.savedDate)}</span>
                               {save.label && (
-                                <span className="min-w-0 truncate font-semibold text-gray-500">· “{save.label}”</span>
+                                <span className="min-w-0 max-w-full truncate font-semibold text-gray-500">· “{save.label}”</span>
                               )}
                               {save.backdated && (
                                 <span
@@ -928,22 +930,25 @@ export default function AccountPage() {
                               {save.summary.gamesPicked} games picked ({save.summary.record}) · Proj {save.summary.projectedPoints} {save.sport === 'nhl' ? 'pts' : 'wins'}{save.sport !== 'nfl' && ` · ${save.summary.playoffOdds.toFixed(1)}% odds`}
                             </div>
                           </div>
-                          {changeCount > 0 && (
-                            <span className="flex-shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                              {changeCount} change{changeCount === 1 ? '' : 's'}
-                            </span>
-                          )}
-                          {grade && grade.graded > 0 && (
-                            <div className="flex-shrink-0 text-right">
-                              <div className="text-sm font-bold text-gray-900">{grade.exact}/{grade.graded}</div>
-                              <div className="text-[10px] uppercase tracking-wide text-gray-400">exact</div>
-                            </div>
-                          )}
-                          {grade && grade.graded === 0 && (
-                            <span className="flex-shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                              Pending
-                            </span>
-                          )}
+                          {/* Chips stack on mobile so the title keeps its width */}
+                          <div className="flex flex-shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2">
+                            {changeCount > 0 && (
+                              <span className="whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                {changeCount} change{changeCount === 1 ? '' : 's'}
+                              </span>
+                            )}
+                            {grade && grade.graded > 0 && (
+                              <div className="text-right">
+                                <div className="text-sm font-bold text-gray-900">{grade.exact}/{grade.graded}</div>
+                                <div className="text-[10px] uppercase tracking-wide text-gray-400">exact</div>
+                              </div>
+                            )}
+                            {grade && grade.graded === 0 && (
+                              <span className="whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                Pending
+                              </span>
+                            )}
+                          </div>
                           {open ? <ChevronUp className="h-4 w-4 flex-shrink-0 text-gray-400" /> : <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-400" />}
                         </button>
 
