@@ -14,6 +14,7 @@ import MLBStandingsCard from './MLBStandingsCard';
 import MerchCTA from '@/components/affiliate/MerchCTA';
 import GamePromo from '@/components/perfectseason/GamePromo';
 import WhatIfStickyBar from '@/components/WhatIfStickyBar';
+import HeaderProfileIcon from '@/components/HeaderProfileIcon';
 import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
 import AuthModal from '@/components/perfectseason/board/AuthModal';
 import SavePicksModal from '@/components/whatif/SavePicksModal';
@@ -371,6 +372,11 @@ export default function MLBTeamTracker({ team }: MLBTeamTrackerProps) {
             {/* Team Navigation (same position as NHL TeamNav) */}
             <div className="absolute left-0 top-0">
               <MLBTeamNav currentTeamId={team.id} teamColors={team.colors} />
+            </div>
+
+            {/* Account entry (mirrors the NHL tracker header) */}
+            <div className="absolute right-0 top-0">
+              <HeaderProfileIcon user={user} />
             </div>
 
             <button

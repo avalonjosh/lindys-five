@@ -13,6 +13,7 @@ import type { NFLGameResult } from '@/lib/types/nfl';
 import { fetchNFLSchedule } from '@/lib/services/nflApi';
 import NFLPickNav from './NFLPickNav';
 import WhatIfStickyBar from '@/components/WhatIfStickyBar';
+import HeaderProfileIcon from '@/components/HeaderProfileIcon';
 import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
 import AuthModal from '@/components/perfectseason/board/AuthModal';
 import SavePicksModal from '@/components/whatif/SavePicksModal';
@@ -238,6 +239,11 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
           <div className="flex flex-col items-center text-center relative">
             <div className="absolute left-0 top-0">
               <NFLPickNav currentTeamId={team.id} />
+            </div>
+
+            {/* Account entry (mirrors the NHL tracker header) */}
+            <div className="absolute right-0 top-0">
+              <HeaderProfileIcon user={user} />
             </div>
 
             <button

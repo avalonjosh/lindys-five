@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { UserRound } from 'lucide-react';
+import HeaderProfileIcon from '@/components/HeaderProfileIcon';
 import { useRouter } from 'next/navigation';
 import type { GameChunk, SeasonStats, ChunkStats, GameResult } from '@/lib/types';
 import { fetchSabresSchedule, fetchLastSeasonComparison, isRateLimitError } from '@/lib/services/nhlApi';
@@ -1071,27 +1071,10 @@ export default function TeamTracker({
                 }}
               />
             </button>
-            <Link
-              href="/account"
-              title={user ? `My Account · ${user.username}` : 'Sign in to save picks'}
-              aria-label="My Account"
-              className="flex h-6 w-6 md:h-8 md:w-8 flex-shrink-0 items-center justify-center rounded-full transition-opacity hover:opacity-75"
-              // Frosted tint, not a solid chip — dark tint on the white
-              // lightning/penguins dark-mode headers, white tint elsewhere.
-              style={
-                isGoatMode && (team.id === 'lightning' || team.id === 'penguins')
-                  ? { backgroundColor: `${team.colors.primary}18`, color: team.colors.primary }
-                  : { backgroundColor: 'rgba(255,255,255,0.16)', color: 'rgba(255,255,255,0.85)' }
-              }
-            >
-              {user ? (
-                <span className="text-sm md:text-lg font-bold leading-none" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-                  {user.username.charAt(0).toUpperCase()}
-                </span>
-              ) : (
-                <UserRound className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              )}
-            </Link>
+            <HeaderProfileIcon
+              user={user}
+              darkTint={isGoatMode && (team.id === 'lightning' || team.id === 'penguins') ? team.colors.primary : undefined}
+            />
           </div>
 
           <button
