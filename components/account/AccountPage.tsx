@@ -932,7 +932,11 @@ export default function AccountPage() {
                           {/* Chips stack on mobile so the title keeps its width */}
                           <div className="flex flex-shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2">
                             {changeCount > 0 && (
-                              <span className="whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                              // Team-tinted so it reads as info, distinct from the gray status pill
+                              <span
+                                className="whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                                style={{ backgroundColor: `${team.colors.primary}14`, color: team.colors.primary }}
+                              >
                                 {changeCount} change{changeCount === 1 ? '' : 's'}
                               </span>
                             )}
