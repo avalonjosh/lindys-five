@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+import { UserRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { GameChunk, SeasonStats, ChunkStats, GameResult } from '@/lib/types';
 import { fetchSabresSchedule, fetchLastSeasonComparison, isRateLimitError } from '@/lib/services/nhlApi';
@@ -1041,8 +1042,8 @@ export default function TeamTracker({
             <TeamNav currentTeamId={team.id} isGoatMode={isGoatMode} darkModeColors={darkModeColors} teamColors={team.colors} refreshTrigger={refreshTrigger} />
           </div>
 
-          {/* Theme Toggle Switch */}
-          <div className="absolute right-0 top-0">
+          {/* Theme toggle + account entry (toggle sits left of the profile icon) */}
+          <div className="absolute right-0 top-0 flex items-center gap-2 md:gap-3">
             <button
               onClick={toggleTheme}
               className={`relative inline-flex h-6 w-11 md:h-7 md:w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2`}
@@ -1070,6 +1071,21 @@ export default function TeamTracker({
                 }}
               />
             </button>
+            <Link
+              href="/account"
+              title={user ? `My Account · ${user.username}` : 'Sign in to save picks'}
+              aria-label="My Account"
+              className="flex h-6 w-6 md:h-8 md:w-8 flex-shrink-0 items-center justify-center rounded-full bg-white shadow-md transition-opacity hover:opacity-85"
+              style={{ color: isGoatMode ? darkModeColors.accent : team.colors.primary }}
+            >
+              {user ? (
+                <span className="text-sm md:text-lg font-bold leading-none" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+                  {user.username.charAt(0).toUpperCase()}
+                </span>
+              ) : (
+                <UserRound className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              )}
+            </Link>
           </div>
 
           <button
