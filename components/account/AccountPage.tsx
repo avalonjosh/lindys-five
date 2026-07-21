@@ -981,17 +981,17 @@ export default function AccountPage() {
                               <table className="w-full text-xs">
                                 <thead>
                                   <tr className="border-b border-gray-100 text-left text-[10px] font-bold uppercase tracking-wide text-gray-400">
-                                    <th className="w-16 px-3 py-2 font-bold">{save.sport === 'nfl' ? 'Wk' : 'Date'}</th>
-                                    <th className="px-3 py-2 font-bold">Matchup</th>
-                                    <th className="w-20 px-3 py-2 text-center font-bold">Picked</th>
-                                    <th className="w-24 px-3 py-2 text-right font-bold">Result</th>
+                                    <th className="w-12 px-2 py-2 font-bold sm:w-16 sm:px-3">{save.sport === 'nfl' ? 'Wk' : 'Date'}</th>
+                                    <th className="px-2 py-2 font-bold sm:px-3">Matchup</th>
+                                    <th className="w-12 px-1 py-2 text-center font-bold sm:w-20 sm:px-3">Picked</th>
+                                    <th className="w-16 px-2 py-2 text-right font-bold sm:w-24 sm:px-3">Result</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {(grade?.picks ?? save.picks.map(pick => ({ pick, actual: null as ActualOutcome | null, exact: false, simpleRight: false, excluded: false }))).map(({ pick, actual, exact, excluded }) => (
                                     <tr key={pick.gameId} className="even:bg-gray-50">
-                                      <td className="px-3 py-2 text-gray-400">{pick.week ? `Wk ${pick.week}` : pickDateLabel(pick.date)}</td>
-                                      <td className="px-3 py-2">
+                                      <td className="px-2 py-2 text-gray-400 sm:px-3">{pick.week ? `Wk ${pick.week}` : pickDateLabel(pick.date)}</td>
+                                      <td className="px-2 py-2 sm:px-3">
                                         <span className="flex min-w-0 items-center gap-2 font-semibold text-gray-700">
                                           {opponentLogo(save.sport, pick.opponentAbbrev) && (
                                             // eslint-disable-next-line @next/next/no-img-element
@@ -1000,7 +1000,7 @@ export default function AccountPage() {
                                           <span className="truncate">{pick.isHome ? 'vs' : '@'} {pick.opponentAbbrev}</span>
                                         </span>
                                       </td>
-                                      <td className="px-3 py-2 text-center">
+                                      <td className="px-1 py-2 text-center sm:px-3">
                                         <span
                                           className="inline-flex h-6 min-w-7 items-center justify-center rounded-md px-1 text-xs font-bold text-white"
                                           style={{
@@ -1011,7 +1011,7 @@ export default function AccountPage() {
                                           {pick.outcome}
                                         </span>
                                       </td>
-                                      <td className="px-3 py-2">
+                                      <td className="px-2 py-2 sm:px-3">
                                         {excluded && actual != null ? (
                                           <span
                                             className="flex items-center justify-end gap-1 text-gray-400"
