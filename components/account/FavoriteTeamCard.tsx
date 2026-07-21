@@ -162,7 +162,7 @@ export default function FavoriteTeamCard({ teamSlug }: { teamSlug: string }) {
   if (!team || snap.kind === 'unavailable') return null;
 
   return (
-    <section className="mb-4 overflow-hidden rounded-xl bg-white shadow-lg">
+    <section className="mb-4 overflow-hidden rounded-2xl border-2 border-gray-200 bg-white shadow-xl">
       {/* Team-tinted header strip, same treatment as the picks group headers */}
       <div
         className="flex items-center justify-between gap-2 border-b border-gray-100 px-4 py-3"

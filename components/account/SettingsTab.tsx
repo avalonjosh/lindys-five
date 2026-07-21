@@ -113,12 +113,12 @@ export default function SettingsTab({ email, accent, onEmailChanged, onDeleted }
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="grid gap-4 md:grid-cols-2">
       {/* Email */}
-      <section className="rounded-xl bg-white p-4 shadow-lg">
+      <section className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-sm font-bold text-gray-900">Email</h3>
+            <h3 className="text-sm font-bold" style={{ color: accent }}>Email</h3>
             <p className="truncate text-sm text-gray-500">{email ?? 'Loading…'}</p>
           </div>
           <button
@@ -160,10 +160,10 @@ export default function SettingsTab({ email, accent, onEmailChanged, onDeleted }
       </section>
 
       {/* Password */}
-      <section className="rounded-xl bg-white p-4 shadow-lg">
+      <section className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-bold text-gray-900">Password</h3>
+            <h3 className="text-sm font-bold" style={{ color: accent }}>Password</h3>
             <p className="text-sm text-gray-500">••••••••</p>
           </div>
           <button
@@ -205,10 +205,10 @@ export default function SettingsTab({ email, accent, onEmailChanged, onDeleted }
       </section>
 
       {/* Newsletter */}
-      <section className="rounded-xl bg-white p-4 shadow-lg">
+      <section className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-sm font-bold text-gray-900">Email Recaps</h3>
+            <h3 className="text-sm font-bold" style={{ color: accent }}>Email Recaps</h3>
             <p className="text-sm text-gray-500">
               {subscribed == null
                 ? 'Loading…'
@@ -235,7 +235,7 @@ export default function SettingsTab({ email, accent, onEmailChanged, onDeleted }
       </section>
 
       {/* Danger zone */}
-      <section className="rounded-xl border border-red-200 bg-white p-4 shadow-lg">
+      <section className="rounded-2xl border-2 border-red-200 bg-white p-3 shadow-xl md:p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold text-red-600">Delete Account</h3>
