@@ -490,7 +490,7 @@ export default function AccountPage() {
           <div className="text-2xl font-bold text-gray-900 md:text-3xl">{saves?.length ?? '—'}</div>
         </div>
         <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2 md:p-3">
-          <div className="mb-1 text-xs font-semibold uppercase tracking-wide" style={{ color: heroColor }}>Exact Accuracy</div>
+          <div className="mb-1 text-xs font-semibold uppercase tracking-wide" style={{ color: heroColor }}>Pick Accuracy</div>
           <div className="text-2xl font-bold text-gray-900 md:text-3xl">
             {overall.graded > 0 ? `${Math.round((overall.exact / overall.graded) * 100)}%` : '—'}
           </div>
@@ -499,52 +499,54 @@ export default function AccountPage() {
           )}
         </div>
         <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2 md:p-3">
-          <div className="mb-1 text-xs font-semibold uppercase tracking-wide" style={{ color: heroColor }}>Best Rank</div>
-          <div className="text-2xl font-bold text-gray-900 md:text-3xl">{bestRank != null ? `#${bestRank}` : '—'}</div>
-        </div>
-        <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2 md:p-3">
           <div className="mb-1 text-xs font-semibold uppercase tracking-wide" style={{ color: heroColor }}>Daily Puzzles</div>
           <div className="text-2xl font-bold text-gray-900 md:text-3xl">{profile?.perfectSeason.daily.count ?? '—'}</div>
         </div>
+        <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2 md:p-3">
+          <div className="mb-1 text-xs font-semibold uppercase tracking-wide" style={{ color: heroColor }}>Best Rank</div>
+          <div className="text-2xl font-bold text-gray-900 md:text-3xl">{bestRank != null ? `#${bestRank}` : '—'}</div>
+        </div>
       </div>
       </div>
 
-      {/* Today's puzzles — the daily hook */}
-      <section className="mb-4 rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h3 className="text-lg font-bold md:text-xl" style={{ color: heroColor }}>Today&apos;s Daily Puzzles</h3>
-          {(profile?.perfectSeason.daily.streak.current ?? 0) >= 2 && (
-            <span className="flex-shrink-0 rounded-full bg-orange-50 px-2 py-0.5 text-xs font-bold text-orange-600">
-              🔥 {profile!.perfectSeason.daily.streak.current}-day streak
-            </span>
-          )}
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:max-w-md">
-          {([
-            { label: '82-0', sport: 'NHL', href: '/82-0', played: profile?.perfectSeason.daily.playedToday.nhl ?? false },
-            { label: '162-0', sport: 'MLB', href: '/162-0', played: profile?.perfectSeason.daily.playedToday.mlb ?? false },
-          ] as const).map(p => (
-            <div key={p.label} className="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2.5">
-              <div>
-                <div className="text-sm font-bold text-gray-900">{p.label}</div>
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{p.sport}</div>
+      {/* Team snapshot + daily puzzles — paired so neither strands in an 80rem row */}
+      <div className="mb-4 grid gap-4 md:grid-cols-2">
+        {user.favoriteTeam && <FavoriteTeamCard teamSlug={user.favoriteTeam} />}
+
+        {/* Today's puzzles — the daily hook */}
+        <section className={`rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4 ${user.favoriteTeam ? '' : 'md:col-span-2'}`}>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h3 className="text-lg font-bold md:text-xl" style={{ color: heroColor }}>Today&apos;s Daily Puzzles</h3>
+            {(profile?.perfectSeason.daily.streak.current ?? 0) >= 2 && (
+              <span className="flex-shrink-0 rounded-full bg-orange-50 px-2 py-0.5 text-xs font-bold text-orange-600">
+                🔥 {profile!.perfectSeason.daily.streak.current}-day streak
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {([
+              { label: '82-0', sport: 'NHL', href: '/82-0', played: profile?.perfectSeason.daily.playedToday.nhl ?? false },
+              { label: '162-0', sport: 'MLB', href: '/162-0', played: profile?.perfectSeason.daily.playedToday.mlb ?? false },
+            ] as const).map(p => (
+              <div key={p.label} className="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2.5">
+                <div>
+                  <div className="text-sm font-bold text-gray-900">{p.label}</div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{p.sport}</div>
+                </div>
+                {p.played ? (
+                  <span className="flex items-center gap-1 text-xs font-bold text-green-600">
+                    <Check className="h-3.5 w-3.5" /> Played
+                  </span>
+                ) : (
+                  <Link href={p.href} className="rounded-lg px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90" style={{ backgroundColor: heroColor }}>
+                    Play
+                  </Link>
+                )}
               </div>
-              {p.played ? (
-                <span className="flex items-center gap-1 text-xs font-bold text-green-600">
-                  <Check className="h-3.5 w-3.5" /> Played
-                </span>
-              ) : (
-                <Link href={p.href} className="rounded-lg px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90" style={{ backgroundColor: heroColor }}>
-                  Play
-                </Link>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Favorite team snapshot — record, odds, next game */}
-      {user.favoriteTeam && <FavoriteTeamCard teamSlug={user.favoriteTeam} />}
+            ))}
+          </div>
+        </section>
+      </div>
 
       {/* Summary cards — less than the tabs show, so "View all" has a reason to exist */}
       <div className="mb-4 grid gap-4 sm:grid-cols-2">
