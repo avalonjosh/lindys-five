@@ -583,7 +583,8 @@ export async function fetchScoresByDate(date: string): Promise<NHLGame[]> {
     }
 
     // Include regular season (2) and playoff (3) games
-    const regularSeasonGames = dayData.games.filter((game: NHLGame) => game.gameType === 2 || game.gameType === 3);
+    // Preseason (1), regular season (2), and playoffs (3) all show on the scores page
+    const regularSeasonGames = dayData.games.filter((game: NHLGame) => game.gameType === 1 || game.gameType === 2 || game.gameType === 3);
 
     // NHL API returns seriesStatus as an object for playoff games; normalize to string
     regularSeasonGames.forEach((game: NHLGame) => {

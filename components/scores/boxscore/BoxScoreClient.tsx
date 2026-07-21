@@ -270,8 +270,9 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
           <GameHeader boxscore={boxscore} landing={landing} />
 
           <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
-            {/* Future game: playoff stakes + standings first, then preview */}
-            {isFuture && (
+            {/* Future game: playoff stakes + standings first, then preview
+                (skipped for preseason games — exhibitions carry no stakes) */}
+            {isFuture && boxscore.gameType !== 1 && (
               <>
                 {boxscore.gameType === 3 ? (
                   seriesHub && <SeriesHub data={seriesHub} currentGameId={gameId} />
@@ -357,8 +358,9 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
               </>
             )}
 
-            {/* Playoff impact + standings for live/final games (future games show these above) */}
-            {!isFuture && (
+            {/* Playoff impact + standings for live/final games (future games show
+                these above; preseason games carry no stakes) */}
+            {!isFuture && boxscore.gameType !== 1 && (
               <>
                 {boxscore.gameType === 3 ? (
                   seriesHub && <SeriesHub data={seriesHub} currentGameId={gameId} />

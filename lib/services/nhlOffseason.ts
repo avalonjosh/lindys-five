@@ -94,6 +94,7 @@ export interface UpcomingSeasonInfo {
   seasonLabel: string;
   openingDate?: string; // YYYY-MM-DD — league-wide regular-season opening night
   endDate?: string; // YYYY-MM-DD — regular-season finale
+  preseasonStartDate?: string; // YYYY-MM-DD — first exhibition game
 }
 
 // The upcoming season's opening night, once its schedule is posted. In the
@@ -119,6 +120,7 @@ export async function getUpcomingSeasonInfo(currentSeason: string): Promise<Upco
       scheduled: true,
       openingDate,
       endDate: data.regularSeasonEndDate,
+      preseasonStartDate: data.preSeasonStartDate,
     };
   } catch {
     return base;

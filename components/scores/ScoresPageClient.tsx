@@ -63,6 +63,7 @@ interface ScoresPageClientProps {
   preseason?: boolean;
   upcomingSeasonLabel?: string;
   openingDate?: string;
+  preseasonStartDate?: string;
 }
 
 export default function ScoresPageClient({
@@ -72,11 +73,16 @@ export default function ScoresPageClient({
   preseason = false,
   upcomingSeasonLabel,
   openingDate,
+  preseasonStartDate,
 }: ScoresPageClientProps) {
-  // During the preseason, open on Opening Night's slate instead of an empty summer date.
-  const [selectedDate, setSelectedDate] = useState(
-    preseason && openingDate ? openingDate : getTodayString()
-  );
+  // During the summer, open on Opening Night's slate instead of an empty date —
+  // but once exhibition games are underway, today's slate has real games.
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = getTodayString();
+    if (!preseason || !openingDate) return today;
+    if (preseasonStartDate && today >= preseasonStartDate) return today;
+    return openingDate;
+  });
   const [games, setGames] = useState<NHLGame[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -265,7 +271,10 @@ export default function ScoresPageClient({
               {countdownLabel ? ` — ${countdownLabel}` : ''}.
             </p>
             <p className="mt-1 text-xs md:text-sm" style={{ color: '#9A7B1F' }}>
-              The full schedule is out — browse any date below. Meanwhile, see the{' '}
+              {preseasonStartDate
+                ? <>Preseason games start {formatOpenerDate(preseasonStartDate)} — the full schedule is out, browse any date below. </>
+                : <>The full schedule is out — browse any date below. </>}
+              Meanwhile, see the{' '}
               <Link href="/nhl-playoff-odds" className="underline">way-too-early playoff odds</Link> and{' '}
               <Link href="/nhl" className="underline">team trackers</Link>.
             </p>

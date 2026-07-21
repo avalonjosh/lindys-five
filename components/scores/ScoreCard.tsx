@@ -296,6 +296,15 @@ export default function ScoreCard({ game, favoriteTeamAbbrev, standings }: Score
         isWinner={winner === 'home'}
       />
 
+      {/* Preseason Badge (gameType 1) */}
+      {game.gameType === 1 && (
+        <div className="border-t border-gray-100 mt-1 pt-2">
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+            Preseason
+          </p>
+        </div>
+      )}
+
       {/* Playoff Series Badge (gameType 3) */}
       {game.gameType === 3 && typeof game.seriesStatus === 'string' && game.seriesStatus && (
         <div className="border-t border-gray-100 mt-1 pt-2">
@@ -308,8 +317,8 @@ export default function ScoreCard({ game, favoriteTeamAbbrev, standings }: Score
         </div>
       )}
 
-      {/* Playoff Stakes (regular season only) */}
-      {game.gameType !== 3 && (homeStakes || awayStakes) && (
+      {/* Playoff Stakes (regular season only — exhibitions don't move odds) */}
+      {game.gameType === 2 && (homeStakes || awayStakes) && (
         <>
           <div className="border-t border-gray-100 mt-1 pt-2">
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">

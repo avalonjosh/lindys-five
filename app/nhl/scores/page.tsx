@@ -84,6 +84,7 @@ export default async function ScoresPageWrapper() {
         preseason={preseason}
         upcomingSeasonLabel={upcoming?.seasonLabel}
         openingDate={upcoming?.openingDate}
+        preseasonStartDate={upcoming?.preseasonStartDate}
       />
     </>
   );
