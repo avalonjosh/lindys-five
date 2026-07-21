@@ -723,13 +723,6 @@ export default function AccountPage() {
         <>
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold md:text-2xl" style={{ color: heroColor }}>My Picks</h2>
-        <Link
-          href="/nhl"
-          className="rounded-lg px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90 md:text-sm"
-          style={{ backgroundColor: heroColor }}
-        >
-          Make Picks
-        </Link>
       </div>
       {saves == null ? (
         <div className="py-12 text-center text-gray-400">Loading your picks…</div>
@@ -784,6 +777,13 @@ export default function AccountPage() {
                       </div>
                     </div>
                   )}
+                  <Link
+                    href={getTeamUrl(group.teamId)}
+                    className="flex-shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90"
+                    style={{ backgroundColor: team.colors.primary }}
+                  >
+                    Pick the {team.name}
+                  </Link>
                 </div>
 
                 {/* Trend charts — one measure per chart (no dual axis) */}
