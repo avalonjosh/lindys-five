@@ -90,13 +90,6 @@ function pickDateLabel(date: string): string {
   return isNaN(parsed.getTime()) ? date : parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-/** j•••@gmail.com — enough to recognize your own address, nothing more. */
-function maskEmail(email: string): string {
-  const [local, domain] = email.split('@');
-  if (!domain) return email;
-  return `${local.slice(0, 1)}•••@${domain}`;
-}
-
 function gradeClasses(grade: string): string {
   switch (grade.charAt(0).toUpperCase()) {
     case 'A': case 'S': return 'bg-green-100 text-green-700';
@@ -387,14 +380,9 @@ export default function AccountPage() {
               {user.username}
             </h1>
             <p className="px-2 text-xs leading-tight text-white opacity-90 md:text-base">
-              {profile ? (
-                <>
-                  {maskEmail(profile.email)}
-                  {' · '}Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                </>
-              ) : (
-                'Your profile'
-              )}
+              {profile
+                ? `Member since ${new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
+                : 'Your profile'}
             </p>
             <div className="mt-2">
                 {editingFavorite ? (
