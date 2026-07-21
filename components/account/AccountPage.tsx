@@ -91,6 +91,60 @@ function pickDateLabel(date: string): string {
   return isNaN(parsed.getTime()) ? date : parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+/** Pick-by-pick differences between a group's two most recent saves, so a
+ * re-pick day ("McDavid Traded") shows exactly which calls flipped. */
+function SaveDiffPanel({ group, color, className }: { group: TeamGroup; color: string; className?: string }) {
+  const latest = group.saves[group.saves.length - 1];
+  const prev = group.saves[group.saves.length - 2];
+  const prevBy = new Map(prev.picks.map(p => [p.gameId, p]));
+  const latestIds = new Set(latest.picks.map(p => p.gameId));
+  const changed = latest.picks
+    .map(pick => ({ pick, from: prevBy.get(pick.gameId)?.outcome }))
+    .filter((c): c is { pick: WhatIfPick; from: WhatIfPick['outcome'] } => c.from != null && c.from !== c.pick.outcome);
+  const added = latest.picks.filter(p => !prevBy.has(p.gameId)).length;
+  const dropped = prev.picks.filter(p => !latestIds.has(p.gameId)).length;
+
+  const gameLabel = (p: WhatIfPick) =>
+    `${p.week ? `Wk ${p.week}` : pickDateLabel(p.date)} · ${p.isHome ? 'vs' : '@'} ${p.opponentAbbrev}`;
+  const outcomeColor = (o: string) => (o === 'W' ? 'text-green-600' : o === 'OTL' ? 'text-yellow-600' : 'text-red-500');
+
+  return (
+    <div className={`rounded-lg bg-gray-50 p-3 ${className ?? ''}`}>
+      <div className="mb-1.5 flex items-baseline justify-between gap-2">
+        <h4 className="text-sm font-bold" style={{ color }}>What Changed</h4>
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+          {pickDateLabel(prev.savedDate)} → {pickDateLabel(latest.savedDate)}
+        </span>
+      </div>
+      {changed.length === 0 && added === 0 && dropped === 0 ? (
+        <p className="text-xs text-gray-500">No pick changes between your last two saves.</p>
+      ) : (
+        <>
+          {changed.length > 0 && (
+            <ul className="flex max-h-44 flex-col gap-1 overflow-y-auto">
+              {changed.map(({ pick, from }) => (
+                <li key={pick.gameId} className="flex items-center gap-2 rounded-md bg-white px-2.5 py-1.5 text-xs">
+                  <span className="min-w-0 flex-1 truncate font-semibold text-gray-700">{gameLabel(pick)}</span>
+                  <span className="flex-shrink-0 font-bold text-gray-400 line-through">{from}</span>
+                  <span className="flex-shrink-0 text-gray-400">→</span>
+                  <span className={`flex-shrink-0 font-bold ${outcomeColor(pick.outcome)}`}>{pick.outcome}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {(added > 0 || dropped > 0) && (
+            <p className={`text-xs text-gray-500 ${changed.length > 0 ? 'mt-1.5' : ''}`}>
+              {added > 0 && `${added} new pick${added === 1 ? '' : 's'}`}
+              {added > 0 && dropped > 0 && ' · '}
+              {dropped > 0 && `${dropped} pick${dropped === 1 ? '' : 's'} dropped`}
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 function gradeClasses(grade: string): string {
   switch (grade.charAt(0).toUpperCase()) {
     case 'A': case 'S': return 'bg-green-100 text-green-700';
@@ -803,6 +857,13 @@ export default function AccountPage() {
                         unit="%"
                       />
                     )}
+                    {/* NFL: fills the second grid cell beside the lone chart;
+                        NHL/MLB: spans below the two charts. */}
+                    <SaveDiffPanel
+                      group={group}
+                      color={team.colors.primary}
+                      className={group.sport === 'nfl' ? '' : 'sm:col-span-2'}
+                    />
                   </div>
                 ) : (
                   <div className="border-b border-gray-100 px-4 py-2.5 text-xs text-gray-500">
