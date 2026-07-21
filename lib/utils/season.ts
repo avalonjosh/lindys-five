@@ -46,3 +46,10 @@ export function previousNHLSeason(season: string): string {
 export function getRegularSeasonGameCount(season: string): number {
   return parseInt(season.slice(0, 4), 10) >= 2026 ? 84 : 82;
 }
+
+// Game count for the season in progress today — for live-standings math
+// (cut lines, confidence factors, season-complete checks) where the data is
+// by definition the current season's.
+export function getCurrentSeasonGameCount(): number {
+  return getRegularSeasonGameCount(getCurrentNHLSeason());
+}

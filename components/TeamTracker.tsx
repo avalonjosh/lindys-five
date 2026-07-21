@@ -97,7 +97,7 @@ export default function TeamTracker({
     const initialCache = new Map<number, ChunkStats>();
 
     // We don't know which chunks exist yet, but we can pre-populate
-    // the cache for chunks 1-17 (max possible in a season: 82 games / 5 = 16.4)
+    // the cache for chunks 1-17 (max possible in a season: 84 games / 5 = 16.8)
     for (let i = 1; i <= 17; i++) {
       const cachedStats = loadChunkStatsFromCache(team.id, i, team.nhlId);
       if (cachedStats) {

@@ -407,8 +407,10 @@ export default async function TeamPage({ params }: TeamPageProps) {
       };
     });
 
-    const chunks = calculateChunks(games);
-    const seasonStats = calculateSeasonStats(chunks);
+    // The schedule carries the season length (82, or 84 from 2026-27).
+    const totalGames = games.length > 0 ? games.length : 82;
+    const chunks = calculateChunks(games, totalGames);
+    const seasonStats = calculateSeasonStats(chunks, totalGames);
 
     // Parse standings for division rank and conference context
     const standingsData = await standingsRes.json();

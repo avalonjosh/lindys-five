@@ -7,7 +7,6 @@ import { getProbabilityColor, probabilityForFinalPoints, computePositionAwarePro
 import { PlayoffOddsPill, CollapsibleOddsPanel } from '@/components/PlayoffOddsToggle';
 import { trackClick } from '@/lib/analytics';
 
-const TOTAL_GAMES = 82;
 const HISTORICAL_FLOOR = 94;
 
 interface CutLineState {
@@ -626,7 +625,7 @@ function SeasonSection({
               {(() => {
                 // Dynamic range: span both cut line and projected points. In
                 // preseason sim there are no standings, so anchor on the target.
-                const cutLine = preseasonSim ? playoffTarget : cutLineData?.effectiveCutLine ?? 96;
+                const cutLine = preseasonSim ? playoffTarget : cutLineData?.effectiveCutLine ?? stats.playoffTarget;
                 const gap = Math.abs(projectedPoints - cutLine);
                 let start: number;
                 if (gap <= 5) {
@@ -772,12 +771,12 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
       let divisionCutLine: number;
       let divBubbleTeamAbbrev = '';
       if (div3Team && div4Team && div3Team.gamesPlayed > 0 && div4Team.gamesPlayed > 0) {
-        const div3Projected = (div3Team.points / div3Team.gamesPlayed) * TOTAL_GAMES;
-        const div4Projected = (div4Team.points / div4Team.gamesPlayed) * TOTAL_GAMES;
+        const div3Projected = (div3Team.points / div3Team.gamesPlayed) * stats.totalGames;
+        const div4Projected = (div4Team.points / div4Team.gamesPlayed) * stats.totalGames;
         divisionCutLine = Math.ceil((div3Projected + div4Projected) / 2);
         divBubbleTeamAbbrev = div4Team.teamAbbrev;
       } else if (div3Team && div3Team.gamesPlayed > 0) {
-        divisionCutLine = Math.ceil((div3Team.points / div3Team.gamesPlayed) * TOTAL_GAMES);
+        divisionCutLine = Math.ceil((div3Team.points / div3Team.gamesPlayed) * stats.totalGames);
         divBubbleTeamAbbrev = div3Team.teamAbbrev;
       } else {
         divisionCutLine = 90; // fallback
@@ -798,12 +797,12 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
       }
 
       const wc2Pace = wc2Team.gamesPlayed > 0 ? wc2Team.points / wc2Team.gamesPlayed : 0;
-      const wc2Projected = wc2Pace * TOTAL_GAMES;
+      const wc2Projected = wc2Pace * stats.totalGames;
 
       let wildcardCutLine: number;
       if (wc3Team && wc3Team.gamesPlayed > 0) {
         const wc3Pace = wc3Team.points / wc3Team.gamesPlayed;
-        const wc3Projected = wc3Pace * TOTAL_GAMES;
+        const wc3Projected = wc3Pace * stats.totalGames;
         wildcardCutLine = Math.ceil((wc2Projected + wc3Projected) / 2);
       } else {
         wildcardCutLine = Math.ceil(wc2Projected);

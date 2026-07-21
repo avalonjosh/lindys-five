@@ -235,7 +235,7 @@ export default function PostEditor() {
       setLoadingSets(true);
       try {
         const schedule = await fetchSabresSchedule();
-        const chunks = calculateChunks(schedule);
+        const chunks = calculateChunks(schedule, schedule.length > 0 ? schedule.length : 82);
         // Filter to only completed sets
         const completed = chunks.filter((chunk) => chunk.isComplete);
         setCompletedSets(completed);

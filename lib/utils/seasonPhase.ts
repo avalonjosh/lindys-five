@@ -1,4 +1,5 @@
 import type { SeasonPhase } from '@/lib/types/playoffs';
+import { getCurrentSeasonGameCount } from '@/lib/utils/season';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
@@ -52,9 +53,11 @@ export async function detectSeasonPhase(season: string = '20252026'): Promise<{
       const data = await standingsRes.json();
       const standings = data.standings || [];
 
-      // If most teams have played 82 games, regular season is over
+      // If most teams have played the full season (82, or 84 from 2026-27),
+      // the regular season is over
+      const fullSeason = getCurrentSeasonGameCount();
       const teamsWithFullSeason = standings.filter(
-        (t: { gamesPlayed: number }) => t.gamesPlayed >= 82
+        (t: { gamesPlayed: number }) => t.gamesPlayed >= fullSeason
       );
 
       if (teamsWithFullSeason.length >= 28) {

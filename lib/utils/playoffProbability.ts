@@ -1,4 +1,5 @@
 import type { SeasonStats } from '../types';
+import { getCurrentSeasonGameCount } from './season';
 
 /**
  * Calculate playoff probability based on current performance
@@ -41,7 +42,8 @@ export function calculatePlayoffProbability(stats: SeasonStats): number {
 
   // Scale factor - how much each projected point changes probability
   // More games played = more confidence in projection
-  const confidenceFactor = Math.min(gamesPlayed / 82, 1);
+  const totalGames = gamesPlayed + gamesRemaining; // 82, or 84 from 2026-27
+  const confidenceFactor = Math.min(gamesPlayed / totalGames, 1);
 
   // Base calculation: 50% + (projection diff * scale factor)
   // Scale so ~20 points above/below target = near 100%/0%
@@ -61,7 +63,7 @@ export function calculatePlayoffProbability(stats: SeasonStats): number {
   }
 
   // Early season variance - less certainty
-  const varianceFactor = 1 - (gamesRemaining / 82 * 0.2);
+  const varianceFactor = 1 - (gamesRemaining / totalGames * 0.2);
   probability = 50 + (probability - 50) * varianceFactor;
 
   // Clamp between 0 and 100
@@ -119,8 +121,9 @@ export function probabilityForFinalPoints(
   // How far above/below the current season's projected cut line
   const diff = finalPoints - cutLine;
 
-  // Confidence factor increases as season progresses
-  const confidenceFactor = Math.min(gamesPlayed / 82, 1);
+  // Confidence factor increases as season progresses (current-season length:
+  // these functions always run against live-season data)
+  const confidenceFactor = Math.min(gamesPlayed / getCurrentSeasonGameCount(), 1);
 
   // Steepness (k) of the S-curve varies by path type
   // Division: fewer competitors, less volatile → steeper curve
@@ -313,7 +316,7 @@ export function computePositionAwareProbability(
   // Scales with games played (more meaningful later in season)
   let positionBonus = 0;
   if (isInPlayoffPosition && gamesPlayed >= 25) {
-    const seasonProgress = Math.min(gamesPlayed / 82, 1);
+    const seasonProgress = Math.min(gamesPlayed / getCurrentSeasonGameCount(), 1);
     positionBonus = 1.5 * seasonProgress; // Up to 1.5 points reduction
   }
 

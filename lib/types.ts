@@ -128,11 +128,11 @@ export interface SeasonStats {
 }
 
 export interface CutLineData {
-  cutLine: number;           // Projected points for WC2 team (pace × 82)
+  cutLine: number;           // Projected points for WC2 team (pace × season length)
   userPoints: number;
   userGamesPlayed: number;
   pointsNeeded: number;      // cutLine - userPoints
-  gamesRemaining: number;    // 82 - userGamesPlayed
+  gamesRemaining: number;    // season length - userGamesPlayed
   paceNeeded: number;        // pointsNeeded / gamesRemaining
   wc2Team: {
     abbrev: string;

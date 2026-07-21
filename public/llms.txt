@@ -111,7 +111,7 @@ Predict the winner of every game of a team's NFL regular season, save dated pick
 
 ## Methodology
 
-- **NHL projected points**: current points / games played × 82, rounded.
+- **NHL projected points**: current points / games played × season length (82 games; 84 from 2026-27), rounded.
 - **MLB projected wins**: current wins / games played × 162, rounded.
 - **NHL playoff probability**: logistic curve over the gap between projected points and the higher of (division-3 cut line) or (wild card-2 cut line). Cut lines are computed daily from current standings.
 - **MLB playoff probability**: logistic curve over the gap between projected wins and the higher of (division-winner cut line) or (wild card-3 cut line). Cut lines are computed daily from current standings.

@@ -297,7 +297,7 @@ export default function PlayoffOddsClient({ teams }: { teams: TeamData[] }) {
       {view === 'league' && <LeagueView teams={teams} />}
 
       <div className="mt-8 bg-white rounded-xl border border-gray-200 px-5 py-4 text-sm text-gray-500 flex flex-wrap gap-x-6 gap-y-2 shadow-sm">
-        <span><strong className="text-gray-700">Pace</strong> = projected 82-game point total</span>
+        <span><strong className="text-gray-700">Pace</strong> = projected full-season point total</span>
         <span><strong className="text-gray-700">Odds</strong> = playoff probability</span>
         <span><strong className="text-gray-700">PTS%</strong> = points percentage</span>
         <span><strong className="text-gray-700">WC</strong> = wildcard spot</span>

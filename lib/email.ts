@@ -1711,7 +1711,8 @@ async function fetchTeamSchedule(teamAbbrev: string, teamId: number): Promise<Ga
 
 function computeChunksFromSchedule(games: GameResult[], _teamId: number): GameChunk[] {
   const GAMES_PER_CHUNK = 5;
-  const TOTAL_GAMES = 82;
+  // The season schedule is the source of truth for length (82, or 84 from 2026-27).
+  const TOTAL_GAMES = games.length > 0 ? games.length : 82;
   const totalChunks = Math.ceil(TOTAL_GAMES / GAMES_PER_CHUNK);
   const chunks: GameChunk[] = [];
 

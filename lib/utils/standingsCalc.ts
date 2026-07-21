@@ -1,14 +1,16 @@
 import type { StandingsTeam } from '@/lib/types/boxscore';
 import { computePositionAwareProbability } from './playoffProbability';
+import { getCurrentSeasonGameCount } from './season';
 
-const TOTAL_GAMES = 82;
 const WC_HISTORICAL_FLOOR = 94;
 const DIV_HISTORICAL_FLOOR = 90;
 
-/** Project a team's final point total (integer). */
+/** Project a team's final point total (integer). Standings are always the
+ * current season's, so the season length (82, or 84 from 2026-27) comes from
+ * the calendar. */
 export function getProjectedPoints(points: number, gamesPlayed: number): number {
   if (gamesPlayed === 0) return 0;
-  return Math.round((points / gamesPlayed) * TOTAL_GAMES);
+  return Math.round((points / gamesPlayed) * getCurrentSeasonGameCount());
 }
 
 /** Division cut line: average of 3rd & 4th place projected points, ceil, floor 90. */
@@ -20,13 +22,14 @@ export function getDivCutLine(team: StandingsTeam, standings: StandingsTeam[]): 
   const div3Team = divTeams[2];
   const div4Team = divTeams[3];
 
+  const totalGames = getCurrentSeasonGameCount();
   let cutLine: number;
   if (div3Team && div4Team && div3Team.gamesPlayed > 0 && div4Team.gamesPlayed > 0) {
-    const div3Projected = (div3Team.points / div3Team.gamesPlayed) * TOTAL_GAMES;
-    const div4Projected = (div4Team.points / div4Team.gamesPlayed) * TOTAL_GAMES;
+    const div3Projected = (div3Team.points / div3Team.gamesPlayed) * totalGames;
+    const div4Projected = (div4Team.points / div4Team.gamesPlayed) * totalGames;
     cutLine = Math.ceil((div3Projected + div4Projected) / 2);
   } else if (div3Team && div3Team.gamesPlayed > 0) {
-    cutLine = Math.ceil((div3Team.points / div3Team.gamesPlayed) * TOTAL_GAMES);
+    cutLine = Math.ceil((div3Team.points / div3Team.gamesPlayed) * totalGames);
   } else {
     cutLine = DIV_HISTORICAL_FLOOR;
   }
@@ -44,11 +47,12 @@ export function getWcCutLine(team: StandingsTeam, standings: StandingsTeam[]): n
 
   if (!wc2Team || wc2Team.gamesPlayed === 0) return WC_HISTORICAL_FLOOR;
 
-  const wc2Projected = (wc2Team.points / wc2Team.gamesPlayed) * TOTAL_GAMES;
+  const totalGames = getCurrentSeasonGameCount();
+  const wc2Projected = (wc2Team.points / wc2Team.gamesPlayed) * totalGames;
 
   let cutLine: number;
   if (wc3Team && wc3Team.gamesPlayed > 0) {
-    const wc3Projected = (wc3Team.points / wc3Team.gamesPlayed) * TOTAL_GAMES;
+    const wc3Projected = (wc3Team.points / wc3Team.gamesPlayed) * totalGames;
     cutLine = Math.ceil((wc2Projected + wc3Projected) / 2);
   } else {
     cutLine = Math.ceil(wc2Projected);

@@ -15,7 +15,7 @@ import { computeSeriesWinProbability } from '@/lib/utils/playoffProbability';
 import { buildCupOdds } from '@/lib/utils/cupOdds';
 import PlayoffBracketClient from '@/components/playoffs/PlayoffBracketClient';
 import GameTicker from '@/components/landing/GameTicker';
-import { getCurrentNHLSeason, formatSeasonEndYear } from '@/lib/utils/season';
+import { getCurrentNHLSeason, getCurrentSeasonGameCount, formatSeasonEndYear } from '@/lib/utils/season';
 import { getPlayoffsOutcome, getFinalStandings } from '@/lib/services/nhlOffseason';
 
 export const revalidate = 60;
@@ -563,7 +563,7 @@ export default async function PlayoffsPage() {
 
   // Detect if regular season is over (postseason gap)
   const regularSeasonOver = standings.length > 0 &&
-    standings.filter(t => t.gamesPlayed >= 82).length >= 28;
+    standings.filter(t => t.gamesPlayed >= getCurrentSeasonGameCount()).length >= 28;
 
   // Use real bracket if playoffs active, otherwise project from standings
   let eastern: ConferenceBracket;

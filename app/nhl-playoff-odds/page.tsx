@@ -11,7 +11,7 @@ import StanleyCupOddsTable, { type CupOddsTeam } from '@/components/playoffs/Sta
 import NewsletterModal from '@/components/newsletter/NewsletterModal';
 import GameTicker from '@/components/landing/GameTicker';
 import GamePromo from '@/components/perfectseason/GamePromo';
-import { getCurrentNHLSeason, formatSeasonLabel, formatSeasonEndYear } from '@/lib/utils/season';
+import { getCurrentNHLSeason, getCurrentSeasonGameCount, formatSeasonLabel, formatSeasonEndYear } from '@/lib/utils/season';
 import { getPlayoffsOutcome, getFinalStandings } from '@/lib/services/nhlOffseason';
 import { resolveSeasonContext } from '@/lib/utils/seasonContext';
 import NHLPreseasonOddsView from '@/components/nhl/NHLPreseasonOddsView';
@@ -296,7 +296,7 @@ export default async function NHLPlayoffOddsPage() {
   }
   const playoffsActive = !seasonComplete && isPlayoffActive(bracket);
   const regularSeasonOver = !seasonComplete && standings && standings.length > 0 &&
-    standings.filter(t => t.gamesPlayed >= 82).length >= 28;
+    standings.filter(t => t.gamesPlayed >= getCurrentSeasonGameCount()).length >= 28;
 
   if (!standings || standings.length === 0) {
     return (
@@ -430,7 +430,7 @@ export default async function NHLPlayoffOddsPage() {
             <>
               Live NHL playoff probability, projected points, and standings for all 32 teams,
               ranked by points and updated daily. Projected points extrapolate the current
-              points pace over an 82-game season; playoff probability is a logistic estimate
+              points pace over the full season; playoff probability is a logistic estimate
               against the division and wild card cut lines.
             </>
           )}

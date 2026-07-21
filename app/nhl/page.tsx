@@ -112,7 +112,7 @@ export default async function NHLLandingPage() {
         name: 'How are NHL playoff odds calculated?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: "NHL playoff odds are calculated using each team's current points pace projected over 82 games, combined with division and wild card positioning. Probabilities update daily as standings change.",
+          text: "NHL playoff odds are calculated using each team's current points pace projected over the full season, combined with division and wild card positioning. Probabilities update daily as standings change.",
         },
       },
       {

@@ -109,13 +109,15 @@ async function getLatestCompletedSetNumber(teamAbbrev: string, teamId: number): 
     };
   });
 
-  // Find the latest completed set
-  const totalSets = Math.ceil(82 / GAMES_PER_SET);
+  // Find the latest completed set. The schedule itself carries the season
+  // length (82, or 84 from 2026-27).
+  const totalGames = gameResults.length > 0 ? gameResults.length : 82;
+  const totalSets = Math.ceil(totalGames / GAMES_PER_SET);
   let latestCompleted: number | null = null;
 
   for (let i = 0; i < totalSets; i++) {
     const start = i * GAMES_PER_SET;
-    const end = Math.min(start + GAMES_PER_SET, 82);
+    const end = Math.min(start + GAMES_PER_SET, totalGames);
     const setGames = gameResults.slice(start, end);
     const isComplete = setGames.length === (end - start) && setGames.every((g) => g.outcome !== 'PENDING');
     if (isComplete) {
