@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ChevronDown, ChevronUp, Check, X, Minus } from 'lucide-react';
 import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
+import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import AuthModal from '@/components/perfectseason/board/AuthModal';
 import { logout } from '@/lib/perfectseason/account';
 import { fetchWhatIfSaves } from '@/lib/whatif/client';
@@ -356,6 +357,15 @@ export default function AccountPage() {
       <header className="border-b-4 shadow-xl" style={{ background: heroColor, borderBottomColor: heroSecondary }}>
         <div className="mx-auto max-w-7xl px-4 py-3 md:py-4">
           <div className="relative flex flex-col items-center text-center">
+            {/* Team navigation — same corner slot as the tracker headers */}
+            <div className="absolute left-0 top-0">
+              <MLBTeamNav
+                currentTeamId={user.favoriteTeam ?? ''}
+                teamColors={{ primary: heroColor, secondary: heroSecondary, accent: heroSecondary }}
+                defaultTab={favTeam && 'mlbId' in favTeam ? 'mlb' : 'nhl'}
+              />
+            </div>
+
             {/* Sign Out — corner control, like the tracker's toggle slot */}
             <div className="absolute right-0 top-0">
               <button
