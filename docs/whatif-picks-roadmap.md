@@ -35,7 +35,7 @@ The retention loop (re-pick, watch history/accuracy grow) is the point; the prof
 - Pick the Bills: click-test /pick-the-bills (pick → outlook updates → save with label → restore → backdate flow), check mobile, verify /account shows the NFL group.
 - /account redesign: check hero + stat tiles on mobile and with no favorite team set.
 - Create Josh's real account via a What-If save; confirm Sabres preselects as favorite; check cross-device favorite sync.
-- Known gap (accepted for now): signed-OUT /account has no navigation at all.
+- ~~Known gap: signed-OUT /account has no navigation~~ — RESOLVED (4a2216b): signed-out view now has the navy tracker banner with hamburger nav + brand-links-home.
 
 ## Dev notes
 
