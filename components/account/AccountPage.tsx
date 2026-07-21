@@ -119,7 +119,9 @@ function SaveDiffPanel({ latest, prev, color, className }: { latest: WhatIfSave;
   const outcomeColor = (o: string) => (o === 'W' ? 'text-green-600' : o === 'OTL' ? 'text-yellow-600' : 'text-red-500');
 
   return (
-    <div className={className ?? ''}>
+    // Distinct white card with a team-color spine so it can't be mistaken for
+    // the pick list below it.
+    <div className={`rounded-lg border border-l-4 border-gray-200 bg-white p-3 ${className ?? ''}`} style={{ borderLeftColor: color }}>
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
         <h4 className="text-sm font-bold" style={{ color }}>What Changed</h4>
         <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
@@ -133,7 +135,7 @@ function SaveDiffPanel({ latest, prev, color, className }: { latest: WhatIfSave;
           {changed.length > 0 && (
             <ul className="flex max-h-44 flex-col gap-1 overflow-y-auto">
               {changed.map(({ pick, from }) => (
-                <li key={pick.gameId} className="flex items-center gap-2 rounded-md bg-white px-2.5 py-1.5 text-xs">
+                <li key={pick.gameId} className="flex items-center gap-2 rounded-md bg-gray-50 px-2.5 py-1.5 text-xs">
                   <span className="min-w-0 flex-1 truncate font-semibold text-gray-700">{gameLabel(pick)}</span>
                   <span className="flex-shrink-0 font-bold text-gray-400 line-through">{from}</span>
                   <span className="flex-shrink-0 text-gray-400">→</span>
@@ -931,7 +933,7 @@ export default function AccountPage() {
                         {open && (
                           <div className="bg-gray-50 px-4 pb-4">
                             {prevSave && changeCount > 0 && (
-                              <SaveDiffPanel latest={save} prev={prevSave} color={team.colors.primary} className="pt-3" />
+                              <SaveDiffPanel latest={save} prev={prevSave} color={team.colors.primary} className="mt-3" />
                             )}
                             {grade && grade.graded > 0 && (
                               // MLB/NFL have no OTL, so "exact" and "win vs loss" are
@@ -953,7 +955,10 @@ export default function AccountPage() {
                                 </div>
                               </div>
                             )}
-                            <ul className="flex flex-col gap-1 pt-1">
+                            <h4 className="pt-3 text-sm font-bold" style={{ color: team.colors.primary }}>
+                              All Picks ({save.picks.length})
+                            </h4>
+                            <ul className="flex flex-col gap-1 pt-1.5">
                               {(grade?.picks ?? save.picks.map(pick => ({ pick, actual: null as ActualOutcome | null, exact: false, simpleRight: false, excluded: false }))).map(({ pick, actual, exact, excluded }) => (
                                 <li key={pick.gameId} className="flex items-center gap-2 rounded-md bg-white px-2.5 py-1.5 text-xs">
                                   <span className="w-14 flex-shrink-0 text-gray-400">{pick.week ? `Wk ${pick.week}` : pickDateLabel(pick.date)}</span>
