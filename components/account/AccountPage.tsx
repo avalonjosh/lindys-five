@@ -377,13 +377,6 @@ export default function AccountPage() {
               </button>
             </div>
 
-            {/* Monogram avatar in the tracker's logo slot */}
-            <div
-              className="mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-white text-4xl shadow-sm md:mb-3 md:h-24 md:w-24 md:text-6xl"
-              style={{ color: heroColor, fontFamily: 'Bebas Neue, sans-serif' }}
-            >
-              {user.username.charAt(0).toUpperCase()}
-            </div>
             <p
               className="mb-2 text-4xl font-bold tracking-wider text-white md:text-6xl"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
