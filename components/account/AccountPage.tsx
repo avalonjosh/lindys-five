@@ -492,7 +492,7 @@ export default function AccountPage() {
         <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2 md:p-3">
           <div className="mb-1 text-xs font-semibold uppercase tracking-wide" style={{ color: heroColor }}>Pick Accuracy</div>
           <div className="text-2xl font-bold text-gray-900 md:text-3xl">
-            {overall.graded > 0 ? `${Math.round((overall.exact / overall.graded) * 100)}%` : '—'}
+            {overall.graded > 0 ? `${Math.round((overall.exact / overall.graded) * 100)}%` : 'TBD'}
           </div>
           {overall.graded > 0 && (
             <div className="mt-1 text-xs text-gray-600">{overall.exact}/{overall.graded} graded</div>
