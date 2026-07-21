@@ -586,7 +586,7 @@ export default function AccountPage() {
         {/* My Picks summary */}
         <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <h3 className="text-sm font-bold text-gray-900">My What-If Picks</h3>
+            <h3 className="text-sm font-bold text-gray-900">My Picks</h3>
             <button type="button" onClick={() => setTab('picks')} className="text-xs font-bold text-sabres-blue hover:underline">
               View all →
             </button>
@@ -712,7 +712,7 @@ export default function AccountPage() {
       {tab === 'picks' && (
         <>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="font-bold text-gray-900">My What-If Picks</h2>
+        <h2 className="font-bold text-gray-900">My Picks</h2>
         <Link href="/nhl" className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200">
           Make Picks
         </Link>
