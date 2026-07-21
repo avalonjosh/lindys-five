@@ -975,41 +975,69 @@ export default function AccountPage() {
                             <h4 className="pt-3 text-sm font-bold" style={{ color: team.colors.primary }}>
                               All Picks ({save.picks.length})
                             </h4>
-                            <ul className="grid gap-1.5 pt-1.5 sm:grid-cols-2 xl:grid-cols-3">
-                              {(grade?.picks ?? save.picks.map(pick => ({ pick, actual: null as ActualOutcome | null, exact: false, simpleRight: false, excluded: false }))).map(({ pick, actual, exact, excluded }) => (
-                                <li key={pick.gameId} className="flex items-center gap-2 rounded-md bg-white px-2.5 py-2 text-xs">
-                                  <span className="w-11 flex-shrink-0 text-gray-400">{pick.week ? `Wk ${pick.week}` : pickDateLabel(pick.date)}</span>
-                                  {opponentLogo(save.sport, pick.opponentAbbrev) && (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={opponentLogo(save.sport, pick.opponentAbbrev)!} alt="" className="h-6 w-6 flex-shrink-0 object-contain" />
-                                  )}
-                                  <span className="min-w-0 flex-1 truncate font-semibold text-gray-700">
-                                    {pick.isHome ? 'vs' : '@'} {pick.opponentAbbrev}
-                                  </span>
-                                  <span className="flex-shrink-0 font-bold text-gray-900">Picked {pick.outcome}</span>
-                                  {excluded && actual != null ? (
-                                    <span
-                                      className="flex w-16 flex-shrink-0 items-center justify-end gap-1 text-gray-400"
-                                      title="Already played when these picks were entered — not graded"
-                                    >
-                                      <Minus className="h-3.5 w-3.5" /> {actual}
-                                    </span>
-                                  ) : actual == null ? (
-                                    <span className="flex w-16 flex-shrink-0 items-center justify-end gap-1 text-gray-400">
-                                      <Minus className="h-3.5 w-3.5" /> TBD
-                                    </span>
-                                  ) : exact ? (
-                                    <span className="flex w-16 flex-shrink-0 items-center justify-end gap-1 font-bold text-green-600">
-                                      <Check className="h-3.5 w-3.5" /> {actual}
-                                    </span>
-                                  ) : (
-                                    <span className="flex w-16 flex-shrink-0 items-center justify-end gap-1 font-bold text-red-500">
-                                      <X className="h-3.5 w-3.5" /> {actual}
-                                    </span>
-                                  )}
-                                </li>
-                              ))}
-                            </ul>
+                            {/* Box-score-style table: chronological down, labeled
+                                Picked column (team-color badge) vs status-colored Result. */}
+                            <div className="mt-1.5 overflow-hidden rounded-lg bg-white">
+                              <table className="w-full text-xs">
+                                <thead>
+                                  <tr className="border-b border-gray-100 text-left text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                                    <th className="w-16 px-3 py-2 font-bold">{save.sport === 'nfl' ? 'Wk' : 'Date'}</th>
+                                    <th className="px-3 py-2 font-bold">Matchup</th>
+                                    <th className="w-20 px-3 py-2 text-center font-bold">Picked</th>
+                                    <th className="w-24 px-3 py-2 text-right font-bold">Result</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {(grade?.picks ?? save.picks.map(pick => ({ pick, actual: null as ActualOutcome | null, exact: false, simpleRight: false, excluded: false }))).map(({ pick, actual, exact, excluded }) => (
+                                    <tr key={pick.gameId} className="even:bg-gray-50">
+                                      <td className="px-3 py-2 text-gray-400">{pick.week ? `Wk ${pick.week}` : pickDateLabel(pick.date)}</td>
+                                      <td className="px-3 py-2">
+                                        <span className="flex min-w-0 items-center gap-2 font-semibold text-gray-700">
+                                          {opponentLogo(save.sport, pick.opponentAbbrev) && (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img src={opponentLogo(save.sport, pick.opponentAbbrev)!} alt="" className="h-6 w-6 flex-shrink-0 object-contain" />
+                                          )}
+                                          <span className="truncate">{pick.isHome ? 'vs' : '@'} {pick.opponentAbbrev}</span>
+                                        </span>
+                                      </td>
+                                      <td className="px-3 py-2 text-center">
+                                        <span
+                                          className="inline-flex h-6 min-w-7 items-center justify-center rounded-md px-1 text-xs font-bold text-white"
+                                          style={{
+                                            backgroundColor:
+                                              pick.outcome === 'W' ? team.colors.primary : pick.outcome === 'OTL' ? '#d97706' : '#6b7280',
+                                          }}
+                                        >
+                                          {pick.outcome}
+                                        </span>
+                                      </td>
+                                      <td className="px-3 py-2">
+                                        {excluded && actual != null ? (
+                                          <span
+                                            className="flex items-center justify-end gap-1 text-gray-400"
+                                            title="Already played when these picks were entered — not graded"
+                                          >
+                                            <Minus className="h-3.5 w-3.5" /> {actual}
+                                          </span>
+                                        ) : actual == null ? (
+                                          <span className="flex items-center justify-end gap-1 text-gray-400">
+                                            <Minus className="h-3.5 w-3.5" /> TBD
+                                          </span>
+                                        ) : exact ? (
+                                          <span className="flex items-center justify-end gap-1 font-bold text-green-600">
+                                            <Check className="h-3.5 w-3.5" /> {actual}
+                                          </span>
+                                        ) : (
+                                          <span className="flex items-center justify-end gap-1 font-bold text-red-500">
+                                            <X className="h-3.5 w-3.5" /> {actual}
+                                          </span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
                         )}
                       </li>
