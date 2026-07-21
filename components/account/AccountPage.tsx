@@ -91,11 +91,21 @@ function pickDateLabel(date: string): string {
   return isNaN(parsed.getTime()) ? date : parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-/** Pick-by-pick differences between a group's two most recent saves, so a
+/** Total flips + additions + drops between a save and the one before it. */
+function countChanges(current: WhatIfSave, prev: WhatIfSave): number {
+  const prevBy = new Map(prev.picks.map(p => [p.gameId, p]));
+  const currentIds = new Set(current.picks.map(p => p.gameId));
+  let n = prev.picks.filter(p => !currentIds.has(p.gameId)).length;
+  for (const p of current.picks) {
+    const q = prevBy.get(p.gameId);
+    if (!q || q.outcome !== p.outcome) n++;
+  }
+  return n;
+}
+
+/** Pick-by-pick differences between a save and the one before it, so a
  * re-pick day ("McDavid Traded") shows exactly which calls flipped. */
-function SaveDiffPanel({ group, color, className }: { group: TeamGroup; color: string; className?: string }) {
-  const latest = group.saves[group.saves.length - 1];
-  const prev = group.saves[group.saves.length - 2];
+function SaveDiffPanel({ latest, prev, color, className }: { latest: WhatIfSave; prev: WhatIfSave; color: string; className?: string }) {
   const prevBy = new Map(prev.picks.map(p => [p.gameId, p]));
   const latestIds = new Set(latest.picks.map(p => p.gameId));
   const changed = latest.picks
@@ -109,7 +119,7 @@ function SaveDiffPanel({ group, color, className }: { group: TeamGroup; color: s
   const outcomeColor = (o: string) => (o === 'W' ? 'text-green-600' : o === 'OTL' ? 'text-yellow-600' : 'text-red-500');
 
   return (
-    <div className={`rounded-lg bg-gray-50 p-3 ${className ?? ''}`}>
+    <div className={className ?? ''}>
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
         <h4 className="text-sm font-bold" style={{ color }}>What Changed</h4>
         <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
@@ -843,7 +853,7 @@ export default function AccountPage() {
 
                 {/* Trend charts — one measure per chart (no dual axis) */}
                 {group.saves.length >= 2 ? (
-                  <div className="grid gap-4 border-b border-gray-100 p-4 sm:grid-cols-2">
+                  <div className={`grid gap-4 border-b border-gray-100 p-4 ${group.sport === 'nfl' ? '' : 'sm:grid-cols-2'}`}>
                     <PicksChart
                       title={group.sport === 'nhl' ? 'Projected Points by Save' : 'Projected Wins by Save'}
                       data={group.saves.map(s => ({ date: s.savedDate, value: s.summary.projectedPoints }))}
@@ -857,13 +867,6 @@ export default function AccountPage() {
                         unit="%"
                       />
                     )}
-                    {/* NFL: fills the second grid cell beside the lone chart;
-                        NHL/MLB: spans below the two charts. */}
-                    <SaveDiffPanel
-                      group={group}
-                      color={team.colors.primary}
-                      className={group.sport === 'nfl' ? '' : 'sm:col-span-2'}
-                    />
                   </div>
                 ) : (
                   <div className="border-b border-gray-100 px-4 py-2.5 text-xs text-gray-500">
@@ -877,6 +880,9 @@ export default function AccountPage() {
                     const grade = actuals ? gradeSave(save, actuals) : null;
                     const rowKey = `${group.key}:${save.savedDate}`;
                     const open = expanded === rowKey;
+                    const saveIdx = group.saves.indexOf(save);
+                    const prevSave = saveIdx > 0 ? group.saves[saveIdx - 1] : null;
+                    const changeCount = prevSave ? countChanges(save, prevSave) : 0;
                     return (
                       <li key={save.savedDate}>
                         <button
@@ -903,6 +909,11 @@ export default function AccountPage() {
                               {save.summary.gamesPicked} games picked ({save.summary.record}) · Proj {save.summary.projectedPoints} {save.sport === 'nhl' ? 'pts' : 'wins'}{save.sport !== 'nfl' && ` · ${save.summary.playoffOdds.toFixed(1)}% odds`}
                             </div>
                           </div>
+                          {changeCount > 0 && (
+                            <span className="flex-shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                              {changeCount} change{changeCount === 1 ? '' : 's'}
+                            </span>
+                          )}
                           {grade && grade.graded > 0 && (
                             <div className="flex-shrink-0 text-right">
                               <div className="text-sm font-bold text-gray-900">{grade.exact}/{grade.graded}</div>
@@ -919,6 +930,9 @@ export default function AccountPage() {
 
                         {open && (
                           <div className="bg-gray-50 px-4 pb-4">
+                            {prevSave && changeCount > 0 && (
+                              <SaveDiffPanel latest={save} prev={prevSave} color={team.colors.primary} className="pt-3" />
+                            )}
                             {grade && grade.graded > 0 && (
                               // MLB/NFL have no OTL, so "exact" and "win vs loss" are
                               // the same measure — show two tiles instead of three.

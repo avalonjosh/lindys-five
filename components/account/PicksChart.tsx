@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface PicksChartPoint {
   date: string; // YYYY-MM-DD
@@ -14,11 +14,10 @@ interface PicksChartProps {
   unit?: string; // e.g. '%'
 }
 
-const W = 320;
-const H = 96;
+const H = 112;
 const PAD_X = 10;
-const PAD_TOP = 18;
-const PAD_BOTTOM = 22;
+const PAD_TOP = 20;
+const PAD_BOTTOM = 24;
 
 function shortDate(date: string): string {
   return new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -31,6 +30,20 @@ function shortDate(date: string): string {
  */
 export default function PicksChart({ title, data, color, unit = '' }: PicksChartProps) {
   const [hover, setHover] = useState<number | null>(null);
+  // Draw 1:1 with the container's real width so the chart fills whatever box
+  // it's given (half-column, full row) at a fixed, crisp height.
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [W, setW] = useState(320);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const update = () => setW(Math.max(240, Math.round(el.clientWidth)));
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   if (data.length === 0) return null;
 
@@ -52,10 +65,11 @@ export default function PicksChart({ title, data, color, unit = '' }: PicksChart
   return (
     <div className="min-w-0">
       <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-gray-500">{title}</div>
-      <div className="relative">
+      <div className="relative" ref={containerRef}>
         <svg
           viewBox={`0 0 ${W} ${H}`}
-          className="w-full"
+          width="100%"
+          height={H}
           role="img"
           aria-label={`${title}: ${data.map(d => `${shortDate(d.date)} ${fmt(d.value)}`).join(', ')}`}
         >
