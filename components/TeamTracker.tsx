@@ -23,6 +23,8 @@ import WhatIfStickyBar from '@/components/WhatIfStickyBar';
 import SteamEffect from '@/components/SteamEffect';
 import MerchCTA from '@/components/affiliate/MerchCTA';
 import GamePromo from '@/components/perfectseason/GamePromo';
+import PickTeamPromo from '@/components/nfl/PickTeamPromo';
+import { NFL_BY_NHL_MARKET } from '@/lib/teamConfig/nflTeams';
 import PlayoffJourney, { type JourneySeries } from '@/components/playoffs/PlayoffJourney';
 import { hasTeamHistory } from '@/lib/data/teamHistory';
 import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
@@ -1506,7 +1508,9 @@ export default function TeamTracker({
       </div>
       )}
 
-      <div className="mt-8 max-w-2xl mx-auto">
+      <div className="mt-8 max-w-2xl mx-auto flex flex-col gap-4">
+        {/* Same-market NFL cross-promo — first slot while football season is the fresher draw */}
+        {NFL_BY_NHL_MARKET[team.id] && <PickTeamPromo teamIds={NFL_BY_NHL_MARKET[team.id]} />}
         <GamePromo sport="nhl" />
       </div>
 

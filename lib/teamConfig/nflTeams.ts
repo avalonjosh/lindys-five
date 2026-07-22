@@ -105,6 +105,37 @@ export function nflDivisionByAbbrev(abbrev: string): string | null {
   return DIVISION_BY_ABBREV[abbrev.toUpperCase()] ?? null;
 }
 
+/**
+ * NHL market → NFL team(s), for cross-promoting Pick the {Team} on the NHL
+ * trackers. Curated: shared-market only (Devils/Rangers/Islanders → the NY
+ * teams that play in NJ; Carolina spans Raleigh→Charlotte). Canadian teams,
+ * Utah, St. Louis, and Columbus have no NFL market pairing.
+ */
+export const NFL_BY_NHL_MARKET: Record<string, string[]> = {
+  sabres: ['bills'],
+  bruins: ['patriots'],
+  rangers: ['nygiants', 'nyjets'],
+  islanders: ['nygiants', 'nyjets'],
+  devils: ['nygiants', 'nyjets'],
+  flyers: ['eagles'],
+  penguins: ['steelers'],
+  capitals: ['commanders'],
+  hurricanes: ['carpanthers'],
+  panthers: ['dolphins'],
+  lightning: ['buccaneers'],
+  redwings: ['lions'],
+  blackhawks: ['bears'],
+  wild: ['vikings'],
+  avalanche: ['broncos'],
+  stars: ['cowboys'],
+  predators: ['titans'],
+  goldenknights: ['raiders'],
+  kings: ['rams', 'chargers'],
+  ducks: ['rams', 'chargers'],
+  sharks: ['49ers'],
+  kraken: ['seahawks'],
+};
+
 /** Resolve a /pick-the-{pickSlug} URL segment to its team config. */
 export function findNFLTeamByPickSlug(pickSlug: string): NFLTeamConfig | undefined {
   return Object.values(NFL_TEAMS).find((t) => t.pickSlug === pickSlug.toLowerCase());

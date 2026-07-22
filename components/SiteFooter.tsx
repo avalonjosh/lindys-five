@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { NHL_TEAMS, MLB_TEAMS } from '@/lib/teamConfig';
+import { NFL_TEAM_LIST } from '@/lib/teamConfig/nflTeams';
 
 interface TeamLite {
   slug: string;
@@ -70,8 +71,23 @@ export default function SiteFooter() {
           </div>
         </div>
 
+        <div className="mt-8">
+          <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-300">
+            Pick the Team (NFL)
+          </h2>
+          <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm">
+            {NFL_TEAM_LIST.map((t) => (
+              <li key={t.id}>
+                <Link href={`/pick-the-${t.pickSlug}`} className="transition-colors hover:text-white">
+                  {t.city} {t.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
         <p className="mt-8 text-center text-xs text-slate-500">
-          &copy; {new Date().getFullYear()} JRR Apps. Independent NHL &amp; MLB playoff tracker. Not affiliated with the NHL or MLB.
+          &copy; {new Date().getFullYear()} JRR Apps. Independent NHL &amp; MLB playoff tracker. Not affiliated with the NHL, MLB, or NFL.
         </p>
       </div>
     </footer>
