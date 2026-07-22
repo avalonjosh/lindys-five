@@ -104,6 +104,31 @@ function opponentLogo(sport: string, abbrev: string): string | null {
   return id ? `https://www.mlbstatic.com/team-logos/${id}.svg` : null;
 }
 
+/** Badge color for a picked outcome (mirrors the Pick pages' buttons). */
+const pickBadgeColor = (outcome: string, primary: string) =>
+  outcome === 'W' ? primary : outcome === 'OTL' ? '#d97706' : '#6b7280';
+
+interface PickHistoryStep {
+  outcome: WhatIfPick['outcome'];
+  savedDate: string;
+  label?: string;
+}
+
+/** Chronological change-points of one game's pick across the group's saves up
+ * to and including saveIdx. Length 1 = the pick never changed. */
+function pickTrail(group: TeamGroup, saveIdx: number, gameId: number): PickHistoryStep[] {
+  const steps: PickHistoryStep[] = [];
+  for (let i = 0; i <= saveIdx; i++) {
+    const s = group.saves[i];
+    const p = s.picks.find(pk => pk.gameId === gameId);
+    if (!p) continue;
+    if (steps.length === 0 || steps[steps.length - 1].outcome !== p.outcome) {
+      steps.push({ outcome: p.outcome, savedDate: s.savedDate, label: s.label });
+    }
+  }
+  return steps;
+}
+
 /** Total flips + additions + drops between a save and the one before it. */
 function countChanges(current: WhatIfSave, prev: WhatIfSave): number {
   const prevBy = new Map(prev.picks.map(p => [p.gameId, p]));
@@ -1024,12 +1049,15 @@ export default function AccountPage() {
                                   <tr className="border-b border-gray-100 text-left text-[10px] font-bold uppercase tracking-wide text-gray-400">
                                     <th className="w-12 px-2 py-2 font-bold sm:w-16 sm:px-3">{save.sport === 'nfl' ? 'Wk' : 'Date'}</th>
                                     <th className="px-2 py-2 font-bold sm:px-3">Matchup</th>
+                                    <th className="hidden px-3 py-2 font-bold sm:table-cell">Pick History</th>
                                     <th className="w-12 px-1 py-2 text-center font-bold sm:w-20 sm:px-3">Picked</th>
                                     <th className="w-16 px-2 py-2 text-right font-bold sm:w-24 sm:px-3">Result</th>
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {(grade?.picks ?? save.picks.map(pick => ({ pick, actual: null as ActualOutcome | null, exact: false, simpleRight: false, excluded: false }))).map(({ pick, actual, exact, excluded }) => (
+                                  {(grade?.picks ?? save.picks.map(pick => ({ pick, actual: null as ActualOutcome | null, exact: false, simpleRight: false, excluded: false }))).map(({ pick, actual, exact, excluded }) => {
+                                    const trail = pickTrail(group, saveIdx, pick.gameId);
+                                    return (
                                     <tr key={pick.gameId} className="even:bg-gray-50">
                                       <td className="px-2 py-2 text-gray-400 sm:px-3">{pick.week ? `Wk ${pick.week}` : pickDateLabel(pick.date)}</td>
                                       <td className="px-2 py-2 sm:px-3">
@@ -1041,13 +1069,30 @@ export default function AccountPage() {
                                           <span className="truncate">{pick.isHome ? 'vs' : '@'} {pick.opponentAbbrev}</span>
                                         </span>
                                       </td>
+                                      {/* Change-point trail — only when the pick actually flipped */}
+                                      <td className="hidden px-3 py-2 sm:table-cell">
+                                        {trail.length > 1 && (
+                                          <span className="flex flex-wrap items-center gap-1.5">
+                                            {trail.map((step, i) => (
+                                              <span key={`${step.savedDate}-${i}`} className="flex items-center gap-1.5">
+                                                {i > 0 && <span className="text-gray-300">→</span>}
+                                                <span
+                                                  className="inline-flex h-5 min-w-6 items-center justify-center rounded px-1 text-[10px] font-bold text-white"
+                                                  style={{ backgroundColor: pickBadgeColor(step.outcome, team.colors.primary) }}
+                                                  title={`${pickDateLabel(step.savedDate)}${step.label ? ` · “${step.label}”` : ''}`}
+                                                >
+                                                  {step.outcome}
+                                                </span>
+                                                <span className="text-[10px] text-gray-400">{pickDateLabel(step.savedDate)}</span>
+                                              </span>
+                                            ))}
+                                          </span>
+                                        )}
+                                      </td>
                                       <td className="px-1 py-2 text-center sm:px-3">
                                         <span
                                           className="inline-flex h-6 min-w-7 items-center justify-center rounded-md px-1 text-xs font-bold text-white"
-                                          style={{
-                                            backgroundColor:
-                                              pick.outcome === 'W' ? team.colors.primary : pick.outcome === 'OTL' ? '#d97706' : '#6b7280',
-                                          }}
+                                          style={{ backgroundColor: pickBadgeColor(pick.outcome, team.colors.primary) }}
                                         >
                                           {pick.outcome}
                                         </span>
@@ -1075,7 +1120,8 @@ export default function AccountPage() {
                                         )}
                                       </td>
                                     </tr>
-                                  ))}
+                                    );
+                                  })}
                                 </tbody>
                               </table>
                             </div>
