@@ -59,9 +59,22 @@ export async function fetchNFLSchedule(
   const res = await fetchWithRetry(url);
   const data = await res.json();
 
+  // ESPN serves postseason as a separate seasontype=3 request, not in the
+  // default payload — fetch it additionally when asked (best-effort).
+  let postseasonEvents: unknown[] = [];
+  if (includePostseason) {
+    try {
+      const postRes = await fetchWithRetry(`${url}&seasontype=3`);
+      const postData = await postRes.json();
+      postseasonEvents = postData.events || [];
+    } catch {
+      /* regular season still renders */
+    }
+  }
+
   const games: NFLGameResult[] = [];
 
-  for (const event of data.events || []) {
+  for (const event of [...(data.events || []), ...postseasonEvents] as any[]) { // eslint-disable-line @typescript-eslint/no-explicit-any
     // Regular season always; postseason only on request (last-meeting lookups)
     const type = event.seasonType?.type;
     if (type !== 2 && !(includePostseason && type === 3)) continue;
