@@ -1,5 +1,8 @@
+'use client';
+
 import Link from 'next/link';
 import { NFL_TEAMS } from '@/lib/teamConfig/nflTeams';
+import { trackClick } from '@/lib/analytics';
 
 /** "Pick the {NFL Team}" cross-promo card for same-market tracker pages.
  *  Mirrors GamePromo's card; two-team markets (NY, LA) get a button each. */
@@ -33,6 +36,7 @@ export default function PickTeamPromo({ teamIds, className }: { teamIds: string[
           <Link
             key={t.id}
             href={`/pick-the-${t.pickSlug}`}
+            onClick={() => trackClick(`pick-the-${t.pickSlug}`, 'nhl-tracker-promo')}
             className="inline-block rounded-xl px-6 py-3 text-sm font-bold uppercase tracking-wide text-white transition-opacity hover:opacity-90"
             style={{ backgroundColor: t.colors.primary }}
           >

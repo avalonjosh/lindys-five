@@ -24,6 +24,7 @@ import SteamEffect from '@/components/SteamEffect';
 import MerchCTA from '@/components/affiliate/MerchCTA';
 import GamePromo from '@/components/perfectseason/GamePromo';
 import PickTeamPromo from '@/components/nfl/PickTeamPromo';
+import PickTeamBanner from '@/components/nfl/PickTeamBanner';
 import { NFL_BY_NHL_MARKET } from '@/lib/teamConfig/nflTeams';
 import PlayoffJourney, { type JourneySeries } from '@/components/playoffs/PlayoffJourney';
 import { hasTeamHistory } from '@/lib/data/teamHistory';
@@ -1202,6 +1203,9 @@ export default function TeamTracker({
     </header>
 
     <main className="max-w-7xl mx-auto px-4 py-6">
+      {/* Same-market NFL discovery strip — dismissible, gone forever once they try a pick page */}
+      {NFL_BY_NHL_MARKET[team.id] && <PickTeamBanner teamIds={NFL_BY_NHL_MARKET[team.id]} />}
+
       {/* Progress Bar — in playoff mode we move this below PlayoffJourney (see that branch).
           Wrapped in a ref'd container so the sticky What-If bar knows when it scrolls off. */}
       <div ref={progressBoxRef}>

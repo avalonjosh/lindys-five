@@ -69,6 +69,11 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
     setPicks(new Map());
     setLatestSave(null);
     loadData();
+    // Mark the browser as having tried a pick page — quiets the discovery
+    // banner on the NHL trackers for good.
+    try {
+      localStorage.setItem('pickthe-visited', '1');
+    } catch { /* ignore */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [team.id]);
 
