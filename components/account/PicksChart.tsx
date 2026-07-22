@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 interface PicksChartPoint {
   date: string; // YYYY-MM-DD
@@ -30,6 +30,7 @@ function shortDate(date: string): string {
  */
 export default function PicksChart({ title, data, color, unit = '' }: PicksChartProps) {
   const [hover, setHover] = useState<number | null>(null);
+  const gradientId = useId();
   // Draw 1:1 with the container's real width so the chart fills whatever box
   // it's given (half-column, full row) at a fixed, crisp height.
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -60,6 +61,11 @@ export default function PicksChart({ title, data, color, unit = '' }: PicksChart
   const y = (v: number) => PAD_TOP + (1 - (v - lo) / (hi - lo)) * (H - PAD_TOP - PAD_BOTTOM);
 
   const path = data.map((d, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(d.value).toFixed(1)}`).join(' ');
+  // Soft area fill under the line, closed down to the baseline
+  const baselineY = H - PAD_BOTTOM;
+  const areaPath = data.length > 1
+    ? `${path} L${x(data.length - 1).toFixed(1)},${baselineY} L${x(0).toFixed(1)},${baselineY} Z`
+    : null;
   const fmt = (v: number) => `${Number.isInteger(v) ? v : v.toFixed(1)}${unit}`;
 
   return (
@@ -75,6 +81,18 @@ export default function PicksChart({ title, data, color, unit = '' }: PicksChart
         >
           {/* Recessive baseline grid */}
           <line x1={PAD_X} x2={W - PAD_X} y1={H - PAD_BOTTOM} y2={H - PAD_BOTTOM} stroke="#e5e7eb" strokeWidth="1" />
+          {/* Team-color area fill anchoring the line to the baseline */}
+          {areaPath && (
+            <>
+              <defs>
+                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={color} stopOpacity="0.16" />
+                  <stop offset="100%" stopColor={color} stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <path d={areaPath} fill={`url(#${gradientId})`} />
+            </>
+          )}
           <path d={path} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           {data.map((d, i) => (
             <g key={d.date}>

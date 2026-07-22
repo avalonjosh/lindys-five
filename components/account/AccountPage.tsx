@@ -963,11 +963,14 @@ export default function AccountPage() {
                 {/* Trend charts — one measure per chart (no dual axis) */}
                 {group.saves.length >= 2 ? (
                   <div className="border-b border-gray-100 p-4">
-                    <PicksChart
-                      title={group.sport === 'nhl' ? 'Projected Points Over Time' : 'Projected Wins Over Time'}
-                      data={group.saves.map(s => ({ date: s.savedDate, value: s.summary.projectedPoints }))}
-                      color={team.colors.primary}
-                    />
+                    {/* Tinted analytics panel — same grammar as the What Changed slab */}
+                    <div className="rounded-lg bg-gray-50 p-3">
+                      <PicksChart
+                        title={group.sport === 'nhl' ? 'Projected Points Over Time' : 'Projected Wins Over Time'}
+                        data={group.saves.map(s => ({ date: s.savedDate, value: s.summary.projectedPoints }))}
+                        color={team.colors.primary}
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div className="border-b border-gray-100 px-4 py-2.5 text-xs text-gray-500">
@@ -976,6 +979,9 @@ export default function AccountPage() {
                 )}
 
                 {/* Saves, newest first */}
+                <div className="px-4 pt-3 text-[11px] font-bold uppercase tracking-wide text-gray-500">
+                  Save History
+                </div>
                 <ul className="divide-y divide-gray-100">
                   {[...group.saves].reverse().map(save => {
                     const grade = actuals ? gradeSave(save, actuals) : null;
