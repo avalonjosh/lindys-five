@@ -248,9 +248,9 @@ export default function SavePicksModal({ onClose, submission, teamName, totalGam
                 <button
                   type="button"
                   onClick={() => setBackdateOpen(true)}
-                  className="self-start text-xs font-semibold text-gray-400 underline hover:text-gray-600"
+                  className="flex items-center gap-1.5 self-start rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50"
                 >
-                  Logging picks from an earlier date?
+                  <span aria-hidden>📅</span> Log picks from a past date
                 </button>
               )
             )}

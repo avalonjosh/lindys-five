@@ -118,3 +118,33 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ save, replacedToday });
 }
+
+/** Delete one saved pick set (a fun one-off, a mistake). Own saves only. */
+export async function DELETE(request: NextRequest) {
+  const userId = await getUserId(request);
+  if (!userId) return NextResponse.json({ error: 'Sign in to manage your picks' }, { status: 401 });
+
+  let body: { sport?: string; teamId?: string; season?: string; savedDate?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+  }
+
+  const { sport, teamId, season, savedDate } = body;
+  const rules = SPORT_RULES[sport as keyof typeof SPORT_RULES];
+  if (!rules || !teamId || !rules.teams[teamId]) return NextResponse.json({ error: 'Unknown team' }, { status: 400 });
+  if (!season || !rules.seasonRe.test(season)) return NextResponse.json({ error: 'Invalid season' }, { status: 400 });
+  if (!savedDate || !DATE_RE.test(savedDate)) return NextResponse.json({ error: 'Invalid date' }, { status: 400 });
+
+  if (!(await rateLimit(`whatif:rl:delete:${userId}`, 30, 3600))) {
+    return NextResponse.json({ error: 'Too many deletions. Try again later.' }, { status: 429 });
+  }
+
+  const [deleted] = await Promise.all([
+    kv.del(whatIfSaveKey(userId, sport!, teamId, season, savedDate)),
+    kv.zrem(whatIfIndexKey(userId), whatIfIndexMember(sport!, teamId, season, savedDate)),
+  ]);
+
+  return NextResponse.json({ deleted: deleted === 1 });
+}

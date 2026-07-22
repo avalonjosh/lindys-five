@@ -439,6 +439,10 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
                 <Link href="/account?tab=picks" className="underline hover:text-gray-600">My Picks</Link>
               </div>
             )}
+            <div className="mt-2 text-xs text-gray-400">
+              Been picking all season somewhere else? Make your picks, hit Save, and choose{' '}
+              <span className="font-semibold text-gray-500">“Log picks from a past date”</span> to backfill earlier weeks.
+            </div>
           </div>
         </div>
 

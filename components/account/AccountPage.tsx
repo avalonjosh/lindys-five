@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronDown, ChevronUp, Check, X, Minus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Check, X, Minus, Trash2 } from 'lucide-react';
 import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
 import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import AuthModal from '@/components/perfectseason/board/AuthModal';
 import { logout } from '@/lib/perfectseason/account';
-import { fetchWhatIfSaves } from '@/lib/whatif/client';
+import { fetchWhatIfSaves, deleteWhatIfSave } from '@/lib/whatif/client';
 import { fetchSabresSchedule } from '@/lib/services/nhlApi';
 import { fetchMLBSchedule } from '@/lib/services/mlbApi';
 import { fetchNFLSchedule } from '@/lib/services/nflApi';
@@ -278,6 +278,27 @@ export default function AccountPage() {
   const [editingFavorite, setEditingFavorite] = useState(false);
   const [savingFavorite, setSavingFavorite] = useState(false);
   const [showAllSaves, setShowAllSaves] = useState<Set<string>>(new Set()); // group keys with full save list shown
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null); // rowKey awaiting delete confirmation
+  const [deletingSave, setDeletingSave] = useState(false);
+
+  const handleDeleteSave = async (save: WhatIfSave) => {
+    if (deletingSave) return;
+    setDeletingSave(true);
+    try {
+      const result = await deleteWhatIfSave(save.sport, save.teamId, save.season, save.savedDate);
+      if (result.ok) {
+        setSaves(prev =>
+          (prev ?? []).filter(
+            s => !(s.sport === save.sport && s.teamId === save.teamId && s.season === save.season && s.savedDate === save.savedDate)
+          )
+        );
+        setExpanded(null);
+        setConfirmDelete(null);
+      }
+    } finally {
+      setDeletingSave(false);
+    }
+  };
   const [tab, setTab] = useState<AccountTab>('overview');
 
   // Deep link: /account?tab=picks (etc.) opens on that tab — used by the
@@ -1181,6 +1202,38 @@ export default function AccountPage() {
                                   })}
                                 </tbody>
                               </table>
+                            </div>
+
+                            {/* Delete — inline two-step confirm, no popup */}
+                            <div className="flex justify-end pt-3">
+                              {confirmDelete === rowKey ? (
+                                <span className="flex items-center gap-2 text-xs">
+                                  <span className="text-gray-500">Delete this save?</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteSave(save)}
+                                    disabled={deletingSave}
+                                    className="rounded-md bg-red-600 px-2.5 py-1 font-bold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                                  >
+                                    {deletingSave ? 'Deleting…' : 'Delete'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDelete(null)}
+                                    className="font-semibold text-gray-400 hover:text-gray-600"
+                                  >
+                                    Cancel
+                                  </button>
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDelete(rowKey)}
+                                  className="flex items-center gap-1 text-xs font-semibold text-gray-400 transition-colors hover:text-red-600"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" /> Delete this save
+                                </button>
+                              )}
                             </div>
                           </div>
                         )}

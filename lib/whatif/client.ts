@@ -28,6 +28,28 @@ export async function saveWhatIfPicks(
   }
 }
 
+/** Delete one saved pick set. Returns whether anything was removed. */
+export async function deleteWhatIfSave(
+  sport: string,
+  teamId: string,
+  season: string,
+  savedDate: string
+): Promise<{ ok: true; deleted: boolean } | { ok: false; error: string }> {
+  try {
+    const res = await fetch('/api/whatif/save', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sport, teamId, season, savedDate }),
+      credentials: 'include',
+    });
+    const data = await res.json();
+    if (!res.ok) return { ok: false, error: data.error || 'Delete failed' };
+    return { ok: true, deleted: data.deleted === true };
+  } catch {
+    return { ok: false, error: 'Network error' };
+  }
+}
+
 /** All of the signed-in user's saves, newest first. */
 export async function fetchWhatIfSaves(): Promise<WhatIfSave[] | null> {
   try {
