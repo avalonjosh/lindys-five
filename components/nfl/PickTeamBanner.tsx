@@ -37,12 +37,12 @@ export default function PickTeamBanner({ teamIds }: { teamIds: string[] }) {
 
   return (
     <div
-      className="mb-4 flex items-center gap-3 rounded-xl border px-4 py-2.5 text-sm"
+      className="mb-4 flex items-center gap-2.5 rounded-xl border px-3 py-2 text-xs sm:gap-3 sm:px-4 sm:py-2.5 sm:text-sm"
       style={{ backgroundColor: `${lead.colors.primary}0d`, borderColor: `${lead.colors.primary}33` }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={lead.logo} alt="" className="h-6 w-6 flex-shrink-0 object-contain" />
-      <p className="min-w-0 flex-1 text-gray-700">
+      <p className="min-w-0 flex-1 truncate text-gray-700 sm:whitespace-normal">
         <span className="font-bold">New:</span>{' '}
         {teams.map((t, i) => (
           <span key={t.id}>
@@ -60,7 +60,9 @@ export default function PickTeamBanner({ teamIds }: { teamIds: string[] }) {
             </Link>
           </span>
         ))}
-        {' '}— predict every game of the 2026 season and track your accuracy.
+        <span aria-hidden className="sm:hidden"> →</span>
+        {/* The pitch only fits from sm: up — mobile's job is "this exists, tap it" */}
+        <span className="hidden sm:inline"> — predict every game of the 2026 season and track your accuracy.</span>
       </p>
       <button
         type="button"
