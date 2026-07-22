@@ -77,6 +77,34 @@ export const NFL_TEAMS: Record<string, NFLTeamConfig> = {
   commanders: team('commanders', 'commanders', 28, 'Washington', 'Commanders', 'WSH', '#5A1414', '#FFB612'),
 };
 
+/** Division membership, by collision-safe team id. */
+export const NFL_DIVISIONS: Record<string, string[]> = {
+  'AFC East': ['bills', 'dolphins', 'patriots', 'nyjets'],
+  'AFC North': ['ravens', 'bengals', 'browns', 'steelers'],
+  'AFC South': ['texans', 'colts', 'jaguars', 'titans'],
+  'AFC West': ['broncos', 'chiefs', 'raiders', 'chargers'],
+  'NFC East': ['cowboys', 'nygiants', 'eagles', 'commanders'],
+  'NFC North': ['bears', 'lions', 'packers', 'vikings'],
+  'NFC South': ['falcons', 'carpanthers', 'saints', 'buccaneers'],
+  'NFC West': ['azcardinals', 'rams', '49ers', 'seahawks'],
+};
+
+const DIVISION_BY_ID: Record<string, string> = {};
+for (const [division, ids] of Object.entries(NFL_DIVISIONS)) {
+  for (const id of ids) DIVISION_BY_ID[id] = division;
+}
+const DIVISION_BY_ABBREV: Record<string, string> = Object.fromEntries(
+  Object.values(NFL_TEAMS).map(t => [t.abbreviation.toUpperCase(), DIVISION_BY_ID[t.id]])
+);
+
+export function nflDivision(teamId: string): string | null {
+  return DIVISION_BY_ID[teamId] ?? null;
+}
+
+export function nflDivisionByAbbrev(abbrev: string): string | null {
+  return DIVISION_BY_ABBREV[abbrev.toUpperCase()] ?? null;
+}
+
 /** Resolve a /pick-the-{pickSlug} URL segment to its team config. */
 export function findNFLTeamByPickSlug(pickSlug: string): NFLTeamConfig | undefined {
   return Object.values(NFL_TEAMS).find((t) => t.pickSlug === pickSlug.toLowerCase());

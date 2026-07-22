@@ -5,18 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { NFL_TEAMS } from '@/lib/teamConfig/nflTeams';
-
-const NFL_DIVISIONS: Record<string, string[]> = {
-  'AFC East': ['bills', 'dolphins', 'patriots', 'nyjets'],
-  'AFC North': ['ravens', 'bengals', 'browns', 'steelers'],
-  'AFC South': ['texans', 'colts', 'jaguars', 'titans'],
-  'AFC West': ['broncos', 'chiefs', 'raiders', 'chargers'],
-  'NFC East': ['cowboys', 'nygiants', 'eagles', 'commanders'],
-  'NFC North': ['bears', 'lions', 'packers', 'vikings'],
-  'NFC South': ['falcons', 'carpanthers', 'saints', 'buccaneers'],
-  'NFC West': ['azcardinals', 'rams', '49ers', 'seahawks'],
-};
+import { NFL_TEAMS, NFL_DIVISIONS } from '@/lib/teamConfig/nflTeams';
 
 interface NFLPickNavProps {
   currentTeamId: string;

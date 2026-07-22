@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type { NFLTeamConfig } from '@/lib/teamConfig/nflTeams';
+import { nflDivision, nflDivisionByAbbrev, type NFLTeamConfig } from '@/lib/teamConfig/nflTeams';
 import type { NFLGameResult } from '@/lib/types/nfl';
 import { fetchNFLSchedule } from '@/lib/services/nflApi';
 import NFLPickNav from './NFLPickNav';
@@ -36,6 +36,8 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [picks, setPicks] = useState<Map<number, Pick>>(new Map());
+  // Most recent prior-season result vs each opponent, for the row context zone.
+  const [lastMeetings, setLastMeetings] = useState<Map<string, NFLGameResult>>(new Map());
 
   // Saved-picks flow: opt-in account (shared with Perfect Season), save modal,
   // and the user's most recent save for this team (for the restore prompt).
@@ -69,6 +71,25 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [team.id]);
+
+  // Prior season's results, reduced to the latest meeting per opponent.
+  useEffect(() => {
+    let cancelled = false;
+    setLastMeetings(new Map());
+    fetchNFLSchedule(team.abbreviation, Number(season) - 1)
+      .then(({ games: prior }) => {
+        if (cancelled) return;
+        const byOpponent = new Map<string, NFLGameResult>();
+        for (const g of prior) {
+          if (g.outcome === 'PENDING') continue;
+          const existing = byOpponent.get(g.opponent);
+          if (!existing || g.isoDate > existing.isoDate) byOpponent.set(g.opponent, g);
+        }
+        setLastMeetings(byOpponent);
+      })
+      .catch(() => { /* context zone just stays empty */ });
+    return () => { cancelled = true; };
+  }, [team.abbreviation, season]);
 
   // Most recent save for this team, to power the "load my last picks" prompt.
   useEffect(() => {
@@ -396,6 +417,8 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
               }
               const pick = picks.get(game.gameId);
               const final = game.outcome !== 'PENDING';
+              const isDivisionGame = nflDivision(team.id) != null && nflDivision(team.id) === nflDivisionByAbbrev(game.opponent);
+              const lastMeeting = lastMeetings.get(game.opponent);
               return (
                 <li key={game.gameId} className="flex items-center gap-3 px-4 py-2.5">
                   <span className="w-12 flex-shrink-0 text-xs font-bold uppercase tracking-wide text-gray-400">Wk {week}</span>
@@ -410,6 +433,27 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
                     <div className="text-xs text-gray-500">
                       {game.date}{!final ? ` · ${game.startTime}` : ''}
                     </div>
+                  </div>
+                  {/* Context zone (desktop): division-rival tag + last meeting */}
+                  <div className="hidden min-w-0 flex-1 items-center justify-end gap-2.5 md:flex">
+                    {isDivisionGame && (
+                      <span
+                        className="flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                        style={{ backgroundColor: `${team.colors.primary}14`, color: team.colors.primary }}
+                      >
+                        {nflDivision(team.id)}
+                      </span>
+                    )}
+                    {lastMeeting && (
+                      <span className="truncate text-xs text-gray-500">
+                        Last meeting:{' '}
+                        <span className={`font-bold ${lastMeeting.outcome === 'W' ? 'text-green-600' : 'text-red-500'}`}>
+                          {lastMeeting.outcome} {lastMeeting.teamScore}-{lastMeeting.opponentScore}
+                        </span>
+                        {' · '}
+                        {new Date(`${lastMeeting.isoDate}T12:00:00`).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                      </span>
+                    )}
                   </div>
                   {final ? (
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -452,16 +496,7 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
               );
             };
             const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
-            return (
-              // Split-season layout on desktop: Weeks 1-9 beside Weeks 10-18,
-              // like a printed schedule — the whole season on one screen.
-              <div className="md:grid md:grid-cols-2">
-                <ul className="divide-y divide-gray-100">{weeks.slice(0, 9).map(weekRow)}</ul>
-                <ul className="divide-y divide-gray-100 border-t border-gray-100 md:border-l md:border-t-0">
-                  {weeks.slice(9).map(weekRow)}
-                </ul>
-              </div>
-            );
+            return <ul className="divide-y divide-gray-100">{weeks.map(weekRow)}</ul>;
           })()}
         </div>
 
