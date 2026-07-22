@@ -532,7 +532,7 @@ export default function MLBTeamTracker({ team, initialGames, serverSummary }: ML
             )}
             {user && (
               <div className="mt-1.5 text-xs opacity-70">
-                <Link href="/account" className="underline hover:opacity-80">My Picks</Link>
+                <Link href="/account?tab=picks" className="underline hover:opacity-80">My Picks</Link>
               </div>
             )}
           </div>

@@ -200,7 +200,7 @@ export default function SavePicksModal({ onClose, submission, teamName, totalGam
               </div>
             )}
             <Link
-              href="/account"
+              href="/account?tab=picks"
               className="w-full rounded-xl bg-sabres-blue py-3 text-center text-sm font-bold uppercase tracking-wide text-white shadow-md transition-colors hover:bg-sabres-light"
             >
               View My Picks

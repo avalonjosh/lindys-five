@@ -366,7 +366,7 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
             )}
             {user && (
               <div className="mt-2 text-xs text-gray-400">
-                <Link href="/account" className="underline hover:text-gray-600">My Picks</Link>
+                <Link href="/account?tab=picks" className="underline hover:text-gray-600">My Picks</Link>
               </div>
             )}
           </div>

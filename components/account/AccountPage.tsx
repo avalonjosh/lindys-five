@@ -231,6 +231,14 @@ export default function AccountPage() {
   const [savingFavorite, setSavingFavorite] = useState(false);
   const [tab, setTab] = useState<AccountTab>('overview');
 
+  // Deep link: /account?tab=picks (etc.) opens on that tab — used by the
+  // "View My Picks" buttons around the site. Effect (not initializer) to keep
+  // server and client first paint identical.
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tab');
+    if (t === 'picks' || t === 'perfectseason' || t === 'settings' || t === 'overview') setTab(t);
+  }, []);
+
   const changeFavorite = async (slug: string) => {
     if (!user || savingFavorite) return;
     setSavingFavorite(true);
@@ -904,20 +912,12 @@ export default function AccountPage() {
 
                 {/* Trend charts — one measure per chart (no dual axis) */}
                 {group.saves.length >= 2 ? (
-                  <div className={`grid gap-4 border-b border-gray-100 p-4 ${group.sport === 'nfl' ? '' : 'sm:grid-cols-2'}`}>
+                  <div className="border-b border-gray-100 p-4">
                     <PicksChart
                       title={group.sport === 'nhl' ? 'Projected Points by Save' : 'Projected Wins by Save'}
                       data={group.saves.map(s => ({ date: s.savedDate, value: s.summary.projectedPoints }))}
                       color={team.colors.primary}
                     />
-                    {group.sport !== 'nfl' && (
-                      <PicksChart
-                        title="Playoff Odds by Save"
-                        data={group.saves.map(s => ({ date: s.savedDate, value: s.summary.playoffOdds }))}
-                        color={team.colors.primary}
-                        unit="%"
-                      />
-                    )}
                   </div>
                 ) : (
                   <div className="border-b border-gray-100 px-4 py-2.5 text-xs text-gray-500">
