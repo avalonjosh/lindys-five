@@ -273,7 +273,7 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-4 py-6">
         {/* Season Outlook — the tracker's Progress Bar analog */}
         <div ref={outlookBoxRef}>
           <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 mb-4">
@@ -380,12 +380,12 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
             </h2>
             <span className="text-xs text-gray-400">Tap W or L to pick</span>
           </div>
-          <ul className="divide-y divide-gray-100">
-            {Array.from({ length: 18 }, (_, i) => i + 1).map(week => {
+          {(() => {
+            // Bye = a week with no game. Derived from the schedule itself —
+            // ESPN's byeWeek field can disagree with the actual game list
+            // (2026 Bills: byeWeek said 5, the gameless week was 7).
+            const weekRow = (week: number) => {
               const game = games.find(g => g.week === week);
-              // Bye = a week with no game. Derived from the schedule itself —
-              // ESPN's byeWeek field can disagree with the actual game list
-              // (2026 Bills: byeWeek said 5, the gameless week was 7).
               if (!game) {
                 return (
                   <li key={`bye-${week}`} className="flex items-center gap-3 px-4 py-2.5 bg-gray-50">
@@ -403,7 +403,9 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
                   <img src={game.opponentLogo} alt="" className="h-7 w-7 flex-shrink-0 object-contain" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-bold text-gray-900">
-                      {game.isHome ? 'vs' : '@'} {game.opponent}
+                      {game.isHome ? 'vs' : '@'}{' '}
+                      <span className="sm:hidden">{game.opponent}</span>
+                      <span className="hidden sm:inline">{game.opponentName || game.opponent}</span>
                     </div>
                     <div className="text-xs text-gray-500">
                       {game.date}{!final ? ` · ${game.startTime}` : ''}
@@ -448,8 +450,19 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
                   )}
                 </li>
               );
-            })}
-          </ul>
+            };
+            const weeks = Array.from({ length: 18 }, (_, i) => i + 1);
+            return (
+              // Split-season layout on desktop: Weeks 1-9 beside Weeks 10-18,
+              // like a printed schedule — the whole season on one screen.
+              <div className="md:grid md:grid-cols-2">
+                <ul className="divide-y divide-gray-100">{weeks.slice(0, 9).map(weekRow)}</ul>
+                <ul className="divide-y divide-gray-100 border-t border-gray-100 md:border-l md:border-t-0">
+                  {weeks.slice(9).map(weekRow)}
+                </ul>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Footer */}
