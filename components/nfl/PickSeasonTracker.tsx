@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { nflDivision, nflDivisionByAbbrev, type NFLTeamConfig } from '@/lib/teamConfig/nflTeams';
+import type { NFLTeamConfig } from '@/lib/teamConfig/nflTeams';
 import type { NFLGameResult } from '@/lib/types/nfl';
 import { fetchNFLSchedule } from '@/lib/services/nflApi';
 import NFLPickNav from './NFLPickNav';
@@ -417,7 +417,6 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
               }
               const pick = picks.get(game.gameId);
               const final = game.outcome !== 'PENDING';
-              const isDivisionGame = nflDivision(team.id) != null && nflDivision(team.id) === nflDivisionByAbbrev(game.opponent);
               const lastMeeting = lastMeetings.get(game.opponent);
               return (
                 <li key={game.gameId} className="flex items-center gap-3 px-4 py-2.5">
@@ -434,16 +433,8 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
                       {game.date}{!final ? ` · ${game.startTime}` : ''}
                     </div>
                   </div>
-                  {/* Context zone (desktop): division-rival tag + last meeting */}
+                  {/* Context zone (desktop): last meeting */}
                   <div className="hidden min-w-0 flex-1 items-center justify-end gap-2.5 md:flex">
-                    {isDivisionGame && (
-                      <span
-                        className="flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-                        style={{ backgroundColor: `${team.colors.primary}14`, color: team.colors.primary }}
-                      >
-                        {nflDivision(team.id)}
-                      </span>
-                    )}
                     {lastMeeting && (
                       <span className="truncate text-xs text-gray-500">
                         Last meeting:{' '}
