@@ -40,7 +40,8 @@ export default function PickTeamBanner({ teamIds }: { teamIds: string[] }) {
       className="mb-4 flex items-center gap-3 rounded-xl border px-4 py-2.5 text-sm"
       style={{ backgroundColor: `${lead.colors.primary}0d`, borderColor: `${lead.colors.primary}33` }}
     >
-      <span aria-hidden className="flex-shrink-0">🏈</span>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={lead.logo} alt="" className="h-6 w-6 flex-shrink-0 object-contain" />
       <p className="min-w-0 flex-1 text-gray-700">
         <span className="font-bold">New:</span>{' '}
         {teams.map((t, i) => (
