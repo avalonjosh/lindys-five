@@ -957,6 +957,13 @@ export default function AccountPage() {
           <Link href="/nhl" className="text-sm font-bold hover:underline" style={{ color: heroColor }}>
             Browse NHL teams →
           </Link>
+          <p className="mt-4 text-xs text-gray-400">
+            Have a Pick the Bills history from before?{' '}
+            <Link href="/pick-the-bills?backdate=1" className="font-semibold underline hover:text-gray-600">
+              Log past picks
+            </Link>
+            .
+          </p>
         </div>
       ) : (
         <div className="flex flex-col gap-8">
@@ -1305,6 +1312,15 @@ export default function AccountPage() {
                     );
                   })}
                 </ul>
+                {/* NFL groups: empty-slot invite to backfill real pick history */}
+                {group.sport === 'nfl' && NFL_TEAMS[group.teamId] && (
+                  <Link
+                    href={`/pick-the-${NFL_TEAMS[group.teamId].pickSlug}?backdate=1`}
+                    className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-gray-300 px-4 py-3 text-xs font-semibold text-gray-400 transition-colors hover:border-gray-400 hover:text-gray-600"
+                  >
+                    ＋ Add past picks — log picks you made before today
+                  </Link>
+                )}
                 {group.saves.length > SAVE_DISPLAY_LIMIT && (
                   <button
                     type="button"

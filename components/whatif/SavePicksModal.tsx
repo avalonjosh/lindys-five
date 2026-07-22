@@ -21,17 +21,19 @@ interface SavePicksModalProps {
   submission: WhatIfSubmission;
   teamName: string;
   totalGames: number;
+  /** Open with the past-date picker already expanded (the "Add past picks" flow). */
+  defaultBackdateOpen?: boolean;
 }
 
 /** Confirm-and-save sheet for What-If picks. Styled like AuthModal. */
-export default function SavePicksModal({ onClose, submission, teamName, totalGames }: SavePicksModalProps) {
+export default function SavePicksModal({ onClose, submission, teamName, totalGames, defaultBackdateOpen = false }: SavePicksModalProps) {
   const [status, setStatus] = useState<'idle' | 'saving' | 'done' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [replacedToday, setReplacedToday] = useState(false);
   const [label, setLabel] = useState('');
   // Backdate entry (NFL only): log picks actually made on an earlier date —
   // e.g. importing a season of radio-show picks. Marked on the save.
-  const [backdateOpen, setBackdateOpen] = useState(false);
+  const [backdateOpen, setBackdateOpen] = useState(defaultBackdateOpen && submission.sport === 'nfl');
   const [backdate, setBackdate] = useState('');
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const [nlStatus, setNlStatus] = useState<'idle' | 'sending' | 'done' | 'error' | 'dismissed'>('idle');

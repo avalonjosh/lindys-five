@@ -47,6 +47,13 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
   const [latestSave, setLatestSave] = useState<WhatIfSave | null>(null);
   const [autoLoaded, setAutoLoaded] = useState(false);
   const autoRestoredRef = useRef(false);
+  // Arriving via "Add past picks" (?backdate=1): the save modal opens with the
+  // past-date picker already expanded.
+  const [backdateIntent, setBackdateIntent] = useState(false);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('backdate') === '1') setBackdateIntent(true);
+  }, []);
   const [boxOffscreen, setBoxOffscreen] = useState(false);
   const outlookBoxRef = useRef<HTMLDivElement | null>(null);
 
@@ -439,10 +446,6 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
                 <Link href="/account?tab=picks" className="underline hover:text-gray-600">My Picks</Link>
               </div>
             )}
-            <div className="mt-2 text-xs text-gray-400">
-              Been picking all season somewhere else? Make your picks, hit Save, and choose{' '}
-              <span className="font-semibold text-gray-500">“Log picks from a past date”</span> to backfill earlier weeks.
-            </div>
           </div>
         </div>
 
@@ -578,6 +581,7 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
           submission={buildWhatIfSubmission()}
           teamName={team.name}
           totalGames={NFL_SEASON_GAMES}
+          defaultBackdateOpen={backdateIntent}
         />
       )}
     </div>
