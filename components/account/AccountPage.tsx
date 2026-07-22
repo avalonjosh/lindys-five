@@ -23,6 +23,12 @@ import type { ProfileResponse, ProfileBoard } from '@/app/api/account/profile/ro
 
 type ActualOutcome = 'W' | 'OTL' | 'L';
 
+/** A finished game's real result: outcome + score from the picked team's side. */
+interface ActualGame {
+  outcome: ActualOutcome;
+  score?: string; // e.g. "31-24"
+}
+
 interface TeamGroup {
   key: string; // `${sport}:${teamId}:${season}`
   sport: string;
@@ -34,6 +40,7 @@ interface TeamGroup {
 interface PickGrade {
   pick: WhatIfPick;
   actual: ActualOutcome | null; // null = game not final yet
+  score?: string; // final score once graded
   exact: boolean;
   simpleRight: boolean; // win-vs-loss only (OTL counts as a loss)
   /** Backdated save + game already played at entry time: shown, never graded. */
@@ -57,18 +64,19 @@ function outcomeOf(game: GameResult): ActualOutcome | null {
 const pts = (o: ActualOutcome, sport: string) =>
   sport === 'nhl' ? (o === 'W' ? 2 : o === 'OTL' ? 1 : 0) : o === 'W' ? 1 : 0;
 
-function gradeSave(save: WhatIfSave, actuals: Map<number, ActualOutcome>): SaveGrade {
+function gradeSave(save: WhatIfSave, actuals: Map<number, ActualGame>): SaveGrade {
   // Backdated saves can't take credit for games that were already final when
   // the save was actually entered (savedAt), only for what was still upcoming.
   const enteredDate = save.backdated
     ? new Date(save.savedAt).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
     : null;
   const picks: PickGrade[] = save.picks.map(pick => {
-    const actual = actuals.get(pick.gameId) ?? null;
+    const actualGame = actuals.get(pick.gameId) ?? null;
+    const actual = actualGame?.outcome ?? null;
     const exact = actual != null && actual === pick.outcome;
     const simpleRight = actual != null && (pick.outcome === 'W') === (actual === 'W');
     const excluded = enteredDate != null && normalizePickDate(pick.date) < enteredDate;
-    return { pick, actual, exact, simpleRight, excluded };
+    return { pick, actual, score: actualGame?.score, exact, simpleRight, excluded };
   });
   const graded = picks.filter(p => p.actual != null && !p.excluded);
   return {
@@ -102,6 +110,17 @@ function opponentLogo(sport: string, abbrev: string): string | null {
   if (sport === 'nhl') return `https://assets.nhle.com/logos/nhl/svg/${abbrev.toUpperCase()}_light.svg`;
   const id = MLB_ABBREV_TO_ID[abbrev.toUpperCase()];
   return id ? `https://www.mlbstatic.com/team-logos/${id}.svg` : null;
+}
+
+// Full opponent names by sport + abbreviation, for the desktop matchup column.
+const NAME_BY_ABBREV: Record<string, Map<string, string>> = {
+  nhl: new Map(Object.values(NHL_TEAMS).map(t => [t.abbreviation.toUpperCase(), `${t.city} ${t.name}`])),
+  mlb: new Map(Object.values(MLB_TEAMS).map(t => [t.abbreviation.toUpperCase(), `${t.city} ${t.name}`])),
+  nfl: new Map(Object.values(NFL_TEAMS).map(t => [t.abbreviation.toUpperCase(), `${t.city} ${t.name}`])),
+};
+
+function opponentFullName(sport: string, abbrev: string): string | null {
+  return NAME_BY_ABBREV[sport]?.get(abbrev.toUpperCase()) ?? null;
 }
 
 /** Badge color for a picked outcome (mirrors the Pick pages' buttons). */
@@ -250,7 +269,7 @@ export default function AccountPage() {
   const [authOpen, setAuthOpen] = useState(false);
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [saves, setSaves] = useState<WhatIfSave[] | null>(null);
-  const [actualsByTeam, setActualsByTeam] = useState<Map<string, Map<number, ActualOutcome>>>(new Map());
+  const [actualsByTeam, setActualsByTeam] = useState<Map<string, Map<number, ActualGame>>>(new Map());
   const [expanded, setExpanded] = useState<string | null>(null); // `${group.key}:${savedDate}`
   const [editingFavorite, setEditingFavorite] = useState(false);
   const [savingFavorite, setSavingFavorite] = useState(false);
@@ -380,9 +399,11 @@ export default function AccountPage() {
         const team = MLB_TEAMS[group.teamId];
         if (!team) continue;
         fetchMLBSchedule(team.mlbId, Number(group.season)).then(schedule => {
-          const actuals = new Map<number, ActualOutcome>();
+          const actuals = new Map<number, ActualGame>();
           for (const game of schedule) {
-            if (game.gameId != null && game.outcome !== 'PENDING') actuals.set(game.gameId, game.outcome);
+            if (game.gameId != null && game.outcome !== 'PENDING') {
+              actuals.set(game.gameId, { outcome: game.outcome, score: `${game.teamScore}-${game.opponentScore}` });
+            }
           }
           setActualsByTeam(prev => new Map(prev).set(group.key, actuals));
         });
@@ -392,9 +413,11 @@ export default function AccountPage() {
         const team = NFL_TEAMS[group.teamId];
         if (!team) continue;
         fetchNFLSchedule(team.abbreviation, Number(group.season)).then(({ games }) => {
-          const actuals = new Map<number, ActualOutcome>();
+          const actuals = new Map<number, ActualGame>();
           for (const game of games) {
-            if (game.outcome !== 'PENDING') actuals.set(game.gameId, game.outcome);
+            if (game.outcome !== 'PENDING') {
+              actuals.set(game.gameId, { outcome: game.outcome, score: `${game.teamScore}-${game.opponentScore}` });
+            }
           }
           setActualsByTeam(prev => new Map(prev).set(group.key, actuals));
         });
@@ -403,10 +426,12 @@ export default function AccountPage() {
       const team = NHL_TEAMS[group.teamId];
       if (!team) continue;
       fetchSabresSchedule(group.season, team.abbreviation, team.nhlId).then(schedule => {
-        const actuals = new Map<number, ActualOutcome>();
+        const actuals = new Map<number, ActualGame>();
         for (const game of schedule) {
           const outcome = outcomeOf(game);
-          if (game.gameId != null && outcome) actuals.set(game.gameId, outcome);
+          if (game.gameId != null && outcome) {
+            actuals.set(game.gameId, { outcome, score: `${game.sabresScore}-${game.opponentScore}` });
+          }
         }
         setActualsByTeam(prev => new Map(prev).set(group.key, actuals));
       });
@@ -1051,12 +1076,16 @@ export default function AccountPage() {
                                     <th className="px-2 py-2 font-bold sm:px-3">Matchup</th>
                                     <th className="hidden w-px whitespace-nowrap px-3 py-2 font-bold sm:table-cell">Pick History</th>
                                     <th className="w-12 px-1 py-2 text-center font-bold sm:w-20 sm:px-3">Picked</th>
-                                    <th className="w-16 px-2 py-2 text-right font-bold sm:w-24 sm:px-3">Result</th>
+                                    <th className="w-16 px-2 py-2 text-right font-bold sm:w-32 sm:px-3">Result</th>
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {(grade?.picks ?? save.picks.map(pick => ({ pick, actual: null as ActualOutcome | null, exact: false, simpleRight: false, excluded: false }))).map(({ pick, actual, exact, excluded }) => {
+                                  {(grade?.picks ?? save.picks.map(pick => ({ pick, actual: null as ActualOutcome | null, score: undefined as string | undefined, exact: false, simpleRight: false, excluded: false }))).map(({ pick, actual, score, exact, excluded }) => {
                                     const trail = pickTrail(group, saveIdx, pick.gameId);
+                                    // Graded NHL/MLB games have box score pages on-site
+                                    const boxScoreHref = actual != null && (save.sport === 'nhl' || save.sport === 'mlb')
+                                      ? `/${save.sport}/scores/${pick.gameId}`
+                                      : null;
                                     return (
                                     <tr key={pick.gameId} className="even:bg-gray-50">
                                       <td className="px-2 py-2 text-gray-400 sm:px-3">{pick.week ? `Wk ${pick.week}` : pickDateLabel(pick.date)}</td>
@@ -1066,7 +1095,11 @@ export default function AccountPage() {
                                             // eslint-disable-next-line @next/next/no-img-element
                                             <img src={opponentLogo(save.sport, pick.opponentAbbrev)!} alt="" className="h-6 w-6 flex-shrink-0 object-contain" />
                                           )}
-                                          <span className="truncate">{pick.isHome ? 'vs' : '@'} {pick.opponentAbbrev}</span>
+                                          <span className="truncate">
+                                            {pick.isHome ? 'vs' : '@'}{' '}
+                                            <span className="sm:hidden">{pick.opponentAbbrev}</span>
+                                            <span className="hidden sm:inline">{opponentFullName(save.sport, pick.opponentAbbrev) ?? pick.opponentAbbrev}</span>
+                                          </span>
                                         </span>
                                       </td>
                                       {/* Change-point trail — only when the pick actually flipped.
@@ -1100,26 +1133,34 @@ export default function AccountPage() {
                                         </span>
                                       </td>
                                       <td className="px-2 py-2 sm:px-3">
-                                        {excluded && actual != null ? (
-                                          <span
-                                            className="flex items-center justify-end gap-1 text-gray-400"
-                                            title="Already played when these picks were entered — not graded"
-                                          >
-                                            <Minus className="h-3.5 w-3.5" /> {actual}
-                                          </span>
-                                        ) : actual == null ? (
-                                          <span className="flex items-center justify-end gap-1 text-gray-400">
-                                            <Minus className="h-3.5 w-3.5" /> TBD
-                                          </span>
-                                        ) : exact ? (
-                                          <span className="flex items-center justify-end gap-1 font-bold text-green-600">
-                                            <Check className="h-3.5 w-3.5" /> {actual}
-                                          </span>
-                                        ) : (
-                                          <span className="flex items-center justify-end gap-1 font-bold text-red-500">
-                                            <X className="h-3.5 w-3.5" /> {actual}
-                                          </span>
-                                        )}
+                                        {(() => {
+                                          const scoreEl = score ? <span className="hidden font-semibold sm:inline">{score}</span> : null;
+                                          const inner = excluded && actual != null ? (
+                                            <span
+                                              className="flex items-center justify-end gap-1 text-gray-400"
+                                              title="Already played when these picks were entered — not graded"
+                                            >
+                                              <Minus className="h-3.5 w-3.5" /> {actual} {scoreEl}
+                                            </span>
+                                          ) : actual == null ? (
+                                            <span className="flex items-center justify-end gap-1 text-gray-400">
+                                              <Minus className="h-3.5 w-3.5" /> TBD
+                                            </span>
+                                          ) : exact ? (
+                                            <span className="flex items-center justify-end gap-1 font-bold text-green-600">
+                                              <Check className="h-3.5 w-3.5" /> {actual} {scoreEl}
+                                            </span>
+                                          ) : (
+                                            <span className="flex items-center justify-end gap-1 font-bold text-red-500">
+                                              <X className="h-3.5 w-3.5" /> {actual} {scoreEl}
+                                            </span>
+                                          );
+                                          return boxScoreHref ? (
+                                            <Link href={boxScoreHref} title="View box score" className="block hover:underline">
+                                              {inner}
+                                            </Link>
+                                          ) : inner;
+                                        })()}
                                       </td>
                                     </tr>
                                     );
