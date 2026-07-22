@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import MLBTeamNav from '@/components/mlb/MLBTeamNav';
+import BreadcrumbNav from '@/components/seo/BreadcrumbNav';
 import { TEAMS } from '@/lib/teamConfig';
 import type { StandingsTeam } from '@/lib/types/boxscore';
 import type {
@@ -681,6 +682,12 @@ export default async function PlayoffsPage() {
             </p>
           </div>
         </header>
+
+        {/* Visible breadcrumb — matches the BreadcrumbList JSON-LD above */}
+        <BreadcrumbNav
+          className="max-w-7xl mx-auto px-4 py-3 text-sm text-gray-500"
+          items={[{ name: 'Home', href: '/' }, { name: 'Playoffs' }]}
+        />
 
         {/* Champion banner — shown once the Cup Final is decided */}
         {seasonComplete && champion && (
