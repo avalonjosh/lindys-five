@@ -468,8 +468,9 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
                       Live
                     </span>
                   ) : (
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
-                      {(['W', 'L'] as const).map(o => {
+                    // Segmented Win/Loss control: one decision, two states.
+                    <div className="flex flex-shrink-0 items-stretch overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+                      {(['W', 'L'] as const).map((o, i) => {
                         const active = pick === o;
                         return (
                           <button
@@ -478,12 +479,13 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
                             onClick={() => handlePick(game, o)}
                             aria-pressed={active}
                             aria-label={`Pick ${o === 'W' ? 'win' : 'loss'} vs ${game.opponent} in week ${week}`}
-                            className={`flex h-8 w-9 items-center justify-center rounded-lg text-sm font-bold transition-colors ${
-                              active ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                            }`}
-                            style={active ? { backgroundColor: o === 'W' ? team.colors.primary : '#6b7280' } : undefined}
+                            className={`flex h-8 items-center justify-center px-2.5 text-sm font-bold transition-colors sm:px-3.5 ${
+                              i > 0 ? 'border-l border-gray-200' : ''
+                            } ${active ? 'text-white shadow-inner' : 'text-gray-500 hover:bg-gray-50'}`}
+                            style={active ? { backgroundColor: o === 'W' ? team.colors.primary : '#475569' } : undefined}
                           >
-                            {o}
+                            <span className="sm:hidden">{o}</span>
+                            <span className="hidden sm:inline">{o === 'W' ? 'Win' : 'Loss'}</span>
                           </button>
                         );
                       })}
