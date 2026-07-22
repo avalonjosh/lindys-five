@@ -14,6 +14,8 @@ export interface NFLGameResult {
   outcome: 'W' | 'L' | 'PENDING';
   isLive: boolean;
   gameState: string; // ESPN status name, e.g. STATUS_SCHEDULED / STATUS_FINAL
+  /** 2 = regular season, 3 = postseason (postseason only present when requested). */
+  seasonType: number;
 }
 
 export interface NFLScheduleData {

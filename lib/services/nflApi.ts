@@ -45,8 +45,13 @@ const LIVE_STATUSES = new Set(['STATUS_IN_PROGRESS', 'STATUS_HALFTIME', 'STATUS_
  * the Pick the {Team} pages and account-page grading. `teamAbbrev` is the ESPN
  * abbreviation (e.g. "BUF"); `season` is the calendar start year (e.g. 2026).
  */
-export async function fetchNFLSchedule(teamAbbrev: string, season: number): Promise<NFLScheduleData> {
-  const cacheKey = `nfl-schedule-${teamAbbrev}-${season}`;
+export async function fetchNFLSchedule(
+  teamAbbrev: string,
+  season: number,
+  opts: { includePostseason?: boolean } = {}
+): Promise<NFLScheduleData> {
+  const includePostseason = opts.includePostseason === true;
+  const cacheKey = `nfl-schedule-${teamAbbrev}-${season}-${includePostseason ? 'post' : 'reg'}`;
   const cached = getCached<NFLScheduleData>(cacheKey);
   if (cached) return cached;
 
@@ -57,8 +62,9 @@ export async function fetchNFLSchedule(teamAbbrev: string, season: number): Prom
   const games: NFLGameResult[] = [];
 
   for (const event of data.events || []) {
-    // Regular season only
-    if (event.seasonType?.type !== 2) continue;
+    // Regular season always; postseason only on request (last-meeting lookups)
+    const type = event.seasonType?.type;
+    if (type !== 2 && !(includePostseason && type === 3)) continue;
     const comp = event.competitions?.[0];
     if (!comp) continue;
 
@@ -96,10 +102,12 @@ export async function fetchNFLSchedule(teamAbbrev: string, season: number): Prom
       outcome,
       isLive: LIVE_STATUSES.has(statusName),
       gameState: statusName,
+      seasonType: type,
     });
   }
 
-  games.sort((a, b) => a.week - b.week);
+  // Postseason week numbers restart at 1, so order by date, not week
+  games.sort((a, b) => (a.seasonType - b.seasonType) || a.week - b.week);
 
   const result: NFLScheduleData = {
     games,

@@ -72,22 +72,27 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [team.id]);
 
-  // Prior season's results, reduced to the latest meeting per opponent.
+  // Most recent meeting per opponent, playoffs included. The NFL's rotating
+  // schedule guarantees every pairing within 4 seasons, so walking back four
+  // years covers all 17 opponents even ones not played last year.
   useEffect(() => {
     let cancelled = false;
     setLastMeetings(new Map());
-    fetchNFLSchedule(team.abbreviation, Number(season) - 1)
-      .then(({ games: prior }) => {
-        if (cancelled) return;
-        const byOpponent = new Map<string, NFLGameResult>();
-        for (const g of prior) {
+    const priorSeasons = [1, 2, 3, 4].map(back =>
+      fetchNFLSchedule(team.abbreviation, Number(season) - back, { includePostseason: true }).catch(() => null)
+    );
+    Promise.all(priorSeasons).then(results => {
+      if (cancelled) return;
+      const byOpponent = new Map<string, NFLGameResult>();
+      for (const result of results) {
+        for (const g of result?.games ?? []) {
           if (g.outcome === 'PENDING') continue;
           const existing = byOpponent.get(g.opponent);
           if (!existing || g.isoDate > existing.isoDate) byOpponent.set(g.opponent, g);
         }
-        setLastMeetings(byOpponent);
-      })
-      .catch(() => { /* context zone just stays empty */ });
+      }
+      setLastMeetings(byOpponent);
+    });
     return () => { cancelled = true; };
   }, [team.abbreviation, season]);
 
@@ -442,6 +447,7 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
                           {lastMeeting.outcome} {lastMeeting.teamScore}-{lastMeeting.opponentScore}
                         </span>
                         {' · '}
+                        {lastMeeting.seasonType === 3 ? 'Playoffs, ' : ''}
                         {new Date(`${lastMeeting.isoDate}T12:00:00`).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                       </span>
                     )}
