@@ -45,6 +45,8 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
   const [authOpen, setAuthOpen] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [latestSave, setLatestSave] = useState<WhatIfSave | null>(null);
+  const [autoLoaded, setAutoLoaded] = useState(false);
+  const autoRestoredRef = useRef(false);
   const [boxOffscreen, setBoxOffscreen] = useState(false);
   const outlookBoxRef = useRef<HTMLDivElement | null>(null);
 
@@ -68,6 +70,8 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
   useEffect(() => {
     setPicks(new Map());
     setLatestSave(null);
+    setAutoLoaded(false);
+    autoRestoredRef.current = false;
     loadData();
     // Mark the browser as having tried a pick page — quiets the discovery
     // banner on the NHL trackers for good.
@@ -113,6 +117,26 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
     });
     return () => { cancelled = true; };
   }, [user, team.id, season]);
+
+  // Returning pickers open with their latest saved picks already applied —
+  // the page should recognize them, not present a blank slate. Runs once per
+  // team, only onto an untouched board; Reset clears it back to blank.
+  useEffect(() => {
+    if (!latestSave || games.length === 0 || autoRestoredRef.current) return;
+    autoRestoredRef.current = true;
+    if (picks.size > 0) return; // they started picking before the fetch landed
+    const pendingIds = new Set(games.filter(g => g.outcome === 'PENDING').map(g => g.gameId));
+    const restored = new Map<number, Pick>();
+    for (const pick of latestSave.picks) {
+      if (pick.outcome === 'OTL' || !pendingIds.has(pick.gameId)) continue;
+      restored.set(pick.gameId, pick.outcome);
+    }
+    if (restored.size > 0) {
+      setPicks(restored);
+      setAutoLoaded(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latestSave, games]);
 
   // Sticky bar appears once the Season Outlook box scrolls out of view.
   useEffect(() => {
@@ -194,6 +218,11 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
     setSaveModalOpen(true);
   };
 
+  const resetPicks = () => {
+    setPicks(new Map());
+    setAutoLoaded(false);
+  };
+
   // Re-apply a previous save: only still-pending games take effect.
   const handleRestorePicks = () => {
     if (!latestSave) return;
@@ -253,7 +282,7 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
         totalGames={NFL_SEASON_GAMES}
         playoffTarget={NFL_PLAYOFF_TARGET}
         projectionReady={picks.size > 0}
-        onReset={() => setPicks(new Map())}
+        onReset={resetPicks}
         onSave={handleSaveClick}
         onJumpToBox={scrollToOutlook}
         isGoatMode={false}
@@ -323,7 +352,7 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
                       Save Picks
                     </button>
                     <button
-                      onClick={() => setPicks(new Map())}
+                      onClick={resetPicks}
                       className="px-3 py-1.5 rounded-lg text-sm font-semibold border-2 transition-opacity hover:opacity-80"
                       style={{ borderColor: team.colors.primary, color: team.colors.primary }}
                     >
@@ -379,6 +408,16 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
               </span>
             </div>
 
+            {/* Auto-loaded notice: the page opened with their latest save applied */}
+            {autoLoaded && latestSave && picks.size > 0 && (
+              <div className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-500 md:text-sm">
+                Loaded your saved picks from{' '}
+                <span className="font-bold text-gray-700">
+                  {new Date(`${latestSave.savedDate}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+                {latestSave.label ? ` · “${latestSave.label}”` : ''} — change any game and Save Picks to update, or Reset for a blank slate.
+              </div>
+            )}
             {/* Restore prompt: signed-in user with a previous save and a clean slate */}
             {latestSave && picks.size === 0 && (
               <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-2 text-xs md:text-sm text-gray-600">
