@@ -964,7 +964,7 @@ export default function AccountPage() {
                 {group.saves.length >= 2 ? (
                   <div className="border-b border-gray-100 p-4">
                     <PicksChart
-                      title={group.sport === 'nhl' ? 'Projected Points by Save' : 'Projected Wins by Save'}
+                      title={group.sport === 'nhl' ? 'Projected Points Over Time' : 'Projected Wins Over Time'}
                       data={group.saves.map(s => ({ date: s.savedDate, value: s.summary.projectedPoints }))}
                       color={team.colors.primary}
                     />
