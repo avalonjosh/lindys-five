@@ -119,6 +119,41 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ save, replacedToday });
 }
 
+/** Rename a saved pick set (set, change, or clear its label). Own saves only. */
+export async function PATCH(request: NextRequest) {
+  const userId = await getUserId(request);
+  if (!userId) return NextResponse.json({ error: 'Sign in to manage your picks' }, { status: 401 });
+
+  let body: { sport?: string; teamId?: string; season?: string; savedDate?: string; label?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+  }
+
+  const { sport, teamId, season, savedDate } = body;
+  const rules = SPORT_RULES[sport as keyof typeof SPORT_RULES];
+  if (!rules || !teamId || !rules.teams[teamId]) return NextResponse.json({ error: 'Unknown team' }, { status: 400 });
+  if (!season || !rules.seasonRe.test(season)) return NextResponse.json({ error: 'Invalid season' }, { status: 400 });
+  if (!savedDate || !DATE_RE.test(savedDate)) return NextResponse.json({ error: 'Invalid date' }, { status: 400 });
+
+  if (!(await rateLimit(`whatif:rl:rename:${userId}`, 30, 3600))) {
+    return NextResponse.json({ error: 'Too many changes. Try again later.' }, { status: 429 });
+  }
+
+  const key = whatIfSaveKey(userId, sport!, teamId, season, savedDate);
+  const save = await kv.get<WhatIfSave>(key);
+  if (!save) return NextResponse.json({ error: 'Save not found' }, { status: 404 });
+
+  const label = cleanLabel(body.label);
+  const updated: WhatIfSave = { ...save };
+  if (label) updated.label = label;
+  else delete updated.label;
+  await kv.set(key, updated);
+
+  return NextResponse.json({ label: label ?? null });
+}
+
 /** Delete one saved pick set (a fun one-off, a mistake). Own saves only. */
 export async function DELETE(request: NextRequest) {
   const userId = await getUserId(request);

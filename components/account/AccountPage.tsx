@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronDown, ChevronUp, Check, X, Minus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Check, X, Minus, Trash2, Pencil } from 'lucide-react';
 import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
 import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import AuthModal from '@/components/perfectseason/board/AuthModal';
 import { logout } from '@/lib/perfectseason/account';
-import { fetchWhatIfSaves, deleteWhatIfSave } from '@/lib/whatif/client';
+import { fetchWhatIfSaves, deleteWhatIfSave, updateWhatIfSaveLabel } from '@/lib/whatif/client';
 import { fetchSabresSchedule } from '@/lib/services/nhlApi';
 import { fetchMLBSchedule } from '@/lib/services/mlbApi';
 import { fetchNFLSchedule } from '@/lib/services/nflApi';
@@ -280,6 +280,29 @@ export default function AccountPage() {
   const [showAllSaves, setShowAllSaves] = useState<Set<string>>(new Set()); // group keys with full save list shown
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null); // rowKey awaiting delete confirmation
   const [deletingSave, setDeletingSave] = useState(false);
+  const [renamingSave, setRenamingSave] = useState<string | null>(null); // rowKey being renamed
+  const [renameValue, setRenameValue] = useState('');
+  const [savingRename, setSavingRename] = useState(false);
+
+  const handleRenameSave = async (save: WhatIfSave) => {
+    if (savingRename) return;
+    setSavingRename(true);
+    try {
+      const result = await updateWhatIfSaveLabel(save.sport, save.teamId, save.season, save.savedDate, renameValue);
+      if (result.ok) {
+        setSaves(prev =>
+          (prev ?? []).map(s =>
+            s.sport === save.sport && s.teamId === save.teamId && s.season === save.season && s.savedDate === save.savedDate
+              ? { ...s, label: result.label ?? undefined }
+              : s
+          )
+        );
+        setRenamingSave(null);
+      }
+    } finally {
+      setSavingRename(false);
+    }
+  };
 
   const handleDeleteSave = async (save: WhatIfSave) => {
     if (deletingSave) return;
@@ -1204,8 +1227,49 @@ export default function AccountPage() {
                               </table>
                             </div>
 
-                            {/* Delete — inline two-step confirm, no popup */}
-                            <div className="flex justify-end pt-3">
+                            {/* Rename + delete — inline controls, no popups */}
+                            <div className="flex items-center justify-between gap-3 pt-3">
+                              {renamingSave === rowKey ? (
+                                <span className="flex min-w-0 flex-1 items-center gap-2 text-xs">
+                                  <input
+                                    type="text"
+                                    autoFocus
+                                    maxLength={60}
+                                    value={renameValue}
+                                    onChange={e => setRenameValue(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleRenameSave(save)}
+                                    placeholder="Name these picks"
+                                    className="min-w-0 flex-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-800 outline-none focus:border-sabres-blue"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRenameSave(save)}
+                                    disabled={savingRename}
+                                    className="rounded-md px-2.5 py-1 font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                                    style={{ backgroundColor: team.colors.primary }}
+                                  >
+                                    {savingRename ? 'Saving…' : 'Save'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setRenamingSave(null)}
+                                    className="font-semibold text-gray-400 hover:text-gray-600"
+                                  >
+                                    Cancel
+                                  </button>
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setRenamingSave(rowKey);
+                                    setRenameValue(save.label ?? '');
+                                  }}
+                                  className="flex items-center gap-1 text-xs font-semibold text-gray-400 transition-colors hover:text-gray-600"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" /> {save.label ? 'Rename' : 'Name these picks'}
+                                </button>
+                              )}
                               {confirmDelete === rowKey ? (
                                 <span className="flex items-center gap-2 text-xs">
                                   <span className="text-gray-500">Delete this save?</span>

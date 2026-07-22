@@ -28,6 +28,29 @@ export async function saveWhatIfPicks(
   }
 }
 
+/** Set, change, or clear a save's label. Returns the cleaned label (or null). */
+export async function updateWhatIfSaveLabel(
+  sport: string,
+  teamId: string,
+  season: string,
+  savedDate: string,
+  label: string
+): Promise<{ ok: true; label: string | null } | { ok: false; error: string }> {
+  try {
+    const res = await fetch('/api/whatif/save', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sport, teamId, season, savedDate, label }),
+      credentials: 'include',
+    });
+    const data = await res.json();
+    if (!res.ok) return { ok: false, error: data.error || 'Rename failed' };
+    return { ok: true, label: data.label ?? null };
+  } catch {
+    return { ok: false, error: 'Network error' };
+  }
+}
+
 /** Delete one saved pick set. Returns whether anything was removed. */
 export async function deleteWhatIfSave(
   sport: string,
