@@ -60,8 +60,8 @@ export default function PickTeamBanner({ teamIds }: { teamIds: string[] }) {
             </Link>
           </span>
         ))}
-        <span aria-hidden className="sm:hidden"> →</span>
-        {/* The pitch only fits from sm: up — mobile's job is "this exists, tap it" */}
+        {/* Short pitch on mobile (one line), full sentence from sm: up */}
+        <span className="sm:hidden"> — predict the season →</span>
         <span className="hidden sm:inline"> — predict every game of the 2026 season and track your accuracy.</span>
       </p>
       <button
