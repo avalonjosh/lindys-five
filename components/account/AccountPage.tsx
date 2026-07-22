@@ -1049,7 +1049,7 @@ export default function AccountPage() {
                                   <tr className="border-b border-gray-100 text-left text-[10px] font-bold uppercase tracking-wide text-gray-400">
                                     <th className="w-12 px-2 py-2 font-bold sm:w-16 sm:px-3">{save.sport === 'nfl' ? 'Wk' : 'Date'}</th>
                                     <th className="px-2 py-2 font-bold sm:px-3">Matchup</th>
-                                    <th className="hidden px-3 py-2 text-right font-bold sm:table-cell">Pick History</th>
+                                    <th className="hidden w-px whitespace-nowrap px-3 py-2 font-bold sm:table-cell">Pick History</th>
                                     <th className="w-12 px-1 py-2 text-center font-bold sm:w-20 sm:px-3">Picked</th>
                                     <th className="w-16 px-2 py-2 text-right font-bold sm:w-24 sm:px-3">Result</th>
                                   </tr>
@@ -1072,9 +1072,9 @@ export default function AccountPage() {
                                       {/* Change-point trail — only when the pick actually flipped.
                                           Prior picks render as ghosts flowing right into the
                                           current Picked badge (the trail's final step). */}
-                                      <td className="hidden px-3 py-2 sm:table-cell">
+                                      <td className="hidden w-px whitespace-nowrap px-3 py-2 sm:table-cell">
                                         {trail.length > 1 && (
-                                          <span className="flex flex-wrap items-center justify-end gap-1.5">
+                                          <span className="flex items-center gap-1.5">
                                             {trail.slice(0, -1).map((step, i) => (
                                               <span key={`${step.savedDate}-${i}`} className="flex items-center gap-1.5">
                                                 {i > 0 && <span className="text-gray-300">→</span>}
