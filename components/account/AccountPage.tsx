@@ -1069,23 +1069,25 @@ export default function AccountPage() {
                                           <span className="truncate">{pick.isHome ? 'vs' : '@'} {pick.opponentAbbrev}</span>
                                         </span>
                                       </td>
-                                      {/* Change-point trail — only when the pick actually flipped */}
+                                      {/* Change-point trail — only when the pick actually flipped.
+                                          Prior picks render as ghosts flowing right into the
+                                          current Picked badge (the trail's final step). */}
                                       <td className="hidden px-3 py-2 sm:table-cell">
                                         {trail.length > 1 && (
-                                          <span className="flex flex-wrap items-center gap-1.5">
-                                            {trail.map((step, i) => (
+                                          <span className="flex flex-wrap items-center justify-end gap-1.5">
+                                            {trail.slice(0, -1).map((step, i) => (
                                               <span key={`${step.savedDate}-${i}`} className="flex items-center gap-1.5">
                                                 {i > 0 && <span className="text-gray-300">→</span>}
                                                 <span
-                                                  className="inline-flex h-5 min-w-6 items-center justify-center rounded px-1 text-[10px] font-bold text-white"
-                                                  style={{ backgroundColor: pickBadgeColor(step.outcome, team.colors.primary) }}
-                                                  title={`${pickDateLabel(step.savedDate)}${step.label ? ` · “${step.label}”` : ''}`}
+                                                  className="inline-flex h-5 min-w-6 items-center justify-center rounded border border-gray-300 bg-white px-1 text-[10px] font-bold text-gray-400"
+                                                  title={`Picked ${step.outcome} on ${pickDateLabel(step.savedDate)}${step.label ? ` · “${step.label}”` : ''}`}
                                                 >
                                                   {step.outcome}
                                                 </span>
                                                 <span className="text-[10px] text-gray-400">{pickDateLabel(step.savedDate)}</span>
                                               </span>
                                             ))}
+                                            <span className="text-gray-300">→</span>
                                           </span>
                                         )}
                                       </td>
