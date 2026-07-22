@@ -257,6 +257,10 @@ const MLB_OPTIONS = teamOptions(MLB_TEAMS);
 
 type AccountTab = 'overview' | 'picks' | 'perfectseason' | 'settings';
 
+// Save cards shown per group before the "Show all" expander (weekly savers
+// accumulate 18+ per season — a card stack that long needs a cap).
+const SAVE_DISPLAY_LIMIT = 5;
+
 const TABS: { id: AccountTab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'picks', label: 'My Picks' },
@@ -273,6 +277,7 @@ export default function AccountPage() {
   const [expanded, setExpanded] = useState<string | null>(null); // `${group.key}:${savedDate}`
   const [editingFavorite, setEditingFavorite] = useState(false);
   const [savingFavorite, setSavingFavorite] = useState(false);
+  const [showAllSaves, setShowAllSaves] = useState<Set<string>>(new Set()); // group keys with full save list shown
   const [tab, setTab] = useState<AccountTab>('overview');
 
   // Deep link: /account?tab=picks (etc.) opens on that tab — used by the
@@ -976,12 +981,13 @@ export default function AccountPage() {
                   </div>
                 )}
 
-                {/* Saves, newest first */}
-                <div className="border-b border-gray-100 bg-gray-50 px-4 py-2 text-[11px] font-bold uppercase tracking-wide text-gray-500">
-                  Save History
-                </div>
-                <ul className="divide-y divide-gray-100">
-                  {[...group.saves].reverse().map(save => {
+                {/* Saves, newest first — white cards floating in the tinted zone */}
+                <div className="bg-gray-50 px-4 pb-4 pt-3">
+                  <div className="pb-2 text-[11px] font-bold uppercase tracking-wide text-gray-500">
+                    Save History
+                  </div>
+                <ul className="flex flex-col gap-3">
+                  {[...group.saves].reverse().slice(0, showAllSaves.has(group.key) ? undefined : SAVE_DISPLAY_LIMIT).map(save => {
                     const grade = actuals ? gradeSave(save, actuals) : null;
                     const rowKey = `${group.key}:${save.savedDate}`;
                     const open = expanded === rowKey;
@@ -989,7 +995,7 @@ export default function AccountPage() {
                     const prevSave = saveIdx > 0 ? group.saves[saveIdx - 1] : null;
                     const changeCount = prevSave ? countChanges(save, prevSave) : 0;
                     return (
-                      <li key={save.savedDate}>
+                      <li key={save.savedDate} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
                         <button
                           type="button"
                           onClick={() => setExpanded(open ? null : rowKey)}
@@ -999,9 +1005,13 @@ export default function AccountPage() {
                             {/* Title wraps as a unit: unbreakable date, label truncating
                                 on its own line when squeezed, badge flowing along. */}
                             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm font-bold text-gray-900">
-                              <span className="whitespace-nowrap">{longDate(save.savedDate)}</span>
-                              {save.label && (
-                                <span className="min-w-0 max-w-full truncate font-semibold text-gray-500">· “{save.label}”</span>
+                              {save.label ? (
+                                <>
+                                  <span className="min-w-0 max-w-full truncate">“{save.label}”</span>
+                                  <span className="whitespace-nowrap font-semibold text-gray-500">· {longDate(save.savedDate)}</span>
+                                </>
+                              ) : (
+                                <span className="whitespace-nowrap">{longDate(save.savedDate)}</span>
                               )}
                               {save.backdated && (
                                 <span
@@ -1043,7 +1053,7 @@ export default function AccountPage() {
                         </button>
 
                         {open && (
-                          <div className="bg-gray-50 px-4 pb-4">
+                          <div className="border-t border-gray-100 px-4 pb-4">
                             {prevSave && changeCount > 0 && (
                               <SaveDiffPanel latest={save} prev={prevSave} color={team.colors.primary} className="mt-3" />
                             )}
@@ -1051,17 +1061,17 @@ export default function AccountPage() {
                               // MLB/NFL have no OTL, so "exact" and "win vs loss" are
                               // the same measure — show two tiles instead of three.
                               <div className={`mb-3 grid gap-2 pt-3 text-center ${save.sport !== 'nhl' ? 'grid-cols-2' : 'grid-cols-3'}`}>
-                                <div className="rounded-lg bg-white p-2">
+                                <div className="rounded-lg bg-gray-50 p-2">
                                   <div className="text-sm font-bold text-gray-900">{grade.exact}/{grade.graded}</div>
                                   <div className="text-[10px] uppercase tracking-wide text-gray-400">{save.sport !== 'nhl' ? 'Correct (W/L)' : 'Exact (W/OTL/L)'}</div>
                                 </div>
                                 {save.sport === 'nhl' && (
-                                  <div className="rounded-lg bg-white p-2">
+                                  <div className="rounded-lg bg-gray-50 p-2">
                                     <div className="text-sm font-bold text-gray-900">{grade.simpleRight}/{grade.graded}</div>
                                     <div className="text-[10px] uppercase tracking-wide text-gray-400">Win vs Loss</div>
                                   </div>
                                 )}
-                                <div className="rounded-lg bg-white p-2">
+                                <div className="rounded-lg bg-gray-50 p-2">
                                   <div className="text-sm font-bold text-gray-900">{grade.earnedPoints}/{grade.predictedPoints}</div>
                                   <div className="text-[10px] uppercase tracking-wide text-gray-400">{save.sport !== 'nhl' ? 'Wins Earned vs Picked' : 'Pts Earned vs Picked'}</div>
                                 </div>
@@ -1072,7 +1082,7 @@ export default function AccountPage() {
                             </h4>
                             {/* Box-score-style table: chronological down, labeled
                                 Picked column (team-color badge) vs status-colored Result. */}
-                            <div className="mt-1.5 overflow-hidden rounded-lg bg-white">
+                            <div className="mt-1.5 overflow-hidden rounded-lg border border-gray-100 bg-white">
                               <table className="w-full text-xs">
                                 <thead>
                                   <tr className="border-b border-gray-100 text-left text-[10px] font-bold uppercase tracking-wide text-gray-400">
@@ -1178,6 +1188,26 @@ export default function AccountPage() {
                     );
                   })}
                 </ul>
+                {group.saves.length > SAVE_DISPLAY_LIMIT && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowAllSaves(prev => {
+                        const next = new Set(prev);
+                        if (next.has(group.key)) next.delete(group.key);
+                        else next.add(group.key);
+                        return next;
+                      })
+                    }
+                    className="mt-3 w-full rounded-lg border border-gray-200 bg-white py-2 text-xs font-bold transition-colors hover:bg-gray-100"
+                    style={{ color: team.colors.primary }}
+                  >
+                    {showAllSaves.has(group.key)
+                      ? 'Show fewer saves'
+                      : `Show all ${group.saves.length} saves`}
+                  </button>
+                )}
+                </div>
               </section>
             );
           })}
