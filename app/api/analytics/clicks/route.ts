@@ -12,13 +12,9 @@ export async function GET(request: NextRequest) {
   const range = params.get('range') || 'today';
   const limit = Math.min(parseInt(params.get('limit') || '20'), 100);
 
-  if (range === 'alltime') {
-    const data = await kv.zrange('analytics:clicks:alltime', 0, limit - 1, { rev: true, withScores: true }) as (string | number)[];
-    const items = parseZrangeResult(data);
-    return NextResponse.json({ items });
-  }
-
-  const days = range === '7d' ? 7 : range === '30d' ? 30 : 1;
+  // No `:alltime` branch — nothing writes that key anymore. Daily keys are
+  // retained 90 days, so long ranges merge the full retained window.
+  const days = range === '7d' ? 7 : range === '30d' ? 30 : (range === '12mo' || range === 'alltime') ? 90 : 1;
 
   if (days === 1) {
     const dateKey = getDateKey();

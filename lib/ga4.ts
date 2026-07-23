@@ -33,19 +33,23 @@ function getGA4Client() {
   return { analyticsData, propertyId };
 }
 
+// Ranges are exact window lengths (7d = 7 days including today) so the
+// "vs previous" comparison below is apples-to-apples.
 function formatDateRange(range: string): { startDate: string; endDate: string } {
   if (range === 'today') return { startDate: 'today', endDate: 'today' };
-  if (range === '7d') return { startDate: '7daysAgo', endDate: 'today' };
-  if (range === '30d') return { startDate: '30daysAgo', endDate: 'today' };
-  // alltime — GA4 supports up to ~14 months, use a large window
+  if (range === '7d') return { startDate: '6daysAgo', endDate: 'today' };
+  if (range === '30d') return { startDate: '29daysAgo', endDate: 'today' };
+  // 12mo (formerly mislabeled "alltime") — GA4 retains ~14 months
   return { startDate: '365daysAgo', endDate: 'today' };
 }
 
-function previousDateRange(range: string): { startDate: string; endDate: string } {
+// Equal-length window immediately before the current one. null = no honest
+// comparison exists (12mo would need data past GA4 retention).
+function previousDateRange(range: string): { startDate: string; endDate: string } | null {
   if (range === 'today') return { startDate: '1daysAgo', endDate: '1daysAgo' };
-  if (range === '7d') return { startDate: '14daysAgo', endDate: '8daysAgo' };
-  if (range === '30d') return { startDate: '60daysAgo', endDate: '31daysAgo' };
-  return { startDate: '365daysAgo', endDate: 'today' };
+  if (range === '7d') return { startDate: '13daysAgo', endDate: '7daysAgo' };
+  if (range === '30d') return { startDate: '59daysAgo', endDate: '30daysAgo' };
+  return null;
 }
 
 export async function fetchOverview(range: string) {
@@ -67,7 +71,7 @@ export async function fetchOverview(range: string) {
         ],
       },
     }),
-    range !== 'alltime'
+    prevRange
       ? analyticsData.properties.runReport({
           property,
           requestBody: {
@@ -218,6 +222,32 @@ export async function fetchTimeseries(range: string) {
     return { labels, views, visitors: null, timezone: 'ET' };
   }
 
+  // 12mo — monthly breakdown so the chart stays readable
+  if (range === '12mo' || range === 'alltime') {
+    const res = await analyticsData.properties.runReport({
+      property,
+      requestBody: {
+        dateRanges: [dateRange],
+        dimensions: [{ name: 'yearMonth' }],
+        metrics: [{ name: 'screenPageViews' }, { name: 'activeUsers' }],
+        orderBys: [{ dimension: { dimensionName: 'yearMonth' } }],
+      },
+    });
+
+    const labels: string[] = [];
+    const views: number[] = [];
+    const visitors: number[] = [];
+    const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    for (const row of res.data.rows || []) {
+      const ym = row.dimensionValues?.[0]?.value || ''; // YYYYMM
+      const m = parseInt(ym.slice(4, 6), 10);
+      labels.push(`${MONTHS[m - 1] ?? ym} '${ym.slice(2, 4)}`);
+      views.push(parseInt(row.metricValues?.[0]?.value || '0'));
+      visitors.push(parseInt(row.metricValues?.[1]?.value || '0'));
+    }
+    return { labels, views, visitors, timezone: 'ET' };
+  }
+
   // 7d or 30d — daily breakdown
   const res = await analyticsData.properties.runReport({
     property,
@@ -247,4 +277,38 @@ export async function fetchTimeseries(range: string) {
   }
 
   return { labels, views, visitors, timezone: 'ET' };
+}
+
+// Live activity (last 30 minutes): active users + top pages, via the GA4
+// Realtime API. Realtime dimensions don't include pagePath, so we use
+// unifiedScreenName (the page title).
+export async function fetchRealtime() {
+  const { analyticsData, propertyId } = getGA4Client();
+  const property = `properties/${propertyId}`;
+
+  const [totalRes, pagesRes] = await Promise.all([
+    analyticsData.properties.runRealtimeReport({
+      property,
+      requestBody: {
+        metrics: [{ name: 'activeUsers' }],
+      },
+    }),
+    analyticsData.properties.runRealtimeReport({
+      property,
+      requestBody: {
+        dimensions: [{ name: 'unifiedScreenName' }],
+        metrics: [{ name: 'activeUsers' }],
+        orderBys: [{ metric: { metricName: 'activeUsers' }, desc: true }],
+        limit: '5',
+      },
+    }),
+  ]);
+
+  const activeUsers = parseInt(totalRes.data.rows?.[0]?.metricValues?.[0]?.value || '0');
+  const pages = (pagesRes.data.rows || []).map((row: Schema$Row) => ({
+    name: row.dimensionValues?.[0]?.value || '(unknown)',
+    count: parseInt(row.metricValues?.[0]?.value || '0'),
+  }));
+
+  return { activeUsers, pages };
 }

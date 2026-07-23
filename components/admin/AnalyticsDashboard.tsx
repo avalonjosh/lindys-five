@@ -1,15 +1,35 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Radio } from 'lucide-react';
 import { countryFlag } from '@/lib/analytics';
 import { TEAMS } from '@/lib/teamConfig';
-import { Card, Badge, Button, Spinner, WarningBanner } from './ui';
+import { Card, PageHeader, SectionHeading, Badge, Button, Spinner, WarningBanner, Segmented, EmptyState } from './ui';
 
-// Sabres gold theme token (#FFB81C) for SVG chart strokes/fills,
-// matching the `bg-sabres-gold` / `text-sabres-gold` utilities.
-const GOLD = '#FFB81C';
+// Chart palette for the light surface. Views = Sabres blue; the paired series
+// (visitors / impressions) get clearly separated hues.
+const BLUE = '#003087';
+const AMBER = '#d97706';
+const GREEN = '#16a34a';
+const VIOLET = '#7c3aed';
+const GRID = '#e5e7eb';
+const AXIS_TEXT = '#9ca3af';
 
-type Range = 'today' | '7d' | '30d' | 'alltime';
+type Range = 'today' | '7d' | '30d' | '12mo';
+
+const RANGE_LABEL: Record<Range, string> = {
+  today: 'today',
+  '7d': 'last 7 days',
+  '30d': 'last 30 days',
+  '12mo': 'last 12 months',
+};
+
+const DELTA_LABEL: Record<Range, string | null> = {
+  today: 'vs yesterday',
+  '7d': 'vs previous 7 days',
+  '30d': 'vs previous 30 days',
+  '12mo': null,
+};
 
 interface OverviewData {
   error?: string;
@@ -31,6 +51,12 @@ interface TimeseriesData {
 interface TopItem {
   name: string;
   count: number;
+}
+
+interface RealtimeData {
+  activeUsers: number;
+  pages: TopItem[];
+  error?: string;
 }
 
 interface GSCData {
@@ -94,34 +120,46 @@ export default function AnalyticsDashboard() {
   const [topDevices, setTopDevices] = useState<TopItem[]>([]);
   const [topCountries, setTopCountries] = useState<TopItem[]>([]);
   const [topTeams, setTopTeams] = useState<TopItem[]>([]);
-  const [utmSources, setUtmSources] = useState<TopItem[]>([]);
+  const [acquisitionSources, setAcquisitionSources] = useState<TopItem[]>([]);
   const [clicks, setClicks] = useState<TopItem[]>([]);
+  const [realtime, setRealtime] = useState<RealtimeData | null>(null);
   const [gsc, setGsc] = useState<GSCData | null>(null);
   const [gscError, setGscError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ga4Error, setGa4Error] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
-  const toggleSection = (key: string) =>
-    setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
+  // Race guard: abort in-flight requests on range switch and drop responses
+  // that arrive for a stale request id.
+  const abortRef = useRef<AbortController | null>(null);
+  const requestIdRef = useRef(0);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (opts?: { background?: boolean }) => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const requestId = ++requestIdRef.current;
+    const { signal } = controller;
+    if (!opts?.background) setRefreshing(true);
+
     try {
-      const [ovRes, tsRes, pagesRes, refRes, devRes, countryRes, teamsRes, utmSrcRes, clicksRes] =
+      const [ovRes, tsRes, pagesRes, refRes, devRes, countryRes, teamsRes, srcRes, clicksRes] =
         await Promise.all([
-          fetch(`/api/analytics/overview?range=${range}`),
-          range !== 'alltime' ? fetch(`/api/analytics/timeseries?range=${range}`) : null,
-          fetch(`/api/analytics/top?type=pages&range=${range}&limit=10`),
-          fetch(`/api/analytics/top?type=referrers&range=${range}&limit=10`),
-          fetch(`/api/analytics/top?type=devices&range=${range}&limit=5`),
-          fetch(`/api/analytics/top?type=countries&range=${range}&limit=10`),
-          fetch(`/api/analytics/top?type=teams&range=${range}&limit=15`),
-          fetch(`/api/analytics/top?type=utm_source&range=${range}&limit=10`),
-          fetch(`/api/analytics/clicks?range=${range}&limit=15`),
+          fetch(`/api/analytics/overview?range=${range}`, { signal }),
+          fetch(`/api/analytics/timeseries?range=${range}`, { signal }),
+          fetch(`/api/analytics/top?type=pages&range=${range}&limit=10`, { signal }),
+          fetch(`/api/analytics/top?type=referrers&range=${range}&limit=10`, { signal }),
+          fetch(`/api/analytics/top?type=devices&range=${range}&limit=5`, { signal }),
+          fetch(`/api/analytics/top?type=countries&range=${range}&limit=10`, { signal }),
+          fetch(`/api/analytics/top?type=teams&range=${range}&limit=15`, { signal }),
+          fetch(`/api/analytics/top?type=utm_source&range=${range}&limit=10`, { signal }),
+          fetch(`/api/analytics/clicks?range=${range}&limit=15`, { signal }),
         ]);
 
-      // Check for auth failures first
+      if (requestId !== requestIdRef.current) return; // stale response — drop it
+
       if (!ovRes.ok) {
         const status = ovRes.status;
         setError(status === 401 ? 'Session expired — please log in again' : `API error (${status})`);
@@ -129,29 +167,42 @@ export default function AnalyticsDashboard() {
       }
 
       setError(null);
-      setOverview(await ovRes.json());
-      if (tsRes?.ok) setTimeseries(await tsRes.json());
-      else setTimeseries(null);
+      const ov = await ovRes.json();
+      setOverview(ov);
+      // One flag covers every GA4-fed panel — same credentials behind all of them.
+      setGa4Error(ov.error || null);
+
+      if (tsRes.ok) {
+        const ts = await tsRes.json();
+        setTimeseries(ts.labels?.length ? ts : null);
+      } else {
+        setTimeseries(null);
+      }
 
       setTopPages(pagesRes.ok ? (await pagesRes.json()).items || [] : []);
       setTopReferrers(refRes.ok ? (await refRes.json()).items || [] : []);
       setTopDevices(devRes.ok ? (await devRes.json()).items || [] : []);
       setTopCountries(countryRes.ok ? (await countryRes.json()).items || [] : []);
       setTopTeams(teamsRes.ok ? (await teamsRes.json()).items || [] : []);
-      setUtmSources(utmSrcRes.ok ? (await utmSrcRes.json()).items || [] : []);
+      setAcquisitionSources(srcRes.ok ? (await srcRes.json()).items || [] : []);
       setClicks(clicksRes.ok ? (await clicksRes.json()).items || [] : []);
       setLastUpdated(new Date());
     } catch (e) {
+      if ((e as Error).name === 'AbortError') return;
       console.error('Failed to fetch analytics:', e);
-      setError('Failed to load analytics data');
+      if (requestId === requestIdRef.current) setError('Failed to load analytics data');
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [range]);
 
+  // GSC lags ~2 days and only supports 7d/30d windows; the card labels its own
+  // window instead of pretending to follow the page range.
+  const gscRange = range === 'today' || range === '7d' ? '7d' : '30d';
   const fetchGSC = useCallback(async () => {
-    // GSC only has data for 7d/30d (not today or alltime)
-    const gscRange = range === 'today' || range === '7d' ? '7d' : '30d';
     try {
       const res = await fetch(`/api/analytics/search?range=${gscRange}`);
       if (res.ok) {
@@ -166,281 +217,234 @@ export default function AnalyticsDashboard() {
       setGscError('Failed to connect');
       setGsc(null);
     }
-  }, [range]);
+  }, [gscRange]);
+
+  const fetchRealtime = useCallback(async () => {
+    try {
+      const res = await fetch('/api/analytics/realtime');
+      if (res.ok) setRealtime(await res.json());
+    } catch {
+      /* non-fatal */
+    }
+  }, []);
 
   useEffect(() => {
-    setLoading(true);
     fetchData();
     fetchGSC();
-  }, [fetchData, fetchGSC, range]);
+    fetchRealtime();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchData, fetchGSC]);
 
+  // Auto-refresh on Today: full data every 2 minutes, realtime every minute.
   useEffect(() => {
     if (range !== 'today') return;
-    const interval = setInterval(() => {
-      fetchData();
-    }, 120000);
-    return () => clearInterval(interval);
-  }, [range, fetchData]);
+    const dataInterval = setInterval(() => fetchData({ background: true }), 120000);
+    const rtInterval = setInterval(fetchRealtime, 60000);
+    return () => {
+      clearInterval(dataInterval);
+      clearInterval(rtInterval);
+    };
+  }, [range, fetchData, fetchRealtime]);
 
-  const rangeOptions: { value: Range; label: string; shortLabel: string }[] = [
-    { value: 'today', label: 'Today', shortLabel: 'Today' },
-    { value: '7d', label: '7 Days', shortLabel: '7d' },
-    { value: '30d', label: '30 Days', shortLabel: '30d' },
-    { value: 'alltime', label: 'All Time', shortLabel: 'All' },
-  ];
+  const deltaLabel = DELTA_LABEL[range];
 
   return (
-    <>
-      {/* Sticky header — stacks on mobile */}
-      <div className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3">
-          {/* Row 1: title + timestamp (mobile), title + live + timestamp + picker (desktop) */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <h2 className="font-display text-xl sm:text-2xl text-white tracking-wide">
-                Analytics
-              </h2>
-              {lastUpdated && (
-                <span className="text-slate-500 text-[10px] sm:text-xs hidden md:inline">
-                  Updated {lastUpdated.toLocaleTimeString()}
-                </span>
-              )}
+    <main className="mx-auto max-w-7xl px-4 py-8">
+      <PageHeader
+        title="Analytics"
+        description={
+          <>
+            Showing {RANGE_LABEL[range]}
+            {lastUpdated && <span className="text-gray-400"> · updated {lastUpdated.toLocaleTimeString()}</span>}
+            {range === 'today' && <Badge variant="success" className="ml-2">Auto-refreshes every 2m</Badge>}
+          </>
+        }
+        actions={
+          <Segmented
+            options={[
+              { value: 'today', label: 'Today' },
+              { value: '7d', label: '7d' },
+              { value: '30d', label: '30d' },
+              { value: '12mo', label: '12 mo' },
+            ]}
+            value={range}
+            onChange={setRange}
+          />
+        }
+      />
+
+      {error ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <p className="mb-3 text-lg text-red-500">{error}</p>
+          <Button variant="secondary" onClick={() => { setError(null); setLoading(true); fetchData(); }}>
+            Retry
+          </Button>
+        </div>
+      ) : loading && !overview ? (
+        <div className="flex items-center justify-center py-20">
+          <Spinner size="lg" />
+        </div>
+      ) : (
+        <div className={refreshing ? 'pointer-events-none opacity-50 transition-opacity' : 'transition-opacity'}>
+          {/* GA4 credential / fetch failure — covers every GA4-fed panel below */}
+          {ga4Error && (
+            <div className="mb-6">
+              <WarningBanner>
+                <strong>Google Analytics data unavailable:</strong> {ga4Error}. All GA4 panels (views, visitors,
+                pages, referrers, sources, countries, devices, live) will show zeros until the
+                GSC_CLIENT_EMAIL / GSC_PRIVATE_KEY / GA4_PROPERTY_ID keys are fixed in Vercel. First-party
+                panels (teams, clicks) and Search Console are unaffected.
+              </WarningBanner>
             </div>
-            {/* Range picker — desktop: inline. Mobile: shown below */}
-            <div className="hidden sm:flex gap-1 bg-slate-800 border border-slate-700 rounded-lg p-1">
-              {rangeOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setRange(opt.value)}
-                  className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                    range === opt.value
-                      ? 'bg-sabres-gold text-black'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+          )}
+
+          {/* Live now + overview stats */}
+          <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+            <LiveNowCard realtime={realtime} />
+            <OverviewCard
+              label="Page Views"
+              value={overview?.totalViews ?? 0}
+              change={overview?.viewsChange}
+              changeLabel={deltaLabel}
+              sparkData={timeseries?.views}
+            />
+            <OverviewCard
+              label="Unique Visitors"
+              value={overview?.uniqueVisitors ?? '—'}
+              sparkData={timeseries?.visitors || undefined}
+            />
+            <OverviewCard
+              label="Bounce Rate"
+              value={overview?.bounceRate != null ? `${overview.bounceRate}%` : '—'}
+              sentiment={overview?.bounceRate != null ? (overview.bounceRate > 70 ? 'bad' : overview.bounceRate > 50 ? 'neutral' : 'good') : undefined}
+            />
+            <OverviewCard
+              label="Avg Duration"
+              value={overview?.avgDuration != null ? formatDuration(overview.avgDuration) : '—'}
+              sentiment={overview?.avgDuration != null ? (overview.avgDuration > 60 ? 'good' : overview.avgDuration > 20 ? 'neutral' : 'bad') : undefined}
+            />
+            <OverviewCard
+              label="Top Page"
+              value={overview?.topPage ? prettifyPath(overview.topPage.name) : '—'}
+              sub={overview?.topPage ? `${overview.topPage.count} views` : undefined}
+              isText
+            />
           </div>
-          {/* Row 2: range picker on mobile only */}
-          <div className="flex sm:hidden gap-1 bg-slate-800 border border-slate-700 rounded-lg p-1 mt-2">
-            {rangeOptions.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setRange(opt.value)}
-                className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${
-                  range === opt.value
-                    ? 'bg-sabres-gold text-black'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {opt.shortLabel}
-              </button>
-            ))}
+
+          {/* Views over time */}
+          {timeseries && <TimeseriesChart data={timeseries} range={range} />}
+
+          {/* Content */}
+          <SectionBlock title="Content" subtitle={`What people are viewing · ${RANGE_LABEL[range]}`}>
+            <div className="grid gap-4 md:grid-cols-2">
+              <TopTable title="Top Pages" items={topPages} prettify={prettifyPath} ga4Down={!!ga4Error} />
+              <TopTable
+                title="Team Popularity"
+                items={topTeams}
+                prettify={(s) => prettifyPath(`/${s}`)}
+                note={range === '12mo' ? 'First-party tracking · last 90 days (retention limit)' : 'First-party tracking'}
+              />
+            </div>
+          </SectionBlock>
+
+          {/* Acquisition */}
+          <SectionBlock title="Acquisition" subtitle={`Where visitors come from · ${RANGE_LABEL[range]}`}>
+            <div className="grid gap-4 md:grid-cols-2">
+              <TopTable
+                title="Referrers"
+                items={topReferrers}
+                ga4Down={!!ga4Error}
+                emptyMessage="Share your link to start seeing referrer data"
+              />
+              <TopTable
+                title="Acquisition Sources"
+                items={acquisitionSources}
+                ga4Down={!!ga4Error}
+                note="GA4 first-user source (includes UTM + organic + direct)"
+                emptyMessage="Add ?utm_source=... to your links to track campaigns"
+              />
+            </div>
+          </SectionBlock>
+
+          {/* Audience */}
+          <SectionBlock title="Audience" subtitle={`Who is visiting · ${RANGE_LABEL[range]}`}>
+            <div className="grid gap-4 md:grid-cols-2">
+              <TopTable title="Countries" items={topCountries} showFlags formatName={countryName} ga4Down={!!ga4Error} />
+              <TopTable title="Devices" items={topDevices} formatName={(s) => s.charAt(0).toUpperCase() + s.slice(1)} ga4Down={!!ga4Error} />
+            </div>
+          </SectionBlock>
+
+          {/* Engagement */}
+          <SectionBlock title="Engagement" subtitle={`Clicks on tickets, gear, and share buttons · ${RANGE_LABEL[range]}`}>
+            <TopTable
+              title="Click Tracking"
+              items={clicks}
+              note={range === '12mo' ? 'First-party tracking · last 90 days (retention limit)' : 'First-party tracking'}
+              emptyMessage="Click data will appear as users interact with ticket links, share buttons, and team logos"
+            />
+          </SectionBlock>
+
+          {/* Search Console — its own window, clearly labeled */}
+          <SectionBlock
+            title="Google Search"
+            subtitle={
+              gsc?.dateRange
+                ? `Search Console · ${gsc.dateRange.start} to ${gsc.dateRange.end} (data lags ~2 days${range === 'today' ? '; no same-day view exists' : ''})`
+                : 'Search Console · data lags ~2 days'
+            }
+          >
+            {gscError ? (
+              <Card className="border-dashed">
+                <EmptyState>Search Console: {gscError}</EmptyState>
+              </Card>
+            ) : gsc ? (
+              <>
+                <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+                  <OverviewCard label="Search Clicks" value={gsc.overview.clicks} change={gsc.overview.clicksChange} changeLabel={`vs previous ${gscRange === '7d' ? '7' : '30'} days`} />
+                  <OverviewCard label="Impressions" value={gsc.overview.impressions} change={gsc.overview.impressionsChange} changeLabel={`vs previous ${gscRange === '7d' ? '7' : '30'} days`} />
+                  <OverviewCard label="Avg CTR" value={`${gsc.overview.ctr}%`} />
+                  <OverviewCard
+                    label="Avg Position"
+                    value={gsc.overview.position}
+                    sentiment={gsc.overview.position <= 10 ? 'good' : gsc.overview.position <= 30 ? 'neutral' : 'bad'}
+                  />
+                </div>
+                {gsc.daily.length > 0 && <GSCChart daily={gsc.daily} />}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <GSCTable
+                    title="Top Search Queries"
+                    rows={gsc.queries.map(q => ({ name: q.query, clicks: q.clicks, impressions: q.impressions, ctr: q.ctr, position: q.position }))}
+                  />
+                  <GSCTable
+                    title="Top Pages in Search"
+                    rows={gsc.pages.map(p => ({ name: prettifyPath(p.page), clicks: p.clicks, impressions: p.impressions, ctr: p.ctr, position: p.position }))}
+                  />
+                </div>
+              </>
+            ) : (
+              <Card className="border-dashed">
+                <EmptyState>Loading Search Console data...</EmptyState>
+              </Card>
+            )}
+          </SectionBlock>
+
+          {/* Export */}
+          <div className="mt-8 flex items-center justify-between border-t border-gray-200 pt-6">
+            <span className="text-xs text-gray-400">
+              {lastUpdated && `Last updated ${lastUpdated.toLocaleTimeString()}`}
+            </span>
+            <ExportButton
+              topPages={topPages}
+              topReferrers={topReferrers}
+              topCountries={topCountries}
+              topTeams={topTeams}
+              clicks={clicks}
+              range={range}
+            />
           </div>
         </div>
-      </div>
-
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {error ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <p className="text-red-400 text-lg mb-3">{error}</p>
-            <Button
-              variant="ghost"
-              onClick={() => { setError(null); setLoading(true); fetchData(); }}
-            >
-              Retry
-            </Button>
-          </div>
-        ) : loading && !overview ? (
-          <div className="flex items-center justify-center py-20">
-            <Spinner size="lg" />
-          </div>
-        ) : (
-          <>
-            {/* GA4 credential / fetch failure warning */}
-            {overview?.error && (
-              <div className="mb-6">
-                <WarningBanner>
-                  Analytics data unavailable: {overview.error}. Check GSC_CLIENT_EMAIL / GSC_PRIVATE_KEY / GA4_PROPERTY_ID in Vercel.
-                </WarningBanner>
-              </div>
-            )}
-
-            {/* Overview Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-              <OverviewCard
-                label="Page Views"
-                value={overview?.totalViews ?? 0}
-                change={overview?.viewsChange}
-                sparkData={timeseries?.views}
-              />
-              <OverviewCard
-                label="Unique Visitors"
-                value={overview?.uniqueVisitors ?? '—'}
-                sparkData={timeseries?.visitors || undefined}
-              />
-              <OverviewCard
-                label="Bounce Rate"
-                value={overview?.bounceRate != null ? `${overview.bounceRate}%` : '—'}
-                sentiment={overview?.bounceRate != null ? (overview.bounceRate > 70 ? 'bad' : overview.bounceRate > 50 ? 'neutral' : 'good') : undefined}
-              />
-              <OverviewCard
-                label="Avg Duration"
-                value={overview?.avgDuration != null ? formatDuration(overview.avgDuration) : '—'}
-                sentiment={overview?.avgDuration != null ? (overview.avgDuration > 60 ? 'good' : overview.avgDuration > 20 ? 'neutral' : 'bad') : undefined}
-              />
-              <OverviewCard
-                label="Top Page"
-                value={overview?.topPage ? prettifyPath(overview.topPage.name) : '—'}
-                sub={overview?.topPage ? `${overview.topPage.count} views` : undefined}
-                isText
-              />
-              <OverviewCard
-                label="Top Referrer"
-                value={overview?.topReferrer?.name ?? '—'}
-                sub={overview?.topReferrer ? `${overview.topReferrer.count} visits` : undefined}
-                isText
-              />
-            </div>
-
-            {/* Chart */}
-            {timeseries && <TimeseriesChart data={timeseries} range={range} />}
-
-            {/* ===== SEARCH (GSC) SECTION ===== */}
-            <SectionHeader
-              title="Google Search"
-              subtitle={gsc?.dateRange ? `${gsc.dateRange.start} to ${gsc.dateRange.end}` : 'Search Console data'}
-              collapsed={collapsed['search']}
-              onToggle={() => toggleSection('search')}
-            />
-            {!collapsed['search'] && (
-              gscError ? (
-                <EmptyCard message={`Search Console: ${gscError}`} className="mb-6" />
-              ) : gsc ? (
-                <>
-                  {/* GSC Overview Cards */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                    <OverviewCard
-                      label="Search Clicks"
-                      value={gsc.overview.clicks}
-                      change={gsc.overview.clicksChange}
-                    />
-                    <OverviewCard
-                      label="Impressions"
-                      value={gsc.overview.impressions}
-                      change={gsc.overview.impressionsChange}
-                    />
-                    <OverviewCard
-                      label="Avg CTR"
-                      value={`${gsc.overview.ctr}%`}
-                    />
-                    <OverviewCard
-                      label="Avg Position"
-                      value={gsc.overview.position}
-                      sentiment={gsc.overview.position <= 10 ? 'good' : gsc.overview.position <= 30 ? 'neutral' : 'bad'}
-                    />
-                  </div>
-
-                  {/* GSC Chart */}
-                  {gsc.daily.length > 0 && <GSCChart daily={gsc.daily} />}
-
-                  {/* Queries & Pages */}
-                  <div className="grid md:grid-cols-2 gap-4 mb-6">
-                    <GSCTable
-                      title="Top Search Queries"
-                      rows={gsc.queries.map(q => ({ name: q.query, clicks: q.clicks, impressions: q.impressions, ctr: q.ctr, position: q.position }))}
-                    />
-                    <GSCTable
-                      title="Top Pages in Search"
-                      rows={gsc.pages.map(p => ({ name: prettifyPath(p.page), clicks: p.clicks, impressions: p.impressions, ctr: p.ctr, position: p.position }))}
-                    />
-                  </div>
-                </>
-              ) : (
-                <EmptyCard message="Loading Search Console data..." className="mb-6" />
-              )
-            )}
-
-            {/* ===== CONTENT SECTION ===== */}
-            <SectionHeader
-              title="Content"
-              subtitle="What people are viewing"
-              collapsed={collapsed['content']}
-              onToggle={() => toggleSection('content')}
-            />
-            {!collapsed['content'] && (
-              <div className="grid md:grid-cols-2 gap-4 mb-6">
-                <TopTable title="Top Pages" items={topPages} prettify={prettifyPath} />
-                <BarList title="Team Popularity" items={topTeams} prettify={prettifyPath} />
-              </div>
-            )}
-
-            {/* ===== ACQUISITION SECTION ===== */}
-            <SectionHeader
-              title="Acquisition"
-              subtitle="Where visitors come from"
-              collapsed={collapsed['acquisition']}
-              onToggle={() => toggleSection('acquisition')}
-            />
-            {!collapsed['acquisition'] && (
-              <div className="grid md:grid-cols-2 gap-4 mb-6">
-                <TopTable title="Referrers" items={topReferrers} emptyMessage="Share your link to start seeing referrer data" />
-                <TopTable title="UTM Sources" items={utmSources} emptyMessage="Add ?utm_source=... to your links to track campaigns" />
-              </div>
-            )}
-
-            {/* ===== AUDIENCE SECTION ===== */}
-            <SectionHeader
-              title="Audience"
-              subtitle="Who is visiting"
-              collapsed={collapsed['audience']}
-              onToggle={() => toggleSection('audience')}
-            />
-            {!collapsed['audience'] && (
-              <div className="grid md:grid-cols-2 gap-4 mb-6">
-                <TopTable title="Countries" items={topCountries} showFlags formatName={countryName} />
-                <BarList title="Devices" items={topDevices} />
-              </div>
-            )}
-
-            {/* ===== ENGAGEMENT SECTION ===== */}
-            <SectionHeader
-              title="Engagement"
-              subtitle="Clicks and interactions"
-              collapsed={collapsed['engagement']}
-              onToggle={() => toggleSection('engagement')}
-            />
-            {!collapsed['engagement'] && (
-              <>
-                {clicks.length > 0 ? (
-                  <TopTable title="Click Tracking" items={clicks} className="mb-6" />
-                ) : (
-                  <EmptyCard message="Click data will appear as users interact with ticket links, share buttons, and team logos" className="mb-6" />
-                )}
-              </>
-            )}
-
-            {/* Export */}
-            <div className="mt-8 pt-6 border-t border-slate-700 flex items-center justify-between">
-              <span className="flex items-center gap-2 text-slate-500 text-xs">
-                {lastUpdated && `Last updated ${lastUpdated.toLocaleTimeString()}`}
-                {range === 'today' && <Badge variant="success">Auto-refreshes every 2m</Badge>}
-              </span>
-              <ExportButton
-                topPages={topPages}
-                topReferrers={topReferrers}
-                topCountries={topCountries}
-                topTeams={topTeams}
-                clicks={clicks}
-                range={range}
-              />
-            </div>
-          </>
-        )}
-      </main>
-    </>
+      )}
+    </main>
   );
 }
 
@@ -455,39 +459,45 @@ function formatDuration(seconds: number): string {
 
 // --- Sub-components ---
 
-function SectionHeader({
-  title,
-  subtitle,
-  collapsed,
-  onToggle,
-}: {
-  title: string;
-  subtitle: string;
-  collapsed?: boolean;
-  onToggle: () => void;
-}) {
+function SectionBlock({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
-    <button
-      onClick={onToggle}
-      className="w-full flex items-center justify-between py-3 mb-3 border-b border-slate-600 group cursor-pointer"
-    >
-      <div className="text-left">
-        <h3 className="font-display text-xl text-white tracking-wide">
-          {title}
-        </h3>
-        <p className="text-slate-400 text-xs">{subtitle}</p>
+    <section className="mb-8">
+      <div className="mb-3 border-b border-gray-200 pb-2">
+        <h3 className="text-base font-bold text-gray-900">{title}</h3>
+        <p className="text-xs text-gray-500">{subtitle}</p>
       </div>
-      <span className={`text-slate-400 group-hover:text-white transition-transform duration-200 text-lg ${collapsed ? '' : 'rotate-180'}`}>
-        &#9660;
-      </span>
-    </button>
+      {children}
+    </section>
   );
 }
 
-function EmptyCard({ message, className = '' }: { message: string; className?: string }) {
+function LiveNowCard({ realtime }: { realtime: RealtimeData | null }) {
+  const active = realtime && !realtime.error ? realtime.activeUsers : null;
+  const topPage = realtime?.pages?.[0];
   return (
-    <Card padding={false} className={`p-8 border-dashed text-center ${className}`}>
-      <p className="text-slate-500 text-sm">{message}</p>
+    <Card padding={false} className="relative overflow-hidden p-4">
+      <p className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-gray-500">
+        <Radio className="h-3 w-3 text-green-600" />
+        Live now
+        {active != null && active > 0 && (
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+          </span>
+        )}
+      </p>
+      <p className={`text-xl font-bold ${active != null && active > 0 ? 'text-green-700' : 'text-gray-900'}`}>
+        {active != null ? active.toLocaleString() : '—'}
+      </p>
+      <p className="mt-0.5 truncate text-[10px] text-gray-400" title={topPage?.name}>
+        {active == null
+          ? 'GA4 realtime unavailable'
+          : active === 0
+          ? 'No one on the site right now'
+          : topPage
+          ? `Most viewed: ${topPage.name}`
+          : 'active in the last 30 min'}
+      </p>
     </Card>
   );
 }
@@ -496,6 +506,7 @@ function OverviewCard({
   label,
   value,
   change,
+  changeLabel,
   sub,
   isText,
   sparkData,
@@ -504,30 +515,31 @@ function OverviewCard({
   label: string;
   value: number | string;
   change?: number | null;
+  changeLabel?: string | null;
   sub?: string;
   isText?: boolean;
   sparkData?: number[];
   sentiment?: 'good' | 'neutral' | 'bad';
 }) {
-  const sentimentColor = sentiment === 'good' ? 'text-green-400' : sentiment === 'bad' ? 'text-red-400' : 'text-slate-300';
+  const sentimentColor = sentiment === 'good' ? 'text-green-700' : sentiment === 'bad' ? 'text-red-500' : 'text-gray-900';
 
   return (
-    <Card padding={false} className="p-4 relative overflow-hidden">
+    <Card padding={false} className="relative overflow-hidden p-4">
       {sparkData && sparkData.length > 1 && <Sparkline data={sparkData} />}
-      <p className="text-slate-400 text-[10px] uppercase tracking-wider mb-1 relative z-10">{label}</p>
+      <p className="relative z-10 mb-1 text-[10px] uppercase tracking-wider text-gray-500">{label}</p>
       <p
-        className={`font-bold relative z-10 ${isText ? 'text-xs text-white truncate leading-tight' : `text-xl ${sentiment ? sentimentColor : 'text-white'}`}`}
+        className={`relative z-10 font-bold ${isText ? 'truncate text-xs leading-tight text-gray-900' : `text-xl ${sentiment ? sentimentColor : 'text-gray-900'}`}`}
       >
         {typeof value === 'number' ? value.toLocaleString() : value}
       </p>
-      {change !== null && change !== undefined && (
+      {change !== null && change !== undefined && changeLabel && (
         <span
-          className={`text-[10px] font-medium relative z-10 ${change >= 0 ? 'text-green-400' : 'text-red-400'}`}
+          className={`relative z-10 text-[10px] font-medium ${change >= 0 ? 'text-green-600' : 'text-red-500'}`}
         >
-          {change >= 0 ? '↑' : '↓'} {Math.abs(change)}% vs prev period
+          {change >= 0 ? '↑' : '↓'} {Math.abs(change)}% <span className="font-normal text-gray-400">{changeLabel}</span>
         </span>
       )}
-      {sub && <p className="text-slate-500 text-[10px] mt-0.5 relative z-10">{sub}</p>}
+      {sub && <p className="relative z-10 mt-0.5 text-[10px] text-gray-400">{sub}</p>}
     </Card>
   );
 }
@@ -545,8 +557,8 @@ function Sparkline({ data }: { data: number[] }) {
     .join(' ');
 
   return (
-    <svg className="absolute bottom-0 right-0 opacity-15" width={w} height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-      <polyline points={points} fill="none" stroke={GOLD} strokeWidth={2} strokeLinejoin="round" />
+    <svg className="absolute bottom-0 right-0 opacity-20" width={w} height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+      <polyline points={points} fill="none" stroke={BLUE} strokeWidth={2} strokeLinejoin="round" />
     </svg>
   );
 }
@@ -561,10 +573,8 @@ function TimeseriesChart({ data, range }: { data: TimeseriesData; range: Range }
   if (count === 0) {
     return (
       <Card className="mb-6">
-        <h3 className="font-display text-lg text-white tracking-wide">
-          Views Over Time <span className="text-xs font-normal text-slate-400 ml-1">(ET)</span>
-        </h3>
-        <p className="text-slate-500 text-sm mt-4">No data available for this period.</p>
+        <SectionHeading>Views Over Time</SectionHeading>
+        <EmptyState>No data available for this period.</EmptyState>
       </Card>
     );
   }
@@ -637,23 +647,24 @@ function TimeseriesChart({ data, range }: { data: TimeseriesData; range: Range }
 
   return (
     <Card className="mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-display text-lg text-white tracking-wide">
-          Views Over Time <span className="text-xs font-normal text-slate-400 ml-1">(ET)</span>
-        </h3>
-        {data.visitors && (
-          <button
-            onClick={() => setShowVisitors(!showVisitors)}
-            className={`text-xs px-3 py-1 rounded-full border transition-colors ${
-              showVisitors
-                ? 'border-blue-500/50 text-blue-400 bg-blue-500/10'
-                : 'border-slate-600 text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            {showVisitors ? 'Hide' : 'Show'} Visitors
-          </button>
-        )}
-      </div>
+      <SectionHeading
+        actions={
+          data.visitors ? (
+            <button
+              onClick={() => setShowVisitors(!showVisitors)}
+              className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                showVisitors
+                  ? 'border-amber-300 bg-amber-50 text-amber-700'
+                  : 'border-gray-200 text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              {showVisitors ? 'Hide' : 'Show'} Visitors
+            </button>
+          ) : undefined
+        }
+      >
+        Views Over Time <span className="ml-1 text-xs font-normal text-gray-400">(ET)</span>
+      </SectionHeading>
       <div className="overflow-x-auto">
         <svg
           ref={svgRef}
@@ -667,8 +678,8 @@ function TimeseriesChart({ data, range }: { data: TimeseriesData; range: Range }
         >
           {yTicks.map((tick) => (
             <g key={tick.value}>
-              <line x1={PAD_LEFT} x2={W - PAD_RIGHT} y1={tick.y} y2={tick.y} stroke="#334155" strokeWidth={0.5} />
-              <text x={PAD_LEFT - 5} y={tick.y + 4} textAnchor="end" fill="#64748b" fontSize={9}>
+              <line x1={PAD_LEFT} x2={W - PAD_RIGHT} y1={tick.y} y2={tick.y} stroke={GRID} strokeWidth={0.5} />
+              <text x={PAD_LEFT - 5} y={tick.y + 4} textAnchor="end" fill={AXIS_TEXT} fontSize={9}>
                 {tick.value.toLocaleString()}
               </text>
             </g>
@@ -678,25 +689,25 @@ function TimeseriesChart({ data, range }: { data: TimeseriesData; range: Range }
             data.views.map((v, i) => {
               const h = (v / max) * chartH;
               const x = PAD_LEFT + i * (barWidth + barGap);
-              return <rect key={i} x={x} y={PAD_TOP + chartH - h} width={barWidth} height={h} fill={GOLD} opacity={0.85} rx={2} />;
+              return <rect key={i} x={x} y={PAD_TOP + chartH - h} width={barWidth} height={h} fill={BLUE} opacity={0.85} rx={2} />;
             })
           ) : (
             <>
-              <path d={toAreaPath(data.views)} fill={GOLD} opacity={0.12} />
-              <polyline points={toPoints(data.views)} fill="none" stroke={GOLD} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+              <path d={toAreaPath(data.views)} fill={BLUE} opacity={0.08} />
+              <polyline points={toPoints(data.views)} fill="none" stroke={BLUE} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
               {data.views.map((v, i) => {
                 const x = PAD_LEFT + (i / (count - 1)) * chartW;
                 const y = PAD_TOP + chartH - (v / max) * chartH;
-                return <circle key={`vd-${i}`} cx={x} cy={y} r={3} fill={GOLD} />;
+                return <circle key={`vd-${i}`} cx={x} cy={y} r={3} fill={BLUE} />;
               })}
               {showVisitors && data.visitors && (
                 <>
-                  <path d={toAreaPath(data.visitors)} fill="#3b82f6" opacity={0.08} />
-                  <polyline points={toPoints(data.visitors)} fill="none" stroke="#3b82f6" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray="6,3" />
+                  <path d={toAreaPath(data.visitors)} fill={AMBER} opacity={0.06} />
+                  <polyline points={toPoints(data.visitors)} fill="none" stroke={AMBER} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray="6,3" />
                   {data.visitors.map((v, i) => {
                     const x = PAD_LEFT + (i / (count - 1)) * chartW;
                     const y = PAD_TOP + chartH - (v / max) * chartH;
-                    return <circle key={`ud-${i}`} cx={x} cy={y} r={2.5} fill="#3b82f6" />;
+                    return <circle key={`ud-${i}`} cx={x} cy={y} r={2.5} fill={AMBER} />;
                   })}
                 </>
               )}
@@ -707,37 +718,37 @@ function TimeseriesChart({ data, range }: { data: TimeseriesData; range: Range }
             const step = count > 14 ? Math.ceil(count / 10) : 1;
             if (i % step !== 0) return null;
             const x = isToday ? PAD_LEFT + i * (barWidth + barGap) + barWidth / 2 : PAD_LEFT + (i / (count - 1)) * chartW;
-            return <text key={`label-${i}`} x={x} y={H - 5} textAnchor="middle" fill="#94a3b8" fontSize={10}>{label}</text>;
+            return <text key={`label-${i}`} x={x} y={H - 5} textAnchor="middle" fill={AXIS_TEXT} fontSize={10}>{label}</text>;
           })}
 
           {tooltip && (
             <>
-              <line x1={tooltip.x} x2={tooltip.x} y1={PAD_TOP} y2={PAD_TOP + chartH} stroke={GOLD} strokeWidth={1} opacity={0.4} strokeDasharray="3,3" />
-              <circle cx={tooltip.x} cy={tooltip.y} r={5} fill={GOLD} stroke="#1e293b" strokeWidth={2} />
+              <line x1={tooltip.x} x2={tooltip.x} y1={PAD_TOP} y2={PAD_TOP + chartH} stroke={BLUE} strokeWidth={1} opacity={0.4} strokeDasharray="3,3" />
+              <circle cx={tooltip.x} cy={tooltip.y} r={5} fill={BLUE} stroke="#fff" strokeWidth={2} />
             </>
           )}
         </svg>
       </div>
 
       {tooltip && (
-        <div className="mt-1 text-xs text-slate-300">
-          <span className="text-white font-medium">{tooltip.label}</span>
+        <div className="mt-1 text-xs text-gray-600">
+          <span className="font-medium text-gray-900">{tooltip.label}</span>
           {' — '}
-          <span className="text-sabres-gold">{tooltip.views.toLocaleString()} views</span>
+          <span className="font-medium text-sabres-blue">{tooltip.views.toLocaleString()} views</span>
           {tooltip.visitors != null && showVisitors && (
-            <span className="text-blue-400 ml-2">{tooltip.visitors.toLocaleString()} visitors</span>
+            <span className="ml-2 text-amber-600">{tooltip.visitors.toLocaleString()} visitors</span>
           )}
         </div>
       )}
 
-      <div className="flex gap-4 mt-2 text-xs text-slate-400">
+      <div className="mt-2 flex gap-4 text-xs text-gray-500">
         <span className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded-sm inline-block bg-sabres-gold" />
+          <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: BLUE }} />
           Views
         </span>
         {showVisitors && data.visitors && (
           <span className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded-sm inline-block bg-blue-500" />
+            <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: AMBER }} />
             Unique Visitors
           </span>
         )}
@@ -754,6 +765,8 @@ function TopTable({
   prettify,
   formatName,
   emptyMessage,
+  note,
+  ga4Down = false,
 }: {
   title: string;
   items: TopItem[];
@@ -762,84 +775,40 @@ function TopTable({
   prettify?: (s: string) => string;
   formatName?: (s: string) => string;
   emptyMessage?: string;
+  note?: string;
+  ga4Down?: boolean;
 }) {
   const max = items.length > 0 ? items[0].count : 1;
 
   return (
     <Card className={className}>
-      <h3 className="font-display text-lg text-white tracking-wide mb-3">
-        {title}
-      </h3>
+      <SectionHeading>{title}</SectionHeading>
+      {note && <p className="-mt-2 mb-3 text-xs text-gray-400">{note}</p>}
       {items.length === 0 ? (
-        <p className="text-slate-500 text-sm py-4">{emptyMessage || 'No data yet'}</p>
+        <p className="py-4 text-sm text-gray-400">
+          {ga4Down ? 'Unavailable — GA4 keys missing or invalid (see banner above)' : emptyMessage || 'No data yet'}
+        </p>
       ) : (
         <div className="space-y-2">
           {items.map((item, i) => {
             const displayName = prettify ? prettify(item.name) : formatName ? formatName(item.name) : item.name;
             return (
-              <div key={i} className="flex items-center gap-3 group">
-                <span className="text-slate-600 text-xs w-5 text-right shrink-0 font-mono">{i + 1}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between text-sm mb-0.5">
-                    <span className="text-slate-200 truncate group-hover:text-white transition-colors" title={item.name}>
+              <div key={i} className="group flex items-center gap-3">
+                <span className="w-5 shrink-0 text-right font-mono text-xs text-gray-300">{i + 1}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="mb-0.5 flex justify-between text-sm">
+                    <span className="truncate text-gray-700 transition-colors group-hover:text-gray-900" title={item.name}>
                       {showFlags && <span className="mr-1.5">{countryFlag(item.name)}</span>}
                       {displayName}
                     </span>
-                    <span className="text-slate-400 ml-2 shrink-0 tabular-nums">{item.count.toLocaleString()}</span>
+                    <span className="ml-2 shrink-0 tabular-nums text-gray-500">{item.count.toLocaleString()}</span>
                   </div>
-                  <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
                     <div
-                      className="h-full rounded-full transition-all duration-500 bg-sabres-gold"
+                      className="h-full rounded-full bg-sabres-blue transition-all duration-500"
                       style={{ width: `${(item.count / max) * 100}%` }}
                     />
                   </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </Card>
-  );
-}
-
-function BarList({
-  title,
-  items,
-  className = '',
-  prettify,
-  emptyMessage,
-}: {
-  title: string;
-  items: TopItem[];
-  className?: string;
-  prettify?: (s: string) => string;
-  emptyMessage?: string;
-}) {
-  const max = items.length > 0 ? Math.max(...items.map((i) => i.count)) : 1;
-
-  return (
-    <Card className={className}>
-      <h3 className="font-display text-lg text-white tracking-wide mb-3">
-        {title}
-      </h3>
-      {items.length === 0 ? (
-        <p className="text-slate-500 text-sm py-4">{emptyMessage || 'No data yet'}</p>
-      ) : (
-        <div className="space-y-3">
-          {items.map((item, i) => {
-            const displayName = prettify ? prettify(`/${item.name}`) : item.name;
-            return (
-              <div key={i}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-slate-200 capitalize">{displayName}</span>
-                  <span className="text-slate-400 tabular-nums">{item.count.toLocaleString()}</span>
-                </div>
-                <div className="h-4 bg-slate-700 rounded overflow-hidden">
-                  <div
-                    className="h-full rounded transition-all duration-500 bg-sabres-gold"
-                    style={{ width: `${(item.count / max) * 100}%` }}
-                  />
                 </div>
               </div>
             );
@@ -933,10 +902,8 @@ function GSCChart({ daily }: { daily: GSCData['daily'] }) {
   };
 
   return (
-    <Card className="mb-6">
-      <h3 className="font-display text-lg text-white tracking-wide mb-4">
-        Search Performance
-      </h3>
+    <Card className="mb-4">
+      <SectionHeading>Search Performance</SectionHeading>
       <div className="overflow-x-auto">
         <svg
           ref={svgRef}
@@ -946,33 +913,33 @@ function GSCChart({ daily }: { daily: GSCData['daily'] }) {
         >
           {/* Grid */}
           {[0.25, 0.5, 0.75, 1].map(f => (
-            <line key={f} x1={PAD.left} x2={W - PAD.right} y1={PAD.top + chartH - f * chartH} y2={PAD.top + chartH - f * chartH} stroke="#334155" strokeWidth={0.5} />
+            <line key={f} x1={PAD.left} x2={W - PAD.right} y1={PAD.top + chartH - f * chartH} y2={PAD.top + chartH - f * chartH} stroke={GRID} strokeWidth={0.5} />
           ))}
 
           {/* Impressions line (right axis) */}
           <polyline
             points={toPoints(daily.map(d => d.impressions), maxImpressions)}
-            fill="none" stroke="#8b5cf6" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray="6,3"
+            fill="none" stroke={VIOLET} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" strokeDasharray="6,3"
           />
 
           {/* Clicks line (left axis) */}
           <polyline
             points={toPoints(daily.map(d => d.clicks), maxClicks)}
-            fill="none" stroke="#22c55e" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"
+            fill="none" stroke={GREEN} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"
           />
           {daily.map((d, i) => {
             const x = PAD.left + (i / (count - 1)) * chartW;
             const y = PAD.top + chartH - (d.clicks / maxClicks) * chartH;
-            return <circle key={i} cx={x} cy={y} r={2.5} fill="#22c55e" />;
+            return <circle key={i} cx={x} cy={y} r={2.5} fill={GREEN} />;
           })}
 
           {/* Y-axis labels */}
           {[0, 0.5, 1].map(f => (
             <g key={`y-${f}`}>
-              <text x={PAD.left - 5} y={PAD.top + chartH - f * chartH + 4} textAnchor="end" fill="#22c55e" fontSize={9}>
+              <text x={PAD.left - 5} y={PAD.top + chartH - f * chartH + 4} textAnchor="end" fill={GREEN} fontSize={9}>
                 {Math.round(maxClicks * f)}
               </text>
-              <text x={W - PAD.right + 5} y={PAD.top + chartH - f * chartH + 4} textAnchor="start" fill="#8b5cf6" fontSize={9}>
+              <text x={W - PAD.right + 5} y={PAD.top + chartH - f * chartH + 4} textAnchor="start" fill={VIOLET} fontSize={9}>
                 {Math.round(maxImpressions * f)}
               </text>
             </g>
@@ -983,30 +950,30 @@ function GSCChart({ daily }: { daily: GSCData['daily'] }) {
             const step = count > 14 ? Math.ceil(count / 8) : 1;
             if (i % step !== 0) return null;
             const x = PAD.left + (i / (count - 1)) * chartW;
-            return <text key={i} x={x} y={H - 5} textAnchor="middle" fill="#94a3b8" fontSize={10}>{d.date}</text>;
+            return <text key={i} x={x} y={H - 5} textAnchor="middle" fill={AXIS_TEXT} fontSize={10}>{d.date}</text>;
           })}
 
           {/* Tooltip crosshair */}
           {tooltip && (
-            <line x1={tooltip.x} x2={tooltip.x} y1={PAD.top} y2={PAD.top + chartH} stroke="#22c55e" strokeWidth={1} opacity={0.4} strokeDasharray="3,3" />
+            <line x1={tooltip.x} x2={tooltip.x} y1={PAD.top} y2={PAD.top + chartH} stroke={GREEN} strokeWidth={1} opacity={0.4} strokeDasharray="3,3" />
           )}
         </svg>
       </div>
       {tooltip && (
-        <div className="mt-1 text-xs text-slate-300">
-          <span className="text-white font-medium">{tooltip.label}</span>
+        <div className="mt-1 text-xs text-gray-600">
+          <span className="font-medium text-gray-900">{tooltip.label}</span>
           {' — '}
-          <span className="text-green-400">{tooltip.clicks} clicks</span>
-          <span className="text-purple-400 ml-2">{tooltip.impressions.toLocaleString()} impressions</span>
+          <span className="text-green-700">{tooltip.clicks} clicks</span>
+          <span className="ml-2 text-violet-600">{tooltip.impressions.toLocaleString()} impressions</span>
         </div>
       )}
-      <div className="flex gap-4 mt-2 text-xs text-slate-400">
+      <div className="mt-2 flex gap-4 text-xs text-gray-500">
         <span className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded-sm inline-block bg-green-500" />
+          <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: GREEN }} />
           Clicks
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-3 h-3 rounded-sm inline-block bg-purple-500" />
+          <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: VIOLET }} />
           Impressions
         </span>
       </div>
@@ -1023,30 +990,28 @@ function GSCTable({
 }) {
   return (
     <Card className="overflow-x-auto">
-      <h3 className="font-display text-lg text-white tracking-wide mb-3">
-        {title}
-      </h3>
+      <SectionHeading>{title}</SectionHeading>
       {rows.length === 0 ? (
-        <p className="text-slate-500 text-sm py-4">No data yet — GSC needs a few days to populate</p>
+        <p className="py-4 text-sm text-gray-400">No data yet — GSC needs a few days to populate</p>
       ) : (
         <>
           {/* Header */}
-          <div className="flex items-center gap-2 text-[10px] text-slate-500 uppercase tracking-wider mb-2 px-1 min-w-0">
+          <div className="mb-2 flex min-w-0 items-center gap-2 px-1 text-[10px] uppercase tracking-wider text-gray-400">
             <span className="flex-1">Query</span>
             <span className="w-12 text-right">Clicks</span>
-            <span className="w-14 text-right hidden sm:block">Impr</span>
-            <span className="w-12 text-right hidden md:block">CTR</span>
+            <span className="hidden w-14 text-right sm:block">Impr</span>
+            <span className="hidden w-12 text-right md:block">CTR</span>
             <span className="w-10 text-right">Pos</span>
           </div>
           <div className="space-y-1">
             {rows.map((row, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm py-1.5 px-1 rounded hover:bg-slate-700/50 group">
-                <span className="text-slate-600 text-xs w-4 text-right shrink-0 font-mono">{i + 1}</span>
-                <span className="flex-1 text-slate-200 truncate group-hover:text-white" title={row.name}>{row.name}</span>
-                <span className="w-12 text-right text-green-400 font-medium tabular-nums">{row.clicks}</span>
-                <span className="w-14 text-right text-purple-400 tabular-nums hidden sm:block">{row.impressions.toLocaleString()}</span>
-                <span className="w-12 text-right text-slate-400 tabular-nums hidden md:block">{row.ctr}%</span>
-                <span className={`w-10 text-right tabular-nums font-medium ${row.position <= 10 ? 'text-green-400' : row.position <= 30 ? 'text-yellow-400' : 'text-red-400'}`}>
+              <div key={i} className="group flex items-center gap-2 rounded px-1 py-1.5 text-sm hover:bg-gray-50">
+                <span className="w-4 shrink-0 text-right font-mono text-xs text-gray-300">{i + 1}</span>
+                <span className="flex-1 truncate text-gray-700 group-hover:text-gray-900" title={row.name}>{row.name}</span>
+                <span className="w-12 text-right font-medium tabular-nums text-green-700">{row.clicks}</span>
+                <span className="hidden w-14 text-right tabular-nums text-violet-600 sm:block">{row.impressions.toLocaleString()}</span>
+                <span className="hidden w-12 text-right tabular-nums text-gray-500 md:block">{row.ctr}%</span>
+                <span className={`w-10 text-right font-medium tabular-nums ${row.position <= 10 ? 'text-green-700' : row.position <= 30 ? 'text-amber-600' : 'text-red-500'}`}>
                   {row.position}
                 </span>
               </div>
