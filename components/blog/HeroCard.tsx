@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { BlogPost } from '@/lib/types';
 import { TEAMS } from '@/lib/teamConfig';
+import CardArt from './CardArt';
 
 interface HeroCardProps {
   post: BlogPost;
@@ -54,33 +55,29 @@ export default function HeroCard({ post }: HeroCardProps) {
       style={{ borderColor: colors.primary }}
     >
       {/* Layout: Mobile = image top, Desktop = image left */}
-      <div className={hasImage ? 'flex flex-col md:flex-row' : ''}>
-        {/* Featured Image */}
-        {hasImage && (
-          <div className="relative md:w-2/5 flex-shrink-0">
-            <Image
-              src={post.ogImage!}
-              alt={post.title}
-              width={600}
-              height={400}
-              className="w-full h-48 md:h-full md:min-h-[280px] object-cover"
-            />
-            {/* Gradient overlay for mobile */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent md:bg-gradient-to-r md:from-transparent md:to-transparent" />
-          </div>
-        )}
+      <div className="flex flex-col md:flex-row">
+        {/* Featured Image (generated card, or team-branded fallback art) */}
+        <div className="relative md:w-2/5 flex-shrink-0">
+          {hasImage ? (
+            <>
+              <Image
+                src={post.ogImage!}
+                alt={post.title}
+                width={600}
+                height={400}
+                className="w-full h-48 md:h-full md:min-h-[280px] object-cover"
+              />
+              {/* Gradient overlay for mobile */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent md:bg-gradient-to-r md:from-transparent md:to-transparent" />
+            </>
+          ) : (
+            <CardArt team={post.team} className="h-48 w-full md:h-full md:min-h-[280px]" />
+          )}
+        </div>
 
         {/* Content Section */}
-        <div className={`relative ${hasImage ? 'md:w-3/5' : ''}`}>
-          {/* Left accent border - only show when no image */}
-          {!hasImage && (
-            <div
-              className="absolute left-0 top-0 bottom-0 w-2"
-              style={{ backgroundColor: colors.primary }}
-            />
-          )}
-
-          <article className={`p-6 md:p-8 ${!hasImage ? 'pl-8 md:pl-10' : ''}`}>
+        <div className="relative md:w-3/5">
+          <article className="p-6 md:p-8">
             {/* Header */}
             <div className="flex items-center gap-3 mb-4 flex-wrap">
               {post.pinned && (
