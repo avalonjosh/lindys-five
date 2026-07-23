@@ -33,6 +33,15 @@ function espnLogoUrl(sport: 'nhl' | 'mlb', abbrev: string): string {
   const code = (sport === 'nhl' ? ESPN_NHL_CODES[a] : ESPN_MLB_CODES[a]) ?? a.toLowerCase();
   return `https://a.espncdn.com/i/teamlogos/${sport}/500/${code}.png`;
 }
+
+// Brand assets rendered with the site's Bebas Neue font (email clients strip
+// web fonts, so the wordmark ships as an image; alt text covers image-off).
+const EMAIL_WORDMARK = 'https://5i8znjkes1ilakqj.public.blob.vercel-storage.com/email/wordmark-mrxweauh.png';
+const WEEKLY_BANNER = 'https://5i8znjkes1ilakqj.public.blob.vercel-storage.com/email/weekly-banner-mrxweauh.png';
+
+// Header background: solid fallback + a subtle darkening gradient where supported
+const headerBgStyle = (color: string) =>
+  `background-color:${color};background-image:linear-gradient(115deg,${color} 0%,#0a1128 170%);`;
 const NHL_API = 'https://api-web.nhle.com/v1';
 
 // ─── Verification Email ───────────────────────────────────────────
@@ -57,8 +66,8 @@ function renderVerificationEmail(verifyUrl: string): string {
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:20px;">
     <tr><td align="center">
       <table cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
-        <tr><td style="background:#003087;padding:20px;">
-          <h1 style="margin:0;color:#ffffff;font-size:24px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;letter-spacing:2px;text-transform:uppercase;font-style:normal;">Lindy's Five</h1>
+        <tr><td style="${headerBgStyle('#003087')}padding:18px 20px;">
+          <img src="${EMAIL_WORDMARK}" alt="Lindy's Five" width="150" height="23" style="display:block;border:0;" />
         </td></tr>
         <tr><td style="padding:24px 20px;">
           <h2 style="margin:0 0 16px;color:#1e293b;font-size:20px;">Confirm your subscription</h2>
@@ -486,11 +495,11 @@ function renderBoxscoreEmail(data: GameRecapData, blogPost?: BlogPost): string {
       <table cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
 
         <!-- Header -->
-        <tr><td style="background:${primaryColor};padding:16px 20px;">
+        <tr><td style="${headerBgStyle(primaryColor)}padding:15px 20px;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td><h1 style="margin:0;color:#ffffff;font-size:22px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;letter-spacing:2px;text-transform:uppercase;font-style:normal;">Lindy's Five</h1></td>
-              <td align="right"><span style="color:rgba(255,255,255,0.7);font-size:12px;text-transform:uppercase;letter-spacing:1px;">Game Recap</span></td>
+              <td><img src="${EMAIL_WORDMARK}" alt="Lindy's Five" width="150" height="23" style="display:block;border:0;" /></td>
+              <td align="right"><span style="color:rgba(255,255,255,0.75);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">Game Recap</span></td>
             </tr>
           </table>
         </td></tr>
@@ -506,9 +515,9 @@ function renderBoxscoreEmail(data: GameRecapData, blogPost?: BlogPost): string {
               <td align="center" width="30%">
                 <table cellpadding="0" cellspacing="0">
                   <tr>
-                    <td align="right" style="font-size:32px;font-weight:800;color:${awayWon ? '#1e293b' : '#64748b'};padding-right:6px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;">${awayScore}</td>
+                    <td align="right" style="font-size:32px;font-weight:800;color:${awayWon ? '#1e293b' : '#64748b'};padding-right:6px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${awayScore}</td>
                     <td style="font-size:18px;color:#94a3b8;padding:0 2px;">-</td>
-                    <td align="left" style="font-size:32px;font-weight:800;color:${homeWon ? '#1e293b' : '#64748b'};padding-left:6px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;">${homeScore}</td>
+                    <td align="left" style="font-size:32px;font-weight:800;color:${homeWon ? '#1e293b' : '#64748b'};padding-left:6px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${homeScore}</td>
                   </tr>
                 </table>
                 <span style="display:block;margin-top:4px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">${finalLabel}</span>
@@ -946,11 +955,11 @@ function renderPlayoffBoxscoreEmail(data: PlayoffGameRecapData, blogPost?: BlogP
       <table cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
 
         <!-- Header -->
-        <tr><td style="background:${primaryColor};padding:16px 20px;">
+        <tr><td style="${headerBgStyle(primaryColor)}padding:15px 20px;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td><h1 style="margin:0;color:#ffffff;font-size:22px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;letter-spacing:2px;text-transform:uppercase;font-style:normal;">Lindy's Five</h1></td>
-              <td align="right"><span style="color:rgba(255,255,255,0.7);font-size:12px;text-transform:uppercase;letter-spacing:1px;">Playoff Recap &middot; ${roundLabel}</span></td>
+              <td><img src="${EMAIL_WORDMARK}" alt="Lindy's Five" width="150" height="23" style="display:block;border:0;" /></td>
+              <td align="right"><span style="color:rgba(255,255,255,0.75);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">Playoff Recap &middot; ${roundLabel}</span></td>
             </tr>
           </table>
         </td></tr>
@@ -966,9 +975,9 @@ function renderPlayoffBoxscoreEmail(data: PlayoffGameRecapData, blogPost?: BlogP
               <td align="center" width="30%">
                 <table cellpadding="0" cellspacing="0">
                   <tr>
-                    <td align="right" style="font-size:32px;font-weight:800;color:${awayWon ? '#1e293b' : '#64748b'};padding-right:6px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;">${awayScore}</td>
+                    <td align="right" style="font-size:32px;font-weight:800;color:${awayWon ? '#1e293b' : '#64748b'};padding-right:6px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${awayScore}</td>
                     <td style="font-size:18px;color:#94a3b8;padding:0 2px;">-</td>
-                    <td align="left" style="font-size:32px;font-weight:800;color:${homeWon ? '#1e293b' : '#64748b'};padding-left:6px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;">${homeScore}</td>
+                    <td align="left" style="font-size:32px;font-weight:800;color:${homeWon ? '#1e293b' : '#64748b'};padding-left:6px;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">${homeScore}</td>
                   </tr>
                 </table>
                 <span style="display:block;margin-top:4px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">${finalLabel}</span>
@@ -1209,11 +1218,11 @@ function renderAnnouncementEmail(
       <table cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
 
         <!-- Header -->
-        <tr><td style="background:${accent};padding:16px 20px;">
+        <tr><td style="${headerBgStyle(accent)}padding:15px 20px;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td><h1 style="margin:0;color:#ffffff;font-size:22px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;letter-spacing:2px;text-transform:uppercase;font-style:normal;">Lindy's Five</h1></td>
-              <td align="right"><span style="color:rgba(255,255,255,0.7);font-size:12px;text-transform:uppercase;letter-spacing:1px;">${content.heroEyebrow}</span></td>
+              <td><img src="${EMAIL_WORDMARK}" alt="Lindy's Five" width="150" height="23" style="display:block;border:0;" /></td>
+              <td align="right"><span style="color:rgba(255,255,255,0.75);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">${content.heroEyebrow}</span></td>
             </tr>
           </table>
         </td></tr>
@@ -1410,7 +1419,7 @@ function renderNextGameCTA(
           <table width="100%" cellpadding="0" cellspacing="0" style="background:${primaryColor};border-radius:8px;">
             <tr><td style="padding:20px 16px;" align="center">
               <span style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Next Game</span>
-              <span style="display:block;font-size:18px;font-weight:800;color:#ffffff;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;text-transform:uppercase;letter-spacing:1px;font-style:normal;">${nextGame.opponent}</span>
+              <span style="display:block;font-size:18px;font-weight:800;color:#ffffff;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;text-transform:uppercase;letter-spacing:1px;font-style:normal;">${nextGame.opponent}</span>
               <span style="display:block;font-size:14px;color:rgba(255,255,255,0.8);margin:6px 0 16px;">${nextGame.date} &middot; ${nextGame.time} ET</span>
               <a href="${nextGame.ticketLink}" style="display:inline-block;background:#ffffff;color:${primaryColor};padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">
                 Get Tickets
@@ -1453,7 +1462,7 @@ function renderSetRecapEmail(data: SetRecapEmailData): string {
   const gameRowsHtml = set.games
     .filter((g) => g.outcome !== 'PENDING')
     .map((g) => {
-      const outcomeColor = g.outcome === 'W' ? '#16a34a' : g.outcome === 'OTL' ? '#f59e0b' : '#dc2626';
+      const oStyle = g.outcome === 'W' ? OUTCOME_STYLES.W : g.outcome === 'OTL' ? OUTCOME_STYLES.OTL : OUTCOME_STYLES.L;
       const outcomeLabel = g.outcome === 'W' ? 'WIN' : g.outcome === 'OTL' ? 'OTL' : 'LOSS';
       const ptsLabel = g.outcome === 'W' ? '2 PTS' : g.outcome === 'OTL' ? '1 PT' : '0 PTS';
       const dateLabel = formatShortDate(g.date);
@@ -1475,7 +1484,7 @@ function renderSetRecapEmail(data: SetRecapEmailData): string {
                       </tr></table>
                     </td>
                     <td width="65" align="center" style="font-size:14px;font-weight:700;color:#1e293b;">${g.sabresScore} - ${g.opponentScore}</td>
-                    <td width="40" align="right"><span style="font-size:12px;font-weight:700;color:${outcomeColor};">${outcomeLabel}</span></td>
+                    <td width="52" align="right">${outcomePill(outcomeLabel, oStyle.color, oStyle.bg)}</td>
                   </tr>
                 </table>
               </td>
@@ -1498,11 +1507,11 @@ function renderSetRecapEmail(data: SetRecapEmailData): string {
       <table cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
 
         <!-- Header -->
-        <tr><td style="background:${primaryColor};padding:16px 20px;">
+        <tr><td style="${headerBgStyle(primaryColor)}padding:15px 20px;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td><h1 style="margin:0;color:#ffffff;font-size:22px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;letter-spacing:2px;text-transform:uppercase;font-style:normal;">Lindy's Five</h1></td>
-              <td align="right"><span style="color:rgba(255,255,255,0.7);font-size:12px;text-transform:uppercase;letter-spacing:1px;">Set Recap</span></td>
+              <td><img src="${EMAIL_WORDMARK}" alt="Lindy's Five" width="150" height="23" style="display:block;border:0;" /></td>
+              <td align="right"><span style="color:rgba(255,255,255,0.75);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">Set Recap</span></td>
             </tr>
           </table>
         </td></tr>
@@ -1512,11 +1521,11 @@ function renderSetRecapEmail(data: SetRecapEmailData): string {
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td>
-                <span style="display:block;font-size:24px;font-weight:800;color:#1e293b;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;text-transform:uppercase;letter-spacing:1px;font-style:normal;">Set ${set.chunkNumber}</span>
+                <span style="display:block;font-size:24px;font-weight:800;color:#1e293b;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;text-transform:uppercase;letter-spacing:1px;font-style:normal;">Set ${set.chunkNumber}</span>
                 <span style="display:block;font-size:13px;color:#64748b;margin-top:2px;">${dateRange}</span>
               </td>
               <td align="right">
-                <span style="display:block;font-size:32px;font-weight:800;color:${primaryColor};font-family:Impact,'Arial Narrow',Helvetica,sans-serif;font-style:normal;">${set.points}</span>
+                <span style="display:block;font-size:32px;font-weight:800;color:${primaryColor};font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-style:normal;">${set.points}</span>
                 <span style="display:block;font-size:12px;color:#64748b;">of ${set.maxPoints} points</span>
               </td>
             </tr>
@@ -1527,37 +1536,16 @@ function renderSetRecapEmail(data: SetRecapEmailData): string {
         <tr><td style="padding:0 20px 12px;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td align="center" width="33%" style="padding:8px 4px;">
-                <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0fdf4;border-radius:8px;">
-                  <tr><td align="center" style="padding:10px 4px;">
-                    <span style="display:block;font-size:24px;font-weight:800;color:#16a34a;">${set.wins}</span>
-                    <span style="display:block;font-size:10px;font-weight:700;color:#16a34a;text-transform:uppercase;">Wins</span>
-                  </td></tr>
-                </table>
-              </td>
-              <td align="center" width="33%" style="padding:8px 4px;">
-                <table width="100%" cellpadding="0" cellspacing="0" style="background:#fefce8;border-radius:8px;">
-                  <tr><td align="center" style="padding:10px 4px;">
-                    <span style="display:block;font-size:24px;font-weight:800;color:#ca8a04;">${set.otLosses}</span>
-                    <span style="display:block;font-size:10px;font-weight:700;color:#ca8a04;text-transform:uppercase;">OTL</span>
-                  </td></tr>
-                </table>
-              </td>
-              <td align="center" width="33%" style="padding:8px 4px;">
-                <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef2f2;border-radius:8px;">
-                  <tr><td align="center" style="padding:10px 4px;">
-                    <span style="display:block;font-size:24px;font-weight:800;color:#dc2626;">${set.losses}</span>
-                    <span style="display:block;font-size:10px;font-weight:700;color:#dc2626;text-transform:uppercase;">Losses</span>
-                  </td></tr>
-                </table>
-              </td>
+              ${statTile(String(set.wins), 'Wins', OUTCOME_STYLES.W.color)}
+              ${statTile(String(set.otLosses), 'OTL', OUTCOME_STYLES.OTL.color)}
+              ${statTile(String(set.losses), 'Losses', OUTCOME_STYLES.L.color)}
             </tr>
           </table>
         </td></tr>
 
         <!-- Target Badge -->
         <tr><td style="padding:0 20px 20px;" align="center">
-          <span style="display:inline-block;background:${targetBadgeBg};color:${targetBadgeColor};padding:8px 20px;border-radius:20px;font-size:13px;font-weight:700;">${targetIcon} ${targetText}</span>
+          ${statusBadge(`${targetIcon} ${targetText}`, targetBadgeColor, targetBadgeBg)}
         </td></tr>
 
         <!-- Game Results -->
@@ -1783,8 +1771,8 @@ function renderSimpleBlogRecap(post: BlogPost, postUrl: string): string {
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:20px 12px;">
     <tr><td align="center">
       <table cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;">
-        <tr><td style="background:${primaryColor};padding:20px;">
-          <h1 style="margin:0;color:#ffffff;font-size:24px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;letter-spacing:2px;text-transform:uppercase;font-style:normal;">Lindy's Five</h1>
+        <tr><td style="${headerBgStyle(primaryColor)}padding:18px 20px;">
+          <img src="${EMAIL_WORDMARK}" alt="Lindy's Five" width="150" height="23" style="display:block;border:0;" />
         </td></tr>
         <tr><td style="padding:20px;">
           <h2 style="margin:0 0 20px;color:#1e293b;font-size:22px;">${post.title}</h2>
@@ -1974,6 +1962,35 @@ export async function incrementSendStat(
 const EMAIL_NAVY = '#041E42';
 const EMAIL_BLUE = '#003087';
 
+// Neutral stat tile — white card with a thin accent bar; color is an accent, not a fill
+function statTile(value: string, label: string, accent: string): string {
+  return `<td align="center" width="33%" style="padding:0 4px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+      <tr><td style="height:3px;background:${accent};font-size:0;line-height:0;">&nbsp;</td></tr>
+      <tr><td align="center" style="padding:11px 4px 10px;">
+        <span style="display:block;font-size:26px;font-weight:800;color:#0f172a;">${value}</span>
+        <span style="display:block;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">${label}</span>
+      </td></tr>
+    </table>
+  </td>`;
+}
+
+// Quiet tinted pill for game-row outcomes (WIN / OTL / LOSS)
+function outcomePill(label: string, color: string, bg: string): string {
+  return `<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:${bg};color:${color};font-size:11px;font-weight:700;letter-spacing:0.3px;">${label}</span>`;
+}
+
+// Outline-style status badge (Target Met / Missed)
+function statusBadge(text: string, color: string, bg: string): string {
+  return `<span style="display:inline-block;background:${bg};color:${color};border:1.5px solid ${color};padding:7px 18px;border-radius:999px;font-size:13px;font-weight:700;">${text}</span>`;
+}
+
+const OUTCOME_STYLES = {
+  W: { color: '#16a34a', bg: '#f0fdf4' },
+  OTL: { color: '#d97706', bg: '#fffbeb' },
+  L: { color: '#dc2626', bg: '#fef2f2' },
+} as const;
+
 function emailButton(label: string, href: string, opts: { color?: string; filled?: boolean } = {}): string {
   const color = opts.color ?? EMAIL_BLUE;
   const filled = opts.filled ?? true;
@@ -1981,7 +1998,7 @@ function emailButton(label: string, href: string, opts: { color?: string; filled
   return `<a href="${href}" style="display:inline-block;margin:0 8px 10px 0;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px;${style}">${label}</a>`;
 }
 
-function brandEmailShell(opts: { headerBg: string; label: string; body: string; unsubscribeUrl: string; footerNote?: string }): string {
+function brandEmailShell(opts: { headerBg: string; label: string; body: string; unsubscribeUrl: string; footerNote?: string; heroImage?: string }): string {
   const footerNote = opts.footerNote ?? 'NHL &amp; MLB Playoff Tracking';
   return `<!DOCTYPE html>
 <html>
@@ -1989,12 +2006,13 @@ function brandEmailShell(opts: { headerBg: string; label: string; body: string; 
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:20px;"><tr><td align="center">
     <table cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
-      <tr><td style="background:${opts.headerBg};padding:16px 20px;">
+      <tr><td style="${headerBgStyle(opts.headerBg)}padding:15px 20px;">
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
-          <td><h1 style="margin:0;color:#ffffff;font-size:22px;font-family:Impact,'Arial Narrow',Helvetica,sans-serif;letter-spacing:2px;text-transform:uppercase;font-style:normal;">Lindy's Five</h1></td>
-          <td align="right"><span style="color:rgba(255,255,255,0.7);font-size:12px;text-transform:uppercase;letter-spacing:1px;">${opts.label}</span></td>
+          <td><img src="${EMAIL_WORDMARK}" alt="Lindy's Five" width="150" height="23" style="display:block;border:0;" /></td>
+          <td align="right"><span style="color:rgba(255,255,255,0.75);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">${opts.label}</span></td>
         </tr></table>
       </td></tr>
+      ${opts.heroImage ? `<tr><td><img src="${opts.heroImage}" alt="" width="600" style="display:block;width:100%;height:auto;border:0;" /></td></tr>` : ''}
       <tr><td style="padding:24px 20px;background:#ffffff;">${opts.body}</td></tr>
       <tr><td style="background:#f8fafc;padding:16px 20px;border-top:1px solid #e2e8f0;">
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -2014,45 +2032,103 @@ function brandEmailShell(opts: { headerBg: string; label: string; body: string; 
 // the Amazon-compliant way to monetize email (no Amazon links in the email).
 // ---------------------------------------------------------------------------
 
+export interface DigestRaceRow {
+  abbrev: string;
+  name: string;
+  record: string;
+  trail: string; // "—" for the leader, then "2.5 GB" / "3 pts back"
+}
+
+export interface DigestRace {
+  sport: 'nhl' | 'mlb';
+  title: string;   // "AL East Race"
+  note?: string;   // "Tightest division race in baseball"
+  rows: DigestRaceRow[];
+  linkLabel: string;
+  linkUrl: string;
+}
+
 export interface WeeklyDigestContent {
-  latestPost?: { title: string; url: string };
+  latestPosts?: { title: string; url: string; image?: string; date?: string }[];
+  races?: DigestRace[];
 }
 
 const digestUtm = (path: string, content: string) =>
   `${SITE_URL}${path}?utm_source=newsletter&utm_medium=email&utm_campaign=weekly-digest&utm_content=${content}`;
 
 export function renderWeeklyDigestEmail(content: WeeklyDigestContent, unsubscribeUrl: string): string {
+  const today = new Date().toLocaleDateString('en-US', {
+    timeZone: 'America/New_York', month: 'long', day: 'numeric', year: 'numeric',
+  });
   const sectionLabel = (t: string) =>
-    `<p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;">${t}</p>`;
-  const linkRow = (label: string, href: string) =>
-    `<tr><td style="padding:6px 0;"><a href="${href}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;font-size:15px;">${label} &rarr;</a></td></tr>`;
-  const blogBlock = content.latestPost
-    ? `<div style="padding:18px 0 4px;">${sectionLabel('Latest from the blog')}<a href="${content.latestPost.url}" style="color:#1e293b;font-weight:700;text-decoration:none;font-size:17px;">${content.latestPost.title}</a></div>`
+    `<p style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;">${t}</p>`;
+  const sectionCard = (inner: string) =>
+    `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:18px;"><tr><td style="padding:16px 18px;">${inner}</td></tr></table>`;
+
+  // Live standings snapshot(s) — only rendered when the cron found a race worth showing
+  const raceCards = (content.races ?? [])
+    .map((race) => {
+      const rows = race.rows
+        .map(
+          (r, i) => `
+        <tr>
+          <td width="18" style="padding:7px 0;font-size:12px;color:#94a3b8;font-weight:600;">${i + 1}</td>
+          <td width="28" style="padding:7px 0;"><img src="${espnLogoUrl(race.sport, r.abbrev)}" width="22" height="22" alt="${r.abbrev}" style="display:block;border:0;" /></td>
+          <td style="padding:7px 0 7px 8px;font-size:14px;font-weight:700;color:#1e293b;">${r.name}</td>
+          <td align="right" style="padding:7px 0;font-size:13px;color:#475569;white-space:nowrap;">${r.record}</td>
+          <td align="right" width="70" style="padding:7px 0;font-size:13px;font-weight:700;color:#1e293b;white-space:nowrap;">${r.trail}</td>
+        </tr>
+        <tr><td colspan="5" style="border-bottom:1px solid #e2e8f0;"></td></tr>`
+        )
+        .join('');
+      return sectionCard(`
+        ${sectionLabel(race.title)}
+        ${race.note ? `<p style="margin:-6px 0 10px;font-size:13px;color:#64748b;">${race.note}</p>` : ''}
+        <table width="100%" cellpadding="0" cellspacing="0">${rows}</table>
+        <p style="margin:12px 0 0;"><a href="${race.linkUrl}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;font-size:13px;">${race.linkLabel} &rarr;</a></p>`);
+    })
+    .join('');
+
+  // Latest posts with their branded card thumbnails
+  const posts = content.latestPosts ?? [];
+  const blogCard = posts.length
+    ? sectionCard(`
+        ${sectionLabel('Latest from the blog')}
+        <table width="100%" cellpadding="0" cellspacing="0">
+          ${posts
+            .map(
+              (p, i) => `
+          <tr>
+            ${p.image ? `<td width="120" style="padding:${i === 0 ? 0 : 12}px 12px ${i === posts.length - 1 ? 0 : 12}px 0;" valign="top"><a href="${p.url}"><img src="${p.image}" width="120" height="63" alt="" style="display:block;border-radius:6px;border:0;" /></a></td>` : ''}
+            <td valign="middle" style="padding:${i === 0 ? 0 : 12}px 0 ${i === posts.length - 1 ? 0 : 12}px 0;">
+              <a href="${p.url}" style="color:#1e293b;font-weight:700;text-decoration:none;font-size:15px;line-height:1.35;display:block;">${p.title}</a>
+              ${p.date ? `<span style="font-size:12px;color:#94a3b8;">${p.date}</span>` : ''}
+            </td>
+          </tr>
+          ${i < posts.length - 1 ? '<tr><td colspan="2" style="border-bottom:1px solid #e2e8f0;"></td></tr>' : ''}`
+            )
+            .join('')}
+        </table>`)
     : '';
 
   const body = `
-    <p style="margin:0 0 16px;font-size:15px;color:#64748b;line-height:1.6;">Here&rsquo;s what&rsquo;s moving across the NHL and MLB playoff races this week.</p>
-    ${sectionLabel('Playoff races')}
-    <table width="100%" cellpadding="0" cellspacing="0">
-      ${linkRow('NHL playoff odds &amp; standings', digestUtm('/nhl-playoff-odds', 'nhl-odds'))}
-      ${linkRow('MLB playoff odds &amp; standings', digestUtm('/mlb/playoff-odds', 'mlb-odds'))}
-      ${linkRow('Playoff bracket &amp; series odds', digestUtm('/playoffs', 'bracket'))}
-    </table>
-    ${blogBlock}
-    <div style="padding:18px 0 4px;">
+    <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#94a3b8;">${today}</p>
+    <p style="margin:0 0 18px;font-size:15px;color:#475569;line-height:1.6;">Here&rsquo;s what&rsquo;s moving across the playoff races this week.</p>
+    ${raceCards}
+    ${blogCard}
+    ${sectionCard(`
       ${sectionLabel('Can you go 82-0?')}
-      <p style="margin:0 0 10px;font-size:14px;color:#64748b;line-height:1.5;">Draft an all-time roster and climb the daily leaderboard.</p>
-      ${emailButton('82-0 leaderboard', digestUtm('/82-0/leaderboard', 'lb-nhl'))}
-      ${emailButton('162-0 leaderboard', digestUtm('/162-0/leaderboard', 'lb-mlb'))}
-    </div>
-    <div style="padding:6px 0 0;">
-      ${sectionLabel('Fan gear &amp; tickets')}
-      <p style="margin:0;font-size:14px;color:#64748b;line-height:1.5;">
-        <a href="${digestUtm('/nhl/sabres/gear', 'gear')}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">Shop team gear</a> &nbsp;&middot;&nbsp;
-        <a href="${digestUtm('/nhl/sabres/tickets', 'tickets')}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">Find tickets</a>
-      </p>
-    </div>`;
-  return brandEmailShell({ headerBg: EMAIL_NAVY, label: 'Weekly Rundown', body, unsubscribeUrl });
+      <p style="margin:0 0 12px;font-size:14px;color:#475569;line-height:1.5;">Draft an all-time roster and see how far it takes you — new puzzle every day.</p>
+      ${emailButton('Play 82-0 (NHL)', digestUtm('/82-0', 'play-nhl'))}
+      ${emailButton('Play 162-0 (MLB)', digestUtm('/162-0', 'play-mlb'), { filled: false })}`)}
+    ${sectionLabel('More from Lindy&rsquo;s Five')}
+    <p style="margin:0;font-size:14px;color:#64748b;line-height:1.8;">
+      <a href="${digestUtm('/nhl-playoff-odds', 'nhl-odds')}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">NHL odds</a> &nbsp;&middot;&nbsp;
+      <a href="${digestUtm('/mlb/playoff-odds', 'mlb-odds')}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">MLB odds</a> &nbsp;&middot;&nbsp;
+      <a href="${digestUtm('/nhl/sabres/gear', 'gear')}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">Team gear</a> &nbsp;&middot;&nbsp;
+      <a href="${digestUtm('/nhl/sabres/tickets', 'tickets')}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">Tickets</a>
+    </p>`;
+  return brandEmailShell({ headerBg: EMAIL_NAVY, label: 'Weekly Rundown', heroImage: WEEKLY_BANNER, body, unsubscribeUrl });
 }
 
 // ---------------------------------------------------------------------------
@@ -2128,7 +2204,7 @@ const mlbUtm = (path: string, content: string) =>
   `${SITE_URL}${path}?utm_source=newsletter&utm_medium=email&utm_campaign=mlb-game-recap&utm_content=${content}`;
 
 export function renderMLBGameRecapEmail(d: MLBGameRecapEmailData, unsubscribeUrl: string): string {
-  const impact = `font-family:Impact,'Arial Narrow',Helvetica,sans-serif;`;
+  const impact = `font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;`;
   const tracker = mlbUtm(`/mlb/${d.teamSlug}`, 'tracker');
 
   // Away team is listed first in the score block.
@@ -2345,7 +2421,7 @@ const mlbSetUtm = (path: string, content: string) =>
   `${SITE_URL}${path}?utm_source=newsletter&utm_medium=email&utm_campaign=mlb-set-recap&utm_content=${content}`;
 
 export function renderMLBSetRecapEmail(d: MLBSetRecapEmailData, unsubscribeUrl: string): string {
-  const impact = `font-family:Impact,'Arial Narrow',Helvetica,sans-serif;`;
+  const impact = `font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;`;
   const tracker = mlbSetUtm(`/mlb/${d.teamSlug}`, 'tracker');
 
   const card = (label: string, inner: string) =>
@@ -2353,18 +2429,14 @@ export function renderMLBSetRecapEmail(d: MLBSetRecapEmailData, unsubscribeUrl: 
       <tr><td style="padding:12px 16px 4px;"><span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">${label}</span></td></tr>
       <tr><td style="padding:4px 16px 14px;">${inner}</td></tr>
     </table>`;
-  const coloredBox = (value: string, label: string, color: string, bg: string) =>
-    `<td align="center" width="33%" style="padding:0 4px;"><table width="100%" cellpadding="0" cellspacing="0" style="background:${bg};border-radius:8px;"><tr><td align="center" style="padding:12px 4px;">
-      <span style="display:block;font-size:24px;font-weight:800;color:${color};${impact}">${value}</span>
-      <span style="display:block;font-size:10px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.5px;">${label}</span>
-    </td></tr></table></td>`;
+  const coloredBox = (value: string, label: string, color: string, _bg: string) => statTile(value, label, color);
   const statCell = (label: string, value: string) =>
     `<td align="center" width="50%" style="padding:6px 0;"><span style="display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;">${label}</span><span style="display:block;font-size:16px;font-weight:700;color:#1e293b;">${value}</span></td>`;
 
   const gameRows = d.games
     .map((g) => {
       const win = g.outcome === 'W';
-      const outcomeColor = win ? '#16a34a' : g.outcome === 'L' ? '#dc2626' : '#94a3b8';
+      const oStyle = win ? OUTCOME_STYLES.W : g.outcome === 'L' ? OUTCOME_STYLES.L : { color: '#64748b', bg: '#f1f5f9' };
       const outcomeLabel = win ? 'WIN' : g.outcome === 'L' ? 'LOSS' : '—';
       return `<tr><td style="padding:8px 0;border-bottom:1px solid #e2e8f0;"><table width="100%" cellpadding="0" cellspacing="0"><tr>
         <td width="52" style="font-size:12px;color:#94a3b8;white-space:nowrap;">${g.date}</td>
@@ -2374,7 +2446,7 @@ export function renderMLBSetRecapEmail(d: MLBSetRecapEmailData, unsubscribeUrl: 
           <td style="font-size:13px;font-weight:600;color:#1e293b;padding-left:6px;">${g.opponent}</td>
         </tr></table></td>
         <td width="62" align="center" style="font-size:14px;font-weight:700;color:#1e293b;">${g.teamScore} - ${g.opponentScore}</td>
-        <td width="42" align="right"><span style="font-size:12px;font-weight:700;color:${outcomeColor};">${outcomeLabel}</span></td>
+        <td width="52" align="right">${outcomePill(outcomeLabel, oStyle.color, oStyle.bg)}</td>
       </tr></table></td></tr>`;
     })
     .join('');
@@ -2395,7 +2467,7 @@ export function renderMLBSetRecapEmail(d: MLBSetRecapEmailData, unsubscribeUrl: 
       ${coloredBox(String(d.losses), 'Losses', '#dc2626', '#fef2f2')}
       ${coloredBox(`${d.runDiff >= 0 ? '+' : ''}${d.runDiff}`, 'Run Diff', runColor, runBg)}
     </tr></table>
-    <div style="text-align:center;margin-bottom:18px;"><span style="display:inline-block;background:${targetBg};color:${targetColor};padding:8px 20px;border-radius:20px;font-size:13px;font-weight:700;">${d.targetMet ? '&#10003;' : '&#10007;'} ${targetText}</span></div>
+    <div style="text-align:center;margin-bottom:18px;">${statusBadge(`${d.targetMet ? '&#10003;' : '&#10007;'} ${targetText}`, targetColor, targetBg)}</div>
     ${card('Game Results', `<table width="100%" cellpadding="0" cellspacing="0">${gameRows}</table>`)}
     ${card('Playoff Probability', `<table width="100%" cellpadding="0" cellspacing="0" style="background:#e2e8f0;border-radius:4px;"><tr><td style="width:${d.probAfter}%;background:${d.primaryColor};border-radius:4px;height:8px;font-size:0;line-height:0;">&nbsp;</td><td style="font-size:0;line-height:0;">&nbsp;</td></tr></table>
       <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;"><tr><td><span style="font-size:20px;font-weight:800;color:#1e293b;">${d.probAfter}%</span></td><td align="right"><a href="${tracker}" style="font-size:12px;color:${d.primaryColor};text-decoration:none;font-weight:600;">View full tracker &rarr;</a></td></tr></table>`)}

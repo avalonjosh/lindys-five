@@ -15,7 +15,7 @@ const OG_HEIGHT = 630;
 // secondary text with true bold weights (satori's default font has no bold).
 type BrandFont = { name: string; data: Buffer; weight: 400 | 600 | 800; style: 'normal' };
 let fontsPromise: Promise<BrandFont[]> | null = null;
-function loadBrandFonts(): Promise<BrandFont[]> {
+export function loadBrandFonts(): Promise<BrandFont[]> {
   fontsPromise ??= (async () => {
     const dir = path.join(process.cwd(), 'assets', 'fonts');
     const [inter600, inter800, bebas] = await Promise.all([
