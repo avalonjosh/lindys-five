@@ -164,6 +164,10 @@ const GA4_METRIC_MAP: Record<string, string> = {
 };
 
 export async function fetchTopItems(type: string, range: string, limit: number | string) {
+  // Cities need a second dimension (country) so the flag can render and
+  // same-named cities in different countries stay distinct.
+  if (type === 'cities') return fetchTopCities(range, limit);
+
   const dimension = GA4_DIMENSION_MAP[type];
   const metric = GA4_METRIC_MAP[type];
   if (!dimension || !metric) return { items: [] };
@@ -187,6 +191,35 @@ export async function fetchTopItems(type: string, range: string, limit: number |
     name: row.dimensionValues?.[0]?.value || '(unknown)',
     count: parseInt(row.metricValues?.[0]?.value || '0'),
   }));
+
+  return { items };
+}
+
+async function fetchTopCities(range: string, limit: number | string) {
+  const { analyticsData, propertyId } = getGA4Client();
+  const property = `properties/${propertyId}`;
+  const dateRange = formatDateRange(range);
+
+  const res = await analyticsData.properties.runReport({
+    property,
+    requestBody: {
+      dateRanges: [dateRange],
+      dimensions: [{ name: 'city' }, { name: 'countryId' }],
+      metrics: [{ name: 'sessions' }],
+      orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
+      // Fetch extra so filtering "(not set)" still fills the list
+      limit: String(Number(limit) + 5),
+    },
+  });
+
+  const items = (res.data.rows || [])
+    .map((row: Schema$Row) => ({
+      name: row.dimensionValues?.[0]?.value || '(not set)',
+      country: row.dimensionValues?.[1]?.value || '',
+      count: parseInt(row.metricValues?.[0]?.value || '0'),
+    }))
+    .filter((i) => i.name !== '(not set)')
+    .slice(0, Number(limit));
 
   return { items };
 }

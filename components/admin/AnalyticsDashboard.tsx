@@ -51,6 +51,8 @@ interface TimeseriesData {
 interface TopItem {
   name: string;
   count: number;
+  /** ISO country code, set on city rows so the flag can render */
+  country?: string;
 }
 
 interface RealtimeData {
@@ -80,16 +82,6 @@ Object.values(TEAMS).forEach((t) => {
   TEAM_SLUG_MAP[`/${t.slug}`] = t.city + ' ' + t.name;
 });
 
-const COUNTRY_NAMES: Record<string, string> = {
-  US: 'United States', CA: 'Canada', GB: 'United Kingdom', DE: 'Germany', FR: 'France',
-  AU: 'Australia', JP: 'Japan', BR: 'Brazil', IN: 'India', MX: 'Mexico', SE: 'Sweden',
-  FI: 'Finland', NO: 'Norway', DK: 'Denmark', CZ: 'Czech Republic', SK: 'Slovakia',
-  CH: 'Switzerland', RU: 'Russia', IE: 'Ireland', NL: 'Netherlands', IT: 'Italy',
-  ES: 'Spain', PL: 'Poland', AT: 'Austria', BE: 'Belgium', PT: 'Portugal', NZ: 'New Zealand',
-  KR: 'South Korea', CN: 'China', TW: 'Taiwan', HK: 'Hong Kong', SG: 'Singapore',
-  PH: 'Philippines', TH: 'Thailand', ZA: 'South Africa',
-};
-
 function prettifyPath(path: string): string {
   if (path === '/') return 'Home';
   if (path === '/nhl/scores') return 'NHL Scores';
@@ -105,10 +97,6 @@ function prettifyPath(path: string): string {
   return path;
 }
 
-function countryName(code: string): string {
-  return COUNTRY_NAMES[code.toUpperCase()] || code;
-}
-
 // --- Main Component ---
 
 export default function AnalyticsDashboard() {
@@ -118,7 +106,7 @@ export default function AnalyticsDashboard() {
   const [topPages, setTopPages] = useState<TopItem[]>([]);
   const [topReferrers, setTopReferrers] = useState<TopItem[]>([]);
   const [topDevices, setTopDevices] = useState<TopItem[]>([]);
-  const [topCountries, setTopCountries] = useState<TopItem[]>([]);
+  const [topCities, setTopCities] = useState<TopItem[]>([]);
   const [topTeams, setTopTeams] = useState<TopItem[]>([]);
   const [acquisitionSources, setAcquisitionSources] = useState<TopItem[]>([]);
   const [clicks, setClicks] = useState<TopItem[]>([]);
@@ -145,14 +133,14 @@ export default function AnalyticsDashboard() {
     if (!opts?.background) setRefreshing(true);
 
     try {
-      const [ovRes, tsRes, pagesRes, refRes, devRes, countryRes, teamsRes, srcRes, clicksRes] =
+      const [ovRes, tsRes, pagesRes, refRes, devRes, cityRes, teamsRes, srcRes, clicksRes] =
         await Promise.all([
           fetch(`/api/analytics/overview?range=${range}`, { signal }),
           fetch(`/api/analytics/timeseries?range=${range}`, { signal }),
           fetch(`/api/analytics/top?type=pages&range=${range}&limit=10`, { signal }),
           fetch(`/api/analytics/top?type=referrers&range=${range}&limit=10`, { signal }),
           fetch(`/api/analytics/top?type=devices&range=${range}&limit=5`, { signal }),
-          fetch(`/api/analytics/top?type=countries&range=${range}&limit=10`, { signal }),
+          fetch(`/api/analytics/top?type=cities&range=${range}&limit=10`, { signal }),
           fetch(`/api/analytics/top?type=teams&range=${range}&limit=15`, { signal }),
           fetch(`/api/analytics/top?type=utm_source&range=${range}&limit=10`, { signal }),
           fetch(`/api/analytics/clicks?range=${range}&limit=15`, { signal }),
@@ -182,7 +170,7 @@ export default function AnalyticsDashboard() {
       setTopPages(pagesRes.ok ? (await pagesRes.json()).items || [] : []);
       setTopReferrers(refRes.ok ? (await refRes.json()).items || [] : []);
       setTopDevices(devRes.ok ? (await devRes.json()).items || [] : []);
-      setTopCountries(countryRes.ok ? (await countryRes.json()).items || [] : []);
+      setTopCities(cityRes.ok ? (await cityRes.json()).items || [] : []);
       setTopTeams(teamsRes.ok ? (await teamsRes.json()).items || [] : []);
       setAcquisitionSources(srcRes.ok ? (await srcRes.json()).items || [] : []);
       setClicks(clicksRes.ok ? (await clicksRes.json()).items || [] : []);
@@ -369,7 +357,7 @@ export default function AnalyticsDashboard() {
           {/* Audience */}
           <SectionBlock title="Audience" subtitle={`Who is visiting · ${RANGE_LABEL[range]}`}>
             <div className="grid gap-4 md:grid-cols-2">
-              <TopTable title="Countries" items={topCountries} showFlags formatName={countryName} ga4Down={!!ga4Error} />
+              <TopTable title="Cities" items={topCities} showFlags ga4Down={!!ga4Error} />
               <TopTable title="Devices" items={topDevices} formatName={(s) => s.charAt(0).toUpperCase() + s.slice(1)} ga4Down={!!ga4Error} />
             </div>
           </SectionBlock>
@@ -436,7 +424,7 @@ export default function AnalyticsDashboard() {
             <ExportButton
               topPages={topPages}
               topReferrers={topReferrers}
-              topCountries={topCountries}
+              topCities={topCities}
               topTeams={topTeams}
               clicks={clicks}
               range={range}
@@ -798,7 +786,7 @@ function TopTable({
                 <div className="min-w-0 flex-1">
                   <div className="mb-0.5 flex justify-between text-sm">
                     <span className="truncate text-gray-700 transition-colors group-hover:text-gray-900" title={item.name}>
-                      {showFlags && <span className="mr-1.5">{countryFlag(item.name)}</span>}
+                      {showFlags && <span className="mr-1.5">{countryFlag(item.country ?? item.name)}</span>}
                       {displayName}
                     </span>
                     <span className="ml-2 shrink-0 tabular-nums text-gray-500">{item.count.toLocaleString()}</span>
@@ -822,14 +810,14 @@ function TopTable({
 function ExportButton({
   topPages,
   topReferrers,
-  topCountries,
+  topCities,
   topTeams,
   clicks,
   range,
 }: {
   topPages: TopItem[];
   topReferrers: TopItem[];
-  topCountries: TopItem[];
+  topCities: TopItem[];
   topTeams: TopItem[];
   clicks: TopItem[];
   range: Range;
@@ -843,7 +831,7 @@ function ExportButton({
     };
     add('Pages', topPages);
     add('Referrers', topReferrers);
-    add('Countries', topCountries);
+    add('Cities', topCities);
     add('Teams', topTeams);
     add('Clicks', clicks);
 
