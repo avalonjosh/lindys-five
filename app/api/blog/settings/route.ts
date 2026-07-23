@@ -37,7 +37,11 @@ const SETTINGS_KEYS: Record<string, string> = {
 };
 
 // GET - fetch all settings (effective values: KV, falling back to env for auto-publish keys)
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
+  const isAdmin = await verifyAdmin(request);
+  if (!isAdmin) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   try {
     const settings: Record<string, boolean> = {};
     for (const [key, kvKey] of Object.entries(SETTINGS_KEYS)) {

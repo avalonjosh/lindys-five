@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, AlertCircle } from 'lucide-react';
 import { login } from '@/lib/utils/auth';
-import { Card, Button } from '@/components/admin/ui';
+import { Card, Button, Input } from '@/components/admin/ui';
 
 export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
@@ -20,7 +20,7 @@ export default function AdminLoginPage() {
     const result = await login(password);
 
     if (result.success) {
-      router.push('/admin/posts');
+      router.push('/admin');
     } else {
       setError(result.error || 'Login failed');
       setPassword('');
@@ -30,39 +30,36 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="font-display text-3xl text-white tracking-wide mb-2">
-            Lindy&apos;s Five Admin
+        <div className="mb-8 text-center">
+          <h1 className="font-display mb-1 text-3xl tracking-wide text-sabres-blue">
+            Lindy&apos;s Five
           </h1>
-          <p className="text-slate-400">Sign in to manage the site</p>
+          <p className="text-sm text-gray-500">Sign in to manage the site</p>
         </div>
 
         <Card>
           <form onSubmit={handleSubmit}>
             {error && (
-              <div className="flex items-center gap-2 bg-red-900/30 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg mb-6">
-                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <div className="mb-6 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+                <AlertCircle className="h-5 w-5 flex-shrink-0" />
                 <span className="text-sm">{error}</span>
               </div>
             )}
 
             <div className="mb-6">
-              <label
-                htmlFor="password"
-                className="block text-sm font-semibold text-slate-300 mb-2"
-              >
+              <label htmlFor="password" className="mb-2 block text-sm font-semibold text-gray-700">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                <input
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Input
                   type="password"
                   id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-sabres-gold transition-colors"
+                  className="pl-9"
                   placeholder="Enter admin password"
                   required
                   autoFocus
@@ -70,15 +67,10 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={loading || !password}
-              className="w-full"
-            >
+            <Button type="submit" variant="primary" disabled={loading || !password} className="w-full">
               {loading ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-black/30 border-t-black" />
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                   Logging in...
                 </>
               ) : (
@@ -88,9 +80,9 @@ export default function AdminLoginPage() {
           </form>
         </Card>
 
-        <p className="text-center text-slate-500 text-sm mt-6">
-          <a href="/blog" className="text-sabres-gold hover:underline">
-            &larr; Back to Blog
+        <p className="mt-6 text-center text-sm text-gray-400">
+          <a href="/" className="text-sabres-blue hover:underline">
+            &larr; Back to Lindy&apos;s Five
           </a>
         </p>
       </div>

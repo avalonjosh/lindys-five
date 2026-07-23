@@ -2,9 +2,10 @@
 
 import { usePathname } from 'next/navigation';
 import AdminNav from './AdminNav';
+import { ToastProvider } from './ui';
 
 /**
- * Shared visual chrome for every admin page: dark slate background and
+ * Shared visual chrome for every admin page: light gray background and
  * the AdminNav header. The login page renders bare (it has its own look
  * and shouldn't show navigation).
  *
@@ -19,9 +20,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      <AdminNav />
-      {children}
-    </div>
+    <ToastProvider>
+      <div className="min-h-screen bg-gray-50">
+        <AdminNav />
+        {children}
+      </div>
+    </ToastProvider>
   );
 }

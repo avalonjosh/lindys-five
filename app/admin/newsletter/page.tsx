@@ -1,5 +1,6 @@
-import NewsletterDashboard from '@/components/admin/NewsletterDashboard';
+import { redirect } from 'next/navigation';
 
+// Renamed: the tab is about subscribers now, not just the newsletter.
 export default function AdminNewsletterPage() {
-  return <NewsletterDashboard />;
+  redirect('/admin/subscribers');
 }

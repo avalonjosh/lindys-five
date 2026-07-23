@@ -14,6 +14,9 @@ import { GET as billsGameRecapHandler } from '@/app/api/cron/bills-game-recap/ro
 import { GET as weeklyDigestHandler } from '@/app/api/cron/weekly-digest/route';
 import { GET as mlbGameRecapHandler } from '@/app/api/cron/email-mlb-game-recap/route';
 import { GET as mlbSetRecapHandler } from '@/app/api/cron/email-mlb-set-recap/route';
+import { GET as emailGameRecapHandler } from '@/app/api/cron/email-game-recap/route';
+import { GET as emailSetRecapHandler } from '@/app/api/cron/email-set-recap/route';
+import { GET as analyticsCleanupHandler } from '@/app/api/cron/analytics-cleanup/route';
 
 async function verifyAdmin(request: NextRequest): Promise<boolean> {
   const token = request.cookies.get('admin_token')?.value;
@@ -43,7 +46,19 @@ const handlers: Record<string, (request: NextRequest) => Promise<NextResponse>> 
   // Email programs (newsletter admin)
   'weekly-digest': weeklyDigestHandler,
   'email-mlb-game-recap': mlbGameRecapHandler,
-  'email-mlb-set-recap': mlbSetRecapHandler
+  'email-mlb-set-recap': mlbSetRecapHandler,
+  'email-game-recap': emailGameRecapHandler,
+  'email-set-recap': emailSetRecapHandler,
+  // Maintenance
+  'analytics-cleanup': analyticsCleanupHandler,
+};
+
+// Trigger types whose route directory differs from the type name.
+const PATH_ALIASES: Record<string, string> = {
+  'weekly': 'weekly-roundup',
+  'news': 'news-scan',
+  'bills-news': 'bills-news-scan',
+  'bills-weekly': 'bills-weekly-roundup',
 };
 
 const validTypes = Object.keys(handlers);
@@ -66,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     // Build a URL with query params for set-recap
     const url = new URL(request.url);
-    url.pathname = `/api/cron/${type === 'weekly' ? 'weekly-roundup' : type === 'news' ? 'news-scan' : type}`;
+    url.pathname = `/api/cron/${PATH_ALIASES[type] ?? type}`;
     if (type === 'set-recap' && setNumber) {
       url.searchParams.set('setNumber', String(setNumber));
     }

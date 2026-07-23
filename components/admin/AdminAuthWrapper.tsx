@@ -3,7 +3,12 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { verifySession } from '@/lib/utils/auth';
+import { Spinner } from './ui';
 
+/**
+ * Client-side session check layered on top of the middleware gate — catches
+ * expired sessions during long-lived tabs and redirects to login.
+ */
 export default function AdminAuthWrapper({
   children,
 }: {
@@ -32,29 +37,17 @@ export default function AdminAuthWrapper({
     checkAuth();
   }, [pathname, isLoginPage, router]);
 
-  // On login page, render immediately
   if (isLoginPage) {
     return <>{children}</>;
   }
 
-  // Still checking auth
-  if (isAuthenticated === null) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-700 border-t-[#FCB514]"></div>
-      </div>
-    );
-  }
-
-  // Not authenticated (will redirect)
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-700 border-t-[#FCB514]"></div>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <Spinner size="lg" />
       </div>
     );
   }
 
-  // Authenticated
   return <>{children}</>;
 }
