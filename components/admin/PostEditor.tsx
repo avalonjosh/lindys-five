@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Save, Eye, EyeOff, Send, Sparkles, ImagePlus, X, Upload, Calendar, Images, ShieldCheck, AlertTriangle, CheckCircle2, HelpCircle, AlertCircle, RefreshCw, Image as ImageIcon } from 'lucide-react';
@@ -8,7 +8,7 @@ import { fetchPost, createPost, updatePost, generateArticle, uploadImage, fetchI
 import { fetchSabresSchedule } from '@/lib/services/nhlApi';
 import { calculateChunks } from '@/lib/utils/chunkCalculator';
 import PostContent from '@/components/blog/PostContent';
-import { Card, SectionHeading, Button, Toggle, Badge, Spinner, ErrorBanner } from '@/components/admin/ui';
+import { Card, SectionHeading, Button, Toggle, Badge, Spinner, ErrorBanner, Input, Textarea, Select, Field, Modal } from '@/components/admin/ui';
 import type { BlogPost, GameChunk } from '@/lib/types';
 
 // Game option for the selector dropdown
@@ -132,6 +132,10 @@ export default function PostEditor() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+
+  // Publish button sets this synchronously before the form submits, so the
+  // submit handler never reads a stale status out of React state.
+  const statusOverrideRef = useRef<'published' | null>(null);
 
   // AI generation state
   const [articleIdea, setArticleIdea] = useState('');
@@ -284,6 +288,10 @@ export default function PostEditor() {
     setError(null);
     setSaving(true);
 
+    // Read the override synchronously — no setState race on Publish
+    const status = statusOverrideRef.current ?? formData.status;
+    statusOverrideRef.current = null;
+
     try {
       // Convert datetime-local to ISO for API
       const publishedAtISO = datetimeLocalToIso(formData.publishedAt) || undefined;
@@ -294,7 +302,7 @@ export default function PostEditor() {
           content: formData.content,
           team: formData.team,
           type: formData.type,
-          status: formData.status,
+          status,
           opponent: formData.opponent || undefined,
           gameDate: formData.gameDate || undefined,
           gameId: formData.gameId || undefined,
@@ -309,7 +317,7 @@ export default function PostEditor() {
         const result = await updatePost(existingPost.slug, {
           title: formData.title,
           content: formData.content,
-          status: formData.status,
+          status,
           opponent: formData.opponent || undefined,
           gameDate: formData.gameDate || undefined,
           metaDescription: formData.metaDescription || undefined,
@@ -325,11 +333,6 @@ export default function PostEditor() {
     } finally {
       setSaving(false);
     }
-  }
-
-  async function handlePublish() {
-    setFormData({ ...formData, status: 'published' });
-    // Submit will be triggered by form
   }
 
   async function handleGenerateCard() {
@@ -677,26 +680,26 @@ export default function PostEditor() {
   function getCategoryIcon(category: FactCheckFinding['category']) {
     switch (category) {
       case 'verified':
-        return <CheckCircle2 className="w-4 h-4 text-green-400" />;
+        return <CheckCircle2 className="w-4 h-4 text-green-600" />;
       case 'issue':
-        return <AlertCircle className="w-4 h-4 text-red-400" />;
+        return <AlertCircle className="w-4 h-4 text-red-500" />;
       case 'warning':
-        return <AlertTriangle className="w-4 h-4 text-amber-400" />;
+        return <AlertTriangle className="w-4 h-4 text-amber-500" />;
       case 'unverifiable':
-        return <HelpCircle className="w-4 h-4 text-slate-400" />;
+        return <HelpCircle className="w-4 h-4 text-gray-400" />;
     }
   }
 
   function getCategoryColor(category: FactCheckFinding['category']) {
     switch (category) {
       case 'verified':
-        return 'border-green-500/30 bg-green-900/20';
+        return 'border-green-200 bg-green-50';
       case 'issue':
-        return 'border-red-500/30 bg-red-900/20';
+        return 'border-red-200 bg-red-50';
       case 'warning':
-        return 'border-amber-500/30 bg-amber-900/20';
+        return 'border-amber-200 bg-amber-50';
       case 'unverifiable':
-        return 'border-slate-500/30 bg-slate-700/20';
+        return 'border-gray-200 bg-gray-50';
     }
   }
 
@@ -712,18 +715,18 @@ export default function PostEditor() {
 
   return (
     <>
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="mx-auto max-w-6xl px-4 py-8">
         {/* Sub-header */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Link
               href="/admin/posts"
-              className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
+              className="flex items-center gap-2 text-sm text-gray-500 transition-colors hover:text-gray-700"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="h-4 w-4" />
               Back to Posts
             </Link>
-            <h1 className="font-display text-2xl text-white tracking-wide">
+            <h1 className="text-2xl font-bold text-gray-900">
               {isNew ? 'New Post' : 'Edit Post'}
             </h1>
           </div>
@@ -731,12 +734,12 @@ export default function PostEditor() {
             <Button type="button" variant="ghost" onClick={() => setShowPreview(!showPreview)}>
               {showPreview ? (
                 <>
-                  <EyeOff className="w-4 h-4" />
+                  <EyeOff className="h-4 w-4" />
                   Hide Preview
                 </>
               ) : (
                 <>
-                  <Eye className="w-4 h-4" />
+                  <Eye className="h-4 w-4" />
                   Preview
                 </>
               )}
@@ -744,7 +747,7 @@ export default function PostEditor() {
             {isNew ? (
               <>
                 <Button type="submit" form="post-editor-form" variant="secondary" disabled={saving}>
-                  <Save className="w-4 h-4" />
+                  <Save className="h-4 w-4" />
                   {saving ? 'Saving...' : 'Save Draft'}
                 </Button>
                 <Button
@@ -752,15 +755,17 @@ export default function PostEditor() {
                   form="post-editor-form"
                   variant="primary"
                   disabled={saving}
-                  onClick={handlePublish}
+                  onClick={() => {
+                    statusOverrideRef.current = 'published';
+                  }}
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="h-4 w-4" />
                   {saving ? 'Publishing...' : 'Publish'}
                 </Button>
               </>
             ) : (
               <Button type="submit" form="post-editor-form" variant="primary" disabled={saving}>
-                <Save className="w-4 h-4" />
+                <Save className="h-4 w-4" />
                 {saving ? 'Saving...' : 'Save Changes'}
               </Button>
             )}
@@ -778,66 +783,49 @@ export default function PostEditor() {
           <form id="post-editor-form" onSubmit={handleSubmit} className="space-y-6">
             <Card className="space-y-6">
               {/* Title */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">
-                  Title
-                </label>
-                <input
+              <Field label="Title">
+                <Input
                   type="text"
                   value={formData.title}
                   onChange={(e) => updateField('title', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-sabres-gold transition-colors"
                   placeholder="Post title"
                   required
                 />
-              </div>
+              </Field>
 
               {/* Team & Type (only for new posts) */}
               {isNew && (
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-300 mb-2">
-                      Team
-                    </label>
-                    <select
+                  <Field label="Team">
+                    <Select
                       value={formData.team}
-                      onChange={(e) =>
-                        updateField('team', e.target.value as 'sabres' | 'bills')
-                      }
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sabres-gold transition-colors"
+                      onChange={(e) => updateField('team', e.target.value as 'sabres' | 'bills')}
                     >
                       <option value="sabres">Sabres</option>
                       <option value="bills">Bills</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-300 mb-2">
-                      Type
-                    </label>
-                    <select
+                    </Select>
+                  </Field>
+                  <Field label="Type">
+                    <Select
                       value={formData.type}
                       onChange={(e) =>
-                        updateField(
-                          'type',
-                          e.target.value as 'game-recap' | 'set-recap' | 'custom'
-                        )
+                        updateField('type', e.target.value as 'game-recap' | 'set-recap' | 'custom')
                       }
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sabres-gold transition-colors"
                     >
                       <option value="custom">Custom Article</option>
                       <option value="game-recap">Game Recap</option>
                       <option value="set-recap">Set Recap</option>
-                    </select>
-                  </div>
+                    </Select>
+                  </Field>
                 </div>
               )}
 
               {/* AI Article Generator - Only for new custom articles */}
               {isNew && formData.type === 'custom' && (
-                <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-display text-xl text-white tracking-wide flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-indigo-400" />
+                <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-5">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="flex items-center gap-2 text-base font-bold text-gray-900">
+                      <Sparkles className="h-5 w-5 text-indigo-500" />
                       AI Article Generator
                     </h3>
                     <Toggle
@@ -849,27 +837,25 @@ export default function PostEditor() {
 
                   {/* Reference Date - Show when research is enabled */}
                   {researchEnabled && (
-                    <div className="mb-4 p-3 bg-blue-900/30 border border-blue-500/30 rounded-lg flex items-center gap-3">
-                      <span className="text-blue-400 text-sm font-semibold">Reference Date:</span>
-                      <span className="text-white text-sm">{referenceDate}</span>
-                      <span className="text-slate-400 text-xs ml-auto">
+                    <div className="mb-4 flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                      <span className="text-sm font-semibold text-sabres-blue">Reference Date:</span>
+                      <span className="text-sm text-gray-900">{referenceDate}</span>
+                      <span className="ml-auto text-xs text-gray-500">
                         AI will search for data from this date
                       </span>
                     </div>
                   )}
 
                   <div className="mb-4">
-                    <label className="block text-sm font-semibold text-slate-300 mb-2">
-                      Article Idea / Instructions
-                    </label>
-                    <textarea
-                      value={articleIdea}
-                      onChange={(e) => setArticleIdea(e.target.value)}
-                      rows={4}
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-sabres-gold transition-colors text-sm"
-                      placeholder="Describe what you want the article to cover. Be specific about topics, players, stats, comparisons, or themes you want included..."
-                    />
-                    <p className="text-slate-400 text-xs mt-1">
+                    <Field label="Article Idea / Instructions">
+                      <Textarea
+                        value={articleIdea}
+                        onChange={(e) => setArticleIdea(e.target.value)}
+                        rows={4}
+                        placeholder="Describe what you want the article to cover. Be specific about topics, players, stats, comparisons, or themes you want included..."
+                      />
+                    </Field>
+                    <p className="mt-1 text-xs text-gray-500">
                       {researchEnabled
                         ? 'Research mode: AI will search the web for current stats and information.'
                         : "Tip: Enable 'Research' for AI to look up current stats and news."}
@@ -878,15 +864,15 @@ export default function PostEditor() {
 
                   {/* Research Sources - Only show when research is enabled */}
                   {researchEnabled && (
-                    <div className="mb-4 p-4 bg-black/20 rounded-lg border border-indigo-500/20">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-semibold text-slate-300">
+                    <div className="mb-4 rounded-lg border border-indigo-100 bg-white p-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="text-sm font-semibold text-gray-700">
                           Research Sources
                         </span>
                         <button
                           type="button"
                           onClick={() => setCustomizeResearch(!customizeResearch)}
-                          className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                          className="text-xs text-indigo-600 transition-colors hover:text-indigo-700"
                         >
                           {customizeResearch ? 'Use Defaults' : 'Customize'}
                         </button>
@@ -894,14 +880,14 @@ export default function PostEditor() {
 
                       {customizeResearch ? (
                         <div>
-                          <textarea
+                          <Textarea
                             value={customDomains}
                             onChange={(e) => setCustomDomains(e.target.value)}
                             rows={3}
-                            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-sabres-gold transition-colors text-xs font-mono"
+                            className="font-mono text-xs"
                             placeholder="Enter domains (comma or newline separated)&#10;e.g., nhl.com, espn.com"
                           />
-                          <p className="text-slate-400 text-xs mt-1">
+                          <p className="mt-1 text-xs text-gray-500">
                             AI will only search these domains
                           </p>
                         </div>
@@ -925,13 +911,10 @@ export default function PostEditor() {
 
                   {generating && (
                     <div className="mb-4">
-                      <div className="h-2 bg-slate-600 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-indigo-500 animate-pulse"
-                          style={{ width: '100%' }}
-                        />
+                      <div className="h-2 overflow-hidden rounded-full bg-indigo-100">
+                        <div className="h-full animate-pulse bg-indigo-500" style={{ width: '100%' }} />
                       </div>
-                      <p className="text-slate-400 text-sm mt-2 text-center">
+                      <p className="mt-2 text-center text-sm text-gray-500">
                         Generating your article... This may take 15-30 seconds.
                       </p>
                     </div>
@@ -950,7 +933,7 @@ export default function PostEditor() {
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-5 h-5" />
+                        <Sparkles className="h-4 w-4" />
                         Generate Draft
                       </>
                     )}
@@ -960,51 +943,49 @@ export default function PostEditor() {
 
               {/* Game Recap: Game Selector and AI Generator */}
               {isNew && formData.type === 'game-recap' && formData.team === 'sabres' && (
-                <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-6">
-                  <h3 className="font-display text-xl text-white tracking-wide flex items-center gap-2 mb-4">
-                    <Sparkles className="w-5 h-5 text-indigo-400" />
+                <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-5">
+                  <h3 className="mb-4 flex items-center gap-2 text-base font-bold text-gray-900">
+                    <Sparkles className="h-5 w-5 text-indigo-500" />
                     AI Game Recap Generator
                   </h3>
 
                   {/* Game Selector */}
                   <div className="mb-4">
-                    <label className="block text-sm font-semibold text-slate-300 mb-2">
-                      Select Game
-                    </label>
-                    {loadingGames ? (
-                      <div className="flex items-center gap-2 text-slate-400">
-                        <Spinner size="sm" />
-                        Loading recent games...
-                      </div>
-                    ) : recentGames.length > 0 ? (
-                      <select
-                        value={formData.gameId || ''}
-                        onChange={(e) => handleGameSelect(e.target.value)}
-                        className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sabres-gold transition-colors"
-                      >
-                        <option value="">Select a game...</option>
-                        {recentGames.map((g) => (
-                          <option key={g.gameId} value={g.gameId}>
-                            {g.date}: {g.outcome} {g.sabresScore}-{g.opponentScore} {g.isHome ? 'vs' : '@'} {g.opponent}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <p className="text-slate-400 text-sm">No recent games found</p>
-                    )}
+                    <Field label="Select Game">
+                      {loadingGames ? (
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <Spinner size="sm" />
+                          Loading recent games...
+                        </div>
+                      ) : recentGames.length > 0 ? (
+                        <Select
+                          value={formData.gameId || ''}
+                          onChange={(e) => handleGameSelect(e.target.value)}
+                        >
+                          <option value="">Select a game...</option>
+                          {recentGames.map((g) => (
+                            <option key={g.gameId} value={g.gameId}>
+                              {g.date}: {g.outcome} {g.sabresScore}-{g.opponentScore} {g.isHome ? 'vs' : '@'} {g.opponent}
+                            </option>
+                          ))}
+                        </Select>
+                      ) : (
+                        <p className="text-sm text-gray-500">No recent games found</p>
+                      )}
+                    </Field>
                   </div>
 
                   {/* Selected Game Info */}
                   {formData.gameId && (
-                    <div className="mb-4 p-3 bg-blue-900/30 border border-blue-500/30 rounded-lg">
+                    <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <span className="text-slate-400">Opponent:</span>
-                          <span className="text-white ml-2">{formData.opponent}</span>
+                          <span className="text-gray-500">Opponent:</span>
+                          <span className="ml-2 text-gray-900">{formData.opponent}</span>
                         </div>
                         <div>
-                          <span className="text-slate-400">Date:</span>
-                          <span className="text-white ml-2">{formData.gameDate}</span>
+                          <span className="text-gray-500">Date:</span>
+                          <span className="ml-2 text-gray-900">{formData.gameDate}</span>
                         </div>
                       </div>
                     </div>
@@ -1018,13 +999,10 @@ export default function PostEditor() {
 
                   {generating && (
                     <div className="mb-4">
-                      <div className="h-2 bg-slate-600 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-indigo-500 animate-pulse"
-                          style={{ width: '100%' }}
-                        />
+                      <div className="h-2 overflow-hidden rounded-full bg-indigo-100">
+                        <div className="h-full animate-pulse bg-indigo-500" style={{ width: '100%' }} />
                       </div>
-                      <p className="text-slate-400 text-sm mt-2 text-center">
+                      <p className="mt-2 text-center text-sm text-gray-500">
                         Fetching box score and generating recap...
                       </p>
                     </div>
@@ -1043,7 +1021,7 @@ export default function PostEditor() {
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-5 h-5" />
+                        <Sparkles className="h-4 w-4" />
                         Generate Recap
                       </>
                     )}
@@ -1053,47 +1031,45 @@ export default function PostEditor() {
 
               {/* Set Recap: Set Selector and AI Generator */}
               {isNew && formData.type === 'set-recap' && formData.team === 'sabres' && (
-                <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-6">
-                  <h3 className="font-display text-xl text-white tracking-wide flex items-center gap-2 mb-4">
-                    <Sparkles className="w-5 h-5 text-indigo-400" />
+                <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-5">
+                  <h3 className="mb-4 flex items-center gap-2 text-base font-bold text-gray-900">
+                    <Sparkles className="h-5 w-5 text-indigo-500" />
                     AI Set Recap Generator
                   </h3>
 
                   {/* Set Selector */}
                   <div className="mb-4">
-                    <label className="block text-sm font-semibold text-slate-300 mb-2">
-                      Select Set
-                    </label>
-                    {loadingSets ? (
-                      <div className="flex items-center gap-2 text-slate-400">
-                        <Spinner size="sm" />
-                        Loading completed sets...
-                      </div>
-                    ) : completedSets.length > 0 ? (
-                      <select
-                        value={formData.setNumber || ''}
-                        onChange={(e) => handleSetSelect(e.target.value)}
-                        className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sabres-gold transition-colors"
-                      >
-                        <option value="">Select a set...</option>
-                        {completedSets.map((set) => {
-                          const firstDate = set.games[0]?.date || '';
-                          const lastDate = set.games[set.games.length - 1]?.date || '';
-                          return (
-                            <option key={set.chunkNumber} value={set.chunkNumber}>
-                              Set {set.chunkNumber}: {firstDate} - {lastDate} | {set.wins}-{set.losses}-{set.otLosses} ({set.points} pts)
-                            </option>
-                          );
-                        })}
-                      </select>
-                    ) : (
-                      <p className="text-slate-400 text-sm">No completed sets found</p>
-                    )}
+                    <Field label="Select Set">
+                      {loadingSets ? (
+                        <div className="flex items-center gap-2 text-gray-500">
+                          <Spinner size="sm" />
+                          Loading completed sets...
+                        </div>
+                      ) : completedSets.length > 0 ? (
+                        <Select
+                          value={formData.setNumber || ''}
+                          onChange={(e) => handleSetSelect(e.target.value)}
+                        >
+                          <option value="">Select a set...</option>
+                          {completedSets.map((set) => {
+                            const firstDate = set.games[0]?.date || '';
+                            const lastDate = set.games[set.games.length - 1]?.date || '';
+                            return (
+                              <option key={set.chunkNumber} value={set.chunkNumber}>
+                                Set {set.chunkNumber}: {firstDate} - {lastDate} | {set.wins}-{set.losses}-{set.otLosses} ({set.points} pts)
+                              </option>
+                            );
+                          })}
+                        </Select>
+                      ) : (
+                        <p className="text-sm text-gray-500">No completed sets found</p>
+                      )}
+                    </Field>
                   </div>
 
                   {/* Selected Set Info */}
                   {formData.setNumber && (
-                    <div className="mb-4 p-3 bg-blue-900/30 border border-blue-500/30 rounded-lg">
+                    <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
                       {(() => {
                         const selectedSet = completedSets.find((s) => s.chunkNumber === formData.setNumber);
                         if (!selectedSet) return null;
@@ -1101,24 +1077,24 @@ export default function PostEditor() {
                         return (
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
-                              <span className="text-slate-400">Set:</span>
-                              <span className="text-white ml-2">#{formData.setNumber}</span>
+                              <span className="text-gray-500">Set:</span>
+                              <span className="ml-2 text-gray-900">#{formData.setNumber}</span>
                             </div>
                             <div>
-                              <span className="text-slate-400">Record:</span>
-                              <span className="text-white ml-2">
+                              <span className="text-gray-500">Record:</span>
+                              <span className="ml-2 text-gray-900">
                                 {selectedSet.wins}-{selectedSet.losses}-{selectedSet.otLosses}
                               </span>
                             </div>
                             <div>
-                              <span className="text-slate-400">Points:</span>
-                              <span className="text-white ml-2">
+                              <span className="text-gray-500">Points:</span>
+                              <span className="ml-2 text-gray-900">
                                 {selectedSet.points}/{selectedSet.maxPoints} ({pointsPct}%)
                               </span>
                             </div>
                             <div>
-                              <span className="text-slate-400">Opponents:</span>
-                              <span className="text-white ml-2">{formData.opponent}</span>
+                              <span className="text-gray-500">Opponents:</span>
+                              <span className="ml-2 text-gray-900">{formData.opponent}</span>
                             </div>
                           </div>
                         );
@@ -1134,13 +1110,10 @@ export default function PostEditor() {
 
                   {generating && (
                     <div className="mb-4">
-                      <div className="h-2 bg-slate-600 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-indigo-500 animate-pulse"
-                          style={{ width: '100%' }}
-                        />
+                      <div className="h-2 overflow-hidden rounded-full bg-indigo-100">
+                        <div className="h-full animate-pulse bg-indigo-500" style={{ width: '100%' }} />
                       </div>
-                      <p className="text-slate-400 text-sm mt-2 text-center">
+                      <p className="mt-2 text-center text-sm text-gray-500">
                         Fetching game data and generating set recap...
                       </p>
                     </div>
@@ -1159,7 +1132,7 @@ export default function PostEditor() {
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-5 h-5" />
+                        <Sparkles className="h-4 w-4" />
                         Generate Set Recap
                       </>
                     )}
@@ -1170,63 +1143,52 @@ export default function PostEditor() {
               {/* Manual Opponent & Date (for Bills game recaps only) */}
               {(formData.type === 'game-recap' && formData.team === 'bills') && (
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-300 mb-2">
-                      Opponent
-                    </label>
-                    <input
+                  <Field label="Opponent">
+                    <Input
                       type="text"
                       value={formData.opponent}
                       onChange={(e) => updateField('opponent', e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-sabres-gold transition-colors"
                       placeholder="e.g., Rangers"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-300 mb-2">
-                      Game Date
-                    </label>
-                    <input
+                  </Field>
+                  <Field label="Game Date">
+                    <Input
                       type="date"
                       value={formData.gameDate}
                       onChange={(e) => updateField('gameDate', e.target.value)}
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sabres-gold transition-colors"
                     />
-                  </div>
+                  </Field>
                 </div>
               )}
 
               {/* Content */}
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">
-                  Content (Markdown)
-                </label>
-                <textarea
+              <Field label="Content (Markdown)">
+                <Textarea
                   value={formData.content}
                   onChange={(e) => updateField('content', e.target.value)}
                   rows={20}
-                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-sabres-gold transition-colors font-mono text-sm"
+                  className="font-mono text-sm"
                   placeholder="Write your post content in Markdown..."
                   required
                 />
-              </div>
+              </Field>
 
               {/* Content Images Gallery */}
               {(() => {
                 const contentImages = extractImagesFromContent(formData.content);
                 if (contentImages.length === 0) return null;
                 return (
-                  <div className="bg-slate-700/50 rounded-lg p-4 border border-slate-600">
-                    <label className="block text-sm font-semibold text-slate-300 mb-3">
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <p className="mb-3 text-sm font-semibold text-gray-700">
                       Images in Content ({contentImages.length})
-                    </label>
+                    </p>
                     <div className="flex flex-wrap gap-3">
                       {contentImages.map((img, index) => (
-                        <div key={img.url} className="relative group">
+                        <div key={img.url} className="group relative">
                           <img
                             src={img.url}
                             alt={img.alt || `Image ${index + 1}`}
-                            className="w-20 h-20 object-cover rounded-lg border border-slate-500"
+                            className="h-20 w-20 rounded-lg border border-gray-300 object-cover"
                           />
                           <button
                             type="button"
@@ -1234,10 +1196,10 @@ export default function PostEditor() {
                               const newContent = removeImageFromContent(formData.content, img.url);
                               setFormData((prev) => ({ ...prev, content: newContent }));
                             }}
-                            className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute -right-2 -top-2 rounded-full bg-red-600 p-1 text-white opacity-0 transition-opacity hover:bg-red-500 group-hover:opacity-100"
                             title="Remove from content"
                           >
-                            <X className="w-3 h-3" />
+                            <X className="h-3 w-3" />
                           </button>
                           <button
                             type="button"
@@ -1249,10 +1211,10 @@ export default function PostEditor() {
                                 setFormData((prev) => ({ ...prev, content: newContent }));
                               }
                             }}
-                            className={`absolute -bottom-2 left-1/2 -translate-x-1/2 text-xs px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity ${
+                            className={`absolute -bottom-2 left-1/2 -translate-x-1/2 rounded px-2 py-0.5 text-xs opacity-0 transition-opacity group-hover:opacity-100 ${
                               featuredImage
-                                ? 'bg-slate-500 text-slate-400 cursor-not-allowed'
-                                : 'bg-amber-600 hover:bg-amber-500 text-white cursor-pointer'
+                                ? 'cursor-not-allowed bg-gray-300 text-gray-500'
+                                : 'cursor-pointer bg-amber-500 text-white hover:bg-amber-400'
                             }`}
                             title={featuredImage ? 'Remove current featured image first' : 'Make featured image'}
                             disabled={!!featuredImage}
@@ -1262,7 +1224,7 @@ export default function PostEditor() {
                         </div>
                       ))}
                     </div>
-                    <p className="text-slate-400 text-xs mt-2">
+                    <p className="mt-2 text-xs text-gray-500">
                       Hover to remove or promote to featured (★)
                     </p>
                   </div>
@@ -1271,18 +1233,16 @@ export default function PostEditor() {
 
               {/* Meta Description */}
               <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">
-                  Meta Description (SEO)
-                </label>
-                <textarea
-                  value={formData.metaDescription}
-                  onChange={(e) => updateField('metaDescription', e.target.value)}
-                  rows={2}
-                  maxLength={160}
-                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-sabres-gold transition-colors text-sm"
-                  placeholder="Brief description for search results (max 160 chars)"
-                />
-                <p className="text-slate-400 text-xs mt-1">
+                <Field label="Meta Description (SEO)">
+                  <Textarea
+                    value={formData.metaDescription}
+                    onChange={(e) => updateField('metaDescription', e.target.value)}
+                    rows={2}
+                    maxLength={160}
+                    placeholder="Brief description for search results (max 160 chars)"
+                  />
+                </Field>
+                <p className="mt-1 text-xs text-gray-500">
                   {formData.metaDescription.length}/160 characters
                 </p>
               </div>
@@ -1291,28 +1251,28 @@ export default function PostEditor() {
             <Card className="space-y-6">
               {/* Featured Image Section */}
               <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Featured Image
-                </label>
+                </p>
                 {featuredImage ? (
                   <div className="relative inline-block">
                     <img
                       src={featuredImage}
                       alt="Featured"
-                      className="w-full max-w-md h-auto rounded-lg border-2 border-sabres-gold"
+                      className="h-auto w-full max-w-md rounded-lg border-2 border-sabres-blue"
                     />
                     <button
                       type="button"
                       onClick={() => setFeaturedImage(null)}
-                      className="absolute top-2 right-2 bg-red-600 hover:bg-red-500 text-white rounded-full p-1.5 transition-colors"
+                      className="absolute right-2 top-2 rounded-full bg-red-600 p-1.5 text-white transition-colors hover:bg-red-500"
                       title="Remove featured image"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <p className="text-slate-400 text-sm italic">
+                    <p className="text-sm italic text-gray-500">
                       No featured image set. Generate a card from the title, or upload an image below.
                     </p>
                     <Button
@@ -1323,48 +1283,48 @@ export default function PostEditor() {
                       title={formData.title.trim() ? 'Generate a team-branded card image from the post title' : 'Enter a title first'}
                     >
                       {generatingCard ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <RefreshCw className="h-4 w-4 animate-spin" />
                       ) : (
-                        <ImageIcon className="w-4 h-4" />
+                        <ImageIcon className="h-4 w-4" />
                       )}
                       Generate Card from Title
                     </Button>
-                    {cardError && <p className="text-red-400 text-sm">{cardError}</p>}
+                    {cardError && <p className="text-sm text-red-500">{cardError}</p>}
                   </div>
                 )}
               </div>
 
               {/* Image Upload Section */}
               <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
                   {featuredImage ? 'Add More Images to Content' : 'Image Upload'}
-                </label>
+                </p>
 
                 {/* Drop Zone */}
                 <div
                   onDrop={handleDrop}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
-                  className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                  className={`relative rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
                     isDragging
-                      ? 'border-sabres-gold bg-sabres-gold/10'
-                      : 'border-slate-500 hover:border-slate-400'
+                      ? 'border-sabres-blue bg-blue-50'
+                      : 'border-gray-300 hover:border-gray-400'
                   }`}
                 >
                   {uploading ? (
                     <div className="flex flex-col items-center gap-2">
                       <Spinner size="lg" />
-                      <span className="text-slate-400 text-sm">Uploading...</span>
+                      <span className="text-sm text-gray-500">Uploading...</span>
                     </div>
                   ) : (
                     <>
-                      <ImagePlus className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                      <p className="text-slate-400 text-sm mb-2">
+                      <ImagePlus className="mx-auto mb-2 h-8 w-8 text-gray-400" />
+                      <p className="mb-2 text-sm text-gray-500">
                         Drag and drop an image here, or
                       </p>
                       <div className="flex items-center justify-center gap-3">
-                        <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg cursor-pointer transition-colors">
-                          <Upload className="w-4 h-4" />
+                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50">
+                          <Upload className="h-4 w-4" />
                           Upload New
                           <input
                             type="file"
@@ -1374,11 +1334,11 @@ export default function PostEditor() {
                           />
                         </label>
                         <Button type="button" variant="secondary" onClick={openGallery}>
-                          <Images className="w-4 h-4" />
+                          <Images className="h-4 w-4" />
                           Browse Gallery
                         </Button>
                       </div>
-                      <p className="text-slate-400 text-xs mt-2">
+                      <p className="mt-2 text-xs text-gray-400">
                         JPG, PNG, WebP, GIF - Max 5MB
                       </p>
                     </>
@@ -1387,14 +1347,14 @@ export default function PostEditor() {
 
                 {/* Upload Error */}
                 {uploadError && (
-                  <div className="mt-2 bg-red-900/30 border border-red-500/50 text-red-300 px-3 py-2 rounded-lg text-sm flex items-center justify-between">
+                  <div className="mt-2 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
                     <span>{uploadError}</span>
                     <button
                       type="button"
                       onClick={() => setUploadError(null)}
-                      className="text-red-400 hover:text-red-300"
+                      className="text-red-400 hover:text-red-600"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
                 )}
@@ -1402,16 +1362,16 @@ export default function PostEditor() {
                 {/* Uploaded Images Gallery */}
                 {uploadedImages.length > 0 && (
                   <div className="mt-4">
-                    <p className="text-sm text-slate-400 mb-2">
+                    <p className="mb-2 text-sm text-gray-500">
                       Uploaded Images (click to insert again):
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {uploadedImages.map((url, index) => (
-                        <div key={url} className="relative group">
+                        <div key={url} className="group relative">
                           <img
                             src={url}
                             alt={`Uploaded ${index + 1}`}
-                            className="w-16 h-16 object-cover rounded border border-slate-500 cursor-pointer hover:border-sabres-gold transition-colors"
+                            className="h-16 w-16 cursor-pointer rounded border border-gray-300 object-cover transition-colors hover:border-sabres-blue"
                             onClick={() => insertImageAtCursor(url, `Image ${index + 1}`)}
                             title="Click to insert into content"
                           />
@@ -1420,10 +1380,10 @@ export default function PostEditor() {
                             onClick={() => {
                               navigator.clipboard.writeText(url);
                             }}
-                            className="absolute -top-1 -right-1 bg-slate-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                            className="absolute -right-1 -top-1 rounded-full bg-gray-600 p-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100"
                             title="Copy URL"
                           >
-                            <ImagePlus className="w-3 h-3" />
+                            <ImagePlus className="h-3 w-3" />
                           </button>
                         </div>
                       ))}
@@ -1436,45 +1396,49 @@ export default function PostEditor() {
             <Card className="space-y-6">
               {/* Publish Date */}
               <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2 flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Publish Date
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.publishedAt}
-                  onChange={(e) => updateField('publishedAt', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sabres-gold transition-colors"
-                />
-                <p className="text-slate-400 text-xs mt-1">
+                <Field
+                  label={
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="h-3.5 w-3.5" />
+                      Publish Date
+                    </span>
+                  }
+                >
+                  <Input
+                    type="datetime-local"
+                    value={formData.publishedAt}
+                    onChange={(e) => updateField('publishedAt', e.target.value)}
+                  />
+                </Field>
+                <p className="mt-1 text-xs text-gray-500">
                   Leave empty to use current time when publishing. Set a date to backdate or schedule.
                 </p>
               </div>
 
               {/* Pin to Featured */}
-              <div className="flex items-center gap-4 p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg">
+              <div className="flex items-center gap-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
                 <Toggle
                   checked={formData.pinned}
                   onChange={() => updateField('pinned', !formData.pinned)}
                   label={<span className="font-semibold">Pin to Featured Section</span>}
                 />
-                <p className="text-slate-400 text-xs">
+                <p className="text-xs text-gray-500">
                   Pinned posts appear at the top of the blog. Only one post can be pinned at a time.
                 </p>
               </div>
 
               {/* Status Toggle for existing posts */}
               {!isNew && existingPost && (
-                <div className="flex items-center gap-4 p-4 bg-slate-700/50 border border-slate-600 rounded-lg">
-                  <span className="text-slate-300 text-sm font-semibold">Status:</span>
+                <div className="flex items-center gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <span className="text-sm font-semibold text-gray-700">Status:</span>
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
                       onClick={() => updateField('status', 'draft')}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                      className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
                         formData.status === 'draft'
-                          ? 'bg-amber-500 text-black'
-                          : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-white text-gray-600 ring-1 ring-gray-300 hover:bg-gray-100'
                       }`}
                     >
                       Draft
@@ -1482,10 +1446,10 @@ export default function PostEditor() {
                     <button
                       type="button"
                       onClick={() => updateField('status', 'published')}
-                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                      className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
                         formData.status === 'published'
-                          ? 'bg-sabres-gold text-black'
-                          : 'bg-slate-600 text-slate-300 hover:bg-slate-500'
+                          ? 'bg-green-600 text-white'
+                          : 'bg-white text-gray-600 ring-1 ring-gray-300 hover:bg-gray-100'
                       }`}
                     >
                       Published
@@ -1501,23 +1465,23 @@ export default function PostEditor() {
             </Card>
 
             {/* Actions */}
-            <div className="flex items-center gap-4 pt-2 flex-wrap">
+            <div className="flex flex-wrap items-center gap-4 pt-2">
               {/* Fact Check Button */}
               <button
                 type="button"
                 onClick={handleFactCheck}
                 disabled={factChecking || !formData.content.trim()}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-white bg-emerald-700 hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
+                className="ml-auto inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
                 title="Verify facts against live data"
               >
                 {factChecking ? (
                   <>
-                    <Spinner size="sm" />
+                    <Spinner size="sm" className="!border-white/30 !border-t-white" />
                     Checking...
                   </>
                 ) : (
                   <>
-                    <ShieldCheck className="w-5 h-5" />
+                    <ShieldCheck className="h-4 w-4" />
                     Verify Facts
                   </>
                 )}
@@ -1526,14 +1490,14 @@ export default function PostEditor() {
 
             {/* Fact Check Error */}
             {factCheckError && (
-              <div className="bg-red-900/30 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg flex items-center justify-between">
+              <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
                 <span>{factCheckError}</span>
                 <button
                   type="button"
                   onClick={() => setFactCheckError(null)}
-                  className="text-red-400 hover:text-red-300"
+                  className="text-red-400 hover:text-red-600"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             )}
@@ -1543,29 +1507,29 @@ export default function PostEditor() {
               <button
                 type="button"
                 onClick={() => setShowFactCheckResults(true)}
-                className={`w-full p-4 rounded-lg border text-left transition-colors ${
+                className={`w-full rounded-lg border p-4 text-left transition-colors ${
                   factCheckResults.issueCount > 0
-                    ? 'border-red-500/50 bg-red-900/20 hover:bg-red-900/30'
+                    ? 'border-red-200 bg-red-50 hover:bg-red-100'
                     : factCheckResults.warningCount > 0
-                    ? 'border-amber-500/50 bg-amber-900/20 hover:bg-amber-900/30'
-                    : 'border-green-500/50 bg-green-900/20 hover:bg-green-900/30'
+                    ? 'border-amber-200 bg-amber-50 hover:bg-amber-100'
+                    : 'border-green-200 bg-green-50 hover:bg-green-100'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   {factCheckResults.issueCount > 0 ? (
-                    <AlertCircle className="w-5 h-5 text-red-400" />
+                    <AlertCircle className="h-5 w-5 text-red-500" />
                   ) : factCheckResults.warningCount > 0 ? (
-                    <AlertTriangle className="w-5 h-5 text-amber-400" />
+                    <AlertTriangle className="h-5 w-5 text-amber-500" />
                   ) : (
-                    <CheckCircle2 className="w-5 h-5 text-green-400" />
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
                   )}
                   <div>
-                    <p className="font-semibold text-white">
+                    <p className="font-semibold text-gray-900">
                       Fact Check Complete: {factCheckResults.issueCount} issue{factCheckResults.issueCount !== 1 ? 's' : ''}, {factCheckResults.warningCount} warning{factCheckResults.warningCount !== 1 ? 's' : ''}
                     </p>
-                    <p className="text-slate-400 text-sm">{factCheckResults.summary}</p>
+                    <p className="text-sm text-gray-500">{factCheckResults.summary}</p>
                   </div>
-                  <span className="text-slate-400 ml-auto text-sm">Click to view details</span>
+                  <span className="ml-auto text-sm text-gray-400">Click to view details</span>
                 </div>
               </button>
             )}
@@ -1573,17 +1537,17 @@ export default function PostEditor() {
 
           {/* Preview */}
           {showPreview && (
-            <Card className="overflow-auto max-h-[calc(100vh-200px)] self-start">
+            <Card className="max-h-[calc(100vh-200px)] self-start overflow-auto">
               <SectionHeading>Preview</SectionHeading>
               {formData.title && (
-                <h3 className="font-display text-3xl text-white mb-6">
+                <h3 className="mb-6 text-3xl font-bold text-gray-900">
                   {formData.title}
                 </h3>
               )}
               {formData.content ? (
                 <PostContent content={formData.content} accent={accent} />
               ) : (
-                <p className="text-slate-400 italic">
+                <p className="italic text-gray-400">
                   Start typing to see preview...
                 </p>
               )}
@@ -1594,205 +1558,174 @@ export default function PostEditor() {
 
       {/* Image Gallery Modal */}
       {showGallery && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-2xl border border-slate-700 w-full max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-600">
-              <h3 className="font-display text-xl text-white tracking-wide">
-                Image Gallery
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowGallery(false)}
-                className="text-slate-400 hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
+        <Modal onClose={() => setShowGallery(false)} title="Image Gallery" wide>
+          {loadingGallery ? (
+            <div className="flex justify-center py-12">
+              <Spinner size="lg" />
             </div>
-
-            {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-4">
-              {loadingGallery ? (
-                <div className="flex justify-center py-12">
-                  <Spinner size="lg" />
-                </div>
-              ) : galleryError ? (
-                <div className="text-center py-12">
-                  <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-                  <p className="text-red-400 font-semibold">Failed to load gallery</p>
-                  <p className="text-slate-400 text-sm mt-1">{galleryError}</p>
-                  <Button type="button" variant="ghost" className="mt-4" onClick={loadGalleryImages}>
-                    Try Again
-                  </Button>
-                </div>
-              ) : galleryImages.length === 0 ? (
-                <div className="text-center py-12">
-                  <Images className="w-16 h-16 text-slate-500 mx-auto mb-4" />
-                  <p className="text-slate-400">No images uploaded yet</p>
-                  <p className="text-slate-500 text-sm mt-1">
-                    Upload images to build your gallery
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                  {galleryImages.map((image) => (
-                    <div
-                      key={image.url}
-                      className="relative group aspect-square rounded-lg overflow-hidden border border-slate-600 hover:border-sabres-gold transition-colors cursor-pointer"
-                    >
-                      <img
-                        src={image.url}
-                        alt={image.filename}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
-                        {!featuredImage && (
-                          <button
-                            type="button"
-                            onClick={() => selectFromGallery(image.url, true)}
-                            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-semibold rounded transition-colors w-full"
-                          >
-                            Set as Featured
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => selectFromGallery(image.url, false)}
-                          className="px-3 py-1.5 bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold rounded transition-colors w-full"
-                        >
-                          Insert in Content
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+          ) : galleryError ? (
+            <div className="py-12 text-center">
+              <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-400" />
+              <p className="font-semibold text-red-600">Failed to load gallery</p>
+              <p className="mt-1 text-sm text-gray-500">{galleryError}</p>
+              <Button type="button" variant="ghost" className="mt-4" onClick={loadGalleryImages}>
+                Try Again
+              </Button>
             </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-slate-600 text-center">
-              <p className="text-slate-400 text-sm">
-                {galleryError
-                  ? 'Unable to load gallery'
-                  : `${galleryImages.length} image${galleryImages.length !== 1 ? 's' : ''} in gallery`}
+          ) : galleryImages.length === 0 ? (
+            <div className="py-12 text-center">
+              <Images className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+              <p className="text-gray-500">No images uploaded yet</p>
+              <p className="mt-1 text-sm text-gray-400">
+                Upload images to build your gallery
               </p>
             </div>
-          </div>
-        </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+              {galleryImages.map((image) => (
+                <div
+                  key={image.url}
+                  className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg border border-gray-200 transition-colors hover:border-sabres-blue"
+                >
+                  <img
+                    src={image.url}
+                    alt={image.filename}
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/60 p-2 opacity-0 transition-opacity group-hover:opacity-100">
+                    {!featuredImage && (
+                      <button
+                        type="button"
+                        onClick={() => selectFromGallery(image.url, true)}
+                        className="w-full rounded bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-amber-400"
+                      >
+                        Set as Featured
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => selectFromGallery(image.url, false)}
+                      className="w-full rounded bg-white px-3 py-1.5 text-xs font-semibold text-gray-800 transition-colors hover:bg-gray-100"
+                    >
+                      Insert in Content
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="mt-4 border-t border-gray-100 pt-3 text-center text-sm text-gray-400">
+            {galleryError
+              ? 'Unable to load gallery'
+              : `${galleryImages.length} image${galleryImages.length !== 1 ? 's' : ''} in gallery`}
+          </p>
+        </Modal>
       )}
 
       {/* Fact Check Results Modal */}
       {showFactCheckResults && factCheckResults && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-2xl border border-slate-700 w-full max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-600">
-              <div className="flex items-center gap-3">
-                <ShieldCheck className="w-6 h-6 text-emerald-400" />
-                <h3 className="font-display text-xl text-white tracking-wide">
-                  Fact Check Results
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowFactCheckResults(false)}
-                className="text-slate-400 hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            {/* Summary */}
-            <div className={`p-4 border-b border-slate-600 ${
+        <Modal
+          onClose={() => setShowFactCheckResults(false)}
+          title={
+            <span className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-emerald-600" />
+              Fact Check Results
+            </span>
+          }
+          wide
+        >
+          {/* Summary */}
+          <div
+            className={`mb-4 rounded-lg border p-4 ${
               factCheckResults.issueCount > 0
-                ? 'bg-red-900/20'
+                ? 'border-red-200 bg-red-50'
                 : factCheckResults.warningCount > 0
-                ? 'bg-amber-900/20'
-                : 'bg-green-900/20'
-            }`}>
-              <div className="flex items-center gap-4 mb-2">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-red-400" />
-                  <span className="text-red-400 font-semibold">{factCheckResults.issueCount} Issues</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-400" />
-                  <span className="text-amber-400 font-semibold">{factCheckResults.warningCount} Warnings</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-400" />
-                  <span className="text-green-400 font-semibold">
-                    {factCheckResults.findings.filter(f => f.category === 'verified').length} Verified
-                  </span>
-                </div>
+                ? 'border-amber-200 bg-amber-50'
+                : 'border-green-200 bg-green-50'
+            }`}
+          >
+            <div className="mb-2 flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-red-500" />
+                <span className="text-sm font-semibold text-red-600">{factCheckResults.issueCount} Issues</span>
               </div>
-              <p className="text-white">{factCheckResults.summary}</p>
-              <p className="text-slate-400 text-sm mt-2">
-                Data source: {factCheckResults.verifiedDataSummary.team.toUpperCase()} |
-                Record: {factCheckResults.verifiedDataSummary.record} |
-                Roster: {factCheckResults.verifiedDataSummary.rosterCount} players
-                {factCheckResults.verifiedDataSummary.hasGameData && ' | Game data included'}
-              </p>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <span className="text-sm font-semibold text-amber-600">{factCheckResults.warningCount} Warnings</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-semibold text-green-700">
+                  {factCheckResults.findings.filter(f => f.category === 'verified').length} Verified
+                </span>
+              </div>
             </div>
+            <p className="text-sm text-gray-900">{factCheckResults.summary}</p>
+            <p className="mt-2 text-xs text-gray-500">
+              Data source: {factCheckResults.verifiedDataSummary.team.toUpperCase()} |
+              Record: {factCheckResults.verifiedDataSummary.record} |
+              Roster: {factCheckResults.verifiedDataSummary.rosterCount} players
+              {factCheckResults.verifiedDataSummary.hasGameData && ' | Game data included'}
+            </p>
+          </div>
 
-            {/* Findings List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {factCheckResults.findings.length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto mb-3" />
-                  <p className="text-white font-semibold">No findings to report</p>
-                  <p className="text-slate-400 text-sm">The article appears to be factually accurate</p>
-                </div>
-              ) : (
-                factCheckResults.findings.map((finding, index) => (
-                  <div
-                    key={index}
-                    className={`p-4 rounded-lg border ${getCategoryColor(finding.category)}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      {getCategoryIcon(finding.category)}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge
-                            variant={
-                              finding.category === 'verified' ? 'success' :
-                              finding.category === 'issue' ? 'error' :
-                              finding.category === 'warning' ? 'warning' : 'neutral'
-                            }
-                            className="uppercase"
-                          >
-                            {finding.category}
-                          </Badge>
-                        </div>
-                        <p className="text-white text-sm mb-2">
-                          <span className="text-slate-400">Claim: </span>
-                          "{finding.claim}"
-                        </p>
-                        <p className="text-slate-300 text-sm">{finding.explanation}</p>
-                        {finding.correction && (
-                          <p className="text-green-400 text-sm mt-2">
-                            <span className="font-semibold">Correction: </span>
-                            {finding.correction}
-                          </p>
-                        )}
+          {/* Findings List */}
+          <div className="max-h-[45vh] space-y-3 overflow-y-auto">
+            {factCheckResults.findings.length === 0 ? (
+              <div className="py-8 text-center">
+                <CheckCircle2 className="mx-auto mb-3 h-12 w-12 text-green-500" />
+                <p className="font-semibold text-gray-900">No findings to report</p>
+                <p className="text-sm text-gray-500">The article appears to be factually accurate</p>
+              </div>
+            ) : (
+              factCheckResults.findings.map((finding, index) => (
+                <div
+                  key={index}
+                  className={`rounded-lg border p-4 ${getCategoryColor(finding.category)}`}
+                >
+                  <div className="flex items-start gap-3">
+                    {getCategoryIcon(finding.category)}
+                    <div className="flex-1">
+                      <div className="mb-1 flex items-center gap-2">
+                        <Badge
+                          variant={
+                            finding.category === 'verified' ? 'success' :
+                            finding.category === 'issue' ? 'error' :
+                            finding.category === 'warning' ? 'warning' : 'neutral'
+                          }
+                          className="uppercase"
+                        >
+                          {finding.category}
+                        </Badge>
                       </div>
+                      <p className="mb-2 text-sm text-gray-900">
+                        <span className="text-gray-500">Claim: </span>
+                        &quot;{finding.claim}&quot;
+                      </p>
+                      <p className="text-sm text-gray-600">{finding.explanation}</p>
+                      {finding.correction && (
+                        <p className="mt-2 text-sm text-green-700">
+                          <span className="font-semibold">Correction: </span>
+                          {finding.correction}
+                        </p>
+                      )}
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-slate-600 flex items-center justify-between">
-              <p className="text-slate-400 text-sm">
-                {factCheckResults.findings.length} finding{factCheckResults.findings.length !== 1 ? 's' : ''} analyzed
-              </p>
-              <Button type="button" variant="ghost" onClick={() => setShowFactCheckResults(false)}>
-                Close
-              </Button>
-            </div>
+                </div>
+              ))
+            )}
           </div>
-        </div>
+
+          {/* Footer */}
+          <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
+            <p className="text-sm text-gray-400">
+              {factCheckResults.findings.length} finding{factCheckResults.findings.length !== 1 ? 's' : ''} analyzed
+            </p>
+            <Button type="button" variant="ghost" onClick={() => setShowFactCheckResults(false)}>
+              Close
+            </Button>
+          </div>
+        </Modal>
       )}
     </>
   );

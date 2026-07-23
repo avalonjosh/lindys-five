@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import { X, RefreshCw, ExternalLink, Copy, Check } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { RefreshCw, ExternalLink, Copy, Check } from 'lucide-react';
+import { Modal, Button, Textarea } from './ui';
 import type { BlogPost } from '@/lib/types';
 
 interface ShareToXModalProps {
@@ -15,7 +16,6 @@ export default function ShareToXModal({ post, onClose }: ShareToXModalProps) {
   const [posting, setPosting] = useState(false);
   const [postedTweetId, setPostedTweetId] = useState<string | null>(null);
   const [postError, setPostError] = useState<string | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Character count (X allows 280 characters)
   const charCount = tweetText.length;
@@ -25,6 +25,7 @@ export default function ShareToXModal({ post, onClose }: ShareToXModalProps) {
   // Generate tweet on mount
   useEffect(() => {
     generateTweet();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function generateTweet() {
@@ -102,169 +103,137 @@ export default function ShareToXModal({ post, onClose }: ShareToXModalProps) {
     }
   }
 
-  // Close on escape key
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div
-        className="relative w-full max-w-lg bg-slate-700 rounded-2xl shadow-2xl border-2 border-slate-500 overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-slate-800 border-b border-slate-600">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">X</span>
+    <Modal
+      onClose={onClose}
+      title={
+        <span className="flex items-center gap-2.5">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-black text-sm font-bold text-white">X</span>
+          Share to X
+        </span>
+      }
+      wide
+    >
+      {/* Post info */}
+      <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
+        <p className="mb-0.5 text-xs text-gray-500">Sharing:</p>
+        <p className="truncate text-sm font-medium text-gray-900">{post.title}</p>
+      </div>
+
+      {/* Tweet textarea */}
+      <div className="relative">
+        <Textarea
+          value={tweetText}
+          onChange={(e) => setTweetText(e.target.value)}
+          disabled={loading}
+          className={`h-44 resize-none ${isOverLimit ? '!border-red-400 !ring-red-200' : ''}`}
+          placeholder="Your tweet will appear here..."
+        />
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-white/80">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              <span>Generating tweet...</span>
             </div>
-            <h2 className="text-xl font-bold text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-              Share to X
-            </h2>
           </div>
+        )}
+      </div>
+
+      {/* Character count */}
+      <div className="mt-2 flex items-center justify-between">
+        <div className="flex items-center gap-3">
           <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-600"
+            onClick={generateTweet}
+            disabled={loading}
+            className="flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700 disabled:opacity-50"
           >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6">
-          {/* Post info */}
-          <div className="mb-4 p-3 bg-slate-800/50 rounded-lg border border-slate-600">
-            <p className="text-sm text-slate-400 mb-1">Sharing:</p>
-            <p className="text-white font-medium truncate">{post.title}</p>
-          </div>
-
-          {/* Tweet textarea */}
-          <div className="relative">
-            <textarea
-              ref={textareaRef}
-              value={tweetText}
-              onChange={(e) => setTweetText(e.target.value)}
-              disabled={loading}
-              className={`w-full h-48 p-4 bg-slate-800 border-2 rounded-xl text-white resize-none focus:outline-none focus:border-[#FCB514] transition-colors ${
-                isOverLimit ? 'border-red-500' : 'border-slate-600'
-              } ${loading ? 'opacity-50' : ''}`}
-              placeholder="Your tweet will appear here..."
-            />
-            {loading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-slate-800/80 rounded-xl">
-                <div className="flex items-center gap-3 text-white">
-                  <RefreshCw className="w-5 h-5 animate-spin" />
-                  <span>Generating tweet...</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Character count */}
-          <div className="flex items-center justify-between mt-2">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={generateTweet}
-                disabled={loading}
-                className="flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors disabled:opacity-50"
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                Regenerate
-              </button>
-              <button
-                onClick={handleCopy}
-                className="flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
-              >
-                {copied ? (
-                  <>
-                    <Check className="w-4 h-4 text-green-400" />
-                    <span className="text-green-400">Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4" />
-                    Copy
-                  </>
-                )}
-              </button>
-            </div>
-            <span className={`text-sm ${isOverLimit ? 'text-red-400 font-semibold' : 'text-slate-400'}`}>
-              {charCount}/{maxChars}
-            </span>
-          </div>
-
-          {/* Error message */}
-          {error && (
-            <div className="mt-3 p-3 bg-red-900/30 border border-red-500/50 rounded-lg">
-              <p className="text-red-400 text-sm">{error}</p>
-              <p className="text-red-400/70 text-xs mt-1">A fallback tweet has been generated.</p>
-            </div>
-          )}
-
-          {/* Post result */}
-          {postedTweetId && (
-            <div className="mt-3 p-3 bg-green-900/30 border border-green-500/50 rounded-lg">
-              <p className="text-green-400 text-sm font-semibold">Posted to X!</p>
-              {postedTweetId !== 'posted' && (
-                <a
-                  href={`https://x.com/i/web/status/${postedTweetId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-green-400/80 text-xs underline hover:text-green-300"
-                >
-                  View tweet
-                </a>
-              )}
-            </div>
-          )}
-          {postError && (
-            <div className="mt-3 p-3 bg-red-900/30 border border-red-500/50 rounded-lg">
-              <p className="text-red-400 text-sm">{postError}</p>
-              <p className="text-red-400/70 text-xs mt-1">
-                You can still use &quot;Open composer&quot; to post manually.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 bg-slate-800 border-t border-slate-600">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-slate-400 hover:text-white font-medium transition-colors"
-          >
-            {postedTweetId ? 'Done' : 'Cancel'}
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            Regenerate
           </button>
           <button
-            onClick={handleOpenComposer}
-            disabled={loading || isOverLimit}
-            className="flex items-center gap-2 px-4 py-2 border border-slate-500 text-slate-300 hover:text-white hover:border-slate-400 font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Open X's compose window to post manually"
+            onClick={handleCopy}
+            className="flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
           >
-            <span>Open composer</span>
-            <ExternalLink className="w-4 h-4" />
-          </button>
-          <button
-            onClick={handlePostToX}
-            disabled={loading || posting || isOverLimit || !!postedTweetId}
-            className="flex items-center gap-2 px-5 py-2 bg-black hover:bg-zinc-900 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {posting ? (
+            {copied ? (
               <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Posting...</span>
+                <Check className="h-4 w-4 text-green-600" />
+                <span className="text-green-600">Copied!</span>
               </>
             ) : (
-              <span>{postedTweetId ? 'Posted' : 'Post to X'}</span>
+              <>
+                <Copy className="h-4 w-4" />
+                Copy
+              </>
             )}
           </button>
         </div>
+        <span className={`text-sm ${isOverLimit ? 'font-semibold text-red-500' : 'text-gray-400'}`}>
+          {charCount}/{maxChars}
+        </span>
       </div>
-    </div>
+
+      {/* Error message */}
+      {error && (
+        <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
+          <p className="text-sm text-red-600">{error}</p>
+          <p className="mt-1 text-xs text-red-400">A fallback tweet has been generated.</p>
+        </div>
+      )}
+
+      {/* Post result */}
+      {postedTweetId && (
+        <div className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3">
+          <p className="text-sm font-semibold text-green-700">Posted to X!</p>
+          {postedTweetId !== 'posted' && (
+            <a
+              href={`https://x.com/i/web/status/${postedTweetId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-green-600 underline hover:text-green-700"
+            >
+              View tweet
+            </a>
+          )}
+        </div>
+      )}
+      {postError && (
+        <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
+          <p className="text-sm text-red-600">{postError}</p>
+          <p className="mt-1 text-xs text-red-400">
+            You can still use &quot;Open composer&quot; to post manually.
+          </p>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="mt-5 flex items-center justify-end gap-2 border-t border-gray-100 pt-4">
+        <Button variant="ghost" onClick={onClose}>
+          {postedTweetId ? 'Done' : 'Cancel'}
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={handleOpenComposer}
+          disabled={loading || isOverLimit}
+          title="Open X's compose window to post manually"
+        >
+          Open composer
+          <ExternalLink className="h-4 w-4" />
+        </Button>
+        <Button
+          onClick={handlePostToX}
+          disabled={loading || posting || isOverLimit || !!postedTweetId}
+          className="!bg-black !text-white hover:!bg-zinc-800"
+        >
+          {posting ? (
+            <>
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              Posting...
+            </>
+          ) : (
+            <span>{postedTweetId ? 'Posted' : 'Post to X'}</span>
+          )}
+        </Button>
+      </div>
+    </Modal>
   );
 }
