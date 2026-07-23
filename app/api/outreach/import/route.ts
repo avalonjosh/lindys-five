@@ -1,18 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
-import { jwtVerify } from 'jose';
-
-async function verifyAdmin(request: NextRequest): Promise<boolean> {
-  const token = request.cookies.get('admin_token')?.value;
-  if (!token) return false;
-  try {
-    const secret = new TextEncoder().encode(process.env.ADMIN_SESSION_SECRET);
-    await jwtVerify(token, secret);
-    return true;
-  } catch {
-    return false;
-  }
-}
+import { verifyAdmin } from '@/lib/adminAuth';
 
 // POST - bulk import contacts from JSON array
 export async function POST(request: NextRequest) {
@@ -27,19 +15,25 @@ export async function POST(request: NextRequest) {
     }
 
     const now = new Date().toISOString();
+
+    // Batch the existence check, then pipeline the writes — no per-contact round trips
+    const ids = contacts.map(
+      (c) => c.id || `outreach-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    );
+    const existing = ids.length > 0
+      ? await kv.mget<(unknown | null)[]>(...ids.map((id) => `outreach:contact:${id}`))
+      : [];
+
     let imported = 0;
     let skipped = 0;
+    const pipeline = kv.pipeline();
 
-    for (const c of contacts) {
-      const id = c.id || `outreach-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-      // Check if already exists
-      const existing = await kv.get(`outreach:contact:${id}`);
-      if (existing) {
+    contacts.forEach((c, i) => {
+      if (existing[i]) {
         skipped++;
-        continue;
+        return;
       }
-
+      const id = ids[i];
       const contact = {
         id,
         name: c.name || '',
@@ -54,11 +48,12 @@ export async function POST(request: NextRequest) {
         createdAt: now,
         updatedAt: now,
       };
-
-      await kv.set(`outreach:contact:${id}`, contact);
-      await kv.sadd('outreach:contacts', id);
+      pipeline.set(`outreach:contact:${id}`, contact);
+      pipeline.sadd('outreach:contacts', id);
       imported++;
-    }
+    });
+
+    if (imported > 0) await pipeline.exec();
 
     return NextResponse.json({ imported, skipped, total: contacts.length });
   } catch (error) {

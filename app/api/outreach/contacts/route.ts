@@ -1,18 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
-import { jwtVerify } from 'jose';
-
-async function verifyAdmin(request: NextRequest): Promise<boolean> {
-  const token = request.cookies.get('admin_token')?.value;
-  if (!token) return false;
-  try {
-    const secret = new TextEncoder().encode(process.env.ADMIN_SESSION_SECRET);
-    await jwtVerify(token, secret);
-    return true;
-  } catch {
-    return false;
-  }
-}
+import { verifyAdmin } from '@/lib/adminAuth';
 
 export interface OutreachContact {
   id: string;
@@ -31,7 +19,7 @@ export interface OutreachContact {
   updatedAt: string;
 }
 
-// GET - fetch all contacts
+// GET - fetch all contacts (batched read, no per-contact round trips)
 export async function GET(request: NextRequest) {
   if (!(await verifyAdmin(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -43,11 +31,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ contacts: [] });
     }
 
-    const contacts: OutreachContact[] = [];
-    for (const id of contactIds) {
-      const contact = await kv.get<OutreachContact>(`outreach:contact:${id}`);
-      if (contact) contacts.push(contact);
-    }
+    const keys = contactIds.map((id) => `outreach:contact:${id}`);
+    const records = await kv.mget<(OutreachContact | null)[]>(...keys);
+    const contacts = records.filter((c): c is OutreachContact => c !== null);
 
     contacts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 

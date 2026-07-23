@@ -3,11 +3,14 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Plus, Trash2, Edit, Mail, Send, Download, Upload,
-  ChevronDown, ChevronUp, Search, X, Copy, Check,
+  ChevronDown, ChevronUp, Copy, Check,
   Users, MailCheck, MessageSquare, Radio
 } from 'lucide-react';
-import { Card, Button, Badge, Spinner, StatCard, ErrorBanner } from './ui';
-import { TEAMS } from '@/lib/teamConfig';
+import {
+  Card, PageHeader, Button, Badge, Spinner, StatCard, ErrorBanner,
+  Input, Textarea, Select, SearchInput, Field, Modal, EmptyState,
+} from './ui';
+import { NHL_TEAMS, MLB_TEAMS, findTeam, getTeamUrl } from '@/lib/teamConfig';
 
 interface OutreachContact {
   id: string;
@@ -48,32 +51,34 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  not_contacted: 'bg-gray-500/20 text-gray-300',
-  contacted: 'bg-yellow-500/20 text-yellow-300',
-  responded: 'bg-blue-500/20 text-blue-300',
-  converted: 'bg-green-500/20 text-green-300',
-  declined: 'bg-red-500/20 text-red-300',
+  not_contacted: 'bg-gray-100 text-gray-600',
+  contacted: 'bg-amber-50 text-amber-700',
+  responded: 'bg-blue-50 text-blue-700',
+  converted: 'bg-green-50 text-green-700',
+  declined: 'bg-red-50 text-red-600',
 };
 
+// Templates are sport-aware: {{league}} and {{sport_fan}} resolve from the
+// contact's team (NHL or MLB), and {{team_url}} uses the sport-correct route.
 const TEMPLATES = {
   cold: {
     name: 'Cold Outreach',
     subject: "Free tool for {{team_name}} coverage — Lindy's Five",
     body: `Hi {{contact_name}},
 
-I'm a developer and hockey fan who built Lindy's Five — a free, real-time dashboard for every NHL team. I wanted to share it because I think it could be useful for your {{team_name}} coverage at {{outlet_name}}.
+I'm a developer and {{sport_fan}} who built Lindy's Five — a free, real-time dashboard for every {{league}} team. I wanted to share it because I think it could be useful for your {{team_name}} coverage at {{outlet_name}}.
 
 Here's the {{team_name}} page: {{team_url}}
 
-It pulls live data from the NHL API and shows:
+It pulls live data from the official {{league}} API and shows:
 - Live scores and game results
-- Full standings with playoff odds
+- Full standings with playoff odds (Monte Carlo simulations)
 - Team stats, streaks, and schedule
-- AI-generated blog posts with daily recaps
+- AI-generated daily recaps
 
-Buffalo sports radio (WGR 550) recently mentioned it on air and their listeners loved it, so I'm reaching out to media folks in other markets who might find it useful — whether for personal reference, content ideas, or sharing with your audience.
+Buffalo sports radio (WGR 550) has featured the site on air and their listeners loved it, so I'm reaching out to media folks in other markets who might find it useful — whether for personal reference, content ideas, or sharing with your audience.
 
-It's completely free, no ads, and works great on mobile. Would love to hear what you think.
+It's completely free, no ads, and works great on mobile. The site now covers every NHL and MLB team. Would love to hear what you think.
 
 Best,
 Josh Rabenold
@@ -84,7 +89,7 @@ Lindy's Five — {{team_url}}`,
     subject: "Re: Free tool for {{team_name}} coverage — Lindy's Five",
     body: `Hi {{contact_name}},
 
-Just wanted to bump this in case it got buried — I built a free real-time dashboard for every NHL team and thought it might be useful for your {{team_name}} coverage.
+Just wanted to bump this in case it got buried — I built a free real-time dashboard for every {{league}} team and thought it might be useful for your {{team_name}} coverage.
 
 Here's the direct link: {{team_url}}
 
@@ -103,11 +108,11 @@ Josh Rabenold`,
     subject: '{{team_name}} data tool — available for on-air use or guest spot',
     body: `Hi {{contact_name}},
 
-I'm a developer who built Lindy's Five, a free real-time dashboard for every NHL team. I've been listening to {{outlet_name}} and thought this could be a useful resource for your show.
+I'm a developer who built Lindy's Five, a free real-time dashboard for every {{league}} team. I've been listening to {{outlet_name}} and thought this could be a useful resource for your show.
 
 Here's the {{team_name}} page: {{team_url}}
 
-The site has real-time standings, playoff odds (Monte Carlo simulations), and AI-generated daily recaps — all pulled from official NHL data. Buffalo's WGR 550 mentioned it on-air recently and it got a great response from listeners.
+The site has real-time standings, playoff odds (Monte Carlo simulations), and AI-generated daily recaps — all pulled from official {{league}} data. Buffalo's WGR 550 has featured it on air and it got a great response from listeners.
 
 A few ways this could work for your show:
 - On-air resource: Quick reference for standings, stats, and playoff scenarios during broadcasts
@@ -125,20 +130,50 @@ Lindy's Five — {{team_url}}`,
 const SITE_URL = 'https://www.lindysfive.com';
 
 function getTeamName(slug: string): string {
-  const team = TEAMS[slug];
+  const team = findTeam(slug);
   return team ? `${team.city} ${team.name}` : slug;
 }
 
-function getTeamUrl(slug: string): string {
-  return `${SITE_URL}/nhl/${slug}`;
+function getLeague(slug: string): string {
+  if (slug in MLB_TEAMS) return 'MLB';
+  return 'NHL';
+}
+
+function getFullTeamUrl(slug: string): string {
+  return `${SITE_URL}${getTeamUrl(slug)}`;
 }
 
 function fillTemplate(template: string, contact: OutreachContact): string {
+  const league = getLeague(contact.team);
   return template
     .replace(/\{\{contact_name\}\}/g, contact.name.split(' ')[0] || contact.name)
     .replace(/\{\{team_name\}\}/g, getTeamName(contact.team))
-    .replace(/\{\{team_url\}\}/g, getTeamUrl(contact.team))
-    .replace(/\{\{outlet_name\}\}/g, contact.outlet);
+    .replace(/\{\{team_url\}\}/g, getFullTeamUrl(contact.team))
+    .replace(/\{\{outlet_name\}\}/g, contact.outlet)
+    .replace(/\{\{league\}\}/g, league)
+    .replace(/\{\{sport_fan\}\}/g, league === 'MLB' ? 'baseball fan' : 'hockey fan');
+}
+
+// Grouped team options for selectors (NHL then MLB, alphabetical by city)
+function TeamOptions() {
+  return (
+    <>
+      <optgroup label="NHL">
+        {Object.entries(NHL_TEAMS)
+          .sort((a, b) => a[1].city.localeCompare(b[1].city))
+          .map(([slug, team]) => (
+            <option key={slug} value={slug}>{team.city} {team.name}</option>
+          ))}
+      </optgroup>
+      <optgroup label="MLB">
+        {Object.entries(MLB_TEAMS)
+          .sort((a, b) => a[1].city.localeCompare(b[1].city))
+          .map(([slug, team]) => (
+            <option key={slug} value={slug}>{team.city} {team.name}</option>
+          ))}
+      </optgroup>
+    </>
+  );
 }
 
 export default function OutreachDashboard() {
@@ -311,96 +346,72 @@ export default function OutreachDashboard() {
 
   return (
     <>
-      <main className="max-w-7xl mx-auto px-4 py-8 text-white">
-        {/* Stats Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-          <StatCard icon={<Users className="w-4 h-4" />} label="Total" value={stats.total} />
-          <StatCard icon={<Mail className="w-4 h-4" />} label="With Email" value={stats.withEmail} />
-          <StatCard icon={<Send className="w-4 h-4" />} label="Contacted" value={stats.contacted} />
-          <StatCard icon={<MessageSquare className="w-4 h-4" />} label="Responded" value={stats.responded} />
-          <StatCard icon={<MailCheck className="w-4 h-4" />} label="Converted" value={stats.converted} />
-          <StatCard icon={<Radio className="w-4 h-4" />} label="Teams" value={stats.teams} />
+      <main className="mx-auto max-w-7xl px-4 py-8">
+        <PageHeader
+          title="Outreach"
+          description="Media contacts and pitch templates — NHL and MLB markets."
+          actions={
+            <>
+              <Button
+                variant="primary"
+                onClick={() => { setEditingContact(null); setShowAddForm(true); }}
+              >
+                <Plus className="h-4 w-4" /> Add Contact
+              </Button>
+            </>
+          }
+        />
+
+        {/* Stats */}
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <StatCard icon={<Users className="h-4 w-4" />} label="Total" value={stats.total} />
+          <StatCard icon={<Mail className="h-4 w-4" />} label="With Email" value={stats.withEmail} />
+          <StatCard icon={<Send className="h-4 w-4" />} label="Contacted" value={stats.contacted} />
+          <StatCard icon={<MessageSquare className="h-4 w-4" />} label="Responded" value={stats.responded} />
+          <StatCard icon={<MailCheck className="h-4 w-4" />} label="Converted" value={stats.converted} />
+          <StatCard icon={<Radio className="h-4 w-4" />} label="Teams" value={stats.teams} />
         </div>
 
-        {/* Actions Bar */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => { setEditingContact(null); setShowAddForm(true); }}
-          >
-            <Plus className="w-4 h-4" /> Add Contact
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleImportFromFile}
-            disabled={importing}
-          >
-            <Upload className="w-4 h-4" /> {importing ? 'Importing...' : 'Import from JSON'}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={handleExportCSV}>
-            <Download className="w-4 h-4" /> Export CSV
-          </Button>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search name, outlet, email..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="pl-8 pr-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white placeholder-slate-400 w-64 focus:outline-none focus:border-slate-400"
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute right-2 top-2.5">
-                <X className="w-4 h-4 text-slate-400 hover:text-white" />
-              </button>
-            )}
-          </div>
-          <select
-            value={filterTeam}
-            onChange={e => setFilterTeam(e.target.value)}
-            className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:border-slate-400"
-          >
+        {/* Filters + secondary actions */}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <SearchInput
+            placeholder="Search name, outlet, email…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full sm:w-64"
+          />
+          <Select value={filterTeam} onChange={e => setFilterTeam(e.target.value)} className="!w-auto">
             <option value="all">All Teams</option>
-            {Object.entries(TEAMS).sort((a, b) => a[1].city.localeCompare(b[1].city)).map(([slug, team]) => (
-              <option key={slug} value={slug}>{team.city} {team.name}</option>
-            ))}
-          </select>
-          <select
-            value={filterType}
-            onChange={e => setFilterType(e.target.value as FilterType)}
-            className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:border-slate-400"
-          >
+            <TeamOptions />
+          </Select>
+          <Select value={filterType} onChange={e => setFilterType(e.target.value as FilterType)} className="!w-auto">
             <option value="all">All Types</option>
             {Object.entries(TYPE_LABELS).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
             ))}
-          </select>
-          <select
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value as FilterStatus)}
-            className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:border-slate-400"
-          >
+          </Select>
+          <Select value={filterStatus} onChange={e => setFilterStatus(e.target.value as FilterStatus)} className="!w-auto">
             <option value="all">All Statuses</option>
             {Object.entries(STATUS_LABELS).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
             ))}
-          </select>
+          </Select>
           {(filterTeam !== 'all' || filterType !== 'all' || filterStatus !== 'all' || searchQuery) && (
             <button
               onClick={() => { setFilterTeam('all'); setFilterType('all'); setFilterStatus('all'); setSearchQuery(''); }}
-              className="px-3 py-2 text-sm text-slate-400 hover:text-white transition-colors"
+              className="px-2 text-sm text-gray-500 transition-colors hover:text-gray-700"
             >
-              Clear filters
+              Clear
             </button>
           )}
-          <span className="px-3 py-2 text-sm text-slate-400">
+          <span className="ml-auto flex items-center gap-2 text-sm text-gray-400">
             {filteredContacts.length} of {contacts.length}
+            <Button variant="ghost" size="sm" onClick={handleImportFromFile} disabled={importing}>
+              <Upload className="h-4 w-4" /> {importing ? 'Importing…' : 'Import'}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleExportCSV}>
+              <Download className="h-4 w-4" /> CSV
+            </Button>
           </span>
         </div>
 
@@ -419,15 +430,17 @@ export default function OutreachDashboard() {
             <Spinner size="lg" />
           </div>
         ) : filteredContacts.length === 0 ? (
-          <div className="text-center py-20 text-slate-400">
-            <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p className="text-lg mb-2">No contacts found</p>
-            <p className="text-sm">
-              {contacts.length === 0
-                ? 'Click "Import from JSON" to load contacts from the data file, or add them manually.'
-                : 'Try adjusting your filters.'}
-            </p>
-          </div>
+          <Card>
+            <EmptyState>
+              <Users className="mx-auto mb-3 h-10 w-10 text-gray-300" />
+              <p className="mb-1 font-semibold text-gray-600">No contacts found</p>
+              <p>
+                {contacts.length === 0
+                  ? 'Click "Import" to load contacts from the data file, or add them manually.'
+                  : 'Try adjusting your filters.'}
+              </p>
+            </EmptyState>
+          </Card>
         ) : (
           <div className="space-y-2">
             {filteredContacts.map(contact => (
@@ -463,9 +476,6 @@ export default function OutreachDashboard() {
           contact={showTemplatePreview.contact}
           templateKey={showTemplatePreview.template}
           onClose={() => setShowTemplatePreview(null)}
-          onCopy={() => {
-            handleCopyEmail(showTemplatePreview.contact, showTemplatePreview.template);
-          }}
         />
       )}
     </>
@@ -497,26 +507,27 @@ function ContactRow({
     <Card padding={false} className="overflow-hidden">
       {/* Main row */}
       <div
-        className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 cursor-pointer hover:bg-slate-700/40"
+        className="flex cursor-pointer items-center gap-2 px-3 py-3 hover:bg-gray-50 sm:gap-3 sm:px-4"
         onClick={() => setExpanded(!expanded)}
       >
-        <button className="shrink-0 text-slate-400">
-          {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        <button className="shrink-0 text-gray-400">
+          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </button>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-sm truncate">{contact.name}</span>
-            <span className="text-xs text-slate-400 truncate">{contact.outlet}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="truncate text-sm font-medium text-gray-900">{contact.name}</span>
+            <span className="truncate text-xs text-gray-500">{contact.outlet}</span>
           </div>
-          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            <span className="text-xs text-slate-500">{getTeamName(contact.team)}</span>
+          <div className="mt-0.5 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-gray-400">{getTeamName(contact.team)}</span>
             <Badge variant="neutral">{TYPE_LABELS[contact.type] || contact.type}</Badge>
+            <Badge variant={getLeague(contact.team) === 'MLB' ? 'info' : 'accent'}>{getLeague(contact.team)}</Badge>
           </div>
         </div>
 
         {contact.email && (
-          <span className="hidden sm:inline text-xs text-slate-400 truncate max-w-[200px]">
+          <span className="hidden max-w-[200px] truncate text-xs text-gray-400 sm:inline">
             {contact.email}
           </span>
         )}
@@ -525,60 +536,59 @@ function ContactRow({
           value={contact.status}
           onChange={e => { e.stopPropagation(); onStatusChange(e.target.value as OutreachContact['status']); }}
           onClick={e => e.stopPropagation()}
-          className={`text-xs font-semibold px-2 py-1 rounded border-0 cursor-pointer focus:outline-none ${STATUS_COLORS[contact.status]}`}
-          style={{ background: 'transparent' }}
+          className={`cursor-pointer rounded border-0 px-2 py-1 text-xs font-semibold focus:outline-none ${STATUS_COLORS[contact.status]}`}
         >
           {Object.entries(STATUS_LABELS).map(([k, v]) => (
-            <option key={k} value={k} className="bg-slate-800 text-white">{v}</option>
+            <option key={k} value={k} className="bg-white text-gray-900">{v}</option>
           ))}
         </select>
 
-        <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+        <div className="flex shrink-0 items-center gap-1" onClick={e => e.stopPropagation()}>
           {contact.email && (
             <button
               onClick={() => onCopyEmail(contact.type === 'podcast' || contact.type === 'radio' ? 'podcast' : 'cold')}
-              className="p-1.5 text-slate-400 hover:text-white transition-colors"
+              className="p-1.5 text-gray-400 transition-colors hover:text-gray-700"
               title="Copy email template"
             >
-              {isCopied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+              {isCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
             </button>
           )}
           <button
             onClick={onEdit}
-            className="p-1.5 text-slate-400 hover:text-white transition-colors"
+            className="p-1.5 text-gray-400 transition-colors hover:text-gray-700"
             title="Edit"
           >
-            <Edit className="w-4 h-4" />
+            <Edit className="h-4 w-4" />
           </button>
           <button
             onClick={onDelete}
             disabled={isDeleting}
-            className="p-1.5 text-slate-400 hover:text-red-400 transition-colors disabled:opacity-50"
+            className="p-1.5 text-gray-400 transition-colors hover:text-red-500 disabled:opacity-50"
             title="Delete"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="h-4 w-4" />
           </button>
         </div>
       </div>
 
       {/* Expanded details */}
       {expanded && (
-        <div className="px-4 pb-4 pt-1 border-t border-slate-700 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+        <div className="space-y-3 border-t border-gray-100 px-4 pb-4 pt-3">
+          <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
             {contact.email && (
               <div>
-                <span className="text-slate-400">Email: </span>
-                <a href={`mailto:${contact.email}`} className="text-blue-400 hover:underline">{contact.email}</a>
+                <span className="text-gray-400">Email: </span>
+                <a href={`mailto:${contact.email}`} className="text-sabres-blue hover:underline">{contact.email}</a>
               </div>
             )}
             {contact.twitter && (
               <div>
-                <span className="text-slate-400">Twitter: </span>
+                <span className="text-gray-400">Twitter: </span>
                 <a
                   href={`https://x.com/${contact.twitter.replace('@', '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-400 hover:underline"
+                  className="text-sabres-blue hover:underline"
                 >
                   {contact.twitter}
                 </a>
@@ -586,40 +596,40 @@ function ContactRow({
             )}
             {contact.website && (
               <div>
-                <span className="text-slate-400">Website: </span>
-                <a href={contact.website} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline truncate inline-block max-w-[300px] align-bottom">
+                <span className="text-gray-400">Website: </span>
+                <a href={contact.website} target="_blank" rel="noopener noreferrer" className="inline-block max-w-[300px] truncate align-bottom text-sabres-blue hover:underline">
                   {contact.website.replace(/^https?:\/\//, '')}
                 </a>
               </div>
             )}
             {contact.notes && (
               <div className="sm:col-span-2">
-                <span className="text-slate-400">Notes: </span>
-                <span className="text-slate-300">{contact.notes}</span>
+                <span className="text-gray-400">Notes: </span>
+                <span className="text-gray-700">{contact.notes}</span>
               </div>
             )}
             {contact.contactedAt && (
               <div>
-                <span className="text-slate-400">Contacted: </span>
-                <span className="text-slate-300">{new Date(contact.contactedAt).toLocaleDateString()}</span>
+                <span className="text-gray-400">Contacted: </span>
+                <span className="text-gray-700">{new Date(contact.contactedAt).toLocaleDateString()}</span>
               </div>
             )}
             {contact.respondedAt && (
               <div>
-                <span className="text-slate-400">Responded: </span>
-                <span className="text-slate-300">{new Date(contact.respondedAt).toLocaleDateString()}</span>
+                <span className="text-gray-400">Responded: </span>
+                <span className="text-gray-700">{new Date(contact.respondedAt).toLocaleDateString()}</span>
               </div>
             )}
           </div>
 
           {/* Template buttons */}
           <div className="flex flex-wrap gap-2">
-            <span className="text-xs text-slate-400 py-1">Preview template:</span>
+            <span className="py-1 text-xs text-gray-400">Preview template:</span>
             {Object.entries(TEMPLATES).map(([key, tmpl]) => (
               <button
                 key={key}
                 onClick={() => onPreviewTemplate(key as keyof typeof TEMPLATES)}
-                className="text-xs px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
+                className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700 transition-colors hover:bg-gray-50"
               >
                 {tmpl.name}
               </button>
@@ -661,128 +671,98 @@ function ContactFormModal({
     onSave(form);
   };
 
-  const inputClasses = 'w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:border-slate-400';
-
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 text-white" onClick={onClose}>
-      <div
-        className="bg-slate-800 border border-slate-700 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
-          <h2 className="font-display text-2xl tracking-wide">{contact ? 'Edit Contact' : 'Add Contact'}</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+    <Modal onClose={onClose} title={contact ? 'Edit Contact' : 'Add Contact'}>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Name *">
+            <Input
+              required
+              value={form.name || ''}
+              onChange={e => setForm({ ...form, name: e.target.value })}
+            />
+          </Field>
+          <Field label="Outlet *">
+            <Input
+              required
+              value={form.outlet || ''}
+              onChange={e => setForm({ ...form, outlet: e.target.value })}
+            />
+          </Field>
         </div>
-        <form onSubmit={handleSubmit} className="p-4 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Name *</label>
-              <input
-                required
-                value={form.name || ''}
-                onChange={e => setForm({ ...form, name: e.target.value })}
-                className={inputClasses}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Outlet *</label>
-              <input
-                required
-                value={form.outlet || ''}
-                onChange={e => setForm({ ...form, outlet: e.target.value })}
-                className={inputClasses}
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Team</label>
-              <select
-                value={form.team || 'sabres'}
-                onChange={e => setForm({ ...form, team: e.target.value })}
-                className={inputClasses}
-              >
-                {Object.entries(TEAMS).sort((a, b) => a[1].city.localeCompare(b[1].city)).map(([slug, team]) => (
-                  <option key={slug} value={slug}>{team.city} {team.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Type</label>
-              <select
-                value={form.type || 'blog'}
-                onChange={e => setForm({ ...form, type: e.target.value as OutreachContact['type'] })}
-                className={inputClasses}
-              >
-                {Object.entries(TYPE_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Email</label>
-            <input
-              type="email"
-              value={form.email || ''}
-              onChange={e => setForm({ ...form, email: e.target.value })}
-              className={inputClasses}
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Team">
+            <Select
+              value={form.team || 'sabres'}
+              onChange={e => setForm({ ...form, team: e.target.value })}
+            >
+              <TeamOptions />
+            </Select>
+          </Field>
+          <Field label="Type">
+            <Select
+              value={form.type || 'blog'}
+              onChange={e => setForm({ ...form, type: e.target.value as OutreachContact['type'] })}
+            >
+              {Object.entries(TYPE_LABELS).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+        <Field label="Email">
+          <Input
+            type="email"
+            value={form.email || ''}
+            onChange={e => setForm({ ...form, email: e.target.value })}
+          />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Twitter">
+            <Input
+              value={form.twitter || ''}
+              onChange={e => setForm({ ...form, twitter: e.target.value })}
+              placeholder="@handle"
             />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Twitter</label>
-              <input
-                value={form.twitter || ''}
-                onChange={e => setForm({ ...form, twitter: e.target.value })}
-                placeholder="@handle"
-                className={inputClasses}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Website</label>
-              <input
-                value={form.website || ''}
-                onChange={e => setForm({ ...form, website: e.target.value })}
-                placeholder="https://..."
-                className={inputClasses}
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Notes</label>
-            <textarea
-              value={form.notes || ''}
-              onChange={e => setForm({ ...form, notes: e.target.value })}
-              rows={2}
-              className={`${inputClasses} resize-none`}
+          </Field>
+          <Field label="Website">
+            <Input
+              value={form.website || ''}
+              onChange={e => setForm({ ...form, website: e.target.value })}
+              placeholder="https://..."
             />
-          </div>
-          {contact && (
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Status</label>
-              <select
-                value={form.status || 'not_contacted'}
-                onChange={e => setForm({ ...form, status: e.target.value as OutreachContact['status'] })}
-                className={inputClasses}
-              >
-                {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                  <option key={k} value={k}>{v}</option>
-                ))}
-              </select>
-            </div>
-          )}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" size="sm" disabled={saving}>
-              {saving ? 'Saving...' : contact ? 'Update' : 'Add Contact'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+          </Field>
+        </div>
+        <Field label="Notes">
+          <Textarea
+            value={form.notes || ''}
+            onChange={e => setForm({ ...form, notes: e.target.value })}
+            rows={2}
+            className="resize-none"
+          />
+        </Field>
+        {contact && (
+          <Field label="Status">
+            <Select
+              value={form.status || 'not_contacted'}
+              onChange={e => setForm({ ...form, status: e.target.value as OutreachContact['status'] })}
+            >
+              {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </Select>
+          </Field>
+        )}
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" size="sm" disabled={saving}>
+            {saving ? 'Saving...' : contact ? 'Update' : 'Add Contact'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -790,12 +770,10 @@ function TemplatePreviewModal({
   contact,
   templateKey,
   onClose,
-  onCopy,
 }: {
   contact: OutreachContact;
   templateKey: keyof typeof TEMPLATES;
   onClose: () => void;
-  onCopy: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const template = TEMPLATES[templateKey];
@@ -815,39 +793,36 @@ function TemplatePreviewModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 text-white" onClick={onClose}>
-      <div
-        className="bg-slate-800 border border-slate-700 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
-          <div>
-            <h2 className="font-display text-2xl tracking-wide">{template.name}</h2>
-            <p className="text-xs text-slate-400">To: {contact.name} ({contact.outlet})</p>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
-        </div>
-        <div className="p-4">
-          <div className="mb-3">
-            <span className="text-xs text-slate-400">Subject:</span>
-            <p className="text-sm font-medium mt-0.5">{subject}</p>
-          </div>
-          <div className="bg-slate-900 border border-slate-700 rounded-lg p-4 text-sm whitespace-pre-wrap leading-relaxed">
-            {body}
-          </div>
-          <div className="flex gap-2 mt-4">
-            <Button variant="ghost" size="sm" onClick={handleCopy}>
-              {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-              {copied ? 'Copied!' : 'Copy to clipboard'}
-            </Button>
-            {contact.email && (
-              <Button variant="primary" size="sm" onClick={handleMailto}>
-                <Mail className="w-4 h-4" /> Open in Mail
-              </Button>
-            )}
-          </div>
-        </div>
+    <Modal
+      onClose={onClose}
+      title={
+        <span>
+          {template.name}
+          <span className="mt-0.5 block text-xs font-normal text-gray-400">
+            To: {contact.name} ({contact.outlet})
+          </span>
+        </span>
+      }
+      wide
+    >
+      <div className="mb-3">
+        <span className="text-xs text-gray-400">Subject:</span>
+        <p className="mt-0.5 text-sm font-medium text-gray-900">{subject}</p>
       </div>
-    </div>
+      <div className="whitespace-pre-wrap rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm leading-relaxed text-gray-700">
+        {body}
+      </div>
+      <div className="mt-4 flex gap-2">
+        <Button variant="secondary" size="sm" onClick={handleCopy}>
+          {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+          {copied ? 'Copied!' : 'Copy to clipboard'}
+        </Button>
+        {contact.email && (
+          <Button variant="primary" size="sm" onClick={handleMailto}>
+            <Mail className="h-4 w-4" /> Open in Mail
+          </Button>
+        )}
+      </div>
+    </Modal>
   );
 }
