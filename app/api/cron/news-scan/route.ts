@@ -157,8 +157,15 @@ async function findSemanticDuplicate(keywords: string[]) {
   } catch { return null; }
 }
 
+/** Web-search model output embeds <cite index="..."></cite> citation tags inside
+ * JSON string values — strip them (and any stray markup) before the text is used
+ * for titles, slugs, or descriptions. */
+function stripCitationMarkup(text: string): string {
+  return text.replace(/<\/?cite[^>]*>/gi, '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+}
+
 function generateTitle(topic: string) {
-  const cleaned = topic.replace(/^the sabres /i, 'Sabres ').replace(/^sabres /i, 'Sabres ');
+  const cleaned = stripCitationMarkup(topic).replace(/^the sabres /i, 'Sabres ').replace(/^sabres /i, 'Sabres ');
   const titleCased = cleaned.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   return truncateAtWordBoundary(titleCased, 80);
 }
@@ -230,6 +237,16 @@ export async function GET(request: NextRequest) {
     const textContent = searchMessage.content.filter((block: any) => block.type === 'text').map((block: any) => block.text).join('\n');
     const jsonMatch = textContent.match(/\[[\s\S]*\]/);
     if (jsonMatch) { try { stories = JSON.parse(jsonMatch[0]); } catch { stories = []; } }
+    // Scrub citation markup from every string field the pipeline consumes
+    // (topic feeds title, slug, metaDescription, storyKey, and the OG headline).
+    for (const story of stories) {
+      for (const field of Object.keys(story)) {
+        if (typeof story[field] === 'string') story[field] = stripCitationMarkup(story[field]);
+        if (Array.isArray(story[field])) {
+          story[field] = story[field].map((v: unknown) => (typeof v === 'string' ? stripCitationMarkup(v) : v));
+        }
+      }
+    }
 
     if (stories.length === 0) {
       return NextResponse.json({ success: true, message: 'No significant news stories found', storiesProcessed: 0 });
