@@ -1,4 +1,6 @@
 import React from 'react';
+import { readFile } from 'fs/promises';
+import path from 'path';
 import { ImageResponse } from '@vercel/og';
 import { put } from '@vercel/blob';
 import { TEAMS, type TeamConfig } from '@/lib/teamConfig';
@@ -7,6 +9,149 @@ import { modeBadgeLabel, type SharedTeam, type SharedTeamRow } from '@/lib/perfe
 
 const OG_WIDTH = 1200;
 const OG_HEIGHT = 630;
+
+// ---- Brand fonts (node runtime only — the edge /api/og path keeps defaults) ----
+// Bebas Neue = site display font for headlines/labels; Inter carries scores and
+// secondary text with true bold weights (satori's default font has no bold).
+type BrandFont = { name: string; data: Buffer; weight: 400 | 600 | 800; style: 'normal' };
+let fontsPromise: Promise<BrandFont[]> | null = null;
+function loadBrandFonts(): Promise<BrandFont[]> {
+  fontsPromise ??= (async () => {
+    const dir = path.join(process.cwd(), 'assets', 'fonts');
+    const [inter600, inter800, bebas] = await Promise.all([
+      readFile(path.join(dir, 'Inter-SemiBold.ttf')),
+      readFile(path.join(dir, 'Inter-ExtraBold.ttf')),
+      readFile(path.join(dir, 'BebasNeue-Regular.ttf')),
+    ]);
+    return [
+      { name: 'Inter', data: inter600, weight: 600, style: 'normal' },
+      { name: 'Inter', data: inter800, weight: 800, style: 'normal' },
+      { name: 'Bebas Neue', data: bebas, weight: 400, style: 'normal' },
+    ];
+  })();
+  return fontsPromise;
+}
+
+// ---- Team-color background helpers ----
+const NAVY = '#0a1128';
+
+function mixHex(a: string, b: string, t: number): string {
+  const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
+  const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
+  const mixed = pa.map((v, i) => Math.round(v + (pb[i] - v) * t));
+  return `#${mixed.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** Single-team background: primary color eased into deep navy. */
+function teamGradient(primary: string): string {
+  return `linear-gradient(135deg, ${mixHex(primary, NAVY, 0.2)} 0%, ${mixHex(primary, NAVY, 0.75)} 100%)`;
+}
+
+/** Two-team background: away color on the left, home on the right, dark center. */
+function matchupGradient(awayPrimary: string, homePrimary: string): string {
+  return `linear-gradient(115deg, ${mixHex(awayPrimary, NAVY, 0.35)} 0%, ${mixHex(awayPrimary, NAVY, 0.72)} 40%, ${mixHex(homePrimary, NAVY, 0.72)} 60%, ${mixHex(homePrimary, NAVY, 0.35)} 100%)`;
+}
+
+/** Dark-background logo variant: NHL ships one; the Bills logo works as-is. */
+function darkLogo(abbrev: string): string {
+  if (abbrev === 'BILLS') return BILLS_OG_TEAM.logo;
+  return `https://assets.nhle.com/logos/nhl/svg/${abbrev}_dark.svg`;
+}
+
+// ---- Shared card elements ----
+
+function glow(top = '42%') {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: 'flex',
+        background: `radial-gradient(circle at 50% ${top}, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 55%)`,
+      }}
+    />
+  );
+}
+
+function watermark(logo: string, side: 'left' | 'right', opacity = 0.1) {
+  return (
+    <img
+      src={logo}
+      width={520}
+      height={520}
+      style={{
+        position: 'absolute',
+        top: -70,
+        [side]: -120,
+        objectFit: 'contain',
+        opacity,
+      }}
+    />
+  );
+}
+
+function topBar(colors: string[]) {
+  return (
+    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 10, display: 'flex' }}>
+      {colors.map((c, i) => (
+        <div key={i} style={{ flex: 1, background: c, display: 'flex' }} />
+      ))}
+    </div>
+  );
+}
+
+function kicker(text: string, accent: string) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 16,
+        marginBottom: 26,
+      }}
+    >
+      <div style={{ display: 'flex', width: 44, height: 4, background: accent, borderRadius: 2 }} />
+      <div
+        style={{
+          display: 'flex',
+          fontFamily: 'Bebas Neue',
+          fontSize: 30,
+          color: 'rgba(255,255,255,0.92)',
+          letterSpacing: 8,
+        }}
+      >
+        {text}
+      </div>
+      <div style={{ display: 'flex', width: 44, height: 4, background: accent, borderRadius: 2 }} />
+    </div>
+  );
+}
+
+function brandBadge() {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        bottom: 26,
+        display: 'flex',
+        alignItems: 'center',
+        padding: '8px 26px',
+        borderRadius: 999,
+        border: '1.5px solid rgba(255,255,255,0.3)',
+        background: 'rgba(10,17,40,0.35)',
+        fontFamily: 'Bebas Neue',
+        fontSize: 24,
+        letterSpacing: 4,
+        color: 'rgba(255,255,255,0.9)',
+      }}
+    >
+      LINDY&apos;S FIVE
+    </div>
+  );
+}
 
 function getTeamByAbbrev(abbrev: string): TeamConfig | undefined {
   return Object.values(TEAMS).find(t => t.abbreviation === abbrev);
@@ -47,9 +192,10 @@ function gameRecapTemplate({
 }) {
   const homeTeam = getTeamByAbbrev(homeAbbrev);
   const awayTeam = getTeamByAbbrev(awayAbbrev);
-  const homePrimary = homeTeam?.colors.primary || '#333';
-  const awayPrimary = awayTeam?.colors.primary || '#333';
-  const suffix = periodType === 'OT' ? ' OT' : periodType === 'SO' ? ' SO' : '';
+  const homePrimary = homeTeam?.colors.primary || '#1e3a8a';
+  const awayPrimary = awayTeam?.colors.primary || '#1e3a8a';
+  const accent = homeTeam?.colors.accent || '#FFB81C';
+  const suffix = periodType === 'OT' ? ' / OT' : periodType === 'SO' ? ' / SO' : '';
 
   const formattedDate = new Date(gameDate + 'T12:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
@@ -67,39 +213,16 @@ function gameRecapTemplate({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%)',
+        background: matchupGradient(awayPrimary, homePrimary),
         position: 'relative',
       }}
     >
-      {/* Top accent bar */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 6,
-          display: 'flex',
-        }}
-      >
-        <div style={{ flex: 1, background: awayPrimary, display: 'flex' }} />
-        <div style={{ flex: 1, background: homePrimary, display: 'flex' }} />
-      </div>
+      {watermark(darkLogo(awayAbbrev), 'left', 0.09)}
+      {watermark(darkLogo(homeAbbrev), 'right', 0.09)}
+      {glow()}
+      {topBar([awayTeam?.colors.accent || awayPrimary, accent])}
 
-      {/* GAME RECAP label */}
-      <div
-        style={{
-          display: 'flex',
-          fontSize: 18,
-          fontWeight: 700,
-          color: '#888',
-          letterSpacing: 6,
-          textTransform: 'uppercase',
-          marginBottom: 24,
-        }}
-      >
-        {label || 'GAME RECAP'}
-      </div>
+      {kicker(label || 'GAME RECAP', accent)}
 
       {/* Main matchup row */}
       <div
@@ -107,60 +230,42 @@ function gameRecapTemplate({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 40,
+          gap: 56,
         }}
       >
         {/* Away team */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 16,
-          }}
-        >
-          <img
-            src={awayTeam?.logo || `https://assets.nhle.com/logos/nhl/svg/${awayAbbrev}_light.svg`}
-            width={140}
-            height={140}
-            style={{ objectFit: 'contain' }}
-          />
-          <div style={{ display: 'flex', fontSize: 24, fontWeight: 600, color: '#ccc' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+          <img src={darkLogo(awayAbbrev)} width={160} height={160} style={{ objectFit: 'contain' }} />
+          <div style={{ display: 'flex', fontFamily: 'Bebas Neue', fontSize: 38, letterSpacing: 2, color: 'rgba(255,255,255,0.95)' }}>
             {awayTeam?.city || awayAbbrev}
           </div>
         </div>
 
         {/* Score */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 8,
-          }}
-        >
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
           <div
             style={{
               display: 'flex',
               alignItems: 'baseline',
-              gap: 20,
-              fontSize: 96,
+              gap: 24,
+              fontFamily: 'Inter',
+              fontSize: 130,
               fontWeight: 800,
               color: '#ffffff',
               lineHeight: 1,
             }}
           >
             <span>{awayScore}</span>
-            <span style={{ fontSize: 48, color: '#444' }}>-</span>
+            <span style={{ fontSize: 56, color: 'rgba(255,255,255,0.45)' }}>–</span>
             <span>{homeScore}</span>
           </div>
           <div
             style={{
               display: 'flex',
-              fontSize: 20,
-              fontWeight: 600,
-              color: '#666',
-              textTransform: 'uppercase',
+              fontFamily: 'Bebas Neue',
+              fontSize: 28,
+              letterSpacing: 6,
+              color: 'rgba(255,255,255,0.7)',
             }}
           >
             FINAL{suffix}
@@ -168,21 +273,9 @@ function gameRecapTemplate({
         </div>
 
         {/* Home team */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 16,
-          }}
-        >
-          <img
-            src={homeTeam?.logo || `https://assets.nhle.com/logos/nhl/svg/${homeAbbrev}_light.svg`}
-            width={140}
-            height={140}
-            style={{ objectFit: 'contain' }}
-          />
-          <div style={{ display: 'flex', fontSize: 24, fontWeight: 600, color: '#ccc' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+          <img src={darkLogo(homeAbbrev)} width={160} height={160} style={{ objectFit: 'contain' }} />
+          <div style={{ display: 'flex', fontFamily: 'Bebas Neue', fontSize: 38, letterSpacing: 2, color: 'rgba(255,255,255,0.95)' }}>
             {homeTeam?.city || homeAbbrev}
           </div>
         </div>
@@ -192,28 +285,17 @@ function gameRecapTemplate({
       <div
         style={{
           display: 'flex',
-          fontSize: 18,
-          color: '#666',
-          marginTop: 32,
+          fontFamily: 'Inter',
+          fontWeight: 600,
+          fontSize: 21,
+          color: 'rgba(255,255,255,0.6)',
+          marginTop: 30,
         }}
       >
         {formattedDate}
       </div>
 
-      {/* Bottom branding */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 20,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          fontSize: 16,
-          color: '#444',
-        }}
-      >
-        lindysfive.com
-      </div>
+      {brandBadge()}
     </div>
   );
 }
@@ -234,9 +316,10 @@ function setRecapTemplate({
   targetMet: boolean;
 }) {
   const team = getTeamByAbbrev(teamAbbrev);
-  const primary = team?.colors.primary || '#333';
+  const primary = team?.colors.primary || '#1e3a8a';
+  const accent = team?.colors.accent || '#FFB81C';
   const record = `${wins}-${losses}${otLosses > 0 ? `-${otLosses}` : ''}`;
-  const statusColor = targetMet ? '#22c55e' : '#ef4444';
+  const statusColor = targetMet ? '#4ade80' : '#f87171';
   const statusText = targetMet ? 'TARGET MET' : 'TARGET MISSED';
 
   return (
@@ -248,94 +331,53 @@ function setRecapTemplate({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%)',
+        background: teamGradient(primary),
         position: 'relative',
       }}
     >
-      {/* Top accent bar */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 6,
-          background: primary,
-          display: 'flex',
-        }}
-      />
+      {watermark(darkLogo(teamAbbrev), 'right', 0.1)}
+      {glow()}
+      {topBar([accent])}
 
-      {/* SET RECAP label */}
-      <div
-        style={{
-          display: 'flex',
-          fontSize: 18,
-          fontWeight: 700,
-          color: '#888',
-          letterSpacing: 6,
-          textTransform: 'uppercase',
-          marginBottom: 24,
-        }}
-      >
-        SET RECAP
-      </div>
+      {kicker(`SET ${setNumber} RECAP`, accent)}
 
       {/* Team logo */}
-      <img
-        src={team?.logo || `https://assets.nhle.com/logos/nhl/svg/${teamAbbrev}_light.svg`}
-        width={120}
-        height={120}
-        style={{ objectFit: 'contain' }}
-      />
+      <img src={darkLogo(teamAbbrev)} width={140} height={140} style={{ objectFit: 'contain' }} />
 
-      {/* Set number and record */}
+      {/* Record */}
       <div
         style={{
           display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          marginTop: 24,
-          gap: 8,
+          fontFamily: 'Inter',
+          fontSize: 110,
+          fontWeight: 800,
+          color: '#fff',
+          lineHeight: 1,
+          marginTop: 22,
         }}
       >
-        <div style={{ display: 'flex', fontSize: 32, fontWeight: 600, color: '#aaa' }}>
-          Set {setNumber}
-        </div>
-        <div style={{ display: 'flex', fontSize: 80, fontWeight: 800, color: '#fff', lineHeight: 1 }}>
-          {record}
-        </div>
+        {record}
       </div>
 
       {/* Target status */}
       <div
         style={{
           display: 'flex',
-          marginTop: 20,
-          padding: '8px 24px',
-          borderRadius: 8,
-          background: `${statusColor}22`,
+          marginTop: 24,
+          padding: '8px 28px',
+          borderRadius: 999,
+          background: 'rgba(10,17,40,0.35)',
           border: `2px solid ${statusColor}`,
-          fontSize: 20,
-          fontWeight: 700,
+          fontFamily: 'Bebas Neue',
+          fontSize: 26,
           color: statusColor,
-          letterSpacing: 2,
+          letterSpacing: 4,
         }}
       >
         {statusText}
       </div>
 
-      {/* Bottom branding */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 20,
-          display: 'flex',
-          fontSize: 16,
-          color: '#444',
-        }}
-      >
-        lindysfive.com
-      </div>
+      {brandBadge()}
     </div>
   );
 }
@@ -348,7 +390,8 @@ function newsTemplate({
   headline: string;
 }) {
   const team = getOgTeam(teamAbbrev);
-  const primary = team?.colors.primary || '#333';
+  const primary = team?.colors.primary || '#1e3a8a';
+  const accent = team?.colors.accent || '#FFB81C';
 
   return (
     <div
@@ -359,60 +402,36 @@ function newsTemplate({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%)',
+        background: teamGradient(primary),
         position: 'relative',
-        padding: '60px 80px',
+        padding: '60px 90px',
       }}
     >
-      {/* Top accent bar */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 6,
-          background: primary,
-          display: 'flex',
-        }}
-      />
+      {watermark(darkLogo(teamAbbrev), 'right', 0.1)}
+      {glow('38%')}
+      {topBar([accent])}
 
       {/* Team logo */}
-      <img
-        src={team?.logo || `https://assets.nhle.com/logos/nhl/svg/${teamAbbrev}_light.svg`}
-        width={110}
-        height={110}
-        style={{ objectFit: 'contain', opacity: 0.9 }}
-      />
+      <img src={darkLogo(teamAbbrev)} width={130} height={130} style={{ objectFit: 'contain' }} />
 
       {/* Headline */}
       <div
         style={{
           display: 'flex',
-          fontSize: headline.length > 60 ? 40 : 48,
-          fontWeight: 800,
+          fontFamily: 'Bebas Neue',
+          fontSize: headline.length > 60 ? 62 : 76,
           color: '#ffffff',
           textAlign: 'center',
-          lineHeight: 1.2,
-          marginTop: 24,
-          maxWidth: 1000,
+          lineHeight: 1.08,
+          letterSpacing: 1,
+          marginTop: 28,
+          maxWidth: 1020,
         }}
       >
         {headline}
       </div>
 
-      {/* Bottom branding */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 20,
-          display: 'flex',
-          fontSize: 16,
-          color: '#444',
-        }}
-      >
-        lindysfive.com
-      </div>
+      {brandBadge()}
     </div>
   );
 }
@@ -429,7 +448,8 @@ function weeklyRoundupTemplate({
   weekEnd: string;
 }) {
   const team = getOgTeam(teamAbbrev);
-  const primary = team?.colors.primary || '#333';
+  const primary = team?.colors.primary || '#1e3a8a';
+  const accent = team?.colors.accent || '#FFB81C';
 
   const formatDate = (d: string) =>
     new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -443,54 +463,28 @@ function weeklyRoundupTemplate({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%)',
+        background: teamGradient(primary),
         position: 'relative',
       }}
     >
-      {/* Top accent bar */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 6,
-          background: primary,
-          display: 'flex',
-        }}
-      />
+      {watermark(darkLogo(teamAbbrev), 'right', 0.1)}
+      {glow()}
+      {topBar([accent])}
 
-      {/* WEEKLY ROUNDUP label */}
-      <div
-        style={{
-          display: 'flex',
-          fontSize: 18,
-          fontWeight: 700,
-          color: '#888',
-          letterSpacing: 6,
-          textTransform: 'uppercase',
-          marginBottom: 24,
-        }}
-      >
-        WEEKLY ROUNDUP
-      </div>
+      {kicker('WEEKLY ROUNDUP', accent)}
 
       {/* Team logo */}
-      <img
-        src={team?.logo || `https://assets.nhle.com/logos/nhl/svg/${teamAbbrev}_light.svg`}
-        width={120}
-        height={120}
-        style={{ objectFit: 'contain' }}
-      />
+      <img src={darkLogo(teamAbbrev)} width={140} height={140} style={{ objectFit: 'contain' }} />
 
       {/* Week record */}
       <div
         style={{
           display: 'flex',
-          fontSize: 72,
+          fontFamily: 'Inter',
+          fontSize: 100,
           fontWeight: 800,
           color: '#fff',
-          marginTop: 24,
+          marginTop: 22,
           lineHeight: 1,
         }}
       >
@@ -501,26 +495,17 @@ function weeklyRoundupTemplate({
       <div
         style={{
           display: 'flex',
-          fontSize: 22,
-          color: '#666',
-          marginTop: 16,
+          fontFamily: 'Inter',
+          fontWeight: 600,
+          fontSize: 23,
+          color: 'rgba(255,255,255,0.65)',
+          marginTop: 18,
         }}
       >
         {formatDate(weekStart)} – {formatDate(weekEnd)}
       </div>
 
-      {/* Bottom branding */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 20,
-          display: 'flex',
-          fontSize: 16,
-          color: '#444',
-        }}
-      >
-        lindysfive.com
-      </div>
+      {brandBadge()}
     </div>
   );
 }
@@ -538,8 +523,9 @@ function seriesRecapTemplate({
 }) {
   const winner = getTeamByAbbrev(winnerAbbrev);
   const loser = getTeamByAbbrev(loserAbbrev);
-  const winnerPrimary = winner?.colors.primary || '#333';
-  const loserPrimary = loser?.colors.primary || '#333';
+  const winnerPrimary = winner?.colors.primary || '#1e3a8a';
+  const loserPrimary = loser?.colors.primary || '#1e3a8a';
+  const accent = winner?.colors.accent || '#FFB81C';
 
   return (
     <div
@@ -550,39 +536,15 @@ function seriesRecapTemplate({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%)',
+        background: matchupGradient(winnerPrimary, loserPrimary),
         position: 'relative',
       }}
     >
-      {/* Top accent bar */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 6,
-          display: 'flex',
-        }}
-      >
-        <div style={{ flex: 1, background: winnerPrimary, display: 'flex' }} />
-        <div style={{ flex: 1, background: loserPrimary, display: 'flex' }} />
-      </div>
+      {watermark(darkLogo(winnerAbbrev), 'left', 0.09)}
+      {glow()}
+      {topBar([accent, loser?.colors.accent || loserPrimary])}
 
-      {/* Round label */}
-      <div
-        style={{
-          display: 'flex',
-          fontSize: 18,
-          fontWeight: 700,
-          color: '#888',
-          letterSpacing: 6,
-          textTransform: 'uppercase',
-          marginBottom: 24,
-        }}
-      >
-        {roundLabel} — SERIES RECAP
-      </div>
+      {kicker(`${roundLabel} — SERIES RECAP`, accent)}
 
       {/* Matchup row */}
       <div
@@ -590,38 +552,28 @@ function seriesRecapTemplate({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 48,
+          gap: 56,
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-          <img
-            src={winner?.logo || `https://assets.nhle.com/logos/nhl/svg/${winnerAbbrev}_light.svg`}
-            width={150}
-            height={150}
-            style={{ objectFit: 'contain' }}
-          />
-          <div style={{ display: 'flex', fontSize: 24, fontWeight: 700, color: '#fff' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+          <img src={darkLogo(winnerAbbrev)} width={160} height={160} style={{ objectFit: 'contain' }} />
+          <div style={{ display: 'flex', fontFamily: 'Bebas Neue', fontSize: 36, letterSpacing: 2, color: '#fff' }}>
             {winner?.name || winnerAbbrev}
           </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-          <div style={{ display: 'flex', fontSize: 88, fontWeight: 800, color: '#fff', lineHeight: 1 }}>
+          <div style={{ display: 'flex', fontFamily: 'Inter', fontSize: 110, fontWeight: 800, color: '#fff', lineHeight: 1 }}>
             {seriesResult}
           </div>
-          <div style={{ display: 'flex', fontSize: 20, color: '#888', letterSpacing: 2 }}>
+          <div style={{ display: 'flex', fontFamily: 'Bebas Neue', fontSize: 26, color: 'rgba(255,255,255,0.7)', letterSpacing: 6 }}>
             SERIES
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-          <img
-            src={loser?.logo || `https://assets.nhle.com/logos/nhl/svg/${loserAbbrev}_light.svg`}
-            width={150}
-            height={150}
-            style={{ objectFit: 'contain', opacity: 0.5 }}
-          />
-          <div style={{ display: 'flex', fontSize: 24, fontWeight: 600, color: '#999' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+          <img src={darkLogo(loserAbbrev)} width={160} height={160} style={{ objectFit: 'contain', opacity: 0.45 }} />
+          <div style={{ display: 'flex', fontFamily: 'Bebas Neue', fontSize: 36, letterSpacing: 2, color: 'rgba(255,255,255,0.6)' }}>
             {loser?.name || loserAbbrev}
           </div>
         </div>
@@ -631,32 +583,21 @@ function seriesRecapTemplate({
       <div
         style={{
           display: 'flex',
-          marginTop: 32,
-          padding: '8px 24px',
-          borderRadius: 8,
-          background: `${winnerPrimary}44`,
-          border: `2px solid ${winnerPrimary}`,
-          fontSize: 20,
-          fontWeight: 700,
+          marginTop: 30,
+          padding: '8px 28px',
+          borderRadius: 999,
+          background: 'rgba(10,17,40,0.35)',
+          border: `2px solid ${accent}`,
+          fontFamily: 'Bebas Neue',
+          fontSize: 26,
           color: '#fff',
-          letterSpacing: 2,
+          letterSpacing: 4,
         }}
       >
         {(winner?.name || winnerAbbrev).toUpperCase()} WIN THE SERIES
       </div>
 
-      {/* Bottom branding */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 20,
-          display: 'flex',
-          fontSize: 16,
-          color: '#444',
-        }}
-      >
-        lindysfive.com
-      </div>
+      {brandBadge()}
     </div>
   );
 }
@@ -973,46 +914,48 @@ export interface PsTeamImageParams {
 
 export type OgImageParams = GameRecapImageParams | SetRecapImageParams | NewsImageParams | WeeklyRoundupImageParams | SeriesRecapImageParams | SportHubImageParams | PsTeamImageParams;
 
-export function generateOgImageResponse(params: OgImageParams): ImageResponse {
-  let element: React.JSX.Element;
-
+function buildElement(params: OgImageParams): React.JSX.Element {
   switch (params.type) {
     case 'game-recap':
-      element = gameRecapTemplate(params);
-      break;
+      return gameRecapTemplate(params);
     case 'set-recap':
-      element = setRecapTemplate(params);
-      break;
+      return setRecapTemplate(params);
     case 'news-analysis':
-      element = newsTemplate(params);
-      break;
+      return newsTemplate(params);
     case 'weekly-roundup':
-      element = weeklyRoundupTemplate(params);
-      break;
+      return weeklyRoundupTemplate(params);
     case 'series-recap':
-      element = seriesRecapTemplate(params);
-      break;
+      return seriesRecapTemplate(params);
     case 'sport-hub':
-      element = sportHubTemplate(params);
-      break;
+      return sportHubTemplate(params);
     case 'ps-team':
-      element = psTeamTemplate(params.team);
-      break;
+      return psTeamTemplate(params.team);
   }
+}
 
-  return new ImageResponse(element, {
+// Edge-safe (no fs): used by /api/og for hub + Perfect Season cards, which keep
+// the default font. Blog cards go through generateAndUploadOgImage below, where
+// the brand fonts load from disk.
+export function generateOgImageResponse(params: OgImageParams): ImageResponse {
+  return new ImageResponse(buildElement(params), {
     width: OG_WIDTH,
     height: OG_HEIGHT,
   });
 }
 
 export async function generateAndUploadOgImage(params: OgImageParams, slug: string): Promise<string> {
-  const response = generateOgImageResponse(params);
+  const fonts = await loadBrandFonts();
+  const response = new ImageResponse(buildElement(params), {
+    width: OG_WIDTH,
+    height: OG_HEIGHT,
+    fonts,
+  });
   const buffer = await response.arrayBuffer();
 
   const blob = await put(`blog/og/${slug}.png`, Buffer.from(buffer), {
     access: 'public',
     contentType: 'image/png',
+    allowOverwrite: true,
   });
 
   return blob.url;

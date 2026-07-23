@@ -11,6 +11,11 @@ const NHL_SLUGS = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
+  // Brand fonts read from disk by lib/utils/ogImage.tsx at render time —
+  // make sure they're bundled into every serverless function that uses it
+  outputFileTracingIncludes: {
+    '/api/**/*': ['./assets/fonts/*.ttf'],
+  },
   async rewrites() {
     return [
       {

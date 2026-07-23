@@ -54,22 +54,26 @@ function record(results: GameResult[]) {
   return { wins, losses, otLosses, points: wins * 2 + otLosses };
 }
 
-// POST /api/blog/backfill-images?dry=1
+// POST /api/blog/backfill-images?dry=1&force=1
 // Generates a branded card image for every published post that lacks one.
-// Idempotent: posts with an ogImage are skipped.
+// Idempotent: posts with an ogImage are skipped unless force=1, which
+// regenerates every published post's card (e.g. after a template redesign).
 export async function POST(request: NextRequest) {
   if (!(await verifyAdmin(request))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const dry = request.nextUrl.searchParams.get('dry') === '1';
+  const force = request.nextUrl.searchParams.get('force') === '1';
+  const onlySlug = request.nextUrl.searchParams.get('slug');
 
   const postIds = await kv.zrange<string[]>('blog:posts', 0, -1, { rev: true });
   if (!postIds || postIds.length === 0) return NextResponse.json({ processed: 0, results: [] });
 
   const records = await kv.mget<(BlogPost | null)[]>(...postIds.map((id) => `blog:post:${id}`));
   const targets = records.filter(
-    (p): p is BlogPost => !!p && p.status === 'published' && !p.ogImage
+    (p): p is BlogPost =>
+      !!p && p.status === 'published' && (onlySlug ? p.slug === onlySlug : force || !p.ogImage)
   );
 
   const seasonCache = new Map<string, GameResult[]>();
@@ -79,6 +83,9 @@ export async function POST(request: NextRequest) {
   };
 
   const results: { slug: string; type: string; template: string; ok: boolean; error?: string }[] = [];
+  // Unique per-run path suffix: Blob's CDN caches aggressively, so regenerated
+  // cards must land on a fresh URL rather than overwrite the old one.
+  const runStamp = Date.now().toString(36);
 
   for (const post of targets) {
     const teamAbbrev = post.team === 'bills' ? 'BILLS' : TEAMS[post.team]?.abbreviation || 'BUF';
@@ -145,7 +152,7 @@ export async function POST(request: NextRequest) {
       }
 
       if (!dry) {
-        const url = await generateAndUploadOgImage(params, `backfill-${post.slug}`);
+        const url = await generateAndUploadOgImage(params, `backfill-${post.slug}-${runStamp}`);
         await kv.set(`blog:post:${post.id}`, { ...post, ogImage: url });
       }
       results.push({ slug: post.slug, type: post.type, template, ok: true });
