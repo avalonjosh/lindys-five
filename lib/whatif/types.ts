@@ -87,3 +87,29 @@ export const whatIfIndexKey = (userId: string) => `whatif:index:${userId}`;
 
 export const whatIfIndexMember = (sport: string, teamId: string, season: string, savedDate: string) =>
   `${sport}:${teamId}:${season}:${savedDate}`;
+
+/**
+ * Admin-facing global indexes: every save across all users, scored by savedAt.
+ * Members are `${userId}:${sport}:${teamId}:${season}:${savedDate}` — userIds
+ * are UUIDs and the other parts are colon-free, so split(':') round-trips.
+ * Same-day overwrite updates the score in place, mirroring the per-user index.
+ */
+export const whatIfAllKey = () => `whatif:all`;
+
+export const whatIfTeamKey = (sport: string, teamId: string) => `whatif:team:${sport}:${teamId}`;
+
+export const whatIfGlobalMember = (userId: string, sport: string, teamId: string, season: string, savedDate: string) =>
+  `${userId}:${sport}:${teamId}:${season}:${savedDate}`;
+
+export function parseWhatIfGlobalMember(member: string): {
+  userId: string;
+  sport: string;
+  teamId: string;
+  season: string;
+  savedDate: string;
+} | null {
+  const parts = member.split(':');
+  if (parts.length !== 5) return null;
+  const [userId, sport, teamId, season, savedDate] = parts;
+  return { userId, sport, teamId, season, savedDate };
+}

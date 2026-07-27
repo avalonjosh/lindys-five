@@ -8,6 +8,9 @@ import {
   whatIfSaveKey,
   whatIfIndexKey,
   whatIfIndexMember,
+  whatIfAllKey,
+  whatIfTeamKey,
+  whatIfGlobalMember,
   type WhatIfSave,
   type WhatIfSubmission,
 } from '@/lib/whatif/types';
@@ -108,12 +111,15 @@ export async function POST(request: NextRequest) {
     },
   };
 
+  const globalMember = whatIfGlobalMember(userId, sub.sport, sub.teamId, sub.season, savedDate);
   await Promise.all([
     kv.set(key, save),
     kv.zadd(whatIfIndexKey(userId), {
       score: save.savedAt,
       member: whatIfIndexMember(sub.sport, sub.teamId, sub.season, savedDate),
     }),
+    kv.zadd(whatIfAllKey(), { score: save.savedAt, member: globalMember }),
+    kv.zadd(whatIfTeamKey(sub.sport, sub.teamId), { score: save.savedAt, member: globalMember }),
   ]);
 
   return NextResponse.json({ save, replacedToday });
@@ -179,6 +185,8 @@ export async function DELETE(request: NextRequest) {
   const [deleted] = await Promise.all([
     kv.del(whatIfSaveKey(userId, sport!, teamId, season, savedDate)),
     kv.zrem(whatIfIndexKey(userId), whatIfIndexMember(sport!, teamId, season, savedDate)),
+    kv.zrem(whatIfAllKey(), whatIfGlobalMember(userId, sport!, teamId, season, savedDate)),
+    kv.zrem(whatIfTeamKey(sport!, teamId), whatIfGlobalMember(userId, sport!, teamId, season, savedDate)),
   ]);
 
   return NextResponse.json({ deleted: deleted === 1 });

@@ -13,7 +13,7 @@ import {
   lbEntryKey,
   type User,
 } from '@/lib/perfectseason/leaderboard';
-import { whatIfIndexKey } from '@/lib/whatif/types';
+import { whatIfIndexKey, whatIfAllKey, whatIfTeamKey } from '@/lib/whatif/types';
 
 /**
  * Permanently delete the signed-in account: every leaderboard entry, every
@@ -51,10 +51,18 @@ export async function POST(request: NextRequest) {
   );
   await kv.del(userBoardsKey(userId));
 
-  // What-If picks: index members are the save-key suffixes.
+  // What-If picks: index members are the save-key suffixes, and the admin
+  // global indexes hold the same members prefixed with the userId.
   const members = (await kv.zrange<string[]>(whatIfIndexKey(userId), 0, -1)) ?? [];
   if (members.length > 0) {
-    await kv.del(...members.map((m) => `whatif:save:${userId}:${m}`));
+    await Promise.all([
+      kv.del(...members.map((m) => `whatif:save:${userId}:${m}`)),
+      kv.zrem(whatIfAllKey(), ...members.map((m) => `${userId}:${m}`)),
+      ...members.map((m) => {
+        const [sport, teamId] = m.split(':');
+        return kv.zrem(whatIfTeamKey(sport, teamId), `${userId}:${m}`);
+      }),
+    ]);
   }
   await kv.del(whatIfIndexKey(userId));
 
