@@ -418,9 +418,9 @@ export default function TeamTracker({
     ) || null;
   };
 
-  // Get sets available for What If mode. In preseason the whole schedule is
-  // pending, so every set is editable — you can simulate the full season. In
-  // season we limit editing to the current set + next 2 sets.
+  // Get sets available for What If mode: the current set and every set after
+  // it, so all remaining games are editable any time of year. In preseason the
+  // whole schedule is pending, so this is the full season.
   const getWhatIfSets = (): GameChunk[] => {
     if (isPreseason) return chunks;
 
@@ -430,8 +430,7 @@ export default function TeamTracker({
     const currentIndex = chunks.findIndex(c => c.chunkNumber === currentSet.chunkNumber);
     if (currentIndex === -1) return [];
 
-    // Return current set + next 2 sets (up to 3 total)
-    return chunks.slice(currentIndex, currentIndex + 3);
+    return chunks.slice(currentIndex);
   };
 
   // Check if a completed set should be hidden
@@ -515,7 +514,7 @@ export default function TeamTracker({
     const whatIfSets = getWhatIfSets();
     if (whatIfSets.length === 0) return;
 
-    // Only allow editing games in the What If sets (current + next 2)
+    // Only allow editing games in the What If sets (current set onward)
     const isInWhatIfSets = whatIfSets.some(set =>
       set.games.some(g => g.gameId === gameId)
     );
@@ -1269,7 +1268,7 @@ export default function TeamTracker({
           <div className="flex items-center justify-between gap-2">
             <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 flex-1 min-w-0">
               <span className="font-semibold text-sm md:text-base">What If Mode Active</span>
-              <span className="text-xs md:text-sm opacity-80"><span className="hidden md:inline">- </span>{isPreseason ? 'Click any game to simulate the whole season' : 'Simulate pending games in the next 3 sets'}</span>
+              <span className="text-xs md:text-sm opacity-80"><span className="hidden md:inline">- </span>{isPreseason ? 'Click any game to simulate the whole season' : 'Click any pending game to simulate the rest of the season'}</span>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               {hypotheticalResults.size > 0 && (
