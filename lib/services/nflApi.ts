@@ -55,8 +55,10 @@ export async function fetchNFLSchedule(
   const cached = getCached<NFLScheduleData>(cacheKey);
   if (cached) return cached;
 
+  // seasontype=2 must be explicit: without it ESPN defaults to the *current*
+  // season type, which flips to preseason in August and postseason in January.
   const url = `${ESPN_API_BASE}/teams/${teamAbbrev.toLowerCase()}/schedule?season=${season}`;
-  const res = await fetchWithRetry(url);
+  const res = await fetchWithRetry(`${url}&seasontype=2`);
   const data = await res.json();
 
   // ESPN serves postseason as a separate seasontype=3 request, not in the
