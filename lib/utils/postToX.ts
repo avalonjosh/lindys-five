@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { kv } from '@vercel/kv';
 import { TEAMS } from '@/lib/teamConfig';
+import { getAutoXSettingForPost } from '@/lib/blogSettings';
 
 const X_API_URL = 'https://api.x.com/2/tweets';
 
@@ -168,6 +169,7 @@ DO NOT:
 - Start with "New post:" or similar
 - Be overly promotional or clickbaity
 - Use excessive exclamation marks
+- Use em dashes (use periods, commas, or colons instead)
 - Exceed 180 characters
 
 Output ONLY the tweet text, nothing else. No quotes around it. Maximum 180 characters.`;
@@ -246,11 +248,12 @@ export interface TweetPublishResult {
   success: boolean;
   tweetId?: string;
   error?: string;
-  skipped?: 'already-tweeted';
+  skipped?: 'already-tweeted' | 'auto-x-off';
 }
 
 /**
  * Tweet a just-published post exactly once.
+ * - Skips if the type's "Auto-post to X" toggle is off (unless force, i.e. the admin Share button).
  * - Skips if the post was already tweeted (KV flag blog:tweeted:{postId}).
  * - Records the outcome (tweetId or error) on the post record so the admin can see it.
  * Never throws.
@@ -260,10 +263,15 @@ export async function tweetPublishedPost(
   options?: { fullTweet?: string; force?: boolean }
 ): Promise<TweetPublishResult> {
   try {
-    if (post.id && !options?.force) {
-      const alreadyTweeted = await kv.get(`blog:tweeted:${post.id}`);
-      if (alreadyTweeted) {
-        return { success: true, skipped: 'already-tweeted', tweetId: (alreadyTweeted as any)?.tweetId };
+    if (!options?.force) {
+      if (!(await getAutoXSettingForPost(post.type, post.team))) {
+        return { success: true, skipped: 'auto-x-off' };
+      }
+      if (post.id) {
+        const alreadyTweeted = await kv.get(`blog:tweeted:${post.id}`);
+        if (alreadyTweeted) {
+          return { success: true, skipped: 'already-tweeted', tweetId: (alreadyTweeted as any)?.tweetId };
+        }
       }
     }
 

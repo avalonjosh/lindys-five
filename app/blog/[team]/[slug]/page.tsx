@@ -56,6 +56,13 @@ export async function generateMetadata({
     };
   }
 
+  // Posts whose stored card image failed to generate fall back to the live
+  // OG renderer so social cards always have an image
+  const teamAbbrev = post.team === 'bills' ? 'BILLS' : TEAMS[post.team]?.abbreviation || 'BUF';
+  const ogImage =
+    post.ogImage ||
+    `https://www.lindysfive.com/api/og?type=news-analysis&teamAbbrev=${teamAbbrev}&headline=${encodeURIComponent(post.title)}`;
+
   return {
     title: post.title,
     description: post.metaDescription || post.excerpt,
@@ -66,13 +73,13 @@ export async function generateMetadata({
       url: `https://www.lindysfive.com/blog/${post.team}/${post.slug}`,
       siteName: "Lindy's Five",
       publishedTime: post.publishedAt || post.createdAt,
-      ...(post.ogImage && { images: [{ url: post.ogImage }] }),
+      images: [{ url: ogImage }],
     },
     twitter: {
       card: 'summary_large_image',
       title: post.title,
       description: post.metaDescription || post.excerpt,
-      ...(post.ogImage && { images: [post.ogImage] }),
+      images: [ogImage],
     },
     alternates: {
       canonical: `https://www.lindysfive.com/blog/${post.team}/${post.slug}`,

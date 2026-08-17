@@ -44,19 +44,20 @@ const AUTOMATION_JOBS: {
   slug: string;
   trigger: string;
   settingKey: string;
+  xSettingKey: string;
   label: string;
   team: 'sabres' | 'bills';
   hasSetPicker?: boolean;
 }[] = [
-  { slug: 'weekly-roundup', trigger: 'weekly', settingKey: 'auto-publish-weekly', label: 'Weekly Roundup', team: 'sabres' },
-  { slug: 'news-scan', trigger: 'news', settingKey: 'auto-publish-news', label: 'News Scan', team: 'sabres' },
-  { slug: 'game-recap', trigger: 'game-recap', settingKey: 'auto-publish-game-recap', label: 'Game Recaps', team: 'sabres' },
-  { slug: 'set-recap', trigger: 'set-recap', settingKey: 'auto-publish-set-recap', label: 'Set Recaps', team: 'sabres', hasSetPicker: true },
-  { slug: 'playoff-game-recap', trigger: 'playoff-game-recap', settingKey: 'auto-publish-playoff-game-recap', label: 'Playoff Game Recaps', team: 'sabres' },
-  { slug: 'series-recap', trigger: 'series-recap', settingKey: 'auto-publish-series-recap', label: 'Series Recaps', team: 'sabres' },
-  { slug: 'bills-news-scan', trigger: 'bills-news', settingKey: 'auto-publish-bills-news', label: 'News Scan', team: 'bills' },
-  { slug: 'bills-weekly-roundup', trigger: 'bills-weekly', settingKey: 'auto-publish-bills-weekly', label: 'Weekly Roundup', team: 'bills' },
-  { slug: 'bills-game-recap', trigger: 'bills-game-recap', settingKey: 'auto-publish-bills-game-recap', label: 'Game Recaps', team: 'bills' },
+  { slug: 'weekly-roundup', trigger: 'weekly', settingKey: 'auto-publish-weekly', xSettingKey: 'auto-x-weekly', label: 'Weekly Roundup', team: 'sabres' },
+  { slug: 'news-scan', trigger: 'news', settingKey: 'auto-publish-news', xSettingKey: 'auto-x-news', label: 'News Scan', team: 'sabres' },
+  { slug: 'game-recap', trigger: 'game-recap', settingKey: 'auto-publish-game-recap', xSettingKey: 'auto-x-game-recap', label: 'Game Recaps', team: 'sabres' },
+  { slug: 'set-recap', trigger: 'set-recap', settingKey: 'auto-publish-set-recap', xSettingKey: 'auto-x-set-recap', label: 'Set Recaps', team: 'sabres', hasSetPicker: true },
+  { slug: 'playoff-game-recap', trigger: 'playoff-game-recap', settingKey: 'auto-publish-playoff-game-recap', xSettingKey: 'auto-x-playoff-game-recap', label: 'Playoff Game Recaps', team: 'sabres' },
+  { slug: 'series-recap', trigger: 'series-recap', settingKey: 'auto-publish-series-recap', xSettingKey: 'auto-x-series-recap', label: 'Series Recaps', team: 'sabres' },
+  { slug: 'bills-news-scan', trigger: 'bills-news', settingKey: 'auto-publish-bills-news', xSettingKey: 'auto-x-bills-news', label: 'News Scan', team: 'bills' },
+  { slug: 'bills-weekly-roundup', trigger: 'bills-weekly', settingKey: 'auto-publish-bills-weekly', xSettingKey: 'auto-x-bills-weekly', label: 'Weekly Roundup', team: 'bills' },
+  { slug: 'bills-game-recap', trigger: 'bills-game-recap', settingKey: 'auto-publish-bills-game-recap', xSettingKey: 'auto-x-bills-game-recap', label: 'Game Recaps', team: 'bills' },
 ];
 
 function teamBadgeColor(team: string) {
@@ -511,6 +512,13 @@ export default function AdminDashboard() {
           busy={togglingSettings === job.settingKey}
           label={<span className="text-xs text-gray-500">Auto-publish</span>}
         />
+        <Toggle
+          checked={autoPublishSettings[job.xSettingKey] ?? true}
+          onChange={() => toggleSetting(job.xSettingKey)}
+          disabled={togglingSettings !== null}
+          busy={togglingSettings === job.xSettingKey}
+          label={<span className="text-xs text-gray-500">Auto X post</span>}
+        />
         <Button
           variant="secondary"
           size="sm"
@@ -591,7 +599,9 @@ export default function AdminDashboard() {
                 ))}
               </div>
               <p className="mt-2 text-xs text-gray-400">
-                Auto-publish on: articles go live (and post to X) as soon as they generate. Off: they land here as drafts for review.
+                Auto-publish on: articles go live as soon as they generate; off: they land here as drafts for review.
+                Auto X post on: publishing a post of this type (by cron or by you) also tweets it; off: no automatic tweet,
+                but the Share to X button always works.
               </p>
               {triggerResult && (
                 <div

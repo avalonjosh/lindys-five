@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { jwtVerify } from 'jose';
-import { getAutoPublishSetting } from '@/lib/blogSettings';
+import { getAutoPublishSetting, getAutoXSetting } from '@/lib/blogSettings';
 
 // Helper to verify admin authentication
 async function verifyAdmin(request: NextRequest): Promise<boolean> {
@@ -30,6 +30,16 @@ const SETTINGS_KEYS: Record<string, string> = {
   'auto-publish-bills-news': 'blog:settings:auto-publish-bills-news',
   'auto-publish-bills-weekly': 'blog:settings:auto-publish-bills-weekly',
   'auto-publish-bills-game-recap': 'blog:settings:auto-publish-bills-game-recap',
+  // Auto-post to X per content type (default ON when unset)
+  'auto-x-weekly': 'blog:settings:auto-x-weekly',
+  'auto-x-news': 'blog:settings:auto-x-news',
+  'auto-x-game-recap': 'blog:settings:auto-x-game-recap',
+  'auto-x-set-recap': 'blog:settings:auto-x-set-recap',
+  'auto-x-playoff-game-recap': 'blog:settings:auto-x-playoff-game-recap',
+  'auto-x-series-recap': 'blog:settings:auto-x-series-recap',
+  'auto-x-bills-news': 'blog:settings:auto-x-bills-news',
+  'auto-x-bills-weekly': 'blog:settings:auto-x-bills-weekly',
+  'auto-x-bills-game-recap': 'blog:settings:auto-x-bills-game-recap',
   // Email programs (gate the digest + MLB recap crons; toggled from the Newsletter admin)
   'weekly-digest-enabled': 'blog:settings:weekly-digest-enabled',
   'mlb-recap-enabled': 'blog:settings:mlb-recap-enabled',
@@ -47,6 +57,8 @@ export async function GET(request: NextRequest) {
     for (const [key, kvKey] of Object.entries(SETTINGS_KEYS)) {
       if (key.startsWith('auto-publish-')) {
         settings[key] = await getAutoPublishSetting(key.replace('auto-publish-', ''));
+      } else if (key.startsWith('auto-x-')) {
+        settings[key] = await getAutoXSetting(key.replace('auto-x-', ''));
       } else {
         const value = await kv.get(kvKey);
         settings[key] = value === true;
