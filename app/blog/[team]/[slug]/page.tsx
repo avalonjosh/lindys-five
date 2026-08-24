@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { ArrowLeft, Calendar, Clock } from 'lucide-react';
 import { getPostBySlug } from '@/lib/kv';
 import { TEAMS } from '@/lib/teamConfig';
+import { getPostCardImageUrl } from '@/lib/utils/postToX';
 import PostContent from '@/components/blog/PostContent';
 import AuthorByline from '@/components/blog/AuthorByline';
 import NextGameCTA from '@/components/blog/NextGameCTA';
@@ -58,10 +59,7 @@ export async function generateMetadata({
 
   // Posts whose stored card image failed to generate fall back to the live
   // OG renderer so social cards always have an image
-  const teamAbbrev = post.team === 'bills' ? 'BILLS' : TEAMS[post.team]?.abbreviation || 'BUF';
-  const ogImage =
-    post.ogImage ||
-    `https://www.lindysfive.com/api/og?type=news-analysis&teamAbbrev=${teamAbbrev}&headline=${encodeURIComponent(post.title)}`;
+  const ogImage = getPostCardImageUrl(post);
 
   return {
     title: post.title,

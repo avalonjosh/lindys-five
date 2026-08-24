@@ -88,7 +88,13 @@ export async function GET(request: NextRequest) {
         return new Response(`Unknown type: ${type}`, { status: 400 });
     }
 
-    return generateOgImageResponse(params);
+    // Cards are deterministic for a given query string, so let Vercel's CDN
+    // serve repeats instantly (social crawlers have tight fetch budgets).
+    // Perfect Season share cards are backed by mutable KV data, so keep them short.
+    const cacheControl = type === 'ps-team'
+      ? 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600'
+      : 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800';
+    return generateOgImageResponse(params, { 'Cache-Control': cacheControl });
   } catch (error) {
     console.error('OG image generation error:', error);
     return new Response('Failed to generate image', { status: 500 });

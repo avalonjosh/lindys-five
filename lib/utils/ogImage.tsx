@@ -936,10 +936,11 @@ function buildElement(params: OgImageParams): React.JSX.Element {
 // Edge-safe (no fs): used by /api/og for hub + Perfect Season cards, which keep
 // the default font. Blog cards go through generateAndUploadOgImage below, where
 // the brand fonts load from disk.
-export function generateOgImageResponse(params: OgImageParams): ImageResponse {
+export function generateOgImageResponse(params: OgImageParams, headers?: Record<string, string>): ImageResponse {
   return new ImageResponse(buildElement(params), {
     width: OG_WIDTH,
     height: OG_HEIGHT,
+    headers,
   });
 }
 

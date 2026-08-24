@@ -4,6 +4,8 @@ import { TEAMS } from '@/lib/teamConfig';
 import { getAutoXSettingForPost } from '@/lib/blogSettings';
 
 const X_API_URL = 'https://api.x.com/2/tweets';
+const X_MEDIA_UPLOAD_URL = 'https://api.x.com/2/media/upload';
+const SITE_URL = 'https://www.lindysfive.com';
 
 // Hashtags by team
 const HASHTAGS: Record<string, string> = {
@@ -26,6 +28,18 @@ interface PostToXParams {
   tweetText: string;
   articleUrl: string;
   team: string;
+  mediaId?: string;
+}
+
+/**
+ * Card image for a blog post: the stored Blob image if generation succeeded,
+ * otherwise the live /api/og headline card. Shared by the blog page metadata
+ * and the X media upload so both always agree on the image.
+ */
+export function getPostCardImageUrl(post: { team: string; title: string; ogImage?: string | null }): string {
+  if (post.ogImage) return post.ogImage;
+  const teamAbbrev = post.team === 'bills' ? 'BILLS' : TEAMS[post.team]?.abbreviation || 'BUF';
+  return `${SITE_URL}/api/og?type=news-analysis&teamAbbrev=${teamAbbrev}&headline=${encodeURIComponent(post.title)}`;
 }
 
 function generateOAuthSignature(
@@ -78,7 +92,7 @@ function generateOAuthHeader(method: string, url: string, body: string): string 
 /**
  * Post a tweet to X using the v2 API with OAuth 1.0a
  */
-export async function postTweetToX({ tweetText, articleUrl, team }: PostToXParams): Promise<{ success: boolean; tweetId?: string; error?: string }> {
+export async function postTweetToX({ tweetText, articleUrl, team, mediaId }: PostToXParams): Promise<{ success: boolean; tweetId?: string; error?: string }> {
   const apiKey = process.env.X_API_KEY;
   if (!apiKey) {
     console.warn('X API credentials not configured, skipping tweet');
@@ -94,24 +108,87 @@ export async function postTweetToX({ tweetText, articleUrl, team }: PostToXParam
     const overhead = `\n\n${articleUrl}\n\n${hashtags}`.length;
     const maxTextLength = 280 - overhead;
     const trimmedText = tweetText.substring(0, maxTextLength - 3) + '...';
-    return postTweet(`${trimmedText}\n\n${articleUrl}\n\n${hashtags}`);
+    return postTweet(`${trimmedText}\n\n${articleUrl}\n\n${hashtags}`, mediaId);
   }
 
-  return postTweet(fullTweet);
+  return postTweet(fullTweet, mediaId);
 }
 
 // Post exact text to X with no URL/hashtag decoration (used for admin-edited tweets)
-export async function postRawTweet(text: string): Promise<{ success: boolean; tweetId?: string; error?: string }> {
+export async function postRawTweet(text: string, mediaId?: string): Promise<{ success: boolean; tweetId?: string; error?: string }> {
   if (!process.env.X_API_KEY) {
     console.warn('X API credentials not configured, skipping tweet');
     return { success: false, error: 'X API credentials not configured' };
   }
-  return postTweet(text);
+  return postTweet(text, mediaId);
 }
 
-async function postTweet(text: string): Promise<{ success: boolean; tweetId?: string; error?: string }> {
+/**
+ * Download the card image and upload it to X as native media so the tweet
+ * carries the image itself instead of depending on X's link-card crawler.
+ * Returns undefined on any failure so the tweet still goes out text-only.
+ */
+export async function uploadMediaToX(imageUrl: string): Promise<string | undefined> {
   try {
-    const body = JSON.stringify({ text });
+    const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(15000) });
+    if (!imgRes.ok) {
+      console.warn(`X media upload: image fetch returned ${imgRes.status} for ${imageUrl}`);
+      return undefined;
+    }
+    const contentType = imgRes.headers.get('content-type') || 'image/png';
+    const bytes = await imgRes.arrayBuffer();
+    if (bytes.byteLength === 0 || bytes.byteLength > 5 * 1024 * 1024) {
+      console.warn(`X media upload: image size ${bytes.byteLength} out of range`);
+      return undefined;
+    }
+
+    const form = new FormData();
+    form.append('media', new Blob([bytes], { type: contentType }), 'card.png');
+    form.append('media_category', 'tweet_image');
+
+    // Multipart bodies are not part of the OAuth 1.0a signature base string
+    const authHeader = generateOAuthHeader('POST', X_MEDIA_UPLOAD_URL, '');
+    const response = await fetch(X_MEDIA_UPLOAD_URL, {
+      method: 'POST',
+      headers: { Authorization: authHeader },
+      body: form,
+      signal: AbortSignal.timeout(30000),
+    });
+
+    const data: any = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      console.error('X media upload error:', response.status, data);
+      return undefined;
+    }
+    const mediaId: string | undefined = data?.data?.id || data?.media_id_string;
+    if (!mediaId) {
+      console.error('X media upload: no media id in response', data);
+      return undefined;
+    }
+    return mediaId;
+  } catch (error) {
+    console.error('X media upload failed:', error);
+    return undefined;
+  }
+}
+
+/**
+ * Hit the article and its card image once before tweeting so X's crawler
+ * (and any reader clicking through) lands on a warm render.
+ */
+async function warmUpArticle(articleUrl: string, imageUrl: string): Promise<void> {
+  const hit = (url: string) =>
+    fetch(url, { signal: AbortSignal.timeout(10000), headers: { 'User-Agent': 'LindysFive-Warmup/1.0' } })
+      .then(r => r.arrayBuffer())
+      .catch(() => undefined);
+  await Promise.all([hit(articleUrl), hit(imageUrl)]);
+}
+
+async function postTweet(text: string, mediaId?: string): Promise<{ success: boolean; tweetId?: string; error?: string }> {
+  try {
+    const payload: Record<string, unknown> = { text };
+    if (mediaId) payload.media = { media_ids: [mediaId] };
+    const body = JSON.stringify(payload);
     const authHeader = generateOAuthHeader('POST', X_API_URL, body);
 
     const response = await fetch(X_API_URL, {
@@ -146,6 +223,7 @@ export interface TweetablePost {
   team: string;
   type: string;
   slug: string;
+  ogImage?: string | null;
 }
 
 const TWEET_SYSTEM_PROMPT = `You are a social media manager for "Lindy's Five", a Buffalo sports blog covering the Sabres, Bills, and the NHL at large.
@@ -239,9 +317,20 @@ export async function generateTweetText(post: TweetablePost): Promise<{
  * Generate tweet text using Claude and post it to X (no dedupe guard).
  * Prefer tweetPublishedPost() which guards against double-tweeting.
  */
-export async function generateAndPostTweet(post: TweetablePost): Promise<{ success: boolean; tweetId?: string; error?: string }> {
+export async function generateAndPostTweet(post: TweetablePost, mediaId?: string): Promise<{ success: boolean; tweetId?: string; error?: string }> {
   const { tweetText, articleUrl } = await generateTweetText(post);
-  return postTweetToX({ tweetText, articleUrl, team: post.team });
+  return postTweetToX({ tweetText, articleUrl, team: post.team, mediaId });
+}
+
+/**
+ * Warm the article + card image, then upload the card to X as native media.
+ * Returns the media id, or undefined if the upload failed (tweet goes text-only).
+ */
+async function prepareTweetMedia(post: TweetablePost): Promise<string | undefined> {
+  const articleUrl = `${SITE_URL}/blog/${post.team}/${post.slug}`;
+  const imageUrl = getPostCardImageUrl(post);
+  await warmUpArticle(articleUrl, imageUrl);
+  return uploadMediaToX(imageUrl);
 }
 
 export interface TweetPublishResult {
@@ -275,9 +364,12 @@ export async function tweetPublishedPost(
       }
     }
 
+    const mediaId = await prepareTweetMedia(post);
+    if (!mediaId) console.warn(`No media attached to tweet for "${post.title}"; falling back to link card`);
+
     const result = options?.fullTweet
-      ? await postRawTweet(options.fullTweet)
-      : await generateAndPostTweet(post);
+      ? await postRawTweet(options.fullTweet, mediaId)
+      : await generateAndPostTweet(post, mediaId);
 
     if (post.id) {
       const now = new Date().toISOString();
