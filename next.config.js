@@ -11,10 +11,16 @@ const NHL_SLUGS = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
-  // Brand fonts read from disk by lib/utils/ogImage.tsx at render time —
-  // make sure they're bundled into every serverless function that uses it
+  // lib/utils/ogImage.tsx renders card images inside Node serverless
+  // functions (crons, admin routes). Two things the tracer misses on its own:
+  // the brand fonts read from disk, and Next's compiled copy of @vercel/og,
+  // whose Node build (index.node.js + wasm) is not traced into API routes
+  // and throws ERR_MODULE_NOT_FOUND at runtime without this.
   outputFileTracingIncludes: {
-    '/api/**/*': ['./assets/fonts/*.ttf'],
+    '/api/**/*': [
+      './assets/fonts/*.ttf',
+      './node_modules/next/dist/compiled/@vercel/og/**/*',
+    ],
   },
   async rewrites() {
     return [
