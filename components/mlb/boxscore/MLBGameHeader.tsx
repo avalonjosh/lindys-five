@@ -54,6 +54,7 @@ export default function MLBGameHeader({ data }: { data: MLBBoxScoreData }) {
         data.homeTeam.abbreviation,
         data.awayTeam.abbreviation,
         data.dateTime,
+        'mlb',
       )
     : null;
 

@@ -39,7 +39,7 @@ export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, 
   const awayTeamAbbrev = game.isHome ? game.opponent : teamAbbreviation;
   const homeTeamConfig = Object.values(MLB_TEAMS).find(t => t.abbreviation === homeTeamAbbrev);
   const ticketLink = isPending && homeTeamConfig
-    ? generateGameTicketLink(homeTeamConfig.slug, homeTeamConfig.city, homeTeamConfig.stubhubId, homeTeamAbbrev, awayTeamAbbrev, game.date)
+    ? generateGameTicketLink(homeTeamConfig.slug, homeTeamConfig.city, homeTeamConfig.stubhubId, homeTeamAbbrev, awayTeamAbbrev, game.date, 'mlb')
     : null;
 
   const isWin = game.outcome === 'W';

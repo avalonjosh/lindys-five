@@ -139,7 +139,7 @@ export default function MLBScoresPageClient() {
         {!loading && !error && sortedGames.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {sortedGames.map((game) => (
-              <MLBScoreCard key={game.gameId} game={game} favoriteAbbrev={favoriteAbbrev} />
+              <MLBScoreCard key={game.gameId} game={game} favoriteAbbrev={favoriteAbbrev} date={selectedDate} />
             ))}
           </div>
         )}
@@ -148,7 +148,7 @@ export default function MLBScoresPageClient() {
   );
 }
 
-function MLBScoreCard({ game, favoriteAbbrev }: { game: MLBScoreGame; favoriteAbbrev: string | null }) {
+function MLBScoreCard({ game, favoriteAbbrev, date }: { game: MLBScoreGame; favoriteAbbrev: string | null; date: string }) {
   const router = useRouter();
   const isComplete = game.gameState === 'Final' || game.gameState === 'Completed Early';
   const isLive = game.gameState === 'In Progress';
@@ -163,7 +163,7 @@ function MLBScoreCard({ game, favoriteAbbrev }: { game: MLBScoreGame; favoriteAb
   const homeSlug = Object.values(MLB_TEAMS).find(t => t.abbreviation === game.homeTeam.abbrev)?.id;
   const homeTeamConfig = Object.values(MLB_TEAMS).find(t => t.abbreviation === game.homeTeam.abbrev);
   const ticketLink = isUpcoming && homeTeamConfig
-    ? generateGameTicketLink(homeTeamConfig.slug, homeTeamConfig.city, homeTeamConfig.stubhubId, game.homeTeam.abbrev, game.awayTeam.abbrev)
+    ? generateGameTicketLink(homeTeamConfig.slug, homeTeamConfig.city, homeTeamConfig.stubhubId, game.homeTeam.abbrev, game.awayTeam.abbrev, date, 'mlb')
     : null;
 
   const handleCardClick = () => {

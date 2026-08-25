@@ -3,6 +3,7 @@
  */
 
 import { FANATICS_TEAM_PATHS } from '@/lib/affiliate/fanaticsTeams';
+import { NHL_TEAMS, MLB_TEAMS } from '@/lib/teamConfig';
 
 const AMAZON_TAG = process.env.NEXT_PUBLIC_AMAZON_TAG || 'lindysfive-20';
 
@@ -15,6 +16,8 @@ const USE_DIRECT_LINKS = false;
 interface AffiliateLinParams {
   stubhubId: number;
   trackingRef?: string; // Custom tracking parameter (e.g., game ID, team abbreviation)
+  /** Explicit StubHub destination (e.g. a game search); overrides the team-page default. */
+  destination?: string;
 }
 
 /**
@@ -52,12 +55,14 @@ function convertToStubHubSlug(slug: string, city: string): string {
   return `${citySlug}-${teamSlug}`;
 }
 
-export function generateStubHubLink({ stubhubId, trackingRef, teamSlug, teamCity }: AffiliateLinParams & { teamSlug?: string; teamCity?: string }): string {
+export function generateStubHubLink({ stubhubId, trackingRef, teamSlug, teamCity, destination }: AffiliateLinParams & { teamSlug?: string; teamCity?: string }): string {
   // Use team slug format which StubHub redirects properly
   // e.g., https://www.stubhub.com/buffalo-sabres-tickets
   let destinationUrl: string;
 
-  if (teamSlug && teamCity) {
+  if (destination) {
+    destinationUrl = destination;
+  } else if (teamSlug && teamCity) {
     const stubhubSlug = convertToStubHubSlug(teamSlug, teamCity);
     // Special case: Utah uses performer ID format instead of slug
     if (teamSlug === 'utah') {
@@ -132,15 +137,51 @@ export function generateGameTicketLink(
   venueTeamStubhubId: number,
   homeTeam: string,
   awayTeam: string,
-  date?: string
+  date?: string,
+  sport: 'nhl' | 'mlb' = 'nhl'
 ): string {
   const trackingRef = generateGameTrackingRef(homeTeam, awayTeam, date);
   return generateStubHubLink({
     stubhubId: venueTeamStubhubId,
     trackingRef,
     teamSlug: venueTeamSlug,
-    teamCity: venueTeamCity
+    teamCity: venueTeamCity,
+    destination: generateGameSearchDestination(homeTeam, awayTeam, date, sport),
   });
+}
+
+/** "City Name" for a league abbreviation, or null if unknown. */
+function fullTeamName(abbrev: string, sport: 'nhl' | 'mlb'): string | null {
+  const teams = sport === 'mlb' ? MLB_TEAMS : NHL_TEAMS;
+  const t = Object.values(teams).find((x) => x.abbreviation.toUpperCase() === abbrev.toUpperCase());
+  return t ? `${t.city} ${t.name}` : null;
+}
+
+/** Game date as "October 3 2026" (Eastern). Accepts YYYY-MM-DD or an ISO datetime. */
+function gameDateLabel(date?: string): string | null {
+  if (!date) return null;
+  const ymd = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const d = ymd ? new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]), 12) : new Date(date);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString('en-US', {
+    ...(ymd ? {} : { timeZone: 'America/New_York' }),
+    month: 'long', day: 'numeric', year: 'numeric',
+  }).replace(',', '');
+}
+
+/**
+ * StubHub search deep link for a specific game. StubHub event pages need an
+ * event id we have no feed for, but a search for "Away at Home <date>" ranks
+ * the exact game first, which beats landing on the full team schedule.
+ * Returns undefined (caller falls back to the team page) when either team
+ * abbreviation is unknown.
+ */
+export function generateGameSearchDestination(homeTeam: string, awayTeam: string, date: string | undefined, sport: 'nhl' | 'mlb'): string | undefined {
+  const home = fullTeamName(homeTeam, sport);
+  const away = fullTeamName(awayTeam, sport);
+  if (!home || !away) return undefined;
+  const q = [`${away} at ${home}`, gameDateLabel(date)].filter(Boolean).join(' ');
+  return `https://www.stubhub.com/secure/search?q=${encodeURIComponent(q)}`;
 }
 
 /**
