@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import type { MLBGameResult } from '@/lib/types/mlb';
 import { MLB_TEAMS } from '@/lib/teamConfig/mlbTeams';
 import { generateGameTicketLink } from '@/lib/utils/affiliateLinks';
+import { trackClick } from '@/lib/analytics';
 import MLBLiveGameOverlay from './MLBLiveGameOverlay';
 
 interface TeamColors {
@@ -254,8 +255,8 @@ export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, 
                   <a
                     href={ticketLink}
                     target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
+                    rel="sponsored noopener noreferrer"
+                    onClick={(e) => { e.stopPropagation(); trackClick('ticket', `mlb-${homeTeamAbbrev.toLowerCase()}-vs-${awayTeamAbbrev.toLowerCase()}`); }}
                     className="inline-block px-3 py-1.5 text-xs font-bold rounded transition-all shadow-sm hover:shadow-md bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white"
                   >
                     Get Tickets

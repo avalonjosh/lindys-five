@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Ticket } from 'lucide-react';
 import { generateStubHubLink } from '@/lib/utils/affiliateLinks';
+import { trackClick } from '@/lib/analytics';
 import { TEAMS } from '@/lib/teamConfig';
 
 interface NextGame {
@@ -92,6 +93,7 @@ export default function NextGameCTA({ team, primaryColor, accentColor }: NextGam
         })}
         target="_blank"
         rel="sponsored noopener noreferrer"
+        onClick={() => trackClick('ticket', `blog-${nextGame.homeTeamAbbrev.toLowerCase()}-vs-${nextGame.opponentAbbrev.toLowerCase()}`)}
         className="block rounded-2xl p-5 shadow-lg border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl bg-white"
         style={{ borderColor: accentColor }}
       >

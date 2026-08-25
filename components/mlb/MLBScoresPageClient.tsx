@@ -8,6 +8,7 @@ import type { MLBScoreGame } from '@/lib/types/mlb';
 import { fetchMLBScores } from '@/lib/services/mlbApi';
 import { MLB_TEAMS } from '@/lib/teamConfig/mlbTeams';
 import { generateGameTicketLink } from '@/lib/utils/affiliateLinks';
+import { trackClick } from '@/lib/analytics';
 import DateNavigation from '@/components/scores/DateNavigation';
 
 const getTodayString = (): string => {
@@ -235,6 +236,7 @@ function MLBScoreCard({ game, favoriteAbbrev }: { game: MLBScoreGame; favoriteAb
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                trackClick('ticket', `mlb-${game.homeTeam.abbrev.toLowerCase()}-vs-${game.awayTeam.abbrev.toLowerCase()}`);
                 window.open(ticketLink, '_blank', 'noopener,noreferrer');
               }}
               className="px-2 py-0.5 text-xs font-bold rounded bg-blue-600 hover:bg-blue-500 text-white transition-colors"

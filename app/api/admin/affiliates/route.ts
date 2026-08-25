@@ -11,9 +11,12 @@ type Range = '7d' | '30d' | '90d' | '365d';
 const RANGE_DAYS: Record<Range, number> = { '7d': 7, '30d': 30, '90d': 90, '365d': 365 };
 const CACHE_TTL_SECONDS = 30 * 60;
 
+/** Click buckets written by trackClick() on outbound affiliate anchors. */
+const AFFILIATE_BUCKETS = new Set(['ticket', 'ticket-boxscore', 'tickets', 'gear', 'gear-cta', 'merch']);
+
 export interface FirstPartyClicks {
   total: number;
-  byBucket: { name: string; count: number }[]; // gear | tickets | merch | gear-cta
+  byBucket: { name: string; count: number }[]; // ticket | ticket-boxscore | tickets | gear | gear-cta | merch
   byLabel: { name: string; count: number }[];
 }
 
@@ -46,7 +49,7 @@ async function fetchFirstPartyClicks(days: number): Promise<FirstPartyClicks> {
       const name = String(data[i]);
       const count = Number(data[i + 1]) || 0;
       const bucket = name.split(':')[0];
-      if (!['gear', 'tickets', 'merch', 'gear-cta'].includes(bucket)) continue;
+      if (!AFFILIATE_BUCKETS.has(bucket)) continue;
       total += count;
       byLabel.set(name, (byLabel.get(name) || 0) + count);
       byBucket.set(bucket, (byBucket.get(bucket) || 0) + count);

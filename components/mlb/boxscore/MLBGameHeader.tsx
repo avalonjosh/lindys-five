@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import type { MLBBoxScoreData } from '@/lib/types/mlb';
 import { MLB_TEAMS } from '@/lib/teamConfig/mlbTeams';
 import { generateGameTicketLink } from '@/lib/utils/affiliateLinks';
+import { trackClick } from '@/lib/analytics';
 
 // Teams whose logo blends into the dark header background
 const MLB_BG_TEAM_IDS = new Set(['orioles', 'reds', 'cardinals', 'angels', 'phillies', 'nationals', 'rays', 'tigers', 'royals', 'twins', 'dodgers', 'giants', 'rockies', 'padres']);
@@ -131,7 +132,8 @@ export default function MLBGameHeader({ data }: { data: MLBBoxScoreData }) {
               <a
                 href={ticketLink}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="sponsored noopener noreferrer"
+                onClick={() => trackClick('ticket-boxscore', `mlb-${data.homeTeam.abbreviation.toLowerCase()}-vs-${data.awayTeam.abbreviation.toLowerCase()}`)}
                 className="px-3 py-1.5 sm:px-5 sm:py-2 text-xs sm:text-sm font-bold rounded-lg transition-all shadow-md hover:shadow-lg bg-white text-[#002D72] hover:bg-white/90"
               >
                 Get Tickets
