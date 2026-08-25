@@ -5,13 +5,13 @@ import InlineEmailCapture from '@/components/newsletter/InlineEmailCapture';
 import SiteFooter from '@/components/SiteFooter';
 
 export const metadata: Metadata = {
-  title: "Lindy's Five — Track Every Season, Five Games at a Time",
+  title: { absolute: "NHL & MLB Playoff Odds, Standings & Scores | Lindy's Five" },
   description:
-    "NHL and MLB playoff odds, standings, and projections. Track your team's playoff race with 5-game set analysis, updated daily.",
+    "Live NHL and MLB playoff odds, standings, projections, and scores for every team, tracked five games at a time. Will your team make the playoffs? Updated after every game.",
   openGraph: {
-    title: "Lindy's Five — Track Every Season, Five Games at a Time",
+    title: "Lindy's Five: NHL & MLB Playoff Odds, Standings & Scores",
     description:
-      "NHL and MLB playoff odds, standings, and projections. Track your team's playoff race with 5-game set analysis.",
+      "Live NHL and MLB playoff odds, standings, projections, and scores for every team, tracked five games at a time.",
     type: 'website',
     url: 'https://www.lindysfive.com/',
     siteName: "Lindy's Five",

@@ -31,9 +31,11 @@ interface MLBTeamTrackerProps {
   initialGames?: MLBGameResult[];
   /** Server-rendered SEO section (season summary + division table), shown above the footer. */
   serverSummary?: ReactNode;
+  /** Visible FAQ mirroring the FAQPage JSON-LD. */
+  faq?: { q: string; a: string }[];
 }
 
-export default function MLBTeamTracker({ team, initialGames, serverSummary }: MLBTeamTrackerProps) {
+export default function MLBTeamTracker({ team, initialGames, serverSummary, faq }: MLBTeamTrackerProps) {
   const router = useRouter();
   const hasInitial = Boolean(initialGames && initialGames.length > 0);
   const [chunks, setChunks] = useState<MLBGameChunk[]>(() =>
@@ -615,7 +617,7 @@ export default function MLBTeamTracker({ team, initialGames, serverSummary }: ML
 
           {chunks.filter(chunk => !hideCompleted || !shouldHideCompletedSet(chunk)).length === 0 && (
             <div className="text-center py-12">
-              <p className="text-gray-500">No games scheduled yet for the 2026 season.</p>
+              <p className="text-gray-500">No games scheduled yet for this season.</p>
             </div>
           )}
         </div>
@@ -626,6 +628,22 @@ export default function MLBTeamTracker({ team, initialGames, serverSummary }: ML
 
         {/* Server-rendered season summary + division standings (SEO content) */}
         {serverSummary}
+
+        {faq && faq.length > 0 && (
+          <section className="mt-6 rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-xl md:p-6">
+            <h2 className="mb-3 text-lg font-bold md:text-2xl" style={{ color: team.colors.primary }}>
+              {team.name} Playoff FAQ
+            </h2>
+            <dl className="space-y-3">
+              {faq.map((item) => (
+                <div key={item.q}>
+                  <dt className="text-sm font-semibold text-gray-900">{item.q}</dt>
+                  <dd className="mt-1 text-sm leading-relaxed text-gray-700">{item.a}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
 
         {/* Footer — matches NHL */}
         <footer className="text-center text-sm mt-8 pb-8 text-gray-500">

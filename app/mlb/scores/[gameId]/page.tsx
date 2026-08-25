@@ -59,20 +59,30 @@ function buildSportsEventLd(gameId: string, g: MLBScheduleGame) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { gameId } = await params;
+  const summary = await fetchGameSummary(gameId);
+  const away = summary?.teams?.away?.team?.name;
+  const home = summary?.teams?.home?.team?.name;
+  const matchup = away && home ? `${away} at ${home}` : `MLB Game ${gameId}`;
+  const rawDate = summary?.gameDate;
+  const when = rawDate
+    ? new Date(rawDate.includes('T') ? rawDate : `${rawDate}T12:00:00Z`).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' })
+    : '';
+  const title = `${matchup}${when ? ` (${when})` : ''}: Box Score & Stats`;
+  const description = `${matchup} box score${when ? ` from ${when}` : ''}: line score, batting and pitching stats, scoring plays, and what the result means for each team's playoff odds.`;
   return {
-    title: `Game ${gameId} — MLB Box Score`,
-    description: `MLB box score, batting stats, pitching stats, and scoring plays.`,
+    title,
+    description,
     openGraph: {
-      title: `MLB Game Box Score | Lindy's Five`,
-      description: 'MLB box score with batting stats, pitching stats, and scoring plays.',
+      title,
+      description,
       type: 'website',
       url: `https://www.lindysfive.com/mlb/scores/${gameId}`,
       siteName: "Lindy's Five",
     },
     twitter: {
       card: 'summary',
-      title: `MLB Game Box Score | Lindy's Five`,
-      description: 'MLB box score with batting stats, pitching stats, and scoring plays.',
+      title,
+      description,
     },
     alternates: {
       canonical: `https://www.lindysfive.com/mlb/scores/${gameId}`,

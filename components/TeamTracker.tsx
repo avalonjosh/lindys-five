@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import HeaderProfileIcon from '@/components/HeaderProfileIcon';
 import { useRouter } from 'next/navigation';
@@ -46,6 +46,12 @@ interface TeamTrackerProps {
   isPreseason?: boolean;
   preseason?: PreseasonInfo | null;
   lastSeasonSummary?: SeasonSummary | null;
+  /** Server-fetched schedule so the full season renders in the initial HTML. */
+  initialGames?: GameResult[];
+  /** Server-rendered season summary + division standings (crawlable content). */
+  serverSummary?: ReactNode;
+  /** Visible FAQ (mirrors the FAQPage JSON-LD so the answers exist on-page). */
+  faq?: { q: string; a: string }[];
 }
 
 export default function TeamTracker({
@@ -56,6 +62,9 @@ export default function TeamTracker({
   isPreseason = false,
   preseason = null,
   lastSeasonSummary = null,
+  initialGames,
+  serverSummary,
+  faq,
 }: TeamTrackerProps) {
   const router = useRouter();
   // The season to display is resolved on the server (live/complete/preseason);
@@ -90,9 +99,13 @@ export default function TeamTracker({
       setShowConfetti(true);
     }
   };
-  const [chunks, setChunks] = useState<GameChunk[]>([]);
-  const [stats, setStats] = useState<SeasonStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Seed from the server-fetched schedule when available so the first paint
+  // (and the crawled HTML) already contains the season instead of a spinner.
+  const hasInitial = Boolean(initialGames && initialGames.length > 0);
+  const seededRef = useRef(hasInitial);
+  const [chunks, setChunks] = useState<GameChunk[]>(() => (hasInitial ? calculateChunks(initialGames!, totalGames) : []));
+  const [stats, setStats] = useState<SeasonStats | null>(() => (hasInitial ? calculateSeasonStats(calculateChunks(initialGames!, totalGames), totalGames) : null));
+  const [loading, setLoading] = useState(!hasInitial);
   const [hideCompleted, setHideCompleted] = useState(true);
   const [chunkStatsCache, setChunkStatsCache] = useState<Map<number, ChunkStats>>(() => {
     if (typeof window === 'undefined') return new Map<number, ChunkStats>();
@@ -713,8 +726,14 @@ export default function TeamTracker({
     // when arriving with ?whatif=1 (the account page's "Pick the {Team}"
     // button) — a window read, not useSearchParams, to avoid a Suspense
     // boundary on these ISR pages.
-    setChunks([]);
-    setStats(null);
+    // Keep the server-seeded schedule on the first run; only clear when the
+    // team actually changes underneath a mounted tracker.
+    if (seededRef.current) {
+      seededRef.current = false;
+    } else {
+      setChunks([]);
+      setStats(null);
+    }
     setChunkStatsCache(new Map());
     setWhatIfMode(new URLSearchParams(window.location.search).get('whatif') === '1');
     setHypotheticalResults(new Map());
@@ -1509,6 +1528,25 @@ export default function TeamTracker({
             })}
         </div>
       </div>
+      )}
+
+      {/* Server-rendered season summary + division standings (SEO content) */}
+      {serverSummary}
+
+      {faq && faq.length > 0 && (
+        <section className="mt-6 rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-xl md:p-6">
+          <h2 className="mb-3 text-lg font-bold md:text-2xl" style={{ color: team.colors.primary }}>
+            {team.name} Playoff FAQ
+          </h2>
+          <dl className="space-y-3">
+            {faq.map((item) => (
+              <div key={item.q}>
+                <dt className="text-sm font-semibold text-gray-900">{item.q}</dt>
+                <dd className="mt-1 text-sm leading-relaxed text-gray-700">{item.a}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
       )}
 
       <div className="mt-8 max-w-2xl mx-auto flex flex-col gap-4">

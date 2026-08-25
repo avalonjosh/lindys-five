@@ -8,7 +8,7 @@ The site is operated by JRR Apps. Methodology and definitions are stated on each
 
 ## NHL — National Hockey League
 
-- [NHL Playoff Odds 2025-26](https://www.lindysfive.com/nhl-playoff-odds): Full standings table for all 32 teams with playoff probability, projected points, division and wild card position, and Stanley Cup odds. Updated every 5 minutes.
+- [NHL Playoff Odds](https://www.lindysfive.com/nhl-playoff-odds): Full standings table for all 32 teams with playoff probability, projected points, division and wild card position, and Stanley Cup odds. Updated every 5 minutes.
 - [NHL Hub](https://www.lindysfive.com/nhl): Landing page with all 32 NHL team trackers and the current playoff bracket status.
 - [NHL Scores Today](https://www.lindysfive.com/nhl/scores): Live NHL scores, box scores, and playoff-impact summaries for the current day's games.
 - [NHL Playoff Bracket](https://www.lindysfive.com/playoffs): Live Stanley Cup playoff bracket with series-win probabilities, Stanley Cup odds, and per-series game results.
@@ -52,7 +52,7 @@ Each NHL team page shows current record, division and conference rank, projected
 
 ## MLB — Major League Baseball
 
-- [MLB Playoff Odds 2026](https://www.lindysfive.com/mlb/playoff-odds): Full standings table for all 30 teams with playoff probability, projected wins, division and wild card position, and World Series contender ranking. Updated every 5 minutes.
+- [MLB Playoff Odds](https://www.lindysfive.com/mlb/playoff-odds): Full standings table for all 30 teams with playoff probability, projected wins, division and wild card position, and World Series contender ranking. Updated every 5 minutes.
 - [MLB Hub](https://www.lindysfive.com/mlb): Landing page with all 30 MLB team trackers.
 - [MLB Scores Today](https://www.lindysfive.com/mlb/scores): Live MLB scores and box scores for the current day's games.
 

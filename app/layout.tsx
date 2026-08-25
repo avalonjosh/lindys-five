@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     template: "%s | Lindy's Five",
   },
   description:
-    "NHL and MLB playoff odds, standings, and projections for all 32 NHL teams and all 30 MLB teams. Playoff probability, Stanley Cup and World Series odds, points pace, and win pace updated daily.",
+    "Live NHL and MLB playoff odds, standings, and projections for all 62 teams. Playoff probability, points and win pace, Stanley Cup and World Series odds, updated daily.",
   openGraph: {
     type: 'website',
     url: 'https://www.lindysfive.com/',

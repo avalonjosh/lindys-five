@@ -9,6 +9,8 @@ import SiteFooter from '@/components/SiteFooter';
 import { fetchMLBSchedule, fetchMLBStandings } from '@/lib/services/mlbApi';
 import { calculateMLBChunks, calculateMLBSeasonStats } from '@/lib/utils/mlbChunkCalculator';
 import type { MLBGameResult } from '@/lib/types/mlb';
+import { mlbSeasonYear } from '@/lib/utils/mlbSeason';
+import { getMLBPlayoffProbability } from '@/lib/utils/mlbStandingsCalc';
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes for fresh data
 
@@ -41,15 +43,16 @@ export async function generateMetadata({ params }: MLBTeamPageProps): Promise<Me
   }
 
   const fullName = `${team.city} ${team.name}`;
-  const title = `${fullName} Playoff Odds & Standings 2026 — Chances & Projections`;
-  const description = `${fullName} playoff odds and projections for 2026. Track ${possessive(fullName)} win pace, playoff picture, and probability updated daily.`;
+  const year = mlbSeasonYear();
+  const title = `${fullName} Standings & Playoff Odds ${year}`;
+  const description = `Are the ${fullName} going to make the playoffs? Live ${year} playoff odds, division standings, win pace, and 5-game set tracking, updated daily.`;
 
   return {
     title,
     description,
     openGraph: {
-      title: `${fullName} Playoff Odds 2026 — Standings & Projections`,
-      description: `${fullName} playoff odds and projections for the 2026 MLB season. Win pace and playoff picture updated daily.`,
+      title: `${fullName} Playoff Odds ${year}`,
+      description,
       type: 'website',
       url: `https://www.lindysfive.com/mlb/${team.id}`,
       images: [{ url: team.logo }],
@@ -57,8 +60,8 @@ export async function generateMetadata({ params }: MLBTeamPageProps): Promise<Me
     },
     twitter: {
       card: 'summary',
-      title: `${fullName} Playoff Odds 2026`,
-      description: `${fullName} playoff odds and projections. Win pace and playoff picture updated daily.`,
+      title: `${fullName} Playoff Odds ${year}`,
+      description,
       images: [team.logo],
     },
     alternates: {
@@ -76,12 +79,13 @@ export default async function MLBTeamPage({ params }: MLBTeamPageProps) {
   }
 
   const fullName = `${team.city} ${team.name}`;
+  const year = mlbSeasonYear();
 
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
-    name: `${fullName} Playoff Odds & Standings 2026`,
-    description: `${fullName} playoff odds and projections for 2026. Track win pace, playoff picture, and probability updated daily.`,
+    name: `${fullName} Standings & Playoff Odds ${year}`,
+    description: `${fullName} playoff odds, standings, and projections for ${year}. Win pace, playoff picture, and probability updated daily.`,
     url: `https://www.lindysfive.com/mlb/${team.id}`,
     dateModified: new Date().toISOString(),
     publisher: {
@@ -97,37 +101,6 @@ export default async function MLBTeamPage({ params }: MLBTeamPageProps) {
         name: 'Major League Baseball',
       },
     },
-  };
-
-  const faqLd = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: [
-      {
-        '@type': 'Question',
-        name: `Will the ${fullName} make the playoffs in 2026?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: `Track the ${possessive(fullName)} live playoff odds, win pace, and probability on this page. Updated daily with the latest standings data.`,
-        },
-      },
-      {
-        '@type': 'Question',
-        name: `What are the ${possessive(fullName)} playoff odds?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: `See the ${possessive(fullName)} current playoff probability percentage at the top of this page, based on win pace, division standings, and wild card positioning.`,
-        },
-      },
-      {
-        '@type': 'Question',
-        name: `What are the ${possessive(fullName)} World Series odds?`,
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text: `The ${possessive(fullName)} World Series chances start with making the playoffs. Track their current playoff probability and win pace projections here.`,
-        },
-      },
-    ],
   };
 
   const breadcrumbLd = {
@@ -160,6 +133,7 @@ export default async function MLBTeamPage({ params }: MLBTeamPageProps) {
   // the crawlable content that differentiates the 30 MLB pages.
   let initialGames: MLBGameResult[] | undefined;
   let serverSummary: ReactNode = null;
+  let liveFaq: { will: string; odds: string; ws: string } | null = null;
   try {
     const season = new Date().getFullYear();
     const [games, standings] = await Promise.all([
@@ -184,6 +158,13 @@ export default async function MLBTeamPage({ params }: MLBTeamPageProps) {
         `They're ${teamStanding.streak.startsWith('W') ? 'riding' : 'on'} a ${teamStanding.streak} streak, ${teamStanding.last10} over their last 10, with a ${teamStanding.runDifferential >= 0 ? '+' : ''}${teamStanding.runDifferential} run differential (${teamStanding.runsScored} scored, ${teamStanding.runsAllowed} allowed) — ${teamStanding.homeRecord} at home, ${teamStanding.awayRecord} on the road.`,
         currentChunk ? `Current 5-game set (Set ${currentChunk.chunkNumber}): ${currentChunk.wins}-${currentChunk.losses}.` : '',
       ].filter(Boolean).join(' ');
+
+      const pct = Math.max(0, Math.min(100, Math.round(getMLBPlayoffProbability(teamStanding, standings).probability)));
+      liveFaq = {
+        will: `As of today the ${fullName} are ${teamStanding.wins}-${teamStanding.losses}, ${ordinal(teamStanding.divisionRank)} in the ${teamStanding.division}${teamStanding.gamesBack > 0 ? ` (${teamStanding.gamesBack} GB)` : ''}, on pace for ${Math.round(seasonStats.projectedWins)} wins against a ${seasonStats.playoffTarget}-win playoff target, which works out to a ${pct}% chance to make the ${year} playoffs.`,
+        odds: `The ${possessive(fullName)} playoff odds are ${pct}%, based on their ${Math.round(seasonStats.projectedWins)}-win pace through ${seasonStats.gamesPlayed} games, their ${ordinal(teamStanding.divisionRank)}-place division position${teamStanding.wildCardRank ? `, and their ${ordinal(teamStanding.wildCardRank)} spot in the wild card race` : ''}. The number updates daily.`,
+        ws: `World Series odds start with making the playoffs. The ${fullName} are ${teamStanding.wins}-${teamStanding.losses} with a ${teamStanding.runDifferential >= 0 ? '+' : ''}${teamStanding.runDifferential} run differential; this page tracks their playoff probability and win pace through the end of the season.`,
+      };
 
       const divisionRows = standings
         .filter(t => t.division === teamStanding.division)
@@ -251,6 +232,17 @@ export default async function MLBTeamPage({ params }: MLBTeamPageProps) {
     console.error(`SEO data fetch failed for ${team.abbreviation}:`, e);
   }
 
+  const faqEntries = [
+    { q: `Will the ${fullName} make the playoffs in ${year}?`, a: liveFaq?.will ?? `The ${possessive(fullName)} live ${year} playoff probability, record, and win pace are on this page and update daily.` },
+    { q: `What are the ${possessive(fullName)} playoff odds?`, a: liveFaq?.odds ?? `The ${possessive(fullName)} playoff odds are computed from their win pace, division standing, and the wild card race, and update daily.` },
+    { q: `What are the ${possessive(fullName)} World Series odds?`, a: liveFaq?.ws ?? `World Series odds start with making the playoffs. This page tracks the ${possessive(fullName)} playoff probability and win pace all season.` },
+  ];
+  const faqLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqEntries.map((e) => ({ '@type': 'Question', name: e.q, acceptedAnswer: { '@type': 'Answer', text: e.a } })),
+  };
+
   return (
     <>
       <script
@@ -269,10 +261,10 @@ export default async function MLBTeamPage({ params }: MLBTeamPageProps) {
           fetch error) — otherwise the visible serverSummary carries the content. */}
       {!serverSummary && (
         <p className="sr-only">
-          {`${fullName} playoff odds and projections for the 2026 MLB season. Track ${possessive(fullName)} win pace, playoff picture, and probability — updated daily.`}
+          {`${fullName} playoff odds and projections for the ${year} MLB season. Track ${possessive(fullName)} win pace, playoff picture, and probability, updated daily.`}
         </p>
       )}
-      <MLBTeamTracker team={team} initialGames={initialGames} serverSummary={serverSummary} />
+      <MLBTeamTracker team={team} initialGames={initialGames} serverSummary={serverSummary} faq={faqEntries} />
       <SiteFooter />
       <NewsletterModal
         team={teamSlug}

@@ -47,20 +47,29 @@ function buildSportsEventLd(gameId: string, g: LandingResponse) {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { gameId } = await params;
+  const summary = await fetchGameSummary(gameId);
+  const matchup = summary
+    ? `${summary.awayTeam.commonName.default} at ${summary.homeTeam.commonName.default}`
+    : `NHL Game ${gameId}`;
+  const when = summary?.gameDate
+    ? new Date(`${summary.gameDate}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : '';
+  const title = `${matchup}${when ? ` (${when})` : ''}: Box Score & Stats`;
+  const description = `${matchup} box score${when ? ` from ${when}` : ''}: scoring summary, three stars, player and goalie stats, penalties, and what the result means for each team's playoff odds.`;
   return {
-    title: `Game ${gameId} — Box Score | Lindy's Five`,
-    description: `Full box score, scoring summary, player stats, and playoff impact for NHL game ${gameId}.`,
+    title,
+    description,
     openGraph: {
-      title: `Game Box Score | Lindy's Five`,
-      description: 'Full NHL box score with player stats, scoring summary, and playoff probability impact.',
+      title,
+      description,
       type: 'website',
       url: `https://www.lindysfive.com/nhl/scores/${gameId}`,
       siteName: "Lindy's Five",
     },
     twitter: {
       card: 'summary',
-      title: `Game Box Score | Lindy's Five`,
-      description: 'Full NHL box score with player stats and playoff impact.',
+      title,
+      description,
     },
     alternates: {
       canonical: `https://www.lindysfive.com/nhl/scores/${gameId}`,

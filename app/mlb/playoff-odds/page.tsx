@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { mlbSeasonYear } from '@/lib/utils/mlbSeason';
 import Link from 'next/link';
 import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import MLBPlayoffOddsClient, { type MLBTeamRow } from '@/components/mlb/MLBPlayoffOddsClient';
@@ -14,37 +15,19 @@ import {
 
 export const revalidate = 300; // ISR: revalidate every 5 minutes
 
-export const metadata: Metadata = {
-  title: 'MLB Playoff Odds 2026 — Standings, Projections & Playoff Picture',
-  description:
-    'MLB playoff odds, standings, and projections for all 30 teams in 2026. Track playoff probability, World Series odds, win pace, and the wild card race updated daily.',
-  openGraph: {
-    title: 'MLB Playoff Odds 2026 — Standings, Projections & Playoff Picture',
-    description:
-      'MLB playoff odds, standings, and playoff picture for all 30 teams. World Series projections and wild card race updated daily.',
-    type: 'website',
-    url: 'https://www.lindysfive.com/mlb/playoff-odds',
-    siteName: "Lindy's Five",
-    images: [
-      {
-        url: '/api/og?type=sport-hub&sport=mlb&title=MLB%20Playoff%20Odds%202026&subtitle=Live%20Standings%2C%20Projections%20%26%20Wild%20Card%20Race',
-        width: 1200,
-        height: 630,
-        alt: 'MLB Playoff Odds 2026 — Lindy\'s Five',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'MLB Playoff Odds 2026 — Standings & Playoff Picture',
-    description:
-      'MLB playoff odds, standings, and projections for all 30 teams. Playoff picture and World Series odds updated daily.',
-    images: ['/api/og?type=sport-hub&sport=mlb&title=MLB%20Playoff%20Odds%202026&subtitle=Live%20Standings%2C%20Projections%20%26%20Wild%20Card%20Race'],
-  },
-  alternates: {
-    canonical: 'https://www.lindysfive.com/mlb/playoff-odds',
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const year = mlbSeasonYear();
+  const title = `MLB Playoff Odds ${year}: Standings & Playoff Picture`;
+  const description = `MLB playoff odds ${year} for all 30 teams: playoff probability, projected wins, division and wild card standings, and World Series odds, updated daily with every result.`;
+  const og = `/api/og?type=sport-hub&sport=mlb&title=${encodeURIComponent(`MLB Playoff Odds ${year}`)}&subtitle=${encodeURIComponent('Live Standings, Projections & Wild Card Race')}`;
+  return {
+    title,
+    description,
+    openGraph: { title, description, type: 'website', url: 'https://www.lindysfive.com/mlb/playoff-odds', siteName: "Lindy's Five", images: [{ url: og, width: 1200, height: 630, alt: `MLB Playoff Odds ${year}` }] },
+    twitter: { card: 'summary_large_image', title, description, images: [og] },
+    alternates: { canonical: 'https://www.lindysfive.com/mlb/playoff-odds' },
+  };
+}
 
 const abbrevToSlug = Object.fromEntries(
   Object.entries(MLB_TEAMS).map(([slug, team]) => [team.abbreviation, slug])
@@ -64,6 +47,7 @@ function buildTeamRows(standings: MLBStandingsTeam[]): MLBTeamRow[] {
 }
 
 export default async function MLBPlayoffOddsPage() {
+  const year = mlbSeasonYear();
   let standings: MLBStandingsTeam[] = [];
   try {
     standings = await fetchMLBStandings();
@@ -109,9 +93,9 @@ export default async function MLBPlayoffOddsPage() {
     {
       '@context': 'https://schema.org',
       '@type': 'WebPage',
-      name: 'MLB Playoff Odds 2026 — Standings, Projections & Playoff Picture',
+      name: `MLB Playoff Odds ${year} — Standings, Projections & Playoff Picture`,
       description:
-        'MLB playoff odds, standings, and playoff picture for all 30 teams in 2026. World Series projections and wild card race updated daily.',
+        `MLB playoff odds, standings, and playoff picture for all 30 teams in ${year}. World Series projections and wild card race updated daily.`,
       url: 'https://www.lindysfive.com/mlb/playoff-odds',
       dateModified: new Date().toISOString(),
       publisher: { '@type': 'Organization', name: 'JRR Apps' },
@@ -124,9 +108,9 @@ export default async function MLBPlayoffOddsPage() {
     {
       '@context': 'https://schema.org',
       '@type': 'Dataset',
-      name: 'MLB Playoff Odds & Standings 2026',
+      name: `MLB Playoff Odds & Standings ${year}`,
       description:
-        'Daily-updated playoff probability, projected wins, and standings for all 30 MLB teams for the 2026 season. Each team row includes record, win percentage, games back, projected wins at current pace, and a logistic playoff probability measured against the division-winner and third wild card cut lines.',
+        `Daily-updated playoff probability, projected wins, and standings for all 30 MLB teams for the ${year} season. Each team row includes record, win percentage, games back, projected wins at current pace, and a logistic playoff probability measured against the division-winner and third wild card cut lines.`,
       url: 'https://www.lindysfive.com/mlb/playoff-odds',
       keywords: [
         'MLB playoff odds',
@@ -138,7 +122,7 @@ export default async function MLBPlayoffOddsPage() {
       creator: { '@type': 'Organization', name: 'JRR Apps' },
       publisher: { '@type': 'Organization', name: "Lindy's Five" },
       isAccessibleForFree: true,
-      temporalCoverage: '2026-03/2026-11',
+      temporalCoverage: `${year}-03/${year}-11`,
       dateModified: new Date().toISOString(),
       measurementTechnique:
         'Logistic curve over the gap between projected wins and the higher of the division-winner or third wild card cut line, computed daily from live standings.',
@@ -164,10 +148,10 @@ export default async function MLBPlayoffOddsPage() {
       mainEntity: [
         {
           '@type': 'Question',
-          name: 'Which MLB teams will make the playoffs in 2026?',
+          name: `Which MLB teams will make the playoffs in ${year}?`,
           acceptedAnswer: {
             '@type': 'Answer',
-            text: `Twelve MLB teams qualify for the 2026 playoffs — six per league. The three division winners and the next three teams by record in each league advance. Live playoff probability for all 30 MLB teams is shown on this page, updated daily based on current standings.`,
+            text: `Twelve MLB teams qualify for the ${year} playoffs — six per league. The three division winners and the next three teams by record in each league advance. Live playoff probability for all 30 MLB teams is shown on this page, updated daily based on current standings.`,
           },
         },
         {
@@ -208,8 +192,8 @@ export default async function MLBPlayoffOddsPage() {
       {/* Server-rendered standings mirror for crawlers and AI answer engines.
           Duplicates the interactive (client-rendered) table so every team's row
           is present in the initial HTML without JS execution. */}
-      <section className="sr-only" aria-label="MLB playoff odds and standings for all 30 teams, 2026 season">
-        <h2>MLB Playoff Odds &amp; Standings 2026 — All 30 Teams</h2>
+      <section className="sr-only" aria-label={`MLB playoff odds and standings for all 30 teams, ${year} season`}>
+        <h2>MLB Playoff Odds &amp; Standings {year} — All 30 Teams</h2>
         <p>
           Live MLB playoff probability, projected wins, and standings for all 30 teams,
           ranked by wins and updated daily. Projected wins extrapolate the current win
@@ -217,7 +201,7 @@ export default async function MLBPlayoffOddsPage() {
           the division-winner and third wild card cut lines.
         </p>
         <table>
-          <caption>MLB standings and playoff odds, all 30 teams, 2026 (updated daily)</caption>
+          <caption>MLB standings and playoff odds, all 30 teams, {year} (updated daily)</caption>
           <thead>
             <tr>
               <th scope="col">League rank</th>
@@ -274,7 +258,7 @@ export default async function MLBPlayoffOddsPage() {
               className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-3"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
-              MLB Playoff Odds &amp; Standings 2026
+              MLB Playoff Odds &amp; Standings {year}
             </h1>
             <p className="text-base md:text-lg text-white/80 max-w-2xl mx-auto">
               MLB playoff picture, World Series projections, and wild card race for all 30 teams. Updated daily.
@@ -299,7 +283,7 @@ export default async function MLBPlayoffOddsPage() {
                 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3"
                 style={{ fontFamily: 'Bebas Neue, sans-serif' }}
               >
-                2026 World Series Contenders
+                {year} World Series Contenders
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 The current World Series favorites by projected win total:{' '}
@@ -340,11 +324,11 @@ export default async function MLBPlayoffOddsPage() {
               className="text-2xl md:text-3xl font-bold text-gray-900 mb-6"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
-              2026 MLB Playoff Race
+              {year} MLB Playoff Race
             </h2>
             <div className="space-y-4 text-gray-700 leading-relaxed">
               <p>
-                The 2026 MLB playoff race features 12 postseason berths split evenly between the American
+                The {year} MLB playoff race features 12 postseason berths split evenly between the American
                 League and the National League. Each league sends its three division winners and the next
                 three teams by record, with the top two seeds in each league earning a bye through the
                 Wild Card Series. Every game in the 162-game season shifts the playoff picture, which is
@@ -384,9 +368,9 @@ export default async function MLBPlayoffOddsPage() {
             </h2>
             <div className="space-y-6">
               <div>
-                <h3 className="font-bold text-gray-900 mb-2">Which MLB teams will make the playoffs in 2026?</h3>
+                <h3 className="font-bold text-gray-900 mb-2">Which MLB teams will make the playoffs in {year}?</h3>
                 <p className="text-gray-700 leading-relaxed">
-                  Twelve MLB teams qualify for the 2026 playoffs — six per league. The three division
+                  Twelve MLB teams qualify for the {year} playoffs — six per league. The three division
                   winners and the next three teams by record in each league advance. Live playoff
                   probability for all 30 MLB teams is shown above, updated daily based on current standings.
                 </p>

@@ -161,9 +161,10 @@ function TeamCard({ teamId }: { teamId: string }) {
   );
 }
 
-function PlayoffOddsCTA({ playoffsActive }: { playoffsActive?: boolean }) {
+function PlayoffOddsCTA({ playoffsActive, seasonLabel }: { playoffsActive?: boolean; seasonLabel?: string }) {
   const href = playoffsActive ? '/playoffs' : '/nhl-playoff-odds';
-  const title = playoffsActive ? 'Stanley Cup Playoffs 2026' : 'NHL Playoff Odds 2025-26';
+  const endYear = seasonLabel ? `20${seasonLabel.slice(-2)}` : '';
+  const title = playoffsActive ? `Stanley Cup Playoffs ${endYear}`.trim() : `NHL Playoff Odds ${seasonLabel ?? ''}`.trim();
   const subtitle = playoffsActive
     ? 'Live bracket, series odds & Cup predictions →'
     : 'Full standings & projections for all 32 teams →';
@@ -188,9 +189,11 @@ function PlayoffOddsCTA({ playoffsActive }: { playoffsActive?: boolean }) {
 interface FavoriteTeamsGridProps {
   sport: 'nhl' | 'mlb';
   playoffsActive?: boolean;
+  /** e.g. "2026-27"; drives the NHL odds CTA label. */
+  seasonLabel?: string;
 }
 
-export default function FavoriteTeamsGrid({ sport, playoffsActive }: FavoriteTeamsGridProps) {
+export default function FavoriteTeamsGrid({ sport, playoffsActive, seasonLabel }: FavoriteTeamsGridProps) {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -214,7 +217,7 @@ export default function FavoriteTeamsGrid({ sport, playoffsActive }: FavoriteTea
       <>
         {sport === 'nhl' && (
           <div className="flex justify-center mb-16">
-            <PlayoffOddsCTA playoffsActive={playoffsActive} />
+            <PlayoffOddsCTA playoffsActive={playoffsActive} seasonLabel={seasonLabel} />
           </div>
         )}
         <h2 className="text-3xl md:text-4xl font-bold text-gray-400 text-center mb-12" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>All Teams</h2>
@@ -230,7 +233,7 @@ export default function FavoriteTeamsGrid({ sport, playoffsActive }: FavoriteTea
       <>
         {sport === 'nhl' && (
           <div className="flex justify-center mb-16">
-            <PlayoffOddsCTA playoffsActive={playoffsActive} />
+            <PlayoffOddsCTA playoffsActive={playoffsActive} seasonLabel={seasonLabel} />
           </div>
         )}
         <h2 className="text-3xl md:text-4xl font-bold text-gray-400 text-center mb-12" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>All Teams</h2>

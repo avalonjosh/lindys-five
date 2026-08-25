@@ -3,14 +3,15 @@ import Link from 'next/link';
 import FavoriteTeamsGrid from '@/components/landing/FavoriteTeamsGrid';
 import GameTicker from '@/components/landing/GameTicker';
 import SiteFooter from '@/components/SiteFooter';
+import { resolveSeasonContext } from '@/lib/utils/seasonContext';
 
 export const revalidate = 300;
 
-async function isPlayoffsActive(): Promise<boolean> {
+async function isPlayoffsActive(season: string): Promise<boolean> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch('https://api-web.nhle.com/v1/playoff-series/carousel/20252026', {
+    const res = await fetch(`https://api-web.nhle.com/v1/playoff-series/carousel/${season}`, {
       next: { revalidate: 300 },
       signal: controller.signal,
     });
@@ -24,46 +25,36 @@ async function isPlayoffsActive(): Promise<boolean> {
   }
 }
 
-export const metadata: Metadata = {
-  title: "NHL Playoff Odds & Standings 2025-26 — Projections for All 32 Teams",
-  description:
-    "NHL playoff odds, standings, and playoff picture for all 32 teams in 2025-26. Track playoff probability, Stanley Cup odds, points pace, and wild card race updated daily.",
-  openGraph: {
-    title: "NHL Playoff Odds & Standings 2025-26 — Projections for All 32 Teams",
-    description:
-      "NHL playoff odds, standings, and playoff picture for all 32 teams in 2025-26. Track playoff probability, Stanley Cup odds, and wild card race updated daily.",
-    type: 'website',
-    url: 'https://www.lindysfive.com/nhl',
-    siteName: "Lindy's Five",
-    images: [
-      {
-        url: '/api/og?type=sport-hub&sport=nhl&title=NHL%20Playoff%20Odds%202025-26&subtitle=Standings%20%26%20Projections%20for%20All%2032%20Teams',
-        width: 1200,
-        height: 630,
-        alt: "NHL Playoff Odds 2025-26 — Lindy's Five",
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: "NHL Playoff Odds & Standings 2025-26 — All 32 Teams",
-    description:
-      "NHL playoff odds, standings, and projections for all 32 teams. Playoff picture, Stanley Cup odds, and wild card race updated daily.",
-    images: ['/api/og?type=sport-hub&sport=nhl&title=NHL%20Playoff%20Odds%202025-26&subtitle=Standings%20%26%20Projections%20for%20All%2032%20Teams'],
-  },
-  alternates: {
-    canonical: 'https://www.lindysfive.com/nhl',
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { seasonLabel } = await resolveSeasonContext('BUF');
+  const title = `NHL Playoff Odds & Standings ${seasonLabel}: All 32 Teams`;
+  const description = `Live NHL playoff odds and standings for all 32 teams in ${seasonLabel}: playoff probability, points pace, wild card race, and Stanley Cup odds, updated after every game.`;
+  const og = `/api/og?type=sport-hub&sport=nhl&title=${encodeURIComponent(`NHL Playoff Odds ${seasonLabel}`)}&subtitle=${encodeURIComponent('Standings & Projections for All 32 Teams')}`;
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      url: 'https://www.lindysfive.com/nhl',
+      siteName: "Lindy's Five",
+      images: [{ url: og, width: 1200, height: 630, alt: `NHL Playoff Odds ${seasonLabel}` }],
+    },
+    twitter: { card: 'summary_large_image', title, description, images: [og] },
+    alternates: { canonical: 'https://www.lindysfive.com/nhl' },
+  };
+}
 
 export default async function NHLLandingPage() {
-  const playoffsActive = await isPlayoffsActive();
+  const { season, seasonLabel } = await resolveSeasonContext('BUF');
+  const playoffsActive = await isPlayoffsActive(season);
 
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
-    name: 'NHL Playoff Odds & Standings 2025-26 — Projections for All 32 Teams',
-    description: 'NHL playoff odds, standings, and playoff picture for all 32 teams in 2025-26. Track playoff probability, Stanley Cup odds, points pace, and wild card race updated daily.',
+    name: `NHL Playoff Odds & Standings ${seasonLabel}: All 32 Teams`,
+    description: `NHL playoff odds, standings, and playoff picture for all 32 teams in ${seasonLabel}. Track playoff probability, Stanley Cup odds, points pace, and wild card race updated daily.`,
     url: 'https://www.lindysfive.com/nhl',
     publisher: {
       '@type': 'Organization',
@@ -141,12 +132,12 @@ export default async function NHLLandingPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
       />
       <div className="sr-only" aria-hidden="false">
-        <p>NHL Playoff Odds &amp; Standings 2025-26 — All 32 Teams</p>
+        <p>NHL Playoff Odds &amp; Standings {seasonLabel}: All 32 Teams</p>
         <p>
-          NHL playoff odds, standings, and playoff picture for all 32 teams in the 2025-26 season.
+          NHL playoff odds, standings, and playoff picture for all 32 teams in the {seasonLabel} season.
           Track playoff probability, Stanley Cup odds, points pace, and the wild card race — updated daily.
         </p>
-        <h2>All 32 NHL Teams — 2025-26 Playoff Odds</h2>
+        <h2>All 32 NHL Teams: {seasonLabel} Playoff Odds</h2>
         <ul>
           <li><a href="/nhl/sabres">Buffalo Sabres Playoff Odds</a></li>
           <li><a href="/nhl/bruins">Boston Bruins Playoff Odds</a></li>
@@ -195,7 +186,7 @@ export default async function NHLLandingPage() {
               className="text-4xl md:text-6xl font-bold text-white mb-4"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
-              NHL Playoff Odds &amp; Standings 2025-26
+              NHL Playoff Odds &amp; Standings {seasonLabel}
             </h1>
             <p className="text-xl md:text-2xl text-gray-300 mb-2">
               Playoff Picture, Projections &amp; Stanley Cup Odds for All 32 Teams
@@ -205,7 +196,7 @@ export default async function NHLLandingPage() {
             </p>
           </div>
 
-          <FavoriteTeamsGrid sport="nhl" playoffsActive={playoffsActive} />
+          <FavoriteTeamsGrid sport="nhl" playoffsActive={playoffsActive} seasonLabel={seasonLabel} />
 
           {/* Quick Links */}
           <div className="text-center mb-12">

@@ -1,46 +1,30 @@
 import type { Metadata } from 'next';
+import { mlbSeasonYear } from '@/lib/utils/mlbSeason';
 import Link from 'next/link';
 import FavoriteTeamsGrid from '@/components/landing/FavoriteTeamsGrid';
 import SiteFooter from '@/components/SiteFooter';
 
-export const metadata: Metadata = {
-  title: "MLB Playoff Odds & Standings 2026 — Projections for All 30 Teams",
-  description:
-    "MLB playoff odds, standings, and projections for all 30 teams in 2026. Track win pace, playoff picture, and World Series odds updated daily.",
-  openGraph: {
-    title: "MLB Playoff Odds & Standings 2026 — Projections for All 30 Teams",
-    description:
-      "MLB playoff odds, standings, and projections for all 30 teams in 2026. Track win pace, playoff picture, and World Series odds updated daily.",
-    type: 'website',
-    url: 'https://www.lindysfive.com/mlb',
-    siteName: "Lindy's Five",
-    images: [
-      {
-        url: '/api/og?type=sport-hub&sport=mlb&title=MLB%20Playoff%20Odds%202026&subtitle=Standings%20%26%20Projections%20for%20All%2030%20Teams',
-        width: 1200,
-        height: 630,
-        alt: 'MLB Playoff Odds 2026 — Lindy\'s Five',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: "MLB Playoff Odds & Standings 2026 — All 30 Teams",
-    description:
-      "MLB playoff odds, standings, and projections for all 30 teams. Win pace, playoff picture, and World Series odds updated daily.",
-    images: ['/api/og?type=sport-hub&sport=mlb&title=MLB%20Playoff%20Odds%202026&subtitle=Standings%20%26%20Projections%20for%20All%2030%20Teams'],
-  },
-  alternates: {
-    canonical: 'https://www.lindysfive.com/mlb',
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const year = mlbSeasonYear();
+  const title = `MLB Playoff Odds & Standings ${year}: All 30 Teams`;
+  const description = `Live MLB playoff odds and standings for all 30 teams in ${year}: playoff probability, win pace, wild card race, and World Series odds, updated daily.`;
+  const og = `/api/og?type=sport-hub&sport=mlb&title=${encodeURIComponent(`MLB Playoff Odds ${year}`)}&subtitle=${encodeURIComponent('Standings & Projections for All 30 Teams')}`;
+  return {
+    title,
+    description,
+    openGraph: { title, description, type: 'website', url: 'https://www.lindysfive.com/mlb', siteName: "Lindy's Five", images: [{ url: og, width: 1200, height: 630, alt: `MLB Playoff Odds ${year}` }] },
+    twitter: { card: 'summary_large_image', title, description, images: [og] },
+    alternates: { canonical: 'https://www.lindysfive.com/mlb' },
+  };
+}
 
-export default function MLBLandingPage() {
+export default async function MLBLandingPage() {
+  const year = mlbSeasonYear();
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
-    name: 'MLB Playoff Odds & Standings 2026 — Projections for All 30 Teams',
-    description: 'MLB playoff odds, standings, and projections for all 30 teams in 2026. Track win pace, playoff picture, and World Series odds updated daily.',
+    name: `MLB Playoff Odds & Standings ${year} — Projections for All 30 Teams`,
+    description: `MLB playoff odds, standings, and projections for all 30 teams in ${year}. Track win pace, playoff picture, and World Series odds updated daily.`,
     url: 'https://www.lindysfive.com/mlb',
     publisher: {
       '@type': 'Organization',
@@ -78,7 +62,7 @@ export default function MLBLandingPage() {
     mainEntity: [
       {
         '@type': 'Question',
-        name: 'Which MLB teams will make the playoffs in 2026?',
+        name: `Which MLB teams will make the playoffs in ${year}?`,
         acceptedAnswer: {
           '@type': 'Answer',
           text: 'Track live playoff odds for all 30 MLB teams on this page. Playoff probability, win pace, division standings, and World Series projections are updated daily.',
@@ -118,12 +102,12 @@ export default function MLBLandingPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
       />
       <div className="sr-only" aria-hidden="false">
-        <p>MLB Playoff Odds &amp; Standings 2026 — All 30 Teams</p>
+        <p>MLB Playoff Odds &amp; Standings {year} — All 30 Teams</p>
         <p>
-          MLB playoff odds, standings, and projections for all 30 teams in the 2026 season.
+          MLB playoff odds, standings, and projections for all 30 teams in the {year} season.
           Track win pace, playoff picture, World Series odds, and the wild card race — updated daily.
         </p>
-        <h2>All 30 MLB Teams — 2026 Playoff Odds</h2>
+        <h2>All 30 MLB Teams — {year} Playoff Odds</h2>
         <ul>
           <li><a href="/mlb/diamondbacks">Arizona Diamondbacks Playoff Odds</a></li>
           <li><a href="/mlb/braves">Atlanta Braves Playoff Odds</a></li>
@@ -169,7 +153,7 @@ export default function MLBLandingPage() {
             className="text-4xl md:text-6xl font-bold text-white mb-4"
             style={{ fontFamily: 'Bebas Neue, sans-serif' }}
           >
-            MLB Playoff Odds &amp; Standings 2026
+            MLB Playoff Odds &amp; Standings {year}
           </h1>
           <p className="text-xl md:text-2xl text-gray-300 mb-2">
             Projections &amp; World Series Odds for All 30 Teams
