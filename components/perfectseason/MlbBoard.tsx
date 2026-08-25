@@ -1,19 +1,17 @@
 'use client';
 
-import mlbDataJson from '@/data/mlb-data.json';
-import mlbScheduleJson from '@/data/mlb-daily-schedule.json';
 import { mlbConfig } from '@/lib/perfectseason/config.mlb';
-import type { GameData } from '@/lib/perfectseason/types';
 import BoardView from './BoardView';
+import BoardLoading from './BoardLoading';
 import Diamond from './mlb/Diamond';
+import { useGameData } from './useGameData';
 import type { ScheduleJson } from './usePerfectSeasonGame';
 
-// Thin client wrapper: imports only the MLB data/schedule so the /162-0 route
-// bundle never pulls in the NHL dataset (and vice versa for NhlBoard).
-const data = mlbDataJson as unknown as GameData;
-const schedule = mlbScheduleJson as unknown as ScheduleJson;
-
-export default function MlbBoard() {
+// Thin client wrapper: the player pools are fetched from the static data
+// route instead of being bundled, and only a few days of schedule arrive as props.
+export default function MlbBoard({ schedule }: { schedule: ScheduleJson }) {
+  const { data, error } = useGameData('mlb');
+  if (!data) return <BoardLoading error={error} />;
   return (
     <BoardView
       sport="mlb"

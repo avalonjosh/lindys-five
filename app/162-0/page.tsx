@@ -1,6 +1,12 @@
 import MlbBoard from '@/components/perfectseason/MlbBoard';
+import { getScheduleWindow } from '@/lib/perfectseason/server/datasets';
+
+// Re-rendered hourly so the schedule window (and the daily date in the layout
+// metadata) tracks the Eastern calendar day.
+export const revalidate = 3600;
 
 export default function PerfectSeasonPage() {
+  const schedule = getScheduleWindow('mlb');
   return (
     <>
       <h1 className="sr-only">162-0: The Perfect Season (MLB)</h1>
@@ -9,7 +15,7 @@ export default function PerfectSeasonPage() {
         decade and franchise spins, then simulate whether your lineup can win all 162 games
         and finish the season undefeated.
       </p>
-      <MlbBoard />
+      <MlbBoard schedule={schedule} />
     </>
   );
 }

@@ -74,6 +74,7 @@ export default function LandingPage() {
               <div className="flex flex-col items-center text-center">
                 <Image
                   src="https://assets.nhle.com/logos/nhl/svg/NHL_light.svg"
+                  priority
                   alt="NHL"
                   width={200}
                   height={200}
@@ -98,6 +99,7 @@ export default function LandingPage() {
               <div className="flex flex-col items-center text-center">
                 <Image
                   src="https://www.mlbstatic.com/team-logos/league-on-dark/1.svg"
+                  priority
                   alt="MLB"
                   width={200}
                   height={200}

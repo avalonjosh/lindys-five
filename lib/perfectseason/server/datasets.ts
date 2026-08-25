@@ -11,6 +11,7 @@ import nhlSchedule from '@/data/nhl-daily-schedule.json';
 import mlbSchedule from '@/data/mlb-daily-schedule.json';
 import { nhlConfig } from '@/lib/perfectseason/config.nhl';
 import { mlbConfig } from '@/lib/perfectseason/config.mlb';
+import { easternDateString } from '@/lib/perfectseason/seed';
 import type { GameData, RoundTree, Sport, SportConfig } from '@/lib/perfectseason/types';
 
 export interface ScheduleJson {
@@ -30,4 +31,19 @@ const DATASETS: Record<Sport, Dataset> = {
 
 export function getDataset(sport: Sport): Dataset {
   return DATASETS[sport];
+}
+
+/**
+ * The canonical daily schedule trimmed to a window around today (Eastern), so
+ * the board page only serializes a few days instead of the full ~235KB season.
+ */
+export function getScheduleWindow(sport: Sport, days = 2): ScheduleJson {
+  const all = getDataset(sport).schedule.days;
+  const out: ScheduleJson['days'] = {};
+  const now = new Date();
+  for (let offset = -days; offset <= days; offset++) {
+    const key = easternDateString(new Date(now.getTime() + offset * 86_400_000));
+    if (all[key]) out[key] = all[key];
+  }
+  return { days: out };
 }

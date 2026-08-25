@@ -374,7 +374,7 @@ export default function MLBTeamNav({ currentTeamId, teamColors, defaultTab = 'ml
                               onClick={() => handleNavigation(`/nhl/${team.slug}`)}
                               className="w-full text-left px-4 py-3 rounded-lg font-semibold transition-all flex items-center gap-3 hover:bg-gray-100 text-gray-700"
                             >
-                              <img src={team.logo} alt={`${team.city} ${team.name}`} className="w-8 h-8 object-contain flex-shrink-0" />
+                              <img loading="lazy" src={team.logo} alt={`${team.city} ${team.name}`} className="w-8 h-8 object-contain flex-shrink-0" />
                               <div className="flex-1 min-w-0">
                                 <div className="font-bold truncate">{team.city} {team.name}</div>
                                 <div className="text-xs flex items-center gap-1.5 text-gray-500">
@@ -433,7 +433,7 @@ export default function MLBTeamNav({ currentTeamId, teamColors, defaultTab = 'ml
                                   onClick={() => handleNavigation(`/nhl/${team.slug}`)}
                                   className="w-full text-left px-4 py-3 rounded-lg font-semibold transition-all flex items-center gap-3 hover:bg-gray-100 text-gray-700"
                                 >
-                                  <img src={team.logo} alt={`${team.city} ${team.name}`} className="w-8 h-8 object-contain flex-shrink-0" />
+                                  <img loading="lazy" src={team.logo} alt={`${team.city} ${team.name}`} className="w-8 h-8 object-contain flex-shrink-0" />
                                   <div className="flex-1 min-w-0">
                                     <div className="font-bold truncate">{team.city} {team.name}</div>
                                     <div className="text-xs flex items-center gap-1.5 text-gray-500">
@@ -509,7 +509,7 @@ function TeamRow({ team, isActive, isFavorite, standing, onNavigate, onToggleFav
           color: team.colors.primary,
         } : undefined}
       >
-        <img src={team.logo} alt={`${team.city} ${team.name}`} className="w-8 h-8 object-contain flex-shrink-0" />
+        <img loading="lazy" src={team.logo} alt={`${team.city} ${team.name}`} className="w-8 h-8 object-contain flex-shrink-0" />
         <div className="flex-1 min-w-0">
           <div className="font-bold truncate">{team.city} {team.name}</div>
           <div className={`text-xs flex items-center gap-1.5 ${isActive ? 'opacity-70' : 'text-gray-500'}`}>

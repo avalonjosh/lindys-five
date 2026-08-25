@@ -57,6 +57,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${bebasNeue.variable} ${permanentMarker.variable}`}>
+      <head>
+        <link rel="preconnect" href="https://assets.nhle.com" />
+        <link rel="preconnect" href="https://www.mlbstatic.com" />
+      </head>
       <body>
         <link rel="alternate" type="application/rss+xml" title="Lindy's Five Blog" href="https://www.lindysfive.com/feed.xml" />
         <PageTracker />

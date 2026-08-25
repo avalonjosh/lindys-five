@@ -551,8 +551,7 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                                 color: team.colors.primary
                               } : undefined}
                             >
-                              <img
-                                src={team.logo}
+                              <img loading="lazy" src={team.logo}
                                 alt={`${team.city} ${team.name}`}
                                 className="w-8 h-8 object-contain flex-shrink-0"
                               />
@@ -670,8 +669,7 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                                     color: team.colors.primary
                                   } : undefined}
                                 >
-                                  <img
-                                    src={team.logo}
+                                  <img loading="lazy" src={team.logo}
                                     alt={`${team.city} ${team.name}`}
                                     className="w-8 h-8 object-contain flex-shrink-0"
                                   />
@@ -765,7 +763,7 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                                 useClassicStyling ? 'hover:bg-zinc-800 text-zinc-300' : 'hover:bg-gray-100 text-gray-700'
                               }`}
                             >
-                              <img src={team.logo} alt={`${team.city} ${team.name}`} className="w-8 h-8 object-contain flex-shrink-0" />
+                              <img loading="lazy" src={team.logo} alt={`${team.city} ${team.name}`} className="w-8 h-8 object-contain flex-shrink-0" />
                               <div className="flex-1 min-w-0">
                                 <div className="font-bold truncate">{team.city} {team.name}</div>
                                 <div className={`text-xs flex items-center gap-1.5 ${
@@ -835,7 +833,7 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
                                     useClassicStyling ? 'hover:bg-zinc-800 text-zinc-300' : 'hover:bg-gray-100 text-gray-700'
                                   }`}
                                 >
-                                  <img src={team.logo} alt={`${team.city} ${team.name}`} className="w-8 h-8 object-contain flex-shrink-0" />
+                                  <img loading="lazy" src={team.logo} alt={`${team.city} ${team.name}`} className="w-8 h-8 object-contain flex-shrink-0" />
                                   <div className="flex-1 min-w-0">
                                     <div className="font-bold truncate">{team.city} {team.name}</div>
                                     <div className={`text-xs flex items-center gap-1.5 ${

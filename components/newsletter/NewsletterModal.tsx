@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+
+const INTERACT_EVENTS = ['scroll', 'pointerdown', 'keydown', 'touchstart'] as const;
 import { X, Mail, Loader2, Check } from 'lucide-react';
 
 const NHL_TEAMS = [
@@ -91,6 +93,12 @@ export default function NewsletterModal({
 
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let onInteract: (() => void) | null = null;
+    const removeInteract = () => {
+      if (!onInteract) return;
+      for (const ev of INTERACT_EVENTS) window.removeEventListener(ev, onInteract);
+      onInteract = null;
+    };
 
     // Resolve the signed-in account's newsletter standing first, so a
     // subscriber never sees the popup even on a fresh browser/cleared cache.
@@ -143,18 +151,32 @@ export default function NewsletterModal({
         }
       }
 
-      // Timer-based trigger (2.5s delay, once per session)
+      // Auto trigger: 2.5s after mount AND after the visitor's first
+      // interaction (scroll/tap/key), once per session. Gating on interaction
+      // keeps the popup from being painted as the page's LCP element.
       if (!timerShown()) {
-        timer = setTimeout(() => {
-          if (cancelled) return;
+        let timerDone = false;
+        let interacted = false;
+        const show = () => {
+          if (cancelled || !timerDone || !interacted) return;
           // Re-check at fire time: the suppression flag may have been set after
           // mount (e.g. NewsletterVerified writing it on ?newsletter=success).
-          if (isSuppressed()) return;
+          if (isSuppressed() || timerShown()) return;
           // Mark shown at fire time (not just on dismiss) so the auto-popup is
           // once per session across navigations — avoids repeat interstitials
           // when the same visitor browses several team/odds pages.
           sessionStorage.setItem('newsletterModalShown', '1');
           setVisible(true);
+        };
+        onInteract = () => {
+          interacted = true;
+          removeInteract();
+          show();
+        };
+        for (const ev of INTERACT_EVENTS) window.addEventListener(ev, onInteract, { passive: true, once: true });
+        timer = setTimeout(() => {
+          timerDone = true;
+          show();
         }, 2500);
       }
     };
@@ -183,6 +205,7 @@ export default function NewsletterModal({
 
     return () => {
       cancelled = true;
+      removeInteract();
       if (timer) clearTimeout(timer);
       window.removeEventListener('team-starred', handleTeamStarred);
     };

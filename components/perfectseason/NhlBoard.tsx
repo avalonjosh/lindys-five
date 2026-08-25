@@ -1,18 +1,17 @@
 'use client';
 
-import nhlDataJson from '@/data/nhl-data.json';
-import nhlScheduleJson from '@/data/nhl-daily-schedule.json';
 import { nhlConfig } from '@/lib/perfectseason/config.nhl';
-import type { GameData } from '@/lib/perfectseason/types';
 import BoardView from './BoardView';
+import BoardLoading from './BoardLoading';
 import Rink from './nhl/Rink';
+import { useGameData } from './useGameData';
 import type { ScheduleJson } from './usePerfectSeasonGame';
 
-// Thin client wrapper: imports only the NHL dataset for the /82-0 route bundle.
-const data = nhlDataJson as unknown as GameData;
-const schedule = nhlScheduleJson as unknown as ScheduleJson;
-
-export default function NhlBoard() {
+// Thin client wrapper: the player pools are fetched from the static data
+// route instead of being bundled, and only a few days of schedule arrive as props.
+export default function NhlBoard({ schedule }: { schedule: ScheduleJson }) {
+  const { data, error } = useGameData('nhl');
+  if (!data) return <BoardLoading error={error} />;
   return (
     <BoardView
       sport="nhl"
