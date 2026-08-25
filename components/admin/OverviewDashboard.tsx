@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { Eye, Users, FileText, TrendingUp, Zap, Radio, ArrowRight } from 'lucide-react';
+import { Eye, Users, FileText, TrendingUp, Zap, Radio, ArrowRight, DollarSign } from 'lucide-react';
 import { fetchPosts, updatePost } from '@/lib/services/blogApi';
 import { getCronJobs, upcomingRuns } from '@/lib/cronSchedule';
 import {
@@ -13,6 +13,9 @@ import {
   WarningBanner, EmptyState, useToast,
 } from './ui';
 import type { BlogPost, NewsletterSubscriber } from '@/lib/types';
+import type { AffiliatesPayload } from '@/app/api/admin/affiliates/route';
+
+const money = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 // Friendly names for cron slugs shown in the automation snapshot.
 const CRON_LABELS: Record<string, string> = {
@@ -75,6 +78,7 @@ export default function OverviewDashboard() {
   const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
   const [drafts, setDrafts] = useState<BlogPost[]>([]);
   const [settings, setSettings] = useState<Record<string, boolean>>({});
+  const [affiliates, setAffiliates] = useState<AffiliatesPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
 
@@ -109,6 +113,12 @@ export default function OverviewDashboard() {
     }
     if (settingsRes) setSettings(settingsRes.settings || {});
     setLoading(false);
+
+    // Affiliate networks are slower (two external APIs, KV-cached 30 min); load after first paint.
+    fetch('/api/admin/affiliates?range=30d', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d && setAffiliates(d))
+      .catch(() => null);
   }, []);
 
   useEffect(() => {
@@ -200,6 +210,9 @@ export default function OverviewDashboard() {
           sub={drafts.length > 0 ? 'awaiting review below' : 'all caught up'}
         />
       </div>
+
+      {/* Affiliate earnings snapshot */}
+      <AffiliatesSnapshot data={affiliates} />
 
       <div className="mb-6 grid gap-6 lg:grid-cols-3">
         {/* Drafts awaiting review */}
@@ -326,6 +339,70 @@ export default function OverviewDashboard() {
           </p>
         )}
       </Card>
+    </div>
+  );
+}
+
+function AffiliatesSnapshot({ data }: { data: AffiliatesPayload | null }) {
+  const totals = (data?.networks || []).reduce(
+    (acc, n) => ({ clicks: acc.clicks + n.clicks, sales: acc.sales + n.conversions, commission: acc.commission + n.commission, pending: acc.pending + n.pendingCommission }),
+    { clicks: 0, sales: 0, commission: 0, pending: 0 },
+  );
+  const latest = (data?.networks || []).flatMap((n) => n.recentSales).sort((a, b) => b.date.localeCompare(a.date))[0];
+  const onSite = data?.firstParty.total ?? 0;
+
+  return (
+    <Card className="mb-6" padding={false}>
+      <div className="flex items-center justify-between p-4 pb-0 sm:p-5 sm:pb-0">
+        <SectionHeading className="mb-0 w-full border-0 pb-0">
+          <span className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4" /> Affiliates
+            <span className="text-sm font-normal text-gray-400">(last 30 days)</span>
+          </span>
+        </SectionHeading>
+        <Link href="/admin/affiliates" className="flex shrink-0 items-center gap-1 text-sm text-sabres-blue hover:underline">
+          Details <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+      {!data ? (
+        <div className="flex justify-center py-8"><Spinner size="sm" /></div>
+      ) : (
+        <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-5">
+          <div className="grid grid-cols-3 gap-3 lg:col-span-3">
+            <MiniStat label="Commission" value={money(totals.commission)} sub={totals.pending > 0 ? `${money(totals.pending)} pending` : 'all approved'} strong />
+            <MiniStat label="Sales" value={String(totals.sales)} sub={totals.clicks > 0 ? `${((totals.sales / totals.clicks) * 100).toFixed(1)}% of clicks` : 'no clicks yet'} />
+            <MiniStat label="Clicks" value={totals.clicks.toLocaleString()} sub={`${onSite.toLocaleString()} on-site`} />
+          </div>
+          <div className="space-y-2 lg:col-span-2">
+            {data.networks.map((n) => (
+              <div key={n.network} className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm">
+                <span className="flex items-center gap-2">
+                  <span className="inline-block h-2 w-2 rounded-full" style={{ background: n.error ? '#d97706' : n.configured ? '#16a34a' : '#9ca3af' }} title={n.error || (n.configured ? 'connected' : 'not configured')} />
+                  <span className="font-medium text-gray-800">{n.network === 'fanatics' ? 'Fanatics' : 'StubHub'}</span>
+                </span>
+                <span className="tabular-nums text-gray-500">
+                  {n.clicks} clk · {n.conversions} sale{n.conversions === 1 ? '' : 's'} · <span className="font-semibold text-gray-800">{money(n.commission)}</span>
+                </span>
+              </div>
+            ))}
+            <p className="truncate text-xs text-gray-400" title={latest ? `${latest.ref} · ${latest.detail || ''}` : undefined}>
+              {latest
+                ? `Latest sale: ${money(latest.commission)} on ${latest.network === 'fanatics' ? 'Fanatics' : 'StubHub'} · ${timeAgo(latest.date)}`
+                : 'No sales in the last 30 days'}
+            </p>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function MiniStat({ label, value, sub, strong }: { label: string; value: string; sub?: string; strong?: boolean }) {
+  return (
+    <div className="rounded-lg bg-gray-50 p-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">{label}</p>
+      <p className={`mt-0.5 text-xl font-bold ${strong ? 'text-green-700' : 'text-gray-900'}`}>{value}</p>
+      {sub && <p className="text-[10px] text-gray-400">{sub}</p>}
     </div>
   );
 }
