@@ -3,6 +3,7 @@
  */
 
 import { FANATICS_TEAM_PATHS } from '@/lib/affiliate/fanaticsTeams';
+import { STUBHUB_EVENT_IDS } from '@/lib/affiliate/stubhubEvents';
 import { NHL_TEAMS, MLB_TEAMS } from '@/lib/teamConfig';
 
 const AMAZON_TAG = process.env.NEXT_PUBLIC_AMAZON_TAG || 'lindysfive-20';
@@ -146,8 +147,32 @@ export function generateGameTicketLink(
     trackingRef,
     teamSlug: venueTeamSlug,
     teamCity: venueTeamCity,
-    destination: generateGameSearchDestination(homeTeam, awayTeam, date, sport),
+    destination: generateGameEventDestination(homeTeam, awayTeam, date, sport)
+      ?? generateGameSearchDestination(homeTeam, awayTeam, date, sport),
   });
+}
+
+/** Eastern game date as YYYY-MM-DD from a YYYY-MM-DD string or an ISO datetime. */
+function gameDateYmd(date?: string): string | null {
+  if (!date) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d);
+  const get = (t: string) => parts.find((x) => x.type === t)?.value;
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
+/**
+ * Exact StubHub event page for a game, when we have its event id in the
+ * harvested table (see lib/affiliate/stubhubEvents.ts). StubHub redirects
+ * /event/{id}/ to the canonical slugged URL, so the id alone is enough.
+ */
+export function generateGameEventDestination(homeTeam: string, awayTeam: string, date: string | undefined, sport: 'nhl' | 'mlb'): string | undefined {
+  const ymd = gameDateYmd(date);
+  if (!ymd) return undefined;
+  const id = STUBHUB_EVENT_IDS[`${sport}:${homeTeam.toUpperCase()}:${awayTeam.toUpperCase()}:${ymd}`];
+  return id ? `https://www.stubhub.com/event/${id}/` : undefined;
 }
 
 /** "City Name" for a league abbreviation, or null if unknown. */
