@@ -88,8 +88,8 @@ export default function AffiliatesDashboard() {
           <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
             <StatCard label="Commission earned" value={money(totals.commission)} sub={totals.pending > 0 ? `${money(totals.pending)} still pending` : 'all approved'} icon={<DollarSign className="h-6 w-6" />} />
             <StatCard label="Sales" value={totals.conversions} sub={`${money(totals.sales)} order value`} icon={<ShoppingBag className="h-6 w-6" />} />
-            <StatCard label="Network clicks" value={totals.clicks} sub={`${pct(totals.conversions, totals.clicks)} conversion · ${epc(totals.commission, totals.clicks)} per click`} icon={<MousePointerClick className="h-6 w-6" />} />
-            <StatCard label="On-site affiliate clicks" value={data.firstParty.total} sub={data.firstParty.byBucket.map((b) => `${b.name} ${b.count}`).join(' · ') || 'no clicks tracked'} icon={<Ticket className="h-6 w-6" />} />
+            <StatCard label="Network clicks" value={totals.clicks} sub={`${pct(totals.conversions, totals.clicks)} conversion · ${epc(totals.commission, totals.clicks)} per click · includes crawler hits`} icon={<MousePointerClick className="h-6 w-6" />} />
+            <StatCard label="On-site clicks (humans)" value={data.firstParty.total} sub={data.firstParty.byBucket.map((b) => `${b.name} ${b.count}`).join(' · ') || 'no clicks tracked'} icon={<Ticket className="h-6 w-6" />} />
           </div>
 
           {/* Per network */}
@@ -156,7 +156,9 @@ export default function AffiliatesDashboard() {
           </Card>
 
           <p className="mt-6 text-center text-xs text-gray-400">
-            Amazon Associates has no reporting API; check Associates Central for Amazon earnings.
+            Network clicks count every redirect through the affiliate link, including search-engine crawlers following
+            outbound links, so they run well above the on-site count. On-site clicks need JavaScript and skip known bots,
+            so they are the better read on real fans. Amazon Associates has no reporting API; check Associates Central for Amazon earnings.
           </p>
         </div>
       )}
