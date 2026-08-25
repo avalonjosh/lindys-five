@@ -1,0 +1,447 @@
+159257415|0922|Rays@Yankees
+159257421|0829|Red Sox@Yankees
+159257453|0825|Astros@Yankees
+159257454|0826|Astros@Yankees
+159257455|0827|Astros@Yankees
+159257456|0828|Red Sox@Yankees
+159257457|0829|Red Sox@Yankees
+159257458|0830|Red Sox@Yankees
+159257459|0908|Rockies@Yankees
+159257460|0909|Rockies@Yankees
+159257461|0910|Rockies@Yankees
+159257462|0911|Mets@Yankees
+159257463|0912|Mets@Yankees
+159257464|0913|Mets@Yankees
+159257465|0922|Rays@Yankees
+159257466|0923|Rays@Yankees
+159257467|0924|Rays@Yankees
+159257468|0925|Orioles@Yankees
+159257469|0926|Orioles@Yankees
+159257470|0927|Orioles@Yankees
+159257695|0901|Cardinals@Dodgers
+159257696|0902|Cardinals@Dodgers
+159257697|0903|Cardinals@Dodgers
+159257698|0904|Nationals@Dodgers
+159257699|0905|Nationals@Dodgers
+159257700|0906|Nationals@Dodgers
+159257701|0907|Reds@Dodgers
+159257702|0908|Reds@Dodgers
+159257703|0909|Reds@Dodgers
+159257704|0918|Giants@Dodgers
+159257705|0919|Giants@Dodgers
+159257706|0920|Giants@Dodgers
+159257707|0922|Padres@Dodgers
+159257708|0923|Padres@Dodgers
+159257709|0924|Padres@Dodgers
+159257904|0828|Reds@Cubs
+159257905|0829|Reds@Cubs
+159257906|0830|Reds@Cubs
+159257907|0831|Brewers@Cubs
+159257908|0901|Brewers@Cubs
+159257909|0902|Brewers@Cubs
+159257910|0903|Brewers@Cubs
+159257911|0911|Pirates@Cubs
+159257912|0912|Pirates@Cubs
+159257913|0913|Pirates@Cubs
+159257914|0914|Braves@Cubs
+159257915|0915|Braves@Cubs
+159257916|0916|Braves@Cubs
+159257917|0922|Marlins@Cubs
+159257918|0923|Marlins@Cubs
+159257919|0924|Marlins@Cubs
+159260975|0831|Mariners@Red Sox
+159260976|0901|Mariners@Red Sox
+159260977|0902|Mariners@Red Sox
+159260978|0907|Angels@Red Sox
+159260979|0908|Angels@Red Sox
+159260980|0909|Angels@Red Sox
+159260981|0911|Royals@Red Sox
+159260982|0912|Royals@Red Sox
+159260983|0913|Royals@Red Sox
+159260984|0922|Guardians@Red Sox
+159260985|0923|Guardians@Red Sox
+159260986|0924|Guardians@Red Sox
+159260987|0925|Cubs@Red Sox
+159260988|0926|Cubs@Red Sox
+159260989|0927|Cubs@Red Sox
+159261055|0825|Brewers@Mets
+159261056|0826|Brewers@Mets
+159261057|0827|Brewers@Mets
+159261058|0828|Astros@Mets
+159261059|0829|Astros@Mets
+159261060|0830|Astros@Mets
+159261061|0904|Giants@Mets
+159261062|0905|Giants@Mets
+159261063|0906|Giants@Mets
+159261064|0914|Orioles@Mets
+159261065|0915|Orioles@Mets
+159261066|0916|Orioles@Mets
+159261067|0917|Phillies@Mets
+159261068|0918|Phillies@Mets
+159261069|0919|Phillies@Mets
+159261070|0920|Phillies@Mets
+159262134|0831|Giants@Braves
+159262165|0825|Dodgers@Braves
+159262166|0826|Dodgers@Braves
+159262167|0827|Dodgers@Braves
+159262168|0828|Rockies@Braves
+159262169|0829|Rockies@Braves
+159262170|0830|Rockies@Braves
+159262171|0908|Rays@Braves
+159262172|0909|Rays@Braves
+159262173|0910|Rays@Braves
+159262174|0911|Phillies@Braves
+159262175|0912|Phillies@Braves
+159262176|0913|Phillies@Braves
+159262177|0922|Reds@Braves
+159262178|0923|Reds@Braves
+159262179|0924|Reds@Braves
+159262248|0904|Braves@Phillies
+159262249|0905|Braves@Phillies
+159262250|0906|Braves@Phillies
+159262251|0907|Braves@Phillies
+159262252|0908|Astros@Phillies
+159262253|0909|Astros@Phillies
+159262254|0910|Astros@Phillies
+159262255|0922|Brewers@Phillies
+159262256|0923|Brewers@Phillies
+159262257|0924|Brewers@Phillies
+159262258|0925|Rays@Phillies
+159262259|0926|Rays@Phillies
+159262260|0927|Rays@Phillies
+159262324|0825|Reds@Giants
+159262325|0826|Reds@Giants
+159262326|0827|Diamondbacks@Giants
+159262327|0828|Diamondbacks@Giants
+159262328|0829|Diamondbacks@Giants
+159262329|0829|Diamondbacks@Giants
+159262330|0907|Cardinals@Giants
+159262331|0908|Cardinals@Giants
+159262332|0909|Cardinals@Giants
+159262333|0911|Padres@Giants
+159262334|0912|Padres@Giants
+159262335|0913|Padres@Giants
+159262336|0921|Twins@Giants
+159262337|0922|Twins@Giants
+159262338|0923|Twins@Giants
+159262339|0925|Dodgers@Giants
+159262340|0926|Dodgers@Giants
+159262341|0927|Dodgers@Giants
+159262409|0825|Pirates@Padres
+159262410|0826|Pirates@Padres
+159262411|0904|Yankees@Padres
+159262412|0905|Yankees@Padres
+159262413|0906|Yankees@Padres
+159262414|0907|Nationals@Padres
+159262415|0908|Nationals@Padres
+159262416|0909|Nationals@Padres
+159262417|0918|Marlins@Padres
+159262418|0919|Marlins@Padres
+159262419|0920|Marlins@Padres
+159262420|0925|Diamondbacks@Padres
+159262421|0926|Diamondbacks@Padres
+159262422|0927|Diamondbacks@Padres
+159262489|0825|Royals@Blue Jays
+159262490|0826|Royals@Blue Jays
+159262491|0827|Royals@Blue Jays
+159262492|0828|Mariners@Blue Jays
+159262493|0829|Mariners@Blue Jays
+159262494|0830|Mariners@Blue Jays
+159262572|0831|White Sox@Astros
+159262573|0901|White Sox@Astros
+159262574|0902|White Sox@Astros
+159262575|0903|White Sox@Astros
+159262576|0904|Diamondbacks@Astros
+159262577|0905|Diamondbacks@Astros
+159262578|0906|Diamondbacks@Astros
+159262579|0915|Royals@Astros
+159262580|0916|Royals@Astros
+159262581|0917|Royals@Astros
+159262582|0918|Braves@Astros
+159262583|0919|Braves@Astros
+159262584|0920|Braves@Astros
+159262650|0831|Athletics@Rangers
+159262651|0901|Athletics@Rangers
+159262652|0902|Athletics@Rangers
+159262653|0903|Rays@Rangers
+159262654|0904|Rays@Rangers
+159262655|0905|Rays@Rangers
+159262656|0906|Rays@Rangers
+159262657|0915|Red Sox@Rangers
+159262658|0916|Red Sox@Rangers
+159262659|0917|Red Sox@Rangers
+159262660|0918|Blue Jays@Rangers
+159262661|0919|Blue Jays@Rangers
+159262662|0920|Blue Jays@Rangers
+159262663|0922|Mets@Rangers
+159262664|0923|Mets@Rangers
+159262665|0924|Mets@Rangers
+159262732|0825|Orioles@Cardinals
+159262733|0826|Orioles@Cardinals
+159262734|0827|Orioles@Cardinals
+159262735|0828|Pirates@Cardinals
+159262736|0829|Pirates@Cardinals
+159262737|0830|Pirates@Cardinals
+159262738|0911|White Sox@Cardinals
+159262739|0912|White Sox@Cardinals
+159262740|0913|White Sox@Cardinals
+159262741|0914|Giants@Cardinals
+159262742|0915|Giants@Cardinals
+159262743|0916|Giants@Cardinals
+159262744|0918|Nationals@Cardinals
+159262745|0919|Nationals@Cardinals
+159262746|0920|Nationals@Cardinals
+159262811|0825|Rays@Tigers
+159262812|0826|Rays@Tigers
+159262813|0828|Dodgers@Tigers
+159262814|0829|Dodgers@Tigers
+159262815|0830|Dodgers@Tigers
+159262816|0907|Twins@Tigers
+159262817|0908|Twins@Tigers
+159262818|0909|Twins@Tigers
+159262819|0911|Rockies@Tigers
+159262820|0912|Rockies@Tigers
+159262821|0913|Rockies@Tigers
+159262822|0921|Nationals@Tigers
+159262823|0922|Nationals@Tigers
+159262824|0923|Nationals@Tigers
+159262825|0925|Pirates@Tigers
+159262826|0926|Pirates@Tigers
+159262827|0927|Pirates@Tigers
+159262894|0825|Phillies@Mariners
+159262895|0826|Phillies@Mariners
+159262896|0903|Athletics@Mariners
+159262897|0904|Athletics@Mariners
+159262898|0905|Athletics@Mariners
+159262899|0906|Athletics@Mariners
+159262900|0908|Rangers@Mariners
+159262901|0909|Rangers@Mariners
+159262902|0910|Rangers@Mariners
+159262903|0922|Astros@Mariners
+159262904|0923|Astros@Mariners
+159262905|0924|Angels@Mariners
+159262906|0925|Angels@Mariners
+159262907|0926|Angels@Mariners
+159262908|0927|Angels@Mariners
+159263005|0825|Guardians@Angels
+159263006|0826|Guardians@Angels
+159263007|0828|Phillies@Angels
+159263008|0829|Phillies@Angels
+159263009|0830|Phillies@Angels
+159263010|0831|Yankees@Angels
+159263011|0901|Yankees@Angels
+159263012|0902|Yankees@Angels
+159263013|0914|Mariners@Angels
+159263014|0915|Mariners@Angels
+159263015|0916|Mariners@Angels
+159263016|0917|Twins@Angels
+159263017|0918|Twins@Angels
+159263018|0919|Twins@Angels
+159263019|0920|Twins@Angels
+159263088|0831|Padres@Reds
+159263089|0901|Padres@Reds
+159263090|0902|Padres@Reds
+159263091|0904|Brewers@Reds
+159263092|0905|Brewers@Reds
+159263093|0906|Brewers@Reds
+159263094|0914|Dodgers@Reds
+159263095|0915|Dodgers@Reds
+159263096|0916|Dodgers@Reds
+159263097|0917|Dodgers@Reds
+159263098|0918|Cubs@Reds
+159263099|0919|Cubs@Reds
+159263100|0920|Cubs@Reds
+159263170|0828|Rangers@Brewers
+159263171|0829|Rangers@Brewers
+159263172|0830|Rangers@Brewers
+159263173|0907|Cubs@Brewers
+159263174|0908|Cubs@Brewers
+159263175|0909|Cubs@Brewers
+159263176|0911|Reds@Brewers
+159263177|0912|Reds@Brewers
+159263178|0913|Reds@Brewers
+159263179|0925|Cardinals@Brewers
+159263180|0926|Cardinals@Brewers
+159263181|0927|Cardinals@Brewers
+159263248|0828|Padres@Rays
+159263249|0829|Padres@Rays
+159263250|0830|Padres@Rays
+159263251|0831|Mets@Rays
+159263252|0901|Mets@Rays
+159263253|0902|Mets@Rays
+159263254|0911|Astros@Rays
+159263255|0912|Astros@Rays
+159263256|0913|Astros@Rays
+159263257|0915|Athletics@Rays
+159263258|0916|Athletics@Rays
+159263259|0917|Athletics@Rays
+159263260|0918|Red Sox@Rays
+159263261|0919|Red Sox@Rays
+159263262|0920|Red Sox@Rays
+159263329|0901|Giants@Pirates
+159263330|0902|Giants@Pirates
+159263331|0903|Giants@Pirates
+159263332|0904|Angels@Pirates
+159263333|0905|Angels@Pirates
+159263334|0906|Angels@Pirates
+159263335|0915|Brewers@Pirates
+159263336|0916|Brewers@Pirates
+159263337|0917|Brewers@Pirates
+159263338|0918|Royals@Pirates
+159263339|0919|Royals@Pirates
+159263340|0920|Royals@Pirates
+159263341|0922|Cardinals@Pirates
+159263342|0923|Cardinals@Pirates
+159263343|0924|Cardinals@Pirates
+159263410|0825|Rangers@White Sox
+159263411|0826|Rangers@White Sox
+159263412|0904|Twins@White Sox
+159263413|0905|Twins@White Sox
+159263414|0906|Twins@White Sox
+159263415|0908|Pirates@White Sox
+159263416|0909|Pirates@White Sox
+159263417|0910|Pirates@White Sox
+159263418|0917|Tigers@White Sox
+159263419|0918|Tigers@White Sox
+159263420|0919|Tigers@White Sox
+159263421|0920|Tigers@White Sox
+159263422|0925|Rockies@White Sox
+159263423|0926|Rockies@White Sox
+159263424|0927|Rockies@White Sox
+159263493|0903|Red Sox@Orioles
+159263494|0904|Red Sox@Orioles
+159263495|0905|Red Sox@Orioles
+159263496|0906|Red Sox@Orioles
+159263497|0907|Guardians@Orioles
+159263498|0908|Guardians@Orioles
+159263499|0909|Guardians@Orioles
+159263500|0918|Brewers@Orioles
+159263501|0919|Brewers@Orioles
+159263502|0920|Brewers@Orioles
+159263503|0921|Blue Jays@Orioles
+159263504|0922|Blue Jays@Orioles
+159263505|0923|Blue Jays@Orioles
+159263571|0831|Orioles@Rockies
+159263572|0901|Orioles@Rockies
+159263573|0902|Orioles@Rockies
+159263574|0904|Cardinals@Rockies
+159263575|0905|Cardinals@Rockies
+159263576|0906|Cardinals@Rockies
+159263577|0914|Padres@Rockies
+159263578|0915|Padres@Rockies
+159263579|0916|Padres@Rockies
+159263580|0917|Padres@Rockies
+159263581|0918|Mariners@Rockies
+159263582|0919|Mariners@Rockies
+159263583|0920|Mariners@Rockies
+159263584|0922|Diamondbacks@Rockies
+159263585|0923|Diamondbacks@Rockies
+159263586|0924|Diamondbacks@Rockies
+159263654|0825|Cubs@Diamondbacks
+159263655|0826|Cubs@Diamondbacks
+159263656|0831|Phillies@Diamondbacks
+159263657|0901|Phillies@Diamondbacks
+159263658|0902|Phillies@Diamondbacks
+159263659|0911|Rangers@Diamondbacks
+159263660|0912|Rangers@Diamondbacks
+159263661|0913|Rangers@Diamondbacks
+159263662|0914|Marlins@Diamondbacks
+159263663|0915|Marlins@Diamondbacks
+159263664|0916|Marlins@Diamondbacks
+159263665|0918|Yankees@Diamondbacks
+159263666|0919|Yankees@Diamondbacks
+159263667|0920|Yankees@Diamondbacks
+159263732|0825|Rockies@Nationals
+159263733|0826|Rockies@Nationals
+159263734|0827|Rockies@Nationals
+159263735|0828|Marlins@Nationals
+159263736|0829|Marlins@Nationals
+159263737|0830|Marlins@Nationals
+159263738|0831|Marlins@Nationals
+159263739|0901|Braves@Nationals
+159263740|0902|Braves@Nationals
+159263741|0911|Angels@Nationals
+159263742|0912|Angels@Nationals
+159263743|0913|Angels@Nationals
+159263744|0915|Phillies@Nationals
+159263745|0916|Phillies@Nationals
+159263746|0925|Mets@Nationals
+159263747|0926|Mets@Nationals
+159263748|0927|Mets@Nationals
+159263825|0901|Marlins@Royals
+159263826|0902|Marlins@Royals
+159263827|0903|Marlins@Royals
+159263828|0904|Blue Jays@Royals
+159263829|0905|Blue Jays@Royals
+159263830|0906|Blue Jays@Royals
+159263831|0907|Diamondbacks@Royals
+159263832|0908|Diamondbacks@Royals
+159263833|0909|Diamondbacks@Royals
+159263834|0922|White Sox@Royals
+159263835|0923|White Sox@Royals
+159263836|0924|White Sox@Royals
+159263837|0925|Guardians@Royals
+159263838|0926|Guardians@Royals
+159263839|0927|Guardians@Royals
+159263904|0825|Twins@Athletics
+159263905|0826|Twins@Athletics
+159263906|0828|Orioles@Athletics
+159263907|0829|Orioles@Athletics
+159263908|0830|Orioles@Athletics
+159263909|0907|Blue Jays@Athletics
+159263910|0908|Blue Jays@Athletics
+159263911|0909|Blue Jays@Athletics
+159263912|0911|Mariners@Athletics
+159263913|0912|Mariners@Athletics
+159263914|0913|Mariners@Athletics
+159263915|0922|Angels@Athletics
+159263916|0923|Angels@Athletics
+159263917|0924|Astros@Athletics
+159263918|0925|Astros@Athletics
+159263919|0926|Astros@Athletics
+159263920|0927|Astros@Athletics
+159263987|0828|White Sox@Twins
+159263988|0829|White Sox@Twins
+159263989|0830|White Sox@Twins
+159263990|0831|Tigers@Twins
+159263991|0901|Tigers@Twins
+159263992|0902|Tigers@Twins
+159263993|0911|Guardians@Twins
+159263994|0912|Guardians@Twins
+159263995|0913|Guardians@Twins
+159263996|0914|Yankees@Twins
+159263997|0915|Yankees@Twins
+159263998|0916|Yankees@Twins
+159263999|0925|Rangers@Twins
+159264000|0926|Rangers@Twins
+159264001|0927|Rangers@Twins
+159264069|0825|Red Sox@Marlins
+159264070|0826|Red Sox@Marlins
+159264071|0904|Cubs@Marlins
+159264072|0905|Cubs@Marlins
+159264073|0906|Cubs@Marlins
+159264074|0907|Mets@Marlins
+159264075|0908|Mets@Marlins
+159264076|0909|Mets@Marlins
+159264077|0911|Dodgers@Marlins
+159264078|0912|Dodgers@Marlins
+159264079|0913|Dodgers@Marlins
+159264080|0925|Braves@Marlins
+159264081|0926|Braves@Marlins
+159264082|0927|Braves@Marlins
+159264119|0904|Tigers@Guardians
+159264149|0828|Royals@Guardians
+159264150|0829|Royals@Guardians
+159264151|0830|Royals@Guardians
+159264152|0901|Blue Jays@Guardians
+159264153|0902|Blue Jays@Guardians
+159264154|0903|Blue Jays@Guardians
+159264155|0904|Tigers@Guardians
+159264156|0905|Tigers@Guardians
+159264157|0906|Tigers@Guardians
+159264158|0914|White Sox@Guardians
+159264159|0915|White Sox@Guardians
+159264160|0916|White Sox@Guardians
+159264161|0918|Athletics@Guardians
+159264162|0919|Athletics@Guardians
+159264163|0920|Athletics@Guardians

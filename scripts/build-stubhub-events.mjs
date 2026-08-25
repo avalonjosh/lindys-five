@@ -5,19 +5,29 @@
 import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 
 // StubHub venue codes that differ from NHL API abbreviations.
-const NORMALIZE = { LA: 'LAK', NJ: 'NJD', TB: 'TBL', SJ: 'SJS' };
-const norm = (a) => NORMALIZE[a] || a;
+const NHL_NORMALIZE = { LA: 'LAK', NJ: 'NJD', TB: 'TBL', SJ: 'SJS' };
+// MLB listings use nicknames; map to the abbreviations in lib/teamConfig/mlbTeams.ts.
+const MLB_NICKNAMES = {
+  Diamondbacks: 'ARI', Braves: 'ATL', Orioles: 'BAL', 'Red Sox': 'BOS', Cubs: 'CHC', 'White Sox': 'CWS',
+  Reds: 'CIN', Guardians: 'CLE', Rockies: 'COL', Tigers: 'DET', Astros: 'HOU', Royals: 'KC', Angels: 'LAA',
+  Dodgers: 'LAD', Marlins: 'MIA', Brewers: 'MIL', Twins: 'MIN', Mets: 'NYM', Yankees: 'NYY', Athletics: 'OAK',
+  Phillies: 'PHI', Pirates: 'PIT', Padres: 'SD', Giants: 'SF', Mariners: 'SEA', Cardinals: 'STL', Rays: 'TB',
+  Rangers: 'TEX', 'Blue Jays': 'TOR', Nationals: 'WSH',
+};
+const norm = (sport, a) => (sport === 'mlb' ? MLB_NICKNAMES[a] : NHL_NORMALIZE[a] || a);
 
 const files = readdirSync('scripts/data').filter((f) => /^stubhub-(nhl|mlb)-\d{4}-\d{2}\.txt$/.test(f)).sort();
 const entries = new Map();
 for (const f of files) {
   const [, sport, startYear] = f.match(/^stubhub-(nhl|mlb)-(\d{4})-\d{2}\.txt$/);
   for (const line of readFileSync(`scripts/data/${f}`, 'utf8').split('\n')) {
-    const m = line.trim().match(/^(\d+)\|(\d{2})(\d{2})\|([A-Z]{2,3})@([A-Z]{2,3})(\|P)?$/);
+    const m = line.trim().match(/^(\d+)\|(\d{2})(\d{2})\|([A-Za-z .]+)@([A-Za-z .]+?)(\|P)?$/);
     if (!m) continue;
     const [, id, mm, dd, away, home, pre] = m;
     const year = Number(mm) >= 8 ? Number(startYear) : Number(startYear) + 1;
-    const key = `${sport}:${norm(home)}:${norm(away)}:${year}-${mm}-${dd}`;
+    const h = norm(sport, home), a = norm(sport, away);
+    if (!h || !a) { console.warn(`unmapped team in ${f}: ${line}`); continue; }
+    const key = `${sport}:${h}:${a}:${year}-${mm}-${dd}`;
     // Prefer a regular-season listing if a preseason one shares the key (never happens in practice).
     if (!entries.has(key) || !pre) entries.set(key, Number(id));
   }

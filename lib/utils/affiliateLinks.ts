@@ -168,10 +168,17 @@ function gameDateYmd(date?: string): string | null {
  * harvested table (see lib/affiliate/stubhubEvents.ts). StubHub redirects
  * /event/{id}/ to the canonical slugged URL, so the id alone is enough.
  */
+/** MLB Stats API abbreviations that differ from lib/teamConfig (which the event table uses). */
+const MLB_ABBREV_ALIASES: Record<string, string> = { AZ: 'ARI', ATH: 'OAK', CHW: 'CWS', KCR: 'KC', SDP: 'SD', SFG: 'SF', TBR: 'TB', WAS: 'WSH', WSN: 'WSH' };
+const eventAbbrev = (abbrev: string, sport: 'nhl' | 'mlb') => {
+  const up = abbrev.toUpperCase();
+  return sport === 'mlb' ? MLB_ABBREV_ALIASES[up] || up : up;
+};
+
 export function generateGameEventDestination(homeTeam: string, awayTeam: string, date: string | undefined, sport: 'nhl' | 'mlb'): string | undefined {
   const ymd = gameDateYmd(date);
   if (!ymd) return undefined;
-  const id = STUBHUB_EVENT_IDS[`${sport}:${homeTeam.toUpperCase()}:${awayTeam.toUpperCase()}:${ymd}`];
+  const id = STUBHUB_EVENT_IDS[`${sport}:${eventAbbrev(homeTeam, sport)}:${eventAbbrev(awayTeam, sport)}:${ymd}`];
   return id ? `https://www.stubhub.com/event/${id}/` : undefined;
 }
 
