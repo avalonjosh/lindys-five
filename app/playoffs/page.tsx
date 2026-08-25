@@ -43,11 +43,13 @@ export async function generateMetadata(): Promise<Metadata> {
       type: 'website',
       url: 'https://www.lindysfive.com/playoffs',
       siteName: "Lindy's Five",
+      images: [{ url: '/api/og?type=sport-hub&sport=nhl&title=Stanley%20Cup%20Playoff%20Bracket&subtitle=Live%20series%20odds%20%26%20results', width: 1200, height: 630, alt: 'Stanley Cup Playoff Bracket' }],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
+      images: ['/api/og?type=sport-hub&sport=nhl&title=Stanley%20Cup%20Playoff%20Bracket&subtitle=Live%20series%20odds%20%26%20results'],
     },
     alternates: {
       canonical: 'https://www.lindysfive.com/playoffs',
@@ -605,7 +607,7 @@ export default async function PlayoffsPage() {
                 : 'NHL playoff bracket with series odds and Stanley Cup predictions.',
               url: 'https://www.lindysfive.com/playoffs',
               dateModified: new Date().toISOString(),
-              publisher: { '@type': 'Organization', name: 'JRR Apps' },
+              publisher: { '@type': 'Organization', name: "Lindy's Five" },
             },
             {
               '@context': 'https://schema.org',

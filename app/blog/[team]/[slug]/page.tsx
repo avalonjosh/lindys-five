@@ -14,7 +14,7 @@ import ViewTracker from '@/components/blog/ViewTracker';
 import NewsletterSignup from '@/components/newsletter/NewsletterSignup';
 import MerchCTA from '@/components/affiliate/MerchCTA';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 const teamConfig: Record<string, { displayName: string; primary: string; secondary: string; accent: string }> = {
   sabres: {

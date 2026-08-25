@@ -47,22 +47,25 @@ export async function generateMetadata({ params }: MLBTeamPageProps): Promise<Me
   const title = `${fullName} Standings & Playoff Odds ${year}`;
   const description = `Are the ${fullName} going to make the playoffs? Live ${year} playoff odds, division standings, win pace, and 5-game set tracking, updated daily.`;
 
+  const ogTitle = `${fullName} Playoff Odds ${year}`;
+  const og = `/api/og?type=sport-hub&sport=mlb&title=${encodeURIComponent(ogTitle)}&subtitle=${encodeURIComponent('Live playoff odds, standings & 5-game sets')}`;
+
   return {
     title,
     description,
     openGraph: {
-      title: `${fullName} Playoff Odds ${year}`,
+      title: ogTitle,
       description,
       type: 'website',
       url: `https://www.lindysfive.com/mlb/${team.id}`,
-      images: [{ url: team.logo }],
+      images: [{ url: og, width: 1200, height: 630, alt: ogTitle }],
       siteName: "Lindy's Five",
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title: `${fullName} Playoff Odds ${year}`,
       description,
-      images: [team.logo],
+      images: [og],
     },
     alternates: {
       canonical: `https://www.lindysfive.com/mlb/${team.id}`,

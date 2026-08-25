@@ -58,6 +58,13 @@ const nextConfig = {
         destination: '/162-0',
         permanent: true,
       },
+      // The internal NFL pick route (rewrite target of /pick-the-:team) should
+      // never be a second live URL for the same page.
+      {
+        source: '/nfl/pick/:team',
+        destination: '/pick-the-:team',
+        permanent: true,
+      },
       {
         source: '/82',
         destination: '/82-0',

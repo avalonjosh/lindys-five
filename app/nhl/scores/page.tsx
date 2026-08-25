@@ -33,11 +33,13 @@ export async function generateMetadata(): Promise<Metadata> {
       type: 'website',
       url: 'https://www.lindysfive.com/nhl/scores',
       siteName: "Lindy's Five",
+      images: [{ url: '/api/og?type=sport-hub&sport=nhl&title=NHL%20Scores&subtitle=Live%20results%2C%20box%20scores%20%26%20playoff%20impact', width: 1200, height: 630, alt: 'NHL Scores' }],
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title,
       description,
+      images: ['/api/og?type=sport-hub&sport=nhl&title=NHL%20Scores&subtitle=Live%20results%2C%20box%20scores%20%26%20playoff%20impact'],
     },
     alternates: {
       canonical: 'https://www.lindysfive.com/nhl/scores',

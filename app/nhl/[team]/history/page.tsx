@@ -70,7 +70,7 @@ export default async function TeamHistoryPage({ params }: HistoryPageProps) {
       name: `${fullName} Playoff History`,
       description: `Complete ${fullName} playoff history with series results, game-by-game breakdowns, and highlight videos.`,
       url: historyUrl,
-      publisher: { '@type': 'Organization', name: 'JRR Apps' },
+      publisher: { '@type': 'Organization', name: "Lindy's Five" },
     },
     {
       '@context': 'https://schema.org',

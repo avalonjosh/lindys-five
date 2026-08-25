@@ -3,6 +3,7 @@ import SiteFooter from '@/components/SiteFooter';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { getPublishedPosts } from '@/lib/kv';
+import Pagination, { POSTS_PER_PAGE } from '@/components/blog/Pagination';
 import type { BlogPost, PostType } from '@/lib/types';
 import BlogNav from '@/components/blog/BlogNav';
 import PostCard from '@/components/blog/PostCard';
@@ -20,9 +21,11 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.lindysfive.com/blog',
     siteName: 'Lindy\'s Five',
+    images: [{ url: '/api/og?type=sport-hub&sport=nhl&title=Lindy%27s%20Five%20Blog&subtitle=Sabres%20%26%20Bills%20news%2C%20recaps%20%26%20analysis', width: 1200, height: 630, alt: "Lindy's Five Blog" }],
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
+    images: ['/api/og?type=sport-hub&sport=nhl&title=Lindy%27s%20Five%20Blog&subtitle=Sabres%20%26%20Bills%20news%2C%20recaps%20%26%20analysis'],
     title: 'NHL Blog — Sabres Playoff Coverage & Game Recaps',
     description: 'Buffalo Sabres playoff coverage, game recaps, and NHL analysis.',
   },
@@ -43,12 +46,15 @@ const TYPE_LABELS: Record<string, string> = {
 export default async function BlogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; page?: string }>;
 }) {
   const params = await searchParams;
   const typeFilter = params.type as PostType | undefined;
+  const page = Math.max(1, parseInt(params.page || '1', 10) || 1);
 
   const posts = await getPublishedPosts(undefined, typeFilter);
+  const totalPages = Math.max(1, Math.ceil(posts.length / POSTS_PER_PAGE));
+  const pagePosts = posts.slice((page - 1) * POSTS_PER_PAGE, page * POSTS_PER_PAGE);
 
   // Group posts for sectioned layout
   let heroPost: BlogPost | null = null;
@@ -156,10 +162,15 @@ export default async function BlogPage({
                   </Link>
                 </div>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {posts.map((post) => (
+                  {pagePosts.map((post) => (
                     <PostCard key={post.id} post={post} />
                   ))}
                 </div>
+                <Pagination
+                  page={page}
+                  totalPages={totalPages}
+                  hrefFor={(p) => `/blog?type=${typeFilter}${p > 1 ? `&page=${p}` : ''}`}
+                />
               </div>
             ) : (
               /* Sectioned View */

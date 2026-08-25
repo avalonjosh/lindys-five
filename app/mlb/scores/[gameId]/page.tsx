@@ -127,6 +127,7 @@ export default async function MLBBoxScorePage({ params }: Props) {
           ]}
         />
       </div>
+      <h1 className="sr-only">{matchup}: Box Score & Stats</h1>
       <MLBBoxScoreClient gameId={gameId} />
     </>
   );

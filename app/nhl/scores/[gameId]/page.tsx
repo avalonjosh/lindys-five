@@ -129,6 +129,7 @@ export default async function BoxScorePage({ params }: PageProps) {
           ]}
         />
       </div>
+      <h1 className="sr-only">{matchup}: Box Score & Stats</h1>
       <BoxScoreClient gameId={gameId} />
     </>
   );

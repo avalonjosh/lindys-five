@@ -15,12 +15,14 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://www.lindysfive.com/',
     siteName: "Lindy's Five",
+    images: [{ url: '/api/og?type=sport-hub&sport=nhl&title=Lindy%27s%20Five&subtitle=NHL%20%26%20MLB%20playoff%20odds%2C%20standings%20%26%20scores', width: 1200, height: 630, alt: "Lindy's Five" }],
   },
   twitter: {
     card: 'summary_large_image',
     title: "Lindy's Five — NHL & MLB Playoff Tracker",
     description:
       "Track your team's playoff race with 5-game set analysis. NHL and MLB standings, projections, and odds updated daily.",
+    images: ['/api/og?type=sport-hub&sport=nhl&title=Lindy%27s%20Five&subtitle=NHL%20%26%20MLB%20playoff%20odds%2C%20standings%20%26%20scores'],
   },
   alternates: {
     canonical: 'https://www.lindysfive.com/',
@@ -39,7 +41,23 @@ export default function LandingPage() {
             name: "Lindy's Five",
             description: "Track every season, five games at a time. NHL and MLB playoff odds and projections.",
             url: 'https://www.lindysfive.com',
-            publisher: { '@type': 'Organization', name: 'JRR Apps' },
+            publisher: { '@id': 'https://www.lindysfive.com/#organization' },
+          }),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            '@id': 'https://www.lindysfive.com/#organization',
+            name: "Lindy's Five",
+            url: 'https://www.lindysfive.com',
+            logo: 'https://www.lindysfive.com/favicon.svg',
+            description: 'Independent NHL and MLB playoff odds tracker covering all 62 teams, five games at a time.',
+            parentOrganization: { '@type': 'Organization', name: 'JRR Apps' },
+            sameAs: ['https://x.com/lindysfive'],
           }),
         }}
       />

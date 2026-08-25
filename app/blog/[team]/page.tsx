@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { getPublishedPosts } from '@/lib/kv';
+import Pagination, { POSTS_PER_PAGE } from '@/components/blog/Pagination';
 import type { BlogPost, PostType } from '@/lib/types';
 import BlogNav from '@/components/blog/BlogNav';
 import PostCard from '@/components/blog/PostCard';
@@ -58,6 +59,7 @@ export async function generateMetadata({
       type: 'website',
       url: `https://www.lindysfive.com/blog/${team}`,
       siteName: "Lindy's Five",
+      images: [{ url: `/api/og?type=sport-hub&sport=nhl&title=${encodeURIComponent(`${config.displayName} Blog`)}&subtitle=${encodeURIComponent('News, recaps & analysis from Lindy\'s Five')}`, width: 1200, height: 630, alt: `${config.displayName} Blog` }],
     },
     twitter: {
       card: 'summary',
@@ -75,7 +77,7 @@ export default async function TeamBlogPage({
   searchParams,
 }: {
   params: Promise<{ team: string }>;
-  searchParams: Promise<{ type?: string }>;
+  searchParams: Promise<{ type?: string; page?: string }>;
 }) {
   const { team } = await params;
   const searchParamsResolved = await searchParams;
@@ -87,6 +89,9 @@ export default async function TeamBlogPage({
 
   const typeFilter = searchParamsResolved.type as PostType | undefined;
   const posts = await getPublishedPosts(team, typeFilter);
+  const page = Math.max(1, parseInt(searchParamsResolved.page || '1', 10) || 1);
+  const totalPages = Math.max(1, Math.ceil(posts.length / POSTS_PER_PAGE));
+  const pagePosts = posts.slice((page - 1) * POSTS_PER_PAGE, page * POSTS_PER_PAGE);
 
   // Group posts for sectioned layout
   let heroPost: BlogPost | null = null;
@@ -227,10 +232,15 @@ export default async function TeamBlogPage({
                   </Link>
                 </div>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {posts.map((post) => (
+                  {pagePosts.map((post) => (
                     <PostCard key={post.id} post={post} />
                   ))}
                 </div>
+                <Pagination
+                  page={page}
+                  totalPages={totalPages}
+                  hrefFor={(p) => `/blog/${team}?type=${typeFilter}${p > 1 ? `&page=${p}` : ''}`}
+                />
               </div>
             ) : (
               /* Sectioned View */

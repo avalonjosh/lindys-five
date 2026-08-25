@@ -95,9 +95,9 @@ export default function MLBScoresPageClient() {
           </div>
           <div className="text-center">
             <Link href="/" className="inline-block">
-              <h1 className="text-5xl md:text-7xl font-bold text-white mb-2 hover:text-white/90 transition-colors" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+              <p className="text-5xl md:text-7xl font-bold text-white mb-2 hover:text-white/90 transition-colors" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
                 Lindy&apos;s Five
-              </h1>
+              </p>
             </Link>
             <div className="flex items-center justify-center gap-2 mb-8">
               <img
@@ -105,9 +105,9 @@ export default function MLBScoresPageClient() {
                 alt="MLB"
                 className="w-6 h-6"
               />
-              <p className="text-xl text-white/80">
+              <h1 className="text-xl text-white/80 font-normal">
                 MLB Scores
-              </p>
+              </h1>
             </div>
             <div className="flex justify-center">
               <DateNavigation selectedDate={selectedDate} onDateChange={(d) => { setSelectedDate(d); setLoading(true); }} />

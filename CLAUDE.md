@@ -235,7 +235,7 @@ All crons are configured in `vercel.json` and authorized via `CRON_SECRET` Beare
 ### Metadata Pattern
 - **Root layout** provides title template `"%s | Lindy's Five"` and `metadataBase`
 - Each page overrides with specific title/description; titles ~50-80 chars, descriptions ~150-160
-- **OG images:** hub/odds pages use a dynamic generator at `/api/og?type=...`; team pages use team logo; blog posts use `ogImage` from DB
+- **OG images:** every page has one. Hub/odds/scores/playoffs/blog hubs/team pages use the `/api/og?type=sport-hub&sport=nhl|mlb&title=&subtitle=` generator (1200x630, `summary_large_image`); blog posts use `ogImage` from DB
 - Perfect Season layouts use `generateMetadata()` so the social unfurl carries the current daily date
 
 ### Canonical URLs
@@ -246,7 +246,7 @@ Embedded via `<script type="application/ld+json">` with `dangerouslySetInnerHTML
 
 | Page | Schemas |
 |------|---------|
-| Home | WebSite (publisher: JRR Apps) |
+| Home | WebSite + Organization (`@id` `https://www.lindysfive.com/#organization`, name Lindy's Five, parentOrganization JRR Apps). All other `publisher`/`creator` fields say Lindy's Five; JRR Apps appears only in visible copyright lines |
 | NHL/MLB Hub | WebPage + BreadcrumbList + FAQPage |
 | Playoff Odds (NHL/MLB) | WebPage (+ `dateModified`) + Dataset (+ `dateModified`, `variableMeasured`) + BreadcrumbList + FAQPage |
 | Playoffs bracket | WebPage (+ `dateModified`) + BreadcrumbList + SportsEvent (per active series) |
@@ -306,7 +306,7 @@ Sitemap: https://www.lindysfive.com/sitemap.xml
 Curated AI-crawler index: site summary, methodology, data sources, and deep links to every NHL/MLB team tracker, the odds/bracket pages, the Perfect Season games, and the blog/RSS. Keep in sync when routes change.
 
 ### SEO-Specific Patterns
-- **ISR revalidation:** odds + team pages every 5 min, `/playoffs` every 60s, gear/tickets every 24h, blog 60s (`force-dynamic` on individual posts)
+- **ISR revalidation:** odds + team pages every 5 min, `/playoffs` every 60s, gear/tickets every 24h, blog hubs and individual posts 60s. Blog filtered lists (`?type=`) paginate at 24 via `?page=` (`components/blog/Pagination.tsx`)
 - **Screen-reader SEO text:** NHL and MLB team pages (and the hub pages, and the Perfect Season pages) have an `sr-only` block with a server-rendered, answer-shaped summary of live stats for crawlers/AI engines
 - **Single H1:** one canonical H1 per page; hub pages keep the visible H1 and use `<p>` for the sr-only keyword line
 - **Blog posts:** use `metaDescription` from DB, fallback to `excerpt`. `game-recap` and `set-recap` posts are `noindex, follow` and excluded from the sitemap (auto-generated, duplicate the box score pages, earned ~0 clicks); news/weekly/custom stay indexed
@@ -320,6 +320,7 @@ The interactive odds tables (`PlayoffOddsClient`, `MLBPlayoffOddsClient`) are cl
 - `components/seo/BreadcrumbNav.tsx` is the reusable visible trail (`<nav aria-label="Breadcrumb">`); pages that use it already emit a matching BreadcrumbList JSON-LD, so it is the visual counterpart only.
 - Visible trails exist on: NHL/MLB odds, playoffs, gear, tickets, blog, and the NHL/MLB box scores (the box score's final crumb is the live matchup, e.g. "Pirates at Braves").
 - Team pages (dark team-colored hero) and scores hubs (colored hero) intentionally keep JSON-LD breadcrumbs only; a gray server-rendered trail would clash with those client-owned hero headers.
+- Scores hubs: the brand wordmark is a `<p>`; the H1 is "NHL Scores" / "MLB Scores". Box score pages have an sr-only H1 (`{matchup}: Box Score & Stats`) in the server page since the game header is a client component.
 - Gear/tickets BreadcrumbList JSON-LD and visible trail both live inside the hub components (`TeamGearHub`/`TeamTicketsHub`), not the page files.
 
 ### Internal linking
@@ -328,4 +329,5 @@ The interactive odds tables (`PlayoffOddsClient`, `MLBPlayoffOddsClient`) are cl
 
 ### Known opportunities (from SEO/GEO audit, not yet done)
 - `/playoffs` has footer cross-links but no top Home > Playoffs trail; could add one if desired.
+- `/nfl/pick/:team` (the rewrite target for `/pick-the-:team`) 301s back to the pretty URL so it is never a second live URL.
 - ~~Differentiate MLB team-page visible content~~ — DONE (July 2026): MLB team pages now SSR the tracker's initial schedule (`initialGames` prop), render a visible "Season So Far" summary + division standings table with rival links (`serverSummary` prop), and include SiteFooter — served HTML went from ~106 visible chars / 0 links to ~7,300 chars / 74 links. The sr-only block was removed (fallback `<p>` only when data unavailable). Still Josh's move: request indexing in GSC after deploys and watch coverage. Note from diagnosis: NHL team pages are equally thin in served HTML (and their `/api/v1` data fetch is robots-blocked for rendering) but index anyway on age/links/authority — left untouched deliberately.

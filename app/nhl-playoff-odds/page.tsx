@@ -358,7 +358,7 @@ export default async function NHLPlayoffOddsPage() {
               dateModified: new Date().toISOString(),
               publisher: {
                 '@type': 'Organization',
-                name: 'JRR Apps',
+                name: "Lindy's Five",
               },
             },
             {
@@ -378,7 +378,7 @@ export default async function NHLPlayoffOddsPage() {
                 'playoff probability',
                 'projected points',
               ],
-              creator: { '@type': 'Organization', name: 'JRR Apps' },
+              creator: { '@type': 'Organization', name: "Lindy's Five" },
               publisher: { '@type': 'Organization', name: "Lindy's Five" },
               isAccessibleForFree: true,
               temporalCoverage: `${season.slice(0, 4)}-10/${season.slice(4, 8)}-06`,

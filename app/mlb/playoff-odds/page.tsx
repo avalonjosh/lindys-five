@@ -99,7 +99,7 @@ export default async function MLBPlayoffOddsPage() {
         `MLB playoff odds, standings, and playoff picture for all 30 teams in ${year}. World Series projections and wild card race updated daily.`,
       url: 'https://www.lindysfive.com/mlb/playoff-odds',
       dateModified: new Date().toISOString(),
-      publisher: { '@type': 'Organization', name: 'JRR Apps' },
+      publisher: { '@type': 'Organization', name: "Lindy's Five" },
       about: {
         '@type': 'SportsOrganization',
         name: 'Major League Baseball',
@@ -120,7 +120,7 @@ export default async function MLBPlayoffOddsPage() {
         'playoff probability',
         'projected wins',
       ],
-      creator: { '@type': 'Organization', name: 'JRR Apps' },
+      creator: { '@type': 'Organization', name: "Lindy's Five" },
       publisher: { '@type': 'Organization', name: "Lindy's Five" },
       isAccessibleForFree: true,
       temporalCoverage: `${year}-03/${year}-11`,

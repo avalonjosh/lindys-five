@@ -65,6 +65,8 @@ export async function generateMetadata({ params }: TeamPageProps): Promise<Metad
       ? `${fullName} ${seasonLabel} Schedule & Odds`
       : `${fullName} Playoff Odds ${seasonLabel}`;
 
+  const og = `/api/og?type=sport-hub&sport=nhl&title=${encodeURIComponent(ogTitle)}&subtitle=${encodeURIComponent('Live playoff odds, standings & 5-game sets')}`;
+
   return {
     title,
     description,
@@ -73,10 +75,10 @@ export async function generateMetadata({ params }: TeamPageProps): Promise<Metad
       description,
       type: 'website',
       url: `https://www.lindysfive.com/nhl/${team.id}`,
-      images: [{ url: team.logo }],
+      images: [{ url: og, width: 1200, height: 630, alt: ogTitle }],
       siteName: "Lindy's Five",
     },
-    twitter: { card: 'summary', title: ogTitle, description, images: [team.logo] },
+    twitter: { card: 'summary_large_image', title: ogTitle, description, images: [og] },
     alternates: { canonical: `https://www.lindysfive.com/nhl/${team.id}` },
   };
 }
