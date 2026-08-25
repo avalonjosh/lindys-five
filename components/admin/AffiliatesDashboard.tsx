@@ -6,15 +6,15 @@ import { Card, PageHeader, SectionHeading, Segmented, Badge, Button, Spinner, St
 import type { NetworkSummary, NetworkBreakdownRow, NetworkSale } from '@/lib/services/affiliateNetworks';
 import type { AffiliatesPayload } from '@/app/api/admin/affiliates/route';
 
-type Range = '7d' | '30d' | '90d' | '365d';
-const RANGE_LABEL: Record<Range, string> = { '7d': 'last 7 days', '30d': 'last 30 days', '90d': 'last 90 days', '365d': 'last 12 months' };
+type Range = 'today' | '7d' | '30d' | '90d' | '365d';
+const RANGE_LABEL: Record<Range, string> = { today: 'today', '7d': 'last 7 days', '30d': 'last 30 days', '90d': 'last 90 days', '365d': 'last 12 months' };
 
 const money = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const pct = (num: number, den: number) => (den > 0 ? `${((num / den) * 100).toFixed(1)}%` : '—');
 const epc = (commission: number, clicks: number) => (clicks > 0 ? money(commission / clicks) : '—');
 
 export default function AffiliatesDashboard() {
-  const [range, setRange] = useState<Range>('30d');
+  const [range, setRange] = useState<Range>('today');
   const [data, setData] = useState<AffiliatesPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -52,17 +52,17 @@ export default function AffiliatesDashboard() {
         description={
           <>
             Fanatics (Impact) + StubHub (Partnerize) + on-site clicks, {RANGE_LABEL[range]}
-            {data && <span className="text-gray-400"> · network data cached {new Date(data.cachedAt).toLocaleTimeString()}</span>}
+            {data && <span className="text-gray-400"> · network data as of {new Date(data.cachedAt).toLocaleTimeString()}{range === 'today' ? ' (refreshes every 5 min)' : ''}</span>}
           </>
         }
         actions={
           <div className="flex items-center gap-2">
             <Segmented
-              options={[{ value: '7d', label: '7d' }, { value: '30d', label: '30d' }, { value: '90d', label: '90d' }, { value: '365d', label: '12 mo' }]}
+              options={[{ value: 'today', label: 'Today' }, { value: '7d', label: '7d' }, { value: '30d', label: '30d' }, { value: '90d', label: '90d' }, { value: '365d', label: '12 mo' }]}
               value={range}
               onChange={setRange}
             />
-            <Button variant="secondary" onClick={() => load(true)} disabled={refreshing} title="Re-pull from the networks (bypasses the 30-minute cache)">
+            <Button variant="secondary" onClick={() => load(true)} disabled={refreshing} title="Re-pull from the networks (bypasses the cache)">
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             </Button>
           </div>

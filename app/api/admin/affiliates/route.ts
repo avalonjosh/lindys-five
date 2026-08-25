@@ -7,9 +7,22 @@ import { fetchFirstPartyClicks, type FirstPartyClicks } from '@/lib/services/aff
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-type Range = '7d' | '30d' | '90d' | '365d';
-const RANGE_DAYS: Record<Range, number> = { '7d': 7, '30d': 30, '90d': 90, '365d': 365 };
+type Range = 'today' | '7d' | '30d' | '90d' | '365d';
+const RANGE_DAYS: Record<Range, number> = { today: 1, '7d': 7, '30d': 30, '90d': 90, '365d': 365 };
 const CACHE_TTL_SECONDS = 30 * 60;
+const TODAY_CACHE_TTL_SECONDS = 5 * 60;
+
+/** Midnight Eastern time N days ago, as an absolute Date (Vercel runs in UTC). */
+function easternMidnightDaysAgo(daysAgo: number): Date {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', timeZoneName: 'shortOffset' }).formatToParts(now);
+  const get = (t: string) => parts.find((x) => x.type === t)?.value || '';
+  const hours = Number(get('timeZoneName').match(/GMT([+-]\d+)/)?.[1] || '-5'); // -4 (EDT) or -5 (EST)
+  const offset = `${hours < 0 ? '-' : '+'}${String(Math.abs(hours)).padStart(2, '0')}:00`;
+  const d = new Date(`${get('year')}-${get('month')}-${get('day')}T00:00:00${offset}`);
+  d.setUTCDate(d.getUTCDate() - daysAgo);
+  return d;
+}
 
 export interface AffiliatesPayload {
   range: Range;
@@ -38,9 +51,7 @@ export async function GET(request: NextRequest) {
   }
 
   const to = new Date();
-  const from = new Date();
-  from.setDate(from.getDate() - (RANGE_DAYS[range] - 1));
-  from.setHours(0, 0, 0, 0);
+  const from = easternMidnightDaysAgo(RANGE_DAYS[range] - 1);
 
   const [fanatics, stubhub, firstParty] = await Promise.all([
     fetchImpactSummary(from, to),
@@ -58,7 +69,7 @@ export async function GET(request: NextRequest) {
   };
 
   try {
-    await kv.set(cacheKey, payload, { ex: CACHE_TTL_SECONDS });
+    await kv.set(cacheKey, payload, { ex: range === 'today' ? TODAY_CACHE_TTL_SECONDS : CACHE_TTL_SECONDS });
   } catch { /* non-fatal */ }
 
   return NextResponse.json(payload);
