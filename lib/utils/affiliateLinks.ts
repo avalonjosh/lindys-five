@@ -154,7 +154,7 @@ export function generateGameTicketLink(
 
 /** Eastern game date as YYYY-MM-DD from a YYYY-MM-DD string or an ISO datetime. */
 function gameDateYmd(date?: string): string | null {
-  if (!date) return null;
+  if (!date || !/\d{4}/.test(date)) return null;
   if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
   const d = new Date(date);
   if (Number.isNaN(d.getTime())) return null;
@@ -191,7 +191,7 @@ function fullTeamName(abbrev: string, sport: 'nhl' | 'mlb'): string | null {
 
 /** Game date as "October 3 2026" (Eastern). Accepts YYYY-MM-DD or an ISO datetime. */
 function gameDateLabel(date?: string): string | null {
-  if (!date) return null;
+  if (!date || !/\d{4}/.test(date)) return null; // display strings like "8/24" carry no year
   const ymd = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   const d = ymd ? new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]), 12) : new Date(date);
   if (Number.isNaN(d.getTime())) return null;
