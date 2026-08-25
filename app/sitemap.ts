@@ -45,6 +45,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.95,
     },
     {
+      url: `${BASE_URL}/how-playoff-odds-work`,
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
       url: `${BASE_URL}/nhl/scores`,
       changeFrequency: 'daily',
       priority: 0.7,
@@ -145,7 +150,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (const id of postIds) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const post: any = await kv.get(`blog:post:${id}`);
-      if (post && post.status === 'published') {
+      // Auto game/set recaps are noindexed on the post page; keep them out here too.
+      if (post && post.status === 'published' && post.type !== 'game-recap' && post.type !== 'set-recap') {
         const lastModified = post.updatedAt
           ? new Date(post.updatedAt)
           : post.publishedAt

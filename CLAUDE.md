@@ -226,7 +226,7 @@ All crons are configured in `vercel.json` and authorized via `CRON_SECRET` Beare
 
 ### Route Map (current)
 - **Hubs:** `/nhl`, `/mlb` (sport landing pages with team grids + sr-only crawler text)
-- **Odds:** `/nhl-playoff-odds`, `/mlb/playoff-odds`, `/playoffs` (live Stanley Cup bracket)
+- **Odds:** `/nhl-playoff-odds`, `/mlb/playoff-odds`, `/playoffs` (live Stanley Cup bracket), `/how-playoff-odds-work` (static methodology page + FAQ; targets "538 / fangraphs playoff odds" queries)
 - **Team trackers:** `/nhl/{team}`, `/mlb/{team}` (+ `/gear`, `/tickets`; NHL also `/history`)
 - **Scores:** `/nhl/scores`, `/nhl/scores/{gameId}`, `/mlb/scores`, `/mlb/scores/{gameId}`
 - **Games (Perfect Season):** `/82-0` (NHL), `/162-0` (MLB), each with `/leaderboard` and noindexed `/share`
@@ -309,7 +309,7 @@ Curated AI-crawler index: site summary, methodology, data sources, and deep link
 - **ISR revalidation:** odds + team pages every 5 min, `/playoffs` every 60s, gear/tickets every 24h, blog 60s (`force-dynamic` on individual posts)
 - **Screen-reader SEO text:** NHL and MLB team pages (and the hub pages, and the Perfect Season pages) have an `sr-only` block with a server-rendered, answer-shaped summary of live stats for crawlers/AI engines
 - **Single H1:** one canonical H1 per page; hub pages keep the visible H1 and use `<p>` for the sr-only keyword line
-- **Blog posts:** use `metaDescription` from DB, fallback to `excerpt`
+- **Blog posts:** use `metaDescription` from DB, fallback to `excerpt`. `game-recap` and `set-recap` posts are `noindex, follow` and excluded from the sitemap (auto-generated, duplicate the box score pages, earned ~0 clicks); news/weekly/custom stay indexed
 - **Admin pages:** `robots: { index: false, follow: false }`; Perfect Season `/share` pages `robots: { index: false, follow: true }` (UGC)
 - **Image optimization:** `next.config.js` allows remote images from `assets.nhle.com`, `*.public.blob.vercel-storage.com`, and `www.mlbstatic.com` / `img.mlbstatic.com`
 

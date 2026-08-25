@@ -44,6 +44,8 @@ function getBlogTeamConfig(team: string) {
   };
 }
 
+const NOINDEX_POST_TYPES = new Set(['game-recap', 'set-recap']);
+
 export async function generateMetadata({
   params,
 }: {
@@ -63,6 +65,10 @@ export async function generateMetadata({
   return {
     title: post.title,
     description: post.metaDescription || post.excerpt,
+    // Auto-generated game/set recaps duplicate the box score and standings
+    // pages and earn no search traffic; keep them for readers, RSS, and email
+    // but out of the index so crawl budget goes to the news and hub pages.
+    ...(NOINDEX_POST_TYPES.has(post.type) ? { robots: { index: false, follow: true } } : {}),
     openGraph: {
       title: post.title,
       description: post.metaDescription || post.excerpt,

@@ -31,6 +31,7 @@ export default function SiteFooter() {
         >
           <Link href="/nhl-playoff-odds" className="transition-colors hover:text-white">NHL Playoff Odds</Link>
           <Link href="/mlb/playoff-odds" className="transition-colors hover:text-white">MLB Playoff Odds</Link>
+          <Link href="/how-playoff-odds-work" className="transition-colors hover:text-white">How Odds Work</Link>
           <Link href="/nhl/scores" className="transition-colors hover:text-white">NHL Scores</Link>
           <Link href="/mlb/scores" className="transition-colors hover:text-white">MLB Scores</Link>
           <Link href="/82-0" className="transition-colors hover:text-white">82-0</Link>

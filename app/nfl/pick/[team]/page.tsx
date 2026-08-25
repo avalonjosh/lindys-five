@@ -3,6 +3,8 @@ import SiteFooter from '@/components/SiteFooter';
 import { notFound } from 'next/navigation';
 import { findNFLTeamByPickSlug, NFL_TEAMS } from '@/lib/teamConfig';
 import PickSeasonTracker from '@/components/nfl/PickSeasonTracker';
+import { fetchNFLSchedule } from '@/lib/services/nflApi';
+import type { NFLGameResult } from '@/lib/types/nfl';
 
 // Served publicly as /pick-the-{team} via a next.config rewrite.
 export const revalidate = 300;
@@ -56,6 +58,20 @@ export default async function PickTeamPage({ params }: PickPageProps) {
   const fullName = `${team.city} ${team.name}`;
   const url = `https://www.lindysfive.com/pick-the-${team.pickSlug}`;
 
+  // Server-side schedule so the 17-game slate (opponents, dates, results) is
+  // in the served HTML; the client tracker seeds from it and refreshes live.
+  let initialGames: NFLGameResult[] = [];
+  try {
+    initialGames = (await fetchNFLSchedule(team.abbreviation, SEASON)).games;
+  } catch (err) {
+    console.error(`NFL schedule SSR failed for ${team.abbreviation}:`, err);
+  }
+  const played = initialGames.filter((g) => g.outcome !== 'PENDING');
+  const wins = played.filter((g) => g.outcome === 'W').length;
+  const next = initialGames.find((g) => g.outcome === 'PENDING');
+  const opener = initialGames[0];
+  const homeGames = initialGames.filter((g) => g.isHome).length;
+
   const jsonLd = [
     {
       '@context': 'https://schema.org',
@@ -94,8 +110,19 @@ export default async function PickTeamPage({ params }: PickPageProps) {
           account, name each set of picks, and watch your accuracy grade automatically as real
           results come in. You can also log picks you made earlier in the season.
         </p>
+        {initialGames.length > 0 && (
+          <p>
+            {fullName} {SEASON} schedule: {initialGames.length} regular-season games ({homeGames} home,{' '}
+            {initialGames.length - homeGames} away)
+            {opener ? `, opening ${opener.isHome ? 'at home against' : 'on the road at'} the ${opener.opponentName} on ${opener.date}` : ''}.
+            {played.length > 0
+              ? ` Current record: ${wins}-${played.length - wins} through ${played.length} games.`
+              : ''}
+            {next ? ` Next game: ${next.isHome ? 'vs' : 'at'} ${next.opponentName}, Week ${next.week}, ${next.date}.` : ''}
+          </p>
+        )}
       </div>
-      <PickSeasonTracker team={team} />
+      <PickSeasonTracker team={team} initialGames={initialGames} />
       <SiteFooter />
     </>
   );

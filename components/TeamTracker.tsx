@@ -1189,10 +1189,10 @@ export default function TeamTracker({
             )}
           </p>
           <h1
-            className={`text-xs md:text-2xl font-semibold mb-1 px-2 leading-tight whitespace-nowrap`}
+            className={`text-xs md:text-2xl font-semibold mb-1 px-2 leading-tight sm:whitespace-nowrap`}
             style={isGoatMode ? { color: (team.id === 'lightning' || team.id === 'penguins') ? team.colors.primary : isVintageJetsMode ? '#041E42' : darkModeColors.accent } : { color: team.id === 'sabres' ? team.colors.accent : team.colors.secondary }}
           >
-            {team.city} {team.name} Playoff Tracker {seasonLabel}
+            {team.city} {team.name} Playoff Odds & Standings {seasonLabel}
           </h1>
           <p
             className={`text-xs md:text-base opacity-90 px-2 leading-tight ${

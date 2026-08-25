@@ -28,12 +28,14 @@ type Pick = 'W' | 'L';
 
 interface PickSeasonTrackerProps {
   team: NFLTeamConfig;
+  /** Server-fetched schedule so the full season renders in the initial HTML. */
+  initialGames?: NFLGameResult[];
 }
 
-export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
+export default function PickSeasonTracker({ team, initialGames }: PickSeasonTrackerProps) {
   const router = useRouter();
-  const [games, setGames] = useState<NFLGameResult[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [games, setGames] = useState<NFLGameResult[]>(initialGames ?? []);
+  const [loading, setLoading] = useState(!initialGames?.length);
   const [error, setError] = useState(false);
   const [picks, setPicks] = useState<Map<number, Pick>>(new Map());
   // Most recent prior-season result vs each opponent, for the row context zone.
@@ -62,7 +64,7 @@ export default function PickSeasonTracker({ team }: PickSeasonTrackerProps) {
 
   const loadData = async () => {
     try {
-      setLoading(true);
+      setLoading(games.length === 0);
       setError(false);
       const data = await fetchNFLSchedule(team.abbreviation, Number(season));
       setGames(data.games);

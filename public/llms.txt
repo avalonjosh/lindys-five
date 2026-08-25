@@ -4,7 +4,7 @@
 
 Lindy's Five focuses on playoff probability and 5-game-set analysis. For each team we project win pace over the full season (82 games for NHL, 162 for MLB), compare the projection to current division and wild card cut lines, and convert the gap into a playoff probability using a logistic model. Cut lines are computed daily from live standings.
 
-The site is operated by JRR Apps. Methodology and definitions are stated on each page; no betting affiliate content.
+The site is operated by JRR Apps. The full methodology, and how it compares to simulation-based models like FanGraphs and the former FiveThirtyEight, is at https://www.lindysfive.com/how-playoff-odds-work. No betting affiliate content.
 
 ## NHL — National Hockey League
 
