@@ -5,13 +5,14 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LogOut, ExternalLink } from 'lucide-react';
 import { logout } from '@/lib/utils/auth';
 
-type AdminTab = 'overview' | 'posts' | 'subscribers' | 'analytics' | 'outreach' | 'whatif';
+type AdminTab = 'overview' | 'posts' | 'subscribers' | 'analytics' | 'affiliates' | 'outreach' | 'whatif';
 
 const TABS: { key: AdminTab; label: string; href: string }[] = [
   { key: 'overview', label: 'Overview', href: '/admin' },
   { key: 'posts', label: 'Posts', href: '/admin/posts' },
   { key: 'subscribers', label: 'Subscribers', href: '/admin/subscribers' },
   { key: 'analytics', label: 'Analytics', href: '/admin/analytics' },
+  { key: 'affiliates', label: 'Affiliates', href: '/admin/affiliates' },
   { key: 'outreach', label: 'Outreach', href: '/admin/outreach' },
   { key: 'whatif', label: 'What-If', href: '/admin/whatif' },
 ];
@@ -26,6 +27,8 @@ export default function AdminNav() {
     ? 'subscribers'
     : pathname?.startsWith('/admin/analytics')
     ? 'analytics'
+    : pathname?.startsWith('/admin/affiliates')
+    ? 'affiliates'
     : pathname?.startsWith('/admin/outreach')
     ? 'outreach'
     : pathname?.startsWith('/admin/whatif')
