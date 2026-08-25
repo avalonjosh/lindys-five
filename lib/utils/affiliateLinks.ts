@@ -2,6 +2,8 @@
  * Affiliate link utilities for StubHub/Partnerize and Amazon Associates integration
  */
 
+import { FANATICS_TEAM_PATHS } from '@/lib/affiliate/fanaticsTeams';
+
 const AMAZON_TAG = process.env.NEXT_PUBLIC_AMAZON_TAG || 'lindysfive-20';
 
 const STUBHUB_BASE_URL = 'https://stubhub.prf.hn/click';
@@ -159,16 +161,55 @@ export function generateAmazonSearchLink(query: string): string {
   return `https://www.amazon.com/s?k=${encodeURIComponent(query)}&tag=${AMAZON_TAG}`;
 }
 
-// Fanatics affiliate (Impact). Set NEXT_PUBLIC_FANATICS_DEEPLINK to your Impact
-// deep-link prefix (everything before the URL-encoded destination); until then
-// links go direct (non-affiliate), mirroring the StubHub direct-link fallback.
-const FANATICS_DEEPLINK = process.env.NEXT_PUBLIC_FANATICS_DEEPLINK || '';
+// Fanatics affiliate (Impact). NEXT_PUBLIC_FANATICS_DEEPLINK is the Impact
+// tracking link (with or without a trailing `?u=`); until it is set, links go
+// direct (non-affiliate), mirroring the StubHub direct-link fallback.
+const FANATICS_DEEPLINK = (process.env.NEXT_PUBLIC_FANATICS_DEEPLINK || '').replace(/[?&]u=$/, '');
+const FANATICS_BASE = 'https://www.fanatics.com';
 
-/** Fanatics search URL for team gear, wrapped in the Impact deep link if configured. */
-export function generateFanaticsLink(teamCity: string, teamName: string, category = ''): string {
+export type FanaticsSport = 'nhl' | 'mlb';
+
+export interface FanaticsSubIds {
+  /** Impact subId1: which team the click came from, e.g. `nhl-sabres`. */
+  team?: string;
+  /** Impact subId2: where on the site, e.g. `teampage`, `gear-hub-jerseys`, `email-digest`. */
+  placement?: string;
+}
+
+/** Wraps any fanatics.com destination in the Impact deep link, stamping sub-IDs
+ *  so Impact reports break out clicks/sales by team and placement. */
+export function buildFanaticsDeepLink(destination: string, sub: FanaticsSubIds = {}): string {
+  if (!FANATICS_DEEPLINK) return destination;
+  const params = new URLSearchParams();
+  if (sub.team) params.set('subId1', sub.team);
+  if (sub.placement) params.set('subId2', sub.placement);
+  params.set('u', destination);
+  return `${FANATICS_DEEPLINK}?${params.toString()}`;
+}
+
+/** Fanatics search URL for team gear (gear-hub category buttons). */
+export function generateFanaticsLink(teamCity: string, teamName: string, category = '', sub: FanaticsSubIds = {}): string {
   const query = `${teamCity} ${teamName} ${category}`.trim().replace(/\s+/g, ' ');
-  const destination = `https://www.fanatics.com/search?query=${encodeURIComponent(query)}`;
-  return FANATICS_DEEPLINK ? `${FANATICS_DEEPLINK}${encodeURIComponent(destination)}` : destination;
+  return buildFanaticsDeepLink(`${FANATICS_BASE}/search?query=${encodeURIComponent(query)}`, sub);
+}
+
+/** Fanatics team storefront (the primary "Shop Gear" destination). Falls back to
+ *  a team search when the team has no mapped storefront path. */
+export function generateFanaticsTeamLink(sport: FanaticsSport, teamSlug: string, placement: string, teamCity?: string, teamName?: string): string {
+  const path = FANATICS_TEAM_PATHS[`${sport}/${teamSlug}`];
+  const sub: FanaticsSubIds = { team: `${sport}-${teamSlug}`, placement };
+  if (path) return buildFanaticsDeepLink(`${FANATICS_BASE}${path}`, sub);
+  return generateFanaticsLink(teamCity || '', teamName || teamSlug, '', sub);
+}
+
+/** True once the Fanatics affiliate link is configured (so CTAs prefer it over Amazon). */
+export const FANATICS_ENABLED = !!FANATICS_DEEPLINK;
+
+/** Best available merch link for a team: Fanatics storefront when configured, else Amazon. */
+export function generateMerchLink(sport: FanaticsSport, teamSlug: string, teamCity: string, teamName: string, placement: string): string {
+  return FANATICS_ENABLED
+    ? generateFanaticsTeamLink(sport, teamSlug, placement, teamCity, teamName)
+    : generateAmazonMerchLink(teamCity, teamName, sport);
 }
 
 /** StubHub team-tickets landing (not game-specific) for the tickets hub. */

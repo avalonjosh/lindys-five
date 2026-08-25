@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ShoppingBag } from 'lucide-react';
-import { generateAmazonSearchLink, generateFanaticsLink } from '@/lib/utils/affiliateLinks';
+import { generateAmazonSearchLink, generateFanaticsLink, generateFanaticsTeamLink } from '@/lib/utils/affiliateLinks';
 import AffiliateLink from './AffiliateLink';
 
 export interface HubTeam {
@@ -78,6 +78,18 @@ export default function TeamGearHub({ team }: { team: HubTeam }) {
           <span className="text-gray-700">Gear</span>
         </nav>
 
+        {showFanatics && (
+          <AffiliateLink
+            href={generateFanaticsTeamLink(team.sport, team.slug, 'gear-hub-storefront', team.city, team.name)}
+            track="gear" trackLabel={`${team.slug}-fanatics-storefront`}
+            className="mb-4 flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-center text-sm font-bold text-white shadow-md transition-opacity hover:opacity-90"
+            style={{ background: team.primaryColor }}
+          >
+            <ShoppingBag className="h-4 w-4" />
+            Shop the official {full} store on Fanatics
+          </AffiliateLink>
+        )}
+
         <div className="grid gap-3 sm:grid-cols-2">
           {CATEGORIES.map((c) => (
             <div key={c.key} className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-sm">
@@ -86,7 +98,7 @@ export default function TeamGearHub({ team }: { team: HubTeam }) {
               <div className="flex gap-2">
                 {showFanatics && (
                   <AffiliateLink
-                    href={generateFanaticsLink(team.city, team.name, c.label)}
+                    href={generateFanaticsLink(team.city, team.name, c.label, { team: `${team.sport}-${team.slug}`, placement: `gear-hub-${c.key}` })}
                     track="gear" trackLabel={`${team.slug}-fanatics-${c.key}`}
                     className="flex-1 rounded-lg px-3 py-2 text-center text-xs font-bold text-white transition-opacity hover:opacity-90"
                     style={{ background: team.primaryColor }}

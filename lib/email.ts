@@ -4,7 +4,7 @@ import type { BlogPost, NewsletterSubscriber, EmailSendRecord, EmailCampaign, Ga
 import type { LandingResponse, StandingsTeam, ScoringGoal, ThreeStar } from './types/boxscore';
 import { TEAMS } from './teamConfig';
 import { fetchJsonWithRetry } from './fetchWithRetry';
-import { generateGameTicketLink } from './utils/affiliateLinks';
+import { generateGameTicketLink, generateMerchLink } from './utils/affiliateLinks';
 import { getProjectedPoints, getDivCutLine, getWcCutLine, isInPlayoffPosition, getPlayoffProbability } from './utils/standingsCalc';
 import { computePositionAwareProbability, computeSeriesWinProbability } from './utils/playoffProbability';
 import { fetchPlayoffsSnapshot, type PlayoffsSnapshot } from './services/playoffsSnapshot';
@@ -2125,7 +2125,7 @@ export function renderWeeklyDigestEmail(content: WeeklyDigestContent, unsubscrib
     <p style="margin:0;font-size:14px;color:#64748b;line-height:1.8;">
       <a href="${digestUtm('/nhl-playoff-odds', 'nhl-odds')}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">NHL odds</a> &nbsp;&middot;&nbsp;
       <a href="${digestUtm('/mlb/playoff-odds', 'mlb-odds')}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">MLB odds</a> &nbsp;&middot;&nbsp;
-      <a href="${digestUtm('/nhl/sabres/gear', 'gear')}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">Team gear</a> &nbsp;&middot;&nbsp;
+      <a href="${generateMerchLink('nhl', 'sabres', 'Buffalo', 'Sabres', 'email-digest')}" rel="sponsored" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">Team gear</a> &nbsp;&middot;&nbsp;
       <a href="${digestUtm('/nhl/sabres/tickets', 'tickets')}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">Tickets</a>
     </p>`;
   return brandEmailShell({ headerBg: EMAIL_NAVY, label: 'Weekly Rundown', heroImage: WEEKLY_BANNER, body, unsubscribeUrl });

@@ -7,7 +7,7 @@ import { TEAMS } from '@/lib/teamConfig';
 import { generateGameTicketLink } from '@/lib/utils/affiliateLinks';
 import { trackClick } from '@/lib/analytics';
 import { computeSeriesWinProbability } from '@/lib/utils/playoffProbability';
-import { generateAmazonMerchLink } from '@/lib/utils/affiliateLinks';
+import { generateMerchLink } from '@/lib/utils/affiliateLinks';
 import { hasTeamHistory } from '@/lib/data/teamHistory';
 import { ShoppingBag } from 'lucide-react';
 
@@ -566,7 +566,7 @@ function SeriesCard({
 
               const ShopGearCard = (mobileOnly: boolean) => {
                 if (!teamCfg) return null;
-                const merchLink = generateAmazonMerchLink(teamCfg.city, teamCfg.name, 'nhl');
+                const merchLink = generateMerchLink('nhl', teamCfg.id, teamCfg.city, teamCfg.name, 'playoff-journey');
                 return (
                   <div
                     className={`${fillerBase} ${mobileOnly ? 'sm:hidden' : 'hidden sm:flex'}`}

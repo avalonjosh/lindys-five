@@ -317,6 +317,7 @@ export default async function BlogPostPage({
               variant="card"
               primaryColor={postConfig.primary}
               teamSlug="sabres"
+              placement="blog-post"
             />
           )}
 

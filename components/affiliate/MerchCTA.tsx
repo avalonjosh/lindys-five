@@ -1,8 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import { ShoppingBag } from 'lucide-react';
-import { generateAmazonMerchLink } from '@/lib/utils/affiliateLinks';
+import { generateMerchLink, FANATICS_ENABLED } from '@/lib/utils/affiliateLinks';
 import { trackClick } from '@/lib/analytics';
 
 function isLightColor(hex: string): boolean {
@@ -19,24 +18,24 @@ interface MerchCTAProps {
   sport: 'nhl' | 'mlb';
   variant: 'compact' | 'card';
   primaryColor?: string;
-  /** When set, the CTA links to the on-site gear hub (preferred); otherwise it
-   *  links straight to Amazon. The hub keeps users on-site and is email-safe. */
+  /** Team route slug; used to resolve the Fanatics storefront for this team. */
   teamSlug?: string;
+  /** Impact subId2 placement tag, e.g. `teampage`, `blog`, `chunk`. */
+  placement?: string;
 }
 
-export default function MerchCTA({ teamCity, teamName, sport, variant, primaryColor, teamSlug }: MerchCTAProps) {
-  const hubHref = teamSlug ? `/${sport}/${teamSlug}/gear` : undefined;
-  const href = hubHref ?? generateAmazonMerchLink(teamCity, teamName, sport);
-  const label = `${teamCity}-${teamName}`.toLowerCase().replace(/\s+/g, '-');
-  const handleClick = () => trackClick(hubHref ? 'gear-cta' : 'merch', label);
+export default function MerchCTA({ teamCity, teamName, sport, variant, primaryColor, teamSlug, placement = 'teampage' }: MerchCTAProps) {
+  // Warm, on-site traffic converts best when sent straight to the merchant's
+  // team storefront, so this links directly to Fanatics (sub-ID stamped) rather
+  // than the on-site /gear hub. Amazon is the fallback until Fanatics is configured.
+  const slug = teamSlug || teamName.toLowerCase().replace(/\s+/g, '');
+  const href = generateMerchLink(sport, slug, teamCity, teamName, placement);
+  const vendor = FANATICS_ENABLED ? 'fanatics' : 'amazon';
+  const handleClick = () => trackClick('merch', `${sport}-${slug}-${vendor}-${placement}`);
 
-  // Internal hub link uses next/link; the Amazon fallback is a sponsored anchor.
-  const Anchor = ({ className, style, children }: { className: string; style: React.CSSProperties; children: React.ReactNode }) =>
-    hubHref ? (
-      <Link href={hubHref} onClick={handleClick} className={className} style={style}>{children}</Link>
-    ) : (
-      <a href={href} target="_blank" rel="sponsored noopener noreferrer" onClick={handleClick} className={className} style={style}>{children}</a>
-    );
+  const Anchor = ({ className, style, children }: { className: string; style: React.CSSProperties; children: React.ReactNode }) => (
+    <a href={href} target="_blank" rel="sponsored noopener noreferrer" onClick={handleClick} className={className} style={style}>{children}</a>
+  );
 
   if (variant === 'compact') {
     const isLightBg = primaryColor ? isLightColor(primaryColor) : false;
