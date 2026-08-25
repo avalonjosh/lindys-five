@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import SiteFooter from '@/components/SiteFooter';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { notFound } from 'next/navigation';
@@ -134,7 +135,7 @@ export default async function TeamBlogPage({
         '@type': 'ListItem',
         position: 2,
         name: 'Blog',
-        item: `https://www.lindysfive.com/blog/${team}`,
+        item: 'https://www.lindysfive.com/blog',
       },
       {
         '@type': 'ListItem',
@@ -168,7 +169,7 @@ export default async function TeamBlogPage({
           <div className="max-w-7xl mx-auto px-4 py-6">
             {/* Back link */}
             <Link
-              href="/nhl/sabres"
+              href={team === 'bills' ? '/pick-the-bills' : `/nhl/${team}`}
               className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-6"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -271,6 +272,7 @@ export default async function TeamBlogPage({
           </footer>
         </div>
       </div>
+      <SiteFooter />
     </>
   );
 }

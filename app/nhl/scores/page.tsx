@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import SiteFooter from '@/components/SiteFooter';
 import ScoresPageClient from '@/components/scores/ScoresPageClient';
 import { getCurrentNHLSeason, formatSeasonLabel } from '@/lib/utils/season';
 import { getPlayoffsOutcome, getUpcomingSeasonInfo } from '@/lib/services/nhlOffseason';
@@ -65,6 +66,12 @@ export default async function ScoresPageWrapper() {
       {
         '@type': 'ListItem',
         position: 2,
+        name: 'NHL',
+        item: 'https://www.lindysfive.com/nhl',
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
         name: 'Scores',
         item: 'https://www.lindysfive.com/nhl/scores',
       },
@@ -86,6 +93,7 @@ export default async function ScoresPageWrapper() {
         openingDate={upcoming?.openingDate}
         preseasonStartDate={upcoming?.preseasonStartDate}
       />
+      <SiteFooter />
     </>
   );
 }

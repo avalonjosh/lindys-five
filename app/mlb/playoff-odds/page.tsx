@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import SiteFooter from '@/components/SiteFooter';
 import { mlbSeasonYear } from '@/lib/utils/mlbSeason';
 import Link from 'next/link';
 import MLBTeamNav from '@/components/mlb/MLBTeamNav';
@@ -429,6 +430,7 @@ export default async function MLBPlayoffOddsPage() {
           <p className="mt-1">Data sourced from MLB Stats API. Updated every 5 minutes.</p>
         </footer>
       </div>
+      <SiteFooter />
     </>
   );
 }

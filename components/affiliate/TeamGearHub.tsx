@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import SiteFooter from '@/components/SiteFooter';
 import { ShoppingBag } from 'lucide-react';
 import { generateAmazonSearchLink, generateFanaticsLink, generateFanaticsTeamLink } from '@/lib/utils/affiliateLinks';
 import AffiliateLink from './AffiliateLink';
@@ -131,6 +132,7 @@ export default function TeamGearHub({ team }: { team: HubTeam }) {
           purchases made through these links, at no extra cost to you.
         </p>
       </main>
+      <SiteFooter />
     </div>
   );
 }

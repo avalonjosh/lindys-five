@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import SiteFooter from '@/components/SiteFooter';
 import { notFound } from 'next/navigation';
 import { findNFLTeamByPickSlug, NFL_TEAMS } from '@/lib/teamConfig';
 import PickSeasonTracker from '@/components/nfl/PickSeasonTracker';
@@ -95,6 +96,7 @@ export default async function PickTeamPage({ params }: PickPageProps) {
         </p>
       </div>
       <PickSeasonTracker team={team} />
+      <SiteFooter />
     </>
   );
 }

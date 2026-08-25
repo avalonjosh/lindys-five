@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import SiteFooter from '@/components/SiteFooter';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { getPublishedPosts } from '@/lib/kv';
@@ -11,7 +12,7 @@ import BlogSection from '@/components/blog/BlogSection';
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  title: 'NHL Blog — Sabres Playoff Coverage, Game Recaps & Analysis',
+  title: 'Sabres & Bills Blog: Game Recaps, News & Analysis',
   description: 'Buffalo Sabres playoff coverage, game recaps, and NHL analysis from Lindy\'s Five. Bills coverage and more.',
   openGraph: {
     title: 'NHL Blog — Sabres Playoff Coverage & Game Recaps | Lindy\'s Five',
@@ -200,6 +201,7 @@ export default async function BlogPage({
           </footer>
         </div>
       </div>
+      <SiteFooter />
     </>
   );
 }

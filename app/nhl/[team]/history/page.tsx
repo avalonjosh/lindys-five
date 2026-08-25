@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import SiteFooter from '@/components/SiteFooter';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { TEAMS } from '@/lib/teamConfig';
@@ -76,8 +77,9 @@ export default async function TeamHistoryPage({ params }: HistoryPageProps) {
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.lindysfive.com/' },
-        { '@type': 'ListItem', position: 2, name: fullName, item: teamUrl },
-        { '@type': 'ListItem', position: 3, name: 'History', item: historyUrl },
+        { '@type': 'ListItem', position: 2, name: 'NHL', item: 'https://www.lindysfive.com/nhl' },
+        { '@type': 'ListItem', position: 3, name: fullName, item: teamUrl },
+        { '@type': 'ListItem', position: 4, name: 'History', item: historyUrl },
       ],
     },
     {
@@ -143,6 +145,7 @@ export default async function TeamHistoryPage({ params }: HistoryPageProps) {
           <p>Lindy&apos;s Five &bull; {new Date().getFullYear()}</p>
         </footer>
       </div>
+      <SiteFooter />
     </>
   );
 }

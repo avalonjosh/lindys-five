@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
+import SiteFooter from '@/components/SiteFooter';
 import Image from 'next/image';
 import { ArrowLeft, Calendar, Clock } from 'lucide-react';
 import { getPostBySlug } from '@/lib/kv';
@@ -52,9 +53,7 @@ export async function generateMetadata({
   const post = await getPostBySlug(slug);
 
   if (!post) {
-    return {
-      title: 'Post Not Found',
-    };
+    return { title: 'Post Not Found', robots: { index: false, follow: false } };
   }
 
   // Posts whose stored card image failed to generate fall back to the live
@@ -71,6 +70,7 @@ export async function generateMetadata({
       url: `https://www.lindysfive.com/blog/${post.team}/${post.slug}`,
       siteName: "Lindy's Five",
       publishedTime: post.publishedAt || post.createdAt,
+      modifiedTime: post.updatedAt || post.publishedAt || post.createdAt,
       images: [{ url: ogImage }],
     },
     twitter: {
@@ -96,35 +96,16 @@ export default async function BlogPostPage({
   if (!config) {
     notFound();
   }
+  // Only sabres/bills have a /blog/{team} hub; other teams' recaps link back to /blog.
+  const hasTeamHub = team in teamConfig;
+  const backHref = hasTeamHub ? `/blog/${team}` : '/blog';
 
   const post = await getPostBySlug(slug);
+  if (!post || post.status !== 'published') notFound();
 
-  if (!post) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="max-w-3xl mx-auto px-4 py-12">
-          <Link
-            href={`/blog/${team}`}
-            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors mb-8"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to posts</span>
-          </Link>
-          <div className="text-center py-16">
-            <h1
-              className="text-3xl font-bold text-gray-900 mb-4"
-              style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-            >
-              Post Not Found
-            </h1>
-            <p className="text-gray-500">
-              The post you&apos;re looking for doesn&apos;t exist.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Posts resolve by slug alone; only the canonical team URL should render.
+  // Any other team prefix 301s to it instead of serving a duplicate.
+  if (post.team !== team) permanentRedirect(`/blog/${post.team}/${slug}`);
 
   const postConfig = getBlogTeamConfig(post.team) || teamConfig.sabres;
 
@@ -169,16 +150,19 @@ export default async function BlogPostPage({
     headline: post.title,
     description: post.metaDescription || post.excerpt,
     datePublished: post.publishedAt || post.createdAt,
-    dateModified: post.updatedAt,
+    dateModified: post.updatedAt || post.publishedAt || post.createdAt,
+    mainEntityOfPage: `https://www.lindysfive.com/blog/${post.team}/${post.slug}`,
     author: {
       '@type': 'Organization',
       name: "Lindy's Five",
+      url: 'https://www.lindysfive.com',
     },
     publisher: {
       '@type': 'Organization',
       name: "Lindy's Five",
+      url: 'https://www.lindysfive.com',
     },
-    ...(post.ogImage && { image: post.ogImage }),
+    image: getPostCardImageUrl(post),
   };
 
   const breadcrumbLd = {
@@ -195,13 +179,13 @@ export default async function BlogPostPage({
         '@type': 'ListItem',
         position: 2,
         name: 'Blog',
-        item: `https://www.lindysfive.com/blog/${team}`,
+        item: 'https://www.lindysfive.com/blog',
       },
       {
         '@type': 'ListItem',
         position: 3,
         name: config.displayName,
-        item: `https://www.lindysfive.com/blog/${team}`,
+        item: `https://www.lindysfive.com/blog/${hasTeamHub ? team : ''}`.replace(/\/$/, ''),
       },
       {
         '@type': 'ListItem',
@@ -236,7 +220,7 @@ export default async function BlogPostPage({
           <div className="max-w-3xl mx-auto px-4 py-6">
             {/* Back link */}
             <Link
-              href={`/blog/${team}`}
+              href={backHref}
               className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-6"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -367,7 +351,7 @@ export default async function BlogPostPage({
           {/* Footer */}
           <footer className="mt-12 pt-8 border-t border-gray-200">
             <Link
-              href={`/blog/${team}`}
+              href={backHref}
               className="inline-flex items-center gap-2 transition-colors hover:opacity-80"
               style={{ color: postConfig.primary }}
             >
@@ -377,6 +361,7 @@ export default async function BlogPostPage({
           </footer>
         </article>
       </div>
+      <SiteFooter />
     </>
   );
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import SiteFooter from '@/components/SiteFooter';
 import Link from 'next/link';
 import { dailyDateLabel, easternDateString } from '@/lib/perfectseason/seed';
 
@@ -39,6 +40,7 @@ export default function PerfectSeasonNhlLayout({ children }: { children: React.R
           NHLPA. NHL and the NHL Shield are trademarks of their respective owners. NHL data: the NHL stats API.
         </p>
       </footer>
+      <SiteFooter />
     </>
   );
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import SiteFooter from '@/components/SiteFooter';
 import MLBScoresPageClient from '@/components/mlb/MLBScoresPageClient';
 
 export const metadata: Metadata = {
@@ -36,6 +37,7 @@ export default function MLBScoresPage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
       <MLBScoresPageClient />
+      <SiteFooter />
     </>
   );
 }

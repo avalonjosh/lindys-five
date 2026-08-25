@@ -21,85 +21,76 @@ const MLB_TEAM_ROUTES = [
 
 const BASE_URL = 'https://www.lindysfive.com';
 
+// Static URLs carry no lastModified: a build-time timestamp on every URL is
+// noise Google learns to ignore. Only blog posts have a real modified date.
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   const urls: MetadataRoute.Sitemap = [
     {
       url: `${BASE_URL}/`,
-      lastModified: now,
       changeFrequency: 'daily',
       priority: 1.0,
     },
     {
       url: `${BASE_URL}/nhl-playoff-odds`,
-      lastModified: now,
       changeFrequency: 'daily',
       priority: 0.95,
     },
     {
       url: `${BASE_URL}/playoffs`,
-      lastModified: now,
       changeFrequency: 'hourly',
       priority: 0.95,
     },
     {
       url: `${BASE_URL}/nhl/scores`,
-      lastModified: now,
       changeFrequency: 'daily',
       priority: 0.7,
     },
     {
       url: `${BASE_URL}/nhl`,
-      lastModified: now,
       changeFrequency: 'daily',
       priority: 0.95,
     },
     {
       url: `${BASE_URL}/mlb`,
-      lastModified: now,
       changeFrequency: 'daily',
       priority: 0.9,
     },
     {
       url: `${BASE_URL}/mlb/playoff-odds`,
-      lastModified: now,
       changeFrequency: 'daily',
       priority: 0.95,
     },
     {
       url: `${BASE_URL}/mlb/scores`,
-      lastModified: now,
       changeFrequency: 'daily',
       priority: 0.7,
     },
     {
       url: `${BASE_URL}/nhl/sabres/history`,
-      lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.6,
     },
     {
       url: `${BASE_URL}/82-0`,
-      lastModified: now,
       changeFrequency: 'daily',
       priority: 0.7,
     },
     {
       url: `${BASE_URL}/82-0/leaderboard`,
-      lastModified: now,
       changeFrequency: 'daily',
       priority: 0.6,
     },
     {
       url: `${BASE_URL}/162-0`,
-      lastModified: now,
       changeFrequency: 'daily',
       priority: 0.7,
     },
     {
       url: `${BASE_URL}/162-0/leaderboard`,
-      lastModified: now,
       changeFrequency: 'daily',
       priority: 0.6,
     },
@@ -107,23 +98,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // All 32 NHL team tracker routes + gear/tickets hubs
   for (const team of NHL_TEAM_ROUTES) {
-    urls.push({ url: `${BASE_URL}/nhl/${team}`, lastModified: now, changeFrequency: 'daily', priority: 0.9 });
-    urls.push({ url: `${BASE_URL}/nhl/${team}/gear`, lastModified: now, changeFrequency: 'weekly', priority: 0.5 });
-    urls.push({ url: `${BASE_URL}/nhl/${team}/tickets`, lastModified: now, changeFrequency: 'weekly', priority: 0.5 });
+    urls.push({ url: `${BASE_URL}/nhl/${team}`, changeFrequency: 'daily', priority: 0.9 });
+    urls.push({ url: `${BASE_URL}/nhl/${team}/gear`, changeFrequency: 'weekly', priority: 0.5 });
+    urls.push({ url: `${BASE_URL}/nhl/${team}/tickets`, changeFrequency: 'weekly', priority: 0.5 });
   }
 
   // All 30 MLB team tracker routes + gear/tickets hubs
   for (const team of MLB_TEAM_ROUTES) {
-    urls.push({ url: `${BASE_URL}/mlb/${team}`, lastModified: now, changeFrequency: 'daily', priority: 0.85 });
-    urls.push({ url: `${BASE_URL}/mlb/${team}/gear`, lastModified: now, changeFrequency: 'weekly', priority: 0.5 });
-    urls.push({ url: `${BASE_URL}/mlb/${team}/tickets`, lastModified: now, changeFrequency: 'weekly', priority: 0.5 });
+    urls.push({ url: `${BASE_URL}/mlb/${team}`, changeFrequency: 'daily', priority: 0.85 });
+    urls.push({ url: `${BASE_URL}/mlb/${team}/gear`, changeFrequency: 'weekly', priority: 0.5 });
+    urls.push({ url: `${BASE_URL}/mlb/${team}/tickets`, changeFrequency: 'weekly', priority: 0.5 });
   }
 
   // All 32 NFL Pick the {Team} pages (Bills boosted — the flagship)
   for (const team of Object.values(NFL_TEAMS)) {
     urls.push({
       url: `${BASE_URL}/pick-the-${team.pickSlug}`,
-      lastModified: now,
       changeFrequency: 'weekly',
       priority: team.id === 'bills' ? 0.8 : 0.7,
     });
@@ -133,19 +123,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   urls.push(
     {
       url: `${BASE_URL}/blog`,
-      lastModified: now,
       changeFrequency: 'daily',
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/blog/sabres`,
-      lastModified: now,
       changeFrequency: 'daily',
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/blog/bills`,
-      lastModified: now,
       changeFrequency: 'daily',
       priority: 0.8,
     },

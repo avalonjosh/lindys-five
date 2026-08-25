@@ -58,6 +58,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${bebasNeue.variable} ${permanentMarker.variable}`}>
       <body>
+        <link rel="alternate" type="application/rss+xml" title="Lindy's Five Blog" href="https://www.lindysfive.com/feed.xml" />
         <PageTracker />
         <Suspense><NewsletterVerified /></Suspense>
         {children}

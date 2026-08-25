@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import SiteFooter from '@/components/SiteFooter';
 import Link from 'next/link';
 import { dailyDateLabel, easternDateString } from '@/lib/perfectseason/seed';
 
@@ -40,6 +41,7 @@ export default function PerfectSeasonLayout({ children }: { children: React.Reac
           Database (CC BY-SA), sabr.org.
         </p>
       </footer>
+      <SiteFooter />
     </>
   );
 }

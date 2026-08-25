@@ -6,9 +6,9 @@ export async function GET() {
   const rss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Lindy's Five - NHL Playoff Tracker Blog</title>
-    <link>https://www.lindysfive.com/blog/sabres</link>
-    <description>NHL playoff odds, game recaps, set analysis, and projections for all 32 teams.</description>
+    <title>Lindy's Five Blog</title>
+    <link>https://www.lindysfive.com/blog</link>
+    <description>Sabres and Bills game recaps, news analysis, and 5-game set breakdowns from Lindy's Five.</description>
     <language>en-us</language>
     <atom:link href="https://www.lindysfive.com/feed.xml" rel="self" type="application/rss+xml"/>
     ${posts.map(post => `

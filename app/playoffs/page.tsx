@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import SiteFooter from '@/components/SiteFooter';
 import Link from 'next/link';
 import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import BreadcrumbNav from '@/components/seo/BreadcrumbNav';
@@ -514,31 +515,11 @@ function buildProjectedBracket(standings: StandingsTeam[]): {
 
 // ── SportsEvent structured data for active series ──
 
-function buildSportsEventSchema(
-  eastern: ConferenceBracket,
-  western: ConferenceBracket,
-  playoffsActive: boolean,
-  endYear: string
-): object[] {
-  if (!playoffsActive) return [];
-  const events: object[] = [];
-  for (const conf of [eastern, western]) {
-    for (const round of conf.rounds) {
-      for (const matchup of round.matchups) {
-        if (!matchup.topSeed || !matchup.bottomSeed || matchup.isComplete) continue;
-        events.push({
-          '@context': 'https://schema.org',
-          '@type': 'SportsEvent',
-          name: `${matchup.topSeed.name} vs ${matchup.bottomSeed.name} — NHL Playoffs ${endYear}`,
-          sport: 'Ice Hockey',
-          homeTeam: { '@type': 'SportsTeam', name: matchup.topSeed.name },
-          awayTeam: { '@type': 'SportsTeam', name: matchup.bottomSeed.name },
-          description: `Series: ${matchup.topSeedWins}-${matchup.bottomSeedWins}`,
-        });
-      }
-    }
-  }
-  return events;
+// Series have no single startDate or location, which schema.org Event requires;
+// emitting SportsEvent per series only produced Search Console errors, so the
+// page keeps WebPage + BreadcrumbList schema only.
+function buildSportsEventSchema(): object[] {
+  return [];
 }
 
 // ── Page component ──
@@ -634,7 +615,7 @@ export default async function PlayoffsPage() {
                 { '@type': 'ListItem', position: 2, name: 'Playoffs', item: 'https://www.lindysfive.com/playoffs' },
               ],
             },
-            ...buildSportsEventSchema(eastern, western, playoffsActive, endYear),
+            ...buildSportsEventSchema(),
           ]),
         }}
       />
@@ -745,6 +726,7 @@ export default async function PlayoffsPage() {
           </p>
         </footer>
       </div>
+      <SiteFooter />
     </>
   );
 }

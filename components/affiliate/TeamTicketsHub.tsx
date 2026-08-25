@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import SiteFooter from '@/components/SiteFooter';
 import { Ticket } from 'lucide-react';
 import { generateTeamTicketsLink } from '@/lib/utils/affiliateLinks';
 import AffiliateLink from './AffiliateLink';
@@ -80,6 +81,7 @@ export default function TeamTicketsHub({ team, stubhubId }: { team: HubTeam; stu
           cost to you.
         </p>
       </main>
+      <SiteFooter />
     </div>
   );
 }

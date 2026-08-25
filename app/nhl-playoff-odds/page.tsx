@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import SiteFooter from '@/components/SiteFooter';
 import Link from 'next/link';
 import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import { TEAMS } from '@/lib/teamConfig';
@@ -274,11 +275,14 @@ export default async function NHLPlayoffOddsPage() {
   const context = await resolveSeasonContext('BUF');
   if (context.isPreseason) {
     return (
-      <NHLPreseasonOddsView
-        season={context.season}
-        seasonLabel={context.seasonLabel}
-        totalGames={context.totalGames}
-      />
+      <>
+        <NHLPreseasonOddsView
+          season={context.season}
+          seasonLabel={context.seasonLabel}
+          totalGames={context.totalGames}
+        />
+        <SiteFooter />
+      </>
     );
   }
 
@@ -660,6 +664,7 @@ export default async function NHLPlayoffOddsPage() {
           </p>
         </footer>
       </div>
+      <SiteFooter />
     </>
   );
 }
