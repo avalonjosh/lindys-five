@@ -34,6 +34,7 @@ const CRON_LABELS: Record<string, string> = {
   'email-mlb-game-recap': 'MLB Recap Emails',
   'email-mlb-set-recap': 'MLB Set Recap Emails',
   'analytics-cleanup': 'Analytics Cleanup',
+  'affiliate-summary': 'Weekly Affiliate Summary',
 };
 
 // Content-cron auto-publish toggles surfaced when off (they gate the pipeline).

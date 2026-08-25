@@ -17,6 +17,7 @@ import { GET as mlbSetRecapHandler } from '@/app/api/cron/email-mlb-set-recap/ro
 import { GET as emailGameRecapHandler } from '@/app/api/cron/email-game-recap/route';
 import { GET as emailSetRecapHandler } from '@/app/api/cron/email-set-recap/route';
 import { GET as analyticsCleanupHandler } from '@/app/api/cron/analytics-cleanup/route';
+import { GET as affiliateSummaryHandler } from '@/app/api/cron/affiliate-summary/route';
 
 async function verifyAdmin(request: NextRequest): Promise<boolean> {
   const token = request.cookies.get('admin_token')?.value;
@@ -51,6 +52,7 @@ const handlers: Record<string, (request: NextRequest) => Promise<NextResponse>> 
   'email-set-recap': emailSetRecapHandler,
   // Maintenance
   'analytics-cleanup': analyticsCleanupHandler,
+  'affiliate-summary': affiliateSummaryHandler,
 };
 
 // Trigger types whose route directory differs from the type name.

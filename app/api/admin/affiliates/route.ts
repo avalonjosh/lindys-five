@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { verifyAdmin } from '@/lib/adminAuth';
-import { getDateKey } from '@/lib/analytics';
 import { fetchImpactSummary, fetchPartnerizeSummary, type NetworkSummary } from '@/lib/services/affiliateNetworks';
+import { fetchFirstPartyClicks, type FirstPartyClicks } from '@/lib/services/affiliateFirstParty';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -11,15 +11,6 @@ type Range = '7d' | '30d' | '90d' | '365d';
 const RANGE_DAYS: Record<Range, number> = { '7d': 7, '30d': 30, '90d': 90, '365d': 365 };
 const CACHE_TTL_SECONDS = 30 * 60;
 
-/** Click buckets written by trackClick() on outbound affiliate anchors. */
-const AFFILIATE_BUCKETS = new Set(['ticket', 'ticket-boxscore', 'tickets', 'gear', 'gear-cta', 'merch']);
-
-export interface FirstPartyClicks {
-  total: number;
-  byBucket: { name: string; count: number }[]; // ticket | ticket-boxscore | tickets | gear | gear-cta | merch
-  byLabel: { name: string; count: number }[];
-}
-
 export interface AffiliatesPayload {
   range: Range;
   from: string;
@@ -27,37 +18,6 @@ export interface AffiliatesPayload {
   cachedAt: string;
   networks: NetworkSummary[];
   firstParty: FirstPartyClicks;
-}
-
-/** On-site outbound affiliate clicks (tracked in KV by /api/analytics/track). */
-async function fetchFirstPartyClicks(days: number): Promise<FirstPartyClicks> {
-  const pipeline = kv.pipeline();
-  const n = Math.min(days, 90); // daily click keys are retained 90 days
-  for (let i = 0; i < n; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    pipeline.zrange(`analytics:clicks:${getDateKey(d)}`, 0, -1, { withScores: true });
-  }
-  const results = await pipeline.exec();
-  const byLabel = new Map<string, number>();
-  const byBucket = new Map<string, number>();
-  let total = 0;
-  for (const result of results) {
-    const data = result as (string | number)[];
-    if (!Array.isArray(data)) continue;
-    for (let i = 0; i < data.length; i += 2) {
-      const name = String(data[i]);
-      const count = Number(data[i + 1]) || 0;
-      const bucket = name.split(':')[0];
-      if (!AFFILIATE_BUCKETS.has(bucket)) continue;
-      total += count;
-      byLabel.set(name, (byLabel.get(name) || 0) + count);
-      byBucket.set(bucket, (byBucket.get(bucket) || 0) + count);
-    }
-  }
-  const toList = (m: Map<string, number>) =>
-    Array.from(m.entries()).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
-  return { total, byBucket: toList(byBucket), byLabel: toList(byLabel).slice(0, 40) };
 }
 
 export async function GET(request: NextRequest) {
