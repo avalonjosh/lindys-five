@@ -64,7 +64,7 @@ export default function TeamGearHub({ team }: { team: HubTeam }) {
             {full} Gear &amp; Jerseys
           </h1>
           <p className="mx-auto mt-2 max-w-xl text-sm text-white/80">
-            Shop officially licensed {full} {league} jerseys, hats, and apparel — curated from Amazon{showFanatics ? ' and Fanatics' : ''}.
+            Shop officially licensed {full} {league} jerseys, hats, and apparel — curated from {showFanatics ? 'Fanatics and Amazon' : 'Amazon'}.
           </p>
         </div>
       </header>
@@ -84,24 +84,26 @@ export default function TeamGearHub({ team }: { team: HubTeam }) {
               <h2 className="text-lg font-bold text-sabres-navy" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>{full} {c.label}</h2>
               <p className="mb-3 text-xs text-gray-500">{c.blurb}</p>
               <div className="flex gap-2">
-                <AffiliateLink
-                  href={generateAmazonSearchLink(`${full} ${league} ${c.label}`)}
-                  track="gear" trackLabel={`${team.slug}-amazon-${c.key}`}
-                  className="flex-1 rounded-lg px-3 py-2 text-center text-xs font-bold text-white transition-opacity hover:opacity-90"
-                  style={{ background: team.primaryColor }}
-                >
-                  Amazon
-                </AffiliateLink>
                 {showFanatics && (
                   <AffiliateLink
                     href={generateFanaticsLink(team.city, team.name, c.label)}
                     track="gear" trackLabel={`${team.slug}-fanatics-${c.key}`}
-                    className="flex-1 rounded-lg border-2 px-3 py-2 text-center text-xs font-bold transition-colors hover:bg-gray-50"
-                    style={{ borderColor: team.primaryColor, color: team.primaryColor }}
+                    className="flex-1 rounded-lg px-3 py-2 text-center text-xs font-bold text-white transition-opacity hover:opacity-90"
+                    style={{ background: team.primaryColor }}
                   >
                     Fanatics
                   </AffiliateLink>
                 )}
+                <AffiliateLink
+                  href={generateAmazonSearchLink(`${full} ${league} ${c.label}`)}
+                  track="gear" trackLabel={`${team.slug}-amazon-${c.key}`}
+                  className={showFanatics
+                    ? 'flex-1 rounded-lg border-2 px-3 py-2 text-center text-xs font-bold transition-colors hover:bg-gray-50'
+                    : 'flex-1 rounded-lg px-3 py-2 text-center text-xs font-bold text-white transition-opacity hover:opacity-90'}
+                  style={showFanatics ? { borderColor: team.primaryColor, color: team.primaryColor } : { background: team.primaryColor }}
+                >
+                  Amazon
+                </AffiliateLink>
               </div>
             </div>
           ))}
