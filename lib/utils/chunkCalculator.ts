@@ -87,24 +87,17 @@ export function getChunkColor(chunk: GameChunk): string {
     return 'bg-gray-700'; // Future chunk
   }
 
-  // Color gradient based on points earned
-  if (chunk.maxPoints === 10) {
-    // Regular 5-game chunks
-    if (chunk.points >= 10) return 'bg-green-500'; // Brightest green - 10/10
-    if (chunk.points >= 8) return 'bg-green-400';  // Medium green - 8-9/10
-    if (chunk.points >= 6) return 'bg-green-300';  // Light green - 6-7/10 (success!)
-    if (chunk.points === 5) return 'bg-orange-400'; // Orange - 5/10 (close)
-    if (chunk.points >= 3) return 'bg-red-400';    // Light red - 3-4/10
-    return 'bg-red-600';                            // Dark red - 0-2/10
-  } else {
-    // Last 2-game chunk (scaled proportionally)
-    // 4 pts = best, 2.4 pts = threshold
-    if (chunk.points >= 4) return 'bg-green-500';  // Perfect 4/4
-    if (chunk.points >= 3) return 'bg-green-300';  // Success 3/4 or 2/2
-    if (chunk.points === 2) return 'bg-orange-400'; // Close 2/4
-    if (chunk.points === 1) return 'bg-red-400';    // Below 1/4
-    return 'bg-red-600';                            // 0 points
-  }
+  // Color gradient by share of available points, so remainder sets of any
+  // length (2-game in 82-game seasons, 4-game in 84-game seasons) grade on the
+  // same scale as a regular 10-point set: perfect / 0.8 / 0.6 (success) /
+  // 0.5 (close) / 0.25 / worse.
+  const ratio = chunk.maxPoints > 0 ? chunk.points / chunk.maxPoints : 0;
+  if (ratio >= 1) return 'bg-green-500';
+  if (ratio >= 0.8) return 'bg-green-400';
+  if (ratio >= 0.6) return 'bg-green-300';
+  if (ratio >= 0.5) return 'bg-orange-400';
+  if (ratio >= 0.25) return 'bg-red-400';
+  return 'bg-red-600';
 }
 
 export function getChunkBorderColor(chunk: GameChunk): string {

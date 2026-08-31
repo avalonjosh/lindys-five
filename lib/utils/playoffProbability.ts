@@ -115,7 +115,7 @@ export function getProbabilityColor(): string {
 export function probabilityForFinalPoints(
   finalPoints: number,
   gamesPlayed: number,
-  cutLine: number = 96,
+  cutLine: number = Math.round(96 * getCurrentSeasonGameCount() / 82),
   pathType: 'division' | 'wildcard' | 'default' = 'default'
 ): number {
   // How far above/below the current season's projected cut line

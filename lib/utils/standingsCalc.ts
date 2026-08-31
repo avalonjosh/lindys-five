@@ -2,8 +2,9 @@ import type { StandingsTeam } from '@/lib/types/boxscore';
 import { computePositionAwareProbability } from './playoffProbability';
 import { getCurrentSeasonGameCount } from './season';
 
-const WC_HISTORICAL_FLOOR = 94;
-const DIV_HISTORICAL_FLOOR = 90;
+// 82-game-era historical floors, scaled to the season in progress (84 games from 2026-27)
+const WC_HISTORICAL_FLOOR = () => Math.round(94 * getCurrentSeasonGameCount() / 82);
+const DIV_HISTORICAL_FLOOR = () => Math.round(90 * getCurrentSeasonGameCount() / 82);
 
 /** Project a team's final point total (integer). Standings are always the
  * current season's, so the season length (82, or 84 from 2026-27) comes from
@@ -31,9 +32,9 @@ export function getDivCutLine(team: StandingsTeam, standings: StandingsTeam[]): 
   } else if (div3Team && div3Team.gamesPlayed > 0) {
     cutLine = Math.ceil((div3Team.points / div3Team.gamesPlayed) * totalGames);
   } else {
-    cutLine = DIV_HISTORICAL_FLOOR;
+    cutLine = DIV_HISTORICAL_FLOOR();
   }
-  return Math.max(cutLine, DIV_HISTORICAL_FLOOR);
+  return Math.max(cutLine, DIV_HISTORICAL_FLOOR());
 }
 
 /** Wildcard cut line: average of WC2 & WC3 projected points, ceil, floor 94. */
@@ -45,7 +46,7 @@ export function getWcCutLine(team: StandingsTeam, standings: StandingsTeam[]): n
   const wc2Team = wcTeams[1];
   const wc3Team = wcTeams[2];
 
-  if (!wc2Team || wc2Team.gamesPlayed === 0) return WC_HISTORICAL_FLOOR;
+  if (!wc2Team || wc2Team.gamesPlayed === 0) return WC_HISTORICAL_FLOOR();
 
   const totalGames = getCurrentSeasonGameCount();
   const wc2Projected = (wc2Team.points / wc2Team.gamesPlayed) * totalGames;
@@ -57,7 +58,7 @@ export function getWcCutLine(team: StandingsTeam, standings: StandingsTeam[]): n
   } else {
     cutLine = Math.ceil(wc2Projected);
   }
-  return Math.max(cutLine, WC_HISTORICAL_FLOOR);
+  return Math.max(cutLine, WC_HISTORICAL_FLOOR());
 }
 
 /** Whether a team currently holds a playoff spot (top 3 in division or WC1/WC2). */

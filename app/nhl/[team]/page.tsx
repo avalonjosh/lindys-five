@@ -10,6 +10,7 @@ import { isRateLimitError } from '@/lib/services/nhlApi';
 import { getFinalStandings } from '@/lib/services/nhlOffseason';
 import { fetchTeamScheduleServer, fetchStandingsServer, ordinal, possessive } from '@/lib/services/nhlTeamPageData';
 import { calculateChunks, calculateSeasonStats } from '@/lib/utils/chunkCalculator';
+import { getDivCutLine, getWcCutLine } from '@/lib/utils/standingsCalc';
 import { computePositionAwareProbability, getPlayoffStatusMessage } from '@/lib/utils/playoffProbability';
 import { playoffResultText } from '@/lib/utils/seasonSummary';
 import { formatSeasonEndYear, getRegularSeasonGameCount, previousNHLSeason } from '@/lib/utils/season';
@@ -174,12 +175,11 @@ export default async function TeamPage({ params }: TeamPageProps) {
       const seasonStats = calculateSeasonStats(chunks, totalGames);
 
       if (seasonStats.gamesPlayed > 0 && teamStanding) {
-        const confTeams = allTeams.filter((t) => t.conferenceName === teamStanding.conferenceName);
         const divTeams = allTeams.filter((t) => t.divisionName === teamStanding.divisionName);
-        const sortedDiv = [...divTeams].sort((a, b) => b.points - a.points);
-        const confSorted = [...confTeams].sort((a, b) => b.points - a.points);
-        const divCutLine = Math.max(sortedDiv[2]?.points || 96, 96);
-        const wcCutLine = Math.max(confSorted[7]?.points || 96, 96);
+        // Same projected cut lines the odds page uses, so the crawler summary
+        // and the visible odds agree.
+        const divCutLine = getDivCutLine(teamStanding, allTeams);
+        const wcCutLine = getWcCutLine(teamStanding, allTeams);
         const isInPlayoffPosition = teamStanding.divisionSequence <= 3 || (teamStanding.wildcardSequence > 0 && teamStanding.wildcardSequence <= 2);
         const { probability } = computePositionAwareProbability(
           seasonStats.projectedPoints, seasonStats.gamesPlayed, divCutLine, wcCutLine, isInPlayoffPosition, teamStanding.clinchIndicator,
