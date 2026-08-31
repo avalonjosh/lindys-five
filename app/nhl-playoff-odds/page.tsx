@@ -410,6 +410,36 @@ export default async function NHLPlayoffOddsPage() {
                 },
               ],
             },
+            {
+              '@context': 'https://schema.org',
+              '@type': 'FAQPage',
+              mainEntity: [
+                {
+                  '@type': 'Question',
+                  name: `Which NHL teams will make the playoffs in ${endYear}?`,
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: `Sixteen NHL teams qualify for the ${endYear} Stanley Cup Playoffs — eight per conference. The top three teams in each division and two wild cards per conference advance. Live playoff probability for all 32 teams is shown on this page, updated daily from current standings.`,
+                  },
+                },
+                {
+                  '@type': 'Question',
+                  name: 'How are NHL playoff odds calculated?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: `Each team's playoff probability projects their current points pace over the full season, then compares that projection to two cut lines: the projected third-place divisional total and the projected second wild card total. A logistic curve converts the gap between projected points and each cut line into a probability, and the higher of the two paths is shown. Confidence grows as the season progresses.`,
+                  },
+                },
+                {
+                  '@type': 'Question',
+                  name: 'How does the NHL wild card work?',
+                  acceptedAnswer: {
+                    '@type': 'Answer',
+                    text: `The two teams in each conference with the most points outside the top three of their division earn the wild card spots. Wild card teams face the division winners in the first round, so the wild card race usually comes down to the projected points cut line shown on this page.`,
+                  },
+                },
+              ],
+            },
           ]),
         }}
       />

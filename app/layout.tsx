@@ -60,9 +60,9 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://assets.nhle.com" />
         <link rel="preconnect" href="https://www.mlbstatic.com" />
+        <link rel="alternate" type="application/rss+xml" title="Lindy's Five Blog" href="https://www.lindysfive.com/feed.xml" />
       </head>
       <body>
-        <link rel="alternate" type="application/rss+xml" title="Lindy's Five Blog" href="https://www.lindysfive.com/feed.xml" />
         <PageTracker />
         <Suspense><NewsletterVerified /></Suspense>
         {children}

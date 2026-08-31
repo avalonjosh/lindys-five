@@ -14,6 +14,15 @@ export const metadata: Metadata = {
   title: '82-0 Leaderboard — Perfect Season (NHL)',
   description: 'Daily, all-time, tank, and per-franchise leaderboards for the 82-0 Perfect Season NHL roster game.',
   alternates: { canonical: 'https://www.lindysfive.com/82-0/leaderboard' },
+  openGraph: {
+    title: '82-0 Leaderboard — Perfect Season (NHL)',
+    description: 'Daily, all-time, tank, and per-franchise leaderboards for the 82-0 Perfect Season NHL roster game.',
+    url: 'https://www.lindysfive.com/82-0/leaderboard',
+    type: 'website',
+    siteName: "Lindy's Five",
+    images: [{ url: '/api/og?type=sport-hub&sport=nhl&title=82-0%20Leaderboard&subtitle=Perfect%20Season%20Daily%20%26%20All-Time%20Rankings', width: 1200, height: 630 }],
+  },
+  twitter: { card: 'summary_large_image' },
 };
 
 export default function Page() {

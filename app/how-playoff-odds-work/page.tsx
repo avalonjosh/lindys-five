@@ -6,7 +6,9 @@ import SiteFooter from '@/components/SiteFooter';
 const URL = 'https://www.lindysfive.com/how-playoff-odds-work';
 
 export const metadata: Metadata = {
-  title: "How Playoff Odds Are Calculated: Lindy's Five vs FanGraphs & 538",
+  // Absolute: the template would append "| Lindy's Five" to a title that
+  // already names the brand, double-branding and pushing past ~70 chars.
+  title: { absolute: "How Playoff Odds Are Calculated: Lindy's Five vs FanGraphs & 538" },
   description:
     "How Lindy's Five computes NHL and MLB playoff odds from live standings, projected pace, and cut lines, and how that compares to simulation models like FanGraphs, MoneyPuck, and the former FiveThirtyEight.",
   alternates: { canonical: URL },

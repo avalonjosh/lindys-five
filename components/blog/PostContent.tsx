@@ -14,13 +14,15 @@ export default function PostContent({ content, accent = '#003087' }: PostContent
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
+          // Markdown "#" renders as h2: the post page already has the hero h1,
+          // and a second h1 breaks the single-H1-per-page rule.
           h1: ({ children }) => (
-            <h1
+            <h2
               className="text-3xl font-bold text-gray-900 mt-8 mb-4"
               style={{ fontFamily: 'Bebas Neue, sans-serif' }}
             >
               {children}
-            </h1>
+            </h2>
           ),
           h2: ({ children }) => (
             <h2
