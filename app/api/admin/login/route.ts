@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
+import { rateLimit, clientIp } from '@/lib/perfectseason/server/ratelimit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,6 +9,11 @@ export async function POST(request: NextRequest) {
 
     if (!password) {
       return NextResponse.json({ error: 'Password is required' }, { status: 400 });
+    }
+
+    // One shared admin password — throttle online brute force per IP
+    if (!(await rateLimit(`admin:rl:login:${clientIp(request)}`, 10, 900))) {
+      return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
     }
 
     // Get the stored password hash from environment

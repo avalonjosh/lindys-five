@@ -47,11 +47,19 @@ export async function POST(request: NextRequest) {
   await kv.set(userKey(userId), updated);
   await kv.del(userEmailKey(oldEmail));
 
-  // Newsletter follows the account: move an active subscription to the new address.
+  // Newsletter follows the account: move an active subscription to the new
+  // address, but drop the verified flag — the new address never opted in, so
+  // carrying verification over would let anyone subscribe a victim's email by
+  // pointing their own account at it. Recap sends only go to verified subs.
   try {
     const sub = await findSubscriberByEmail(oldEmail);
     if (sub && !sub.unsubscribedAt) {
-      await kv.set(`email:subscriber:${sub.id}`, { ...sub, email: newEmail });
+      await kv.set(`email:subscriber:${sub.id}`, {
+        ...sub,
+        email: newEmail,
+        verified: false,
+        verifiedAt: undefined,
+      });
     }
   } catch (err) {
     console.error('Newsletter email follow failed:', err);
