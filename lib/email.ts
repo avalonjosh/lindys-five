@@ -91,23 +91,57 @@ function renderVerificationEmail(verifyUrl: string): string {
 </html>`;
 }
 
+// ─── Send-once claims ────────────────────────────────────────────
+// Both the content crons (which email right after publishing) and the
+// dedicated email crons can send the same recap. These atomic claims make
+// whichever path runs first the only sender; a claim is released on failure
+// so a later retry can still send.
+
+export async function claimGameRecapSend(teamSlug: string): Promise<string | null> {
+  const today = new Date().toISOString().split('T')[0];
+  const key = `email:game-recap-sent:${teamSlug}:${today}`;
+  const claimed = await kv.set(key, true, { nx: true, ex: 48 * 60 * 60 });
+  return claimed ? key : null;
+}
+
+export async function releaseSendClaim(key: string): Promise<void> {
+  try {
+    await kv.del(key);
+  } catch {
+    // best effort — game-recap claims expire on their own
+  }
+}
+
 // ─── Game Recap Email (Blog-based, Sabres only) ──────────────────
 
 export async function sendGameRecapNewsletter(post: BlogPost) {
   const subscribers = await getVerifiedSubscribersForTeam(post.team);
   if (subscribers.length === 0) return;
 
+  // Claim the team/day send so the noon email cron (or a forced re-run of
+  // the content cron) doesn't send a second, near-identical recap.
+  const claim = await claimGameRecapSend(post.team);
+  if (!claim) {
+    console.log(`Game recap email already sent for ${post.team} today — skipping newsletter`);
+    return;
+  }
+
   // Try to send boxscore-style email with blog link
   try {
     await sendBoxscoreRecapForTeam(post.team, subscribers, post);
   } catch (error) {
     console.error('Failed to send boxscore recap, falling back to blog recap:', error);
-    // Fallback: send simple blog recap
-    const subject = post.title;
-    const postUrl = `${SITE_URL}/blog/${post.team}/${post.slug}?utm_source=newsletter&utm_medium=email&utm_campaign=game-recap&utm_content=blog-link`;
-    const html = renderSimpleBlogRecap(post, postUrl);
-    const sendId = await recordEmailSend(post.team, subscribers.length, subject, 'game-recap');
-    await sendBatchEmails(subscribers, subject, html, sendId);
+    try {
+      // Fallback: send simple blog recap
+      const subject = post.title;
+      const postUrl = `${SITE_URL}/blog/${post.team}/${post.slug}?utm_source=newsletter&utm_medium=email&utm_campaign=game-recap&utm_content=blog-link`;
+      const html = renderSimpleBlogRecap(post, postUrl);
+      const sendId = await recordEmailSend(post.team, subscribers.length, subject, 'game-recap');
+      await sendBatchEmails(subscribers, subject, html, sendId);
+    } catch (fallbackError) {
+      await releaseSendClaim(claim);
+      throw fallbackError;
+    }
   }
 }
 
@@ -119,7 +153,8 @@ export async function sendSetRecapNewsletter(post: BlogPost) {
   if (subscribers.length === 0) return;
 
   try {
-    await sendSetRecapForTeam(post.team, subscribers);
+    const status = await sendSetRecapForTeam(post.team, subscribers, { claim: true });
+    if (status === 'already-sent') return;
   } catch (error) {
     console.error('Failed to send data-driven set recap, falling back to blog:', error);
     const subject = post.title;
@@ -132,8 +167,9 @@ export async function sendSetRecapNewsletter(post: BlogPost) {
 
 export async function sendSetRecapForTeam(
   teamSlug: string,
-  subscribers: NewsletterSubscriber[]
-) {
+  subscribers: NewsletterSubscriber[],
+  opts: { claim?: boolean } = {}
+): Promise<'sent' | 'already-sent'> {
   const teamConfig = TEAMS[teamSlug];
   if (!teamConfig) throw new Error(`Unknown team: ${teamSlug}`);
 
@@ -196,8 +232,24 @@ export async function sendSetRecapForTeam(
     nextGame,
   });
 
-  const sendId = await recordEmailSend(teamSlug, subscribers.length, subject, 'set-recap');
-  await sendBatchEmails(subscribers, subject, html, sendId);
+  // Atomic per-set claim so the content cron and the email cron can't both
+  // send. Only the automated paths pass claim; manual/test sends skip it.
+  let claimKey: string | null = null;
+  if (opts.claim) {
+    const key = `email:set-recap-sent:${teamSlug}:${latestSet.chunkNumber}`;
+    const claimed = await kv.set(key, true, { nx: true });
+    if (!claimed) return 'already-sent';
+    claimKey = key;
+  }
+
+  try {
+    const sendId = await recordEmailSend(teamSlug, subscribers.length, subject, 'set-recap');
+    await sendBatchEmails(subscribers, subject, html, sendId);
+  } catch (error) {
+    if (claimKey) await releaseSendClaim(claimKey);
+    throw error;
+  }
+  return 'sent';
 }
 
 // ─── Boxscore Recap Email ────────────────────────────────────────

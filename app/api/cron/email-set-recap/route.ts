@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
 import { TEAMS } from '@/lib/teamConfig';
 import { sendSetRecapForTeam, getVerifiedSubscribersForTeam } from '@/lib/email';
 import { fetchJsonWithRetry } from '@/lib/fetchWithRetry';
@@ -30,17 +29,13 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        // Check if we already sent for this set
-        const sentKey = `email:set-recap-sent:${slug}:${latestCompletedSet}`;
-        const alreadySent = await kv.get(sentKey);
-        if (alreadySent) {
+        // sendSetRecapForTeam takes an atomic per-set claim, shared with the
+        // content cron's newsletter path, so only one of them sends.
+        const status = await sendSetRecapForTeam(slug, subscribers, { claim: true });
+        if (status === 'already-sent') {
           results.push({ team: slug, status: 'already-sent', set: latestCompletedSet });
           continue;
         }
-
-        await sendSetRecapForTeam(slug, subscribers);
-        // Mark as sent (no expiry — a set number is unique per season)
-        await kv.set(sentKey, true);
         results.push({ team: slug, status: 'sent', set: latestCompletedSet, subscribers: subscribers.length });
       } catch (error) {
         console.error(`Failed to send set recap for ${slug}:`, error);

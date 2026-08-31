@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { kv } from '@vercel/kv';
 import { TEAMS } from '@/lib/teamConfig';
-import { sendBoxscoreRecapForTeam, getVerifiedSubscribersForTeam } from '@/lib/email';
+import { sendBoxscoreRecapForTeam, getVerifiedSubscribersForTeam, claimGameRecapSend, releaseSendClaim } from '@/lib/email';
 import { fetchJsonWithRetry } from '@/lib/fetchWithRetry';
 
 const NHL_API = 'https://api-web.nhle.com/v1';
@@ -54,10 +53,10 @@ export async function GET(request: NextRequest) {
 
       const teamSlug = teamConfig.slug;
 
-      // Skip if we already sent a game recap email for this team today
-      const sentKey = `email:game-recap-sent:${teamSlug}:${todayStr}`;
-      const alreadySent = await kv.get(sentKey);
-      if (alreadySent) {
+      // Atomically claim the team/day send — the content crons that email
+      // right after publishing take the same claim, so only one path sends.
+      const claimKey = await claimGameRecapSend(teamSlug);
+      if (!claimKey) {
         results.push({ team: teamSlug, status: 'already-sent' });
         continue;
       }
@@ -65,17 +64,17 @@ export async function GET(request: NextRequest) {
       // Check if this team has subscribers
       const subscribers = await getVerifiedSubscribersForTeam(teamSlug);
       if (subscribers.length === 0) {
+        await releaseSendClaim(claimKey);
         results.push({ team: teamSlug, status: 'no-subscribers' });
         continue;
       }
 
       try {
         await sendBoxscoreRecapForTeam(teamSlug, subscribers);
-        // Mark as sent (expires after 48 hours)
-        await kv.set(sentKey, true, { ex: 48 * 60 * 60 });
         results.push({ team: teamSlug, status: 'sent', subscribers: subscribers.length });
       } catch (error) {
         console.error(`Failed to send game recap for ${teamSlug}:`, error);
+        await releaseSendClaim(claimKey);
         results.push({ team: teamSlug, status: 'error' });
       }
     }
