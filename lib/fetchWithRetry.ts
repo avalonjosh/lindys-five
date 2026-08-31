@@ -18,14 +18,25 @@ export async function fetchWithRetry(
     try {
       const response = await fetch(url, options);
 
-      // Don't retry on client errors (4xx), only on server errors (5xx)
-      if (response.ok || (response.status >= 400 && response.status < 500)) {
+      // Don't retry on client errors (4xx) except 429 — the NHL API
+      // rate-limits on busy nights, and giving up immediately is what made
+      // recap crons fail. 5xx and 429 both retry.
+      if (response.ok || (response.status >= 400 && response.status < 500 && response.status !== 429)) {
         return response;
       }
 
-      // Server error - will retry
       lastError = new Error(`HTTP ${response.status}: ${response.statusText}`);
 
+      // Rate-limited: honor Retry-After if given, otherwise back off longer
+      if (response.status === 429 && attempt < maxRetries) {
+        const retryAfter = Number(response.headers.get('retry-after'));
+        const delay = Number.isFinite(retryAfter) && retryAfter > 0
+          ? Math.min(retryAfter * 1000, 15000)
+          : initialDelay * Math.pow(2, attempt + 2);
+        console.log(`Rate-limited (429) for ${url}, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
     } catch (error) {
       // Network error - will retry
       lastError = error as Error;

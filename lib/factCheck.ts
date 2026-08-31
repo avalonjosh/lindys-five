@@ -39,9 +39,11 @@ Rules:
       const json = JSON.parse(jsonMatch[0]);
       return { passed: json.passed !== false, issues: json.issues || [] };
     }
-    return { passed: true, issues: [] };
+    // Fail closed: an unparseable verdict means the article was NOT checked.
+    // The post stays a draft rather than auto-publishing unverified AI content.
+    return { passed: false, issues: ['Fact-check returned an unparseable verdict'] };
   } catch (error) {
-    console.error('Fact-check error (defaulting to pass):', error);
-    return { passed: true, issues: [] };
+    console.error('Fact-check error (failing closed — post stays draft):', error);
+    return { passed: false, issues: ['Fact-check errored; article was not verified'] };
   }
 }

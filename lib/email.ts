@@ -1201,39 +1201,15 @@ export async function sendAnnouncementEmail(
   const sendId = await recordEmailSend('announcement', subscribers.length, content.subject, 'announcement');
 
   // Personalize per subscriber: primary team color + direct link to their tracker.
-  // sendBatchEmails uses a single htmlTemplate, so we build a batch-friendly default template;
-  // for announcements we instead send per-subscriber here so each email gets the right team.
-  const BATCH_SIZE = 50;
-  for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
-    const batch = subscribers.slice(i, i + BATCH_SIZE);
-    await Promise.all(batch.map(async (sub) => {
-      const primaryTeamSlug = sub.teams[0];
-      const primaryTeam = primaryTeamSlug ? TEAMS[primaryTeamSlug] : undefined;
-      const accent = primaryTeam?.colors.primary || DEFAULT_BRAND_COLOR;
-      const trackerUrl = primaryTeamSlug
-        ? `${SITE_URL}/nhl/${primaryTeamSlug}?utm_source=newsletter&utm_medium=email&utm_campaign=${slug}&utm_content=tracker`
-        : `${SITE_URL}/nhl-playoff-odds?utm_source=newsletter&utm_medium=email&utm_campaign=${slug}&utm_content=tracker`;
-      const unsubscribeUrl = `${SITE_URL}/api/newsletter/unsubscribe?id=${sub.id}`;
-      const html = renderAnnouncementEmail(slug, { accent, trackerUrl, unsubscribeUrl, primaryTeamName: primaryTeam?.name });
-      try {
-        const res = await getResend().emails.send({
-          from: FROM_EMAIL,
-          to: sub.email,
-          subject: content.subject,
-          html,
-          headers: {
-            'List-Unsubscribe': `<${unsubscribeUrl}>`,
-            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-          },
-        });
-        if (sendId && res.data?.id) {
-          await kv.set(`email:resend-map:${res.data.id}`, sendId, { ex: 60 * 60 * 24 * 30 });
-        }
-      } catch (err) {
-        console.error(`Failed to send announcement to ${sub.email}:`, err);
-      }
-    }));
-  }
+  await sendPersonalizedBatch(subscribers, content.subject, (sub, unsubscribeUrl) => {
+    const primaryTeamSlug = sub.teams[0];
+    const primaryTeam = primaryTeamSlug ? TEAMS[primaryTeamSlug] : undefined;
+    const accent = primaryTeam?.colors.primary || DEFAULT_BRAND_COLOR;
+    const trackerUrl = primaryTeamSlug
+      ? `${SITE_URL}/nhl/${primaryTeamSlug}?utm_source=newsletter&utm_medium=email&utm_campaign=${slug}&utm_content=tracker`
+      : `${SITE_URL}/nhl-playoff-odds?utm_source=newsletter&utm_medium=email&utm_campaign=${slug}&utm_content=tracker`;
+    return renderAnnouncementEmail(slug, { accent, trackerUrl, unsubscribeUrl, primaryTeamName: primaryTeam?.name });
+  }, sendId);
 }
 
 function renderAnnouncementEmail(
@@ -1871,19 +1847,31 @@ function markdownToEmailHtml(markdown: string): string {
 
 // ─── Batch Sending ────────────────────────────────────────────────
 
-async function sendBatchEmails(subscribers: NewsletterSubscriber[], subject: string, htmlTemplate: string, sendRecordId?: string) {
+/**
+ * Batch-send personalized emails via Resend's batch endpoint: one API request
+ * per 100 recipients. (The old per-recipient Promise.all bursts hit Resend's
+ * ~2 req/s rate limit past a handful of subscribers, silently dropping most of
+ * a batch.) Each failed batch is retried once; returns how many recipients
+ * were in successfully sent batches.
+ */
+async function sendPersonalizedBatch(
+  recipients: NewsletterSubscriber[],
+  subject: string,
+  htmlFor: (sub: NewsletterSubscriber, unsubscribeUrl: string) => string,
+  sendRecordId?: string,
+): Promise<number> {
   const BATCH_SIZE = 100;
+  let sent = 0;
 
-  for (let i = 0; i < subscribers.length; i += BATCH_SIZE) {
-    const batch = subscribers.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
+    const batch = recipients.slice(i, i + BATCH_SIZE);
     const emails = batch.map((sub) => {
       const unsubscribeUrl = `${SITE_URL}/api/newsletter/unsubscribe?id=${sub.id}`;
-      const personalizedHtml = htmlTemplate.replace('{{UNSUBSCRIBE_URL}}', unsubscribeUrl);
       return {
         from: FROM_EMAIL,
         to: sub.email,
         subject,
-        html: personalizedHtml,
+        html: htmlFor(sub, unsubscribeUrl),
         headers: {
           'List-Unsubscribe': `<${unsubscribeUrl}>`,
           'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
@@ -1891,34 +1879,63 @@ async function sendBatchEmails(subscribers: NewsletterSubscriber[], subject: str
       };
     });
 
-    try {
-      const response = await getResend().batch.send(emails);
-      // Map Resend email IDs back to our send record for webhook tracking
-      if (sendRecordId && response?.data) {
-        // SDK returns { data } where data could be:
-        // - Array of { id } directly from batch endpoint
-        // - Object with nested { data: [{ id }] }
-        const rawData = response.data as any;
-        const resendIds: any[] = Array.isArray(rawData)
-          ? rawData
-          : Array.isArray(rawData?.data)
-            ? rawData.data
-            : [];
-        for (const item of resendIds) {
-          const emailId = typeof item === 'object' && item !== null && 'id' in item ? (item as { id: string }).id : null;
-          if (emailId) {
-            await kv.set(`email:resend-map:${emailId}`, sendRecordId, { ex: 60 * 60 * 24 * 30 });
-          }
-        }
-        if (resendIds.length === 0) {
-          console.warn('Resend batch: no IDs extracted. response.data:', JSON.stringify(rawData).slice(0, 500));
-        } else {
-          console.log(`Resend batch: mapped ${resendIds.length} email IDs to send record ${sendRecordId}`);
-        }
+    let response: { data?: unknown } | null = null;
+    for (let attempt = 0; attempt < 2 && !response; attempt++) {
+      try {
+        response = await getResend().batch.send(emails);
+      } catch (error) {
+        console.error(`Failed to send batch starting at index ${i} (attempt ${attempt + 1}):`, error);
+        if (attempt === 0) await new Promise((r) => setTimeout(r, 2000));
       }
-    } catch (error) {
-      console.error(`Failed to send batch starting at index ${i}:`, error);
     }
+    if (!response) continue;
+    sent += batch.length;
+
+    // Map Resend email IDs back to our send record for webhook tracking
+    if (sendRecordId && response?.data) {
+      // SDK returns { data } where data could be:
+      // - Array of { id } directly from batch endpoint
+      // - Object with nested { data: [{ id }] }
+      const rawData = response.data as any;
+      const resendIds: any[] = Array.isArray(rawData)
+        ? rawData
+        : Array.isArray(rawData?.data)
+          ? rawData.data
+          : [];
+      await Promise.all(
+        resendIds.map((item) => {
+          const emailId = typeof item === 'object' && item !== null && 'id' in item ? (item as { id: string }).id : null;
+          return emailId
+            ? kv.set(`email:resend-map:${emailId}`, sendRecordId, { ex: 60 * 60 * 24 * 30 })
+            : Promise.resolve(null);
+        })
+      );
+      if (resendIds.length === 0) {
+        console.warn('Resend batch: no IDs extracted. response.data:', JSON.stringify(rawData).slice(0, 500));
+      } else {
+        console.log(`Resend batch: mapped ${resendIds.length} email IDs to send record ${sendRecordId}`);
+      }
+    }
+  }
+
+  if (sent < recipients.length) {
+    console.error(`sendPersonalizedBatch: only ${sent} of ${recipients.length} recipients were in successful batches for "${subject}"`);
+  }
+  return sent;
+}
+
+async function sendBatchEmails(subscribers: NewsletterSubscriber[], subject: string, htmlTemplate: string, sendRecordId?: string) {
+  const sent = await sendPersonalizedBatch(
+    subscribers,
+    subject,
+    (_sub, unsubscribeUrl) => htmlTemplate.replace('{{UNSUBSCRIBE_URL}}', unsubscribeUrl),
+    sendRecordId,
+  );
+  // Total failure should propagate so callers release their send-once claims
+  // and a retry can send. Partial failure keeps the claim (no duplicate sends
+  // to the batches that succeeded) and is logged loudly by the helper.
+  if (sent === 0 && subscribers.length > 0) {
+    throw new Error(`sendBatchEmails: all ${subscribers.length} recipients failed for "${subject}"`);
   }
 }
 
@@ -2347,33 +2364,12 @@ export async function sendMLBGameRecap(
   const subject = `${data.teamCity} ${data.teamName} ${data.won ? 'win' : 'fall'} ${data.teamScore}-${data.oppScore} ${data.isHome ? 'vs' : '@'} ${data.oppName}`;
   const sendId = opts?.testEmail ? undefined : await recordEmailSend(`mlb-recap:${data.teamSlug}`, recipients.length, subject, 'mlb-game-recap');
 
-  let sent = 0;
-  const BATCH = 50;
-  for (let i = 0; i < recipients.length; i += BATCH) {
-    const batch = recipients.slice(i, i + BATCH);
-    await Promise.all(
-      batch.map(async (sub) => {
-        const unsubscribeUrl = `${SITE_URL}/api/newsletter/unsubscribe?id=${sub.id}`;
-        const html = renderMLBGameRecapEmail(data, unsubscribeUrl);
-        try {
-          const res = await getResend().emails.send({
-            from: FROM_EMAIL,
-            to: sub.email,
-            subject,
-            html,
-            headers: {
-              'List-Unsubscribe': `<${unsubscribeUrl}>`,
-              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-            },
-          });
-          sent++;
-          if (sendId && res.data?.id) await kv.set(`email:resend-map:${res.data.id}`, sendId, { ex: 60 * 60 * 24 * 30 });
-        } catch (err) {
-          console.error(`Failed to send MLB recap to ${sub.email}:`, err);
-        }
-      }),
-    );
-  }
+  const sent = await sendPersonalizedBatch(
+    recipients,
+    subject,
+    (_sub, unsubscribeUrl) => renderMLBGameRecapEmail(data, unsubscribeUrl),
+    sendId,
+  );
   return { sent };
 }
 
@@ -2395,33 +2391,12 @@ export async function sendWeeklyDigest(
   const subject = 'Your Lindy’s Five weekly rundown';
   const sendId = opts?.testEmail ? undefined : await recordEmailSend('weekly-digest', recipients.length, subject, 'weekly-digest');
 
-  let sent = 0;
-  const BATCH = 50;
-  for (let i = 0; i < recipients.length; i += BATCH) {
-    const batch = recipients.slice(i, i + BATCH);
-    await Promise.all(
-      batch.map(async (sub) => {
-        const unsubscribeUrl = `${SITE_URL}/api/newsletter/unsubscribe?id=${sub.id}`;
-        const html = renderWeeklyDigestEmail(content, unsubscribeUrl);
-        try {
-          const res = await getResend().emails.send({
-            from: FROM_EMAIL,
-            to: sub.email,
-            subject,
-            html,
-            headers: {
-              'List-Unsubscribe': `<${unsubscribeUrl}>`,
-              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-            },
-          });
-          sent++;
-          if (sendId && res.data?.id) await kv.set(`email:resend-map:${res.data.id}`, sendId, { ex: 60 * 60 * 24 * 30 });
-        } catch (err) {
-          console.error(`Failed to send weekly digest to ${sub.email}:`, err);
-        }
-      }),
-    );
-  }
+  const sent = await sendPersonalizedBatch(
+    recipients,
+    subject,
+    (_sub, unsubscribeUrl) => renderWeeklyDigestEmail(content, unsubscribeUrl),
+    sendId,
+  );
   return { sent };
 }
 
@@ -2545,33 +2520,12 @@ export async function sendMLBSetRecap(
   const subject = `${data.teamCity} ${data.teamName} — Set #${data.setNumber} recap (${data.wins}-${data.losses})`;
   const sendId = opts?.testEmail ? undefined : await recordEmailSend(`mlb-set-recap:${data.teamSlug}`, recipients.length, subject, 'mlb-set-recap');
 
-  let sent = 0;
-  const BATCH = 50;
-  for (let i = 0; i < recipients.length; i += BATCH) {
-    const batch = recipients.slice(i, i + BATCH);
-    await Promise.all(
-      batch.map(async (sub) => {
-        const unsubscribeUrl = `${SITE_URL}/api/newsletter/unsubscribe?id=${sub.id}`;
-        const html = renderMLBSetRecapEmail(data, unsubscribeUrl);
-        try {
-          const res = await getResend().emails.send({
-            from: FROM_EMAIL,
-            to: sub.email,
-            subject,
-            html,
-            headers: {
-              'List-Unsubscribe': `<${unsubscribeUrl}>`,
-              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-            },
-          });
-          sent++;
-          if (sendId && res.data?.id) await kv.set(`email:resend-map:${res.data.id}`, sendId, { ex: 60 * 60 * 24 * 30 });
-        } catch (err) {
-          console.error(`Failed to send MLB set recap to ${sub.email}:`, err);
-        }
-      }),
-    );
-  }
+  const sent = await sendPersonalizedBatch(
+    recipients,
+    subject,
+    (_sub, unsubscribeUrl) => renderMLBSetRecapEmail(data, unsubscribeUrl),
+    sendId,
+  );
   return { sent };
 }
 

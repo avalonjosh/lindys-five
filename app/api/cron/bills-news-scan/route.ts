@@ -244,7 +244,8 @@ export async function GET(request: NextRequest) {
     const contextText = formatBillsContext(billsContext);
     const autoPublish = await getAutoPublishSetting('bills-news');
 
-    for (const story of stories.filter((s: any) => s.importance >= 7)) {
+    // Cap generation per run (each story is a full AI generation call)
+    for (const story of stories.filter((s: any) => s.importance >= 7).slice(0, 3)) {
       const storyKey = story.storyKey || story.topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 50);
       const keywords = story.keywords || [];
 

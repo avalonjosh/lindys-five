@@ -261,7 +261,9 @@ export async function GET(request: NextRequest) {
     const contextText = formatSabresContext(sabresContext);
     const autoPublish = await getAutoPublishSetting('news');
 
-    const importantStories = stories.filter((s: any) => s.importance >= 7);
+    // Cap generation per run: each story is a full Sonnet call with web search,
+    // and the detection pass puts no ceiling on how many it may return.
+    const importantStories = stories.filter((s: any) => s.importance >= 7).slice(0, 3);
 
     for (const story of importantStories) {
       const storyKey = story.storyKey || story.topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 50);

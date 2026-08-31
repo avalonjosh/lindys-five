@@ -351,16 +351,24 @@ export async function tweetPublishedPost(
   post: TweetablePost,
   options?: { fullTweet?: string; force?: boolean }
 ): Promise<TweetPublishResult> {
+  let claimedKey: string | null = null;
   try {
     if (!options?.force) {
       if (!(await getAutoXSettingForPost(post.type, post.team))) {
         return { success: true, skipped: 'auto-x-off' };
       }
       if (post.id) {
-        const alreadyTweeted = await kv.get(`blog:tweeted:${post.id}`);
-        if (alreadyTweeted) {
+        // Atomic claim (NX): generation + media upload + post takes 5-15s, so a
+        // plain read-then-write let overlapping runs (cron retry + manual
+        // trigger) both pass the check and double-tweet. The claim is replaced
+        // with the real record on success and released on failure.
+        const key = `blog:tweeted:${post.id}`;
+        const claimed = await kv.set(key, { pending: true, claimedAt: new Date().toISOString() }, { nx: true });
+        if (!claimed) {
+          const alreadyTweeted = await kv.get(key);
           return { success: true, skipped: 'already-tweeted', tweetId: (alreadyTweeted as any)?.tweetId };
         }
+        claimedKey = key;
       }
     }
 
@@ -375,6 +383,9 @@ export async function tweetPublishedPost(
       const now = new Date().toISOString();
       if (result.success) {
         await kv.set(`blog:tweeted:${post.id}`, { tweetId: result.tweetId, tweetedAt: now });
+      } else if (claimedKey) {
+        // Release the claim so a later retry can tweet
+        await kv.del(claimedKey);
       }
       // Record outcome on the post so the admin UI can surface it
       try {
@@ -396,6 +407,13 @@ export async function tweetPublishedPost(
     return result;
   } catch (error: any) {
     console.error(`tweetPublishedPost failed for "${post.title}":`, error);
+    if (claimedKey) {
+      try {
+        await kv.del(claimedKey);
+      } catch {
+        // best effort — a stuck claim can be cleared with a forced re-tweet
+      }
+    }
     return { success: false, error: error.message };
   }
 }
