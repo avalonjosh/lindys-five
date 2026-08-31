@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { shareKey, type SharedTeam } from '@/lib/perfectseason/share';
+import { rateLimit, clientIp } from '@/lib/perfectseason/server/ratelimit';
+
+const SHARE_TTL_SECONDS = 180 * 24 * 60 * 60; // shares are ephemeral by nature
+const MAX_STRING_LENGTH = 100;
+
+function isShortString(v: unknown): v is string {
+  return typeof v === 'string' && v.length <= MAX_STRING_LENGTH;
+}
 
 const ID_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
@@ -18,16 +26,17 @@ function isValidTeam(t: unknown): t is SharedTeam {
   if (!t || typeof t !== 'object') return false;
   const team = t as Record<string, unknown>;
   if (team.sport !== 'nhl' && team.sport !== 'mlb') return false;
-  if (typeof team.wins !== 'number' || typeof team.losses !== 'number') return false;
-  if (typeof team.rating !== 'number' || typeof team.grade !== 'string') return false;
+  if (!Number.isFinite(team.wins) || !Number.isFinite(team.losses)) return false;
+  if (!Number.isFinite(team.rating) || !isShortString(team.grade)) return false;
   if (!Array.isArray(team.rows) || team.rows.length < 1 || team.rows.length > 12) return false;
   return team.rows.every((r) => {
     const row = r as Record<string, unknown>;
     return (
-      typeof row.slot === 'string' &&
-      typeof row.playerName === 'string' &&
-      typeof row.franchiseId === 'string' &&
-      typeof row.decade === 'string'
+      isShortString(row.slot) &&
+      isShortString(row.playerName) &&
+      isShortString(row.franchiseId) &&
+      isShortString(row.decade) &&
+      (row.franchise === undefined || isShortString(row.franchise))
     );
   });
 }
@@ -46,8 +55,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid team payload' }, { status: 400 });
   }
 
+  if (!(await rateLimit(`ps:rl:share:${clientIp(request)}`, 20, 3600))) {
+    return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
+  }
+
+  // Store a whitelist copy so unvalidated or extra fields can't smuggle in
+  // arbitrarily large payloads.
+  const clean: SharedTeam = {
+    sport: team.sport,
+    variant: team.variant === 'blind' ? 'blind' : 'classic',
+    modeType: team.modeType === 'tank' || team.modeType === 'franchise' ? team.modeType : 'standard',
+    source: team.source === 'free' ? 'free' : 'daily',
+    wins: team.wins,
+    losses: team.losses,
+    rating: team.rating,
+    grade: team.grade,
+    tier: isShortString(team.tier) ? team.tier : '',
+    rows: team.rows.map((r) => ({
+      slot: r.slot,
+      playerName: r.playerName,
+      franchise: isShortString(r.franchise) ? r.franchise : '',
+      franchiseId: r.franchiseId,
+      decade: r.decade,
+    })),
+    createdAt: Number.isFinite(team.createdAt) ? team.createdAt : Date.now(),
+  };
+
   const id = genShareId();
-  await kv.set(shareKey(id), team);
+  await kv.set(shareKey(id), clean, { ex: SHARE_TTL_SECONDS });
 
   return NextResponse.json({ id });
 }
