@@ -3,7 +3,7 @@ import SiteFooter from '@/components/SiteFooter';
 import { notFound } from 'next/navigation';
 import { findNFLTeamByPickSlug, NFL_TEAMS } from '@/lib/teamConfig';
 import PickSeasonTracker from '@/components/nfl/PickSeasonTracker';
-import { fetchNFLSchedule } from '@/lib/services/nflApi';
+import { fetchNFLSchedule, nflSeasonYear } from '@/lib/services/nflApi';
 import type { NFLGameResult } from '@/lib/types/nfl';
 
 // Served publicly as /pick-the-{team} via a next.config rewrite.
@@ -12,8 +12,6 @@ export const revalidate = 300;
 interface PickPageProps {
   params: Promise<{ team: string }>;
 }
-
-const SEASON = new Date().getFullYear();
 
 export async function generateStaticParams() {
   return Object.values(NFL_TEAMS).map((team) => ({ team: team.pickSlug }));
@@ -24,6 +22,7 @@ export async function generateMetadata({ params }: PickPageProps): Promise<Metad
   const team = findNFLTeamByPickSlug(pickSlug);
   if (!team) return { title: 'Team Not Found' };
 
+  const SEASON = nflSeasonYear();
   const fullName = `${team.city} ${team.name}`;
   const title = `Pick the ${team.name} ${SEASON} — Predict Every ${fullName} Game`;
   const description = `Pick every ${fullName} game of the ${SEASON} NFL season, save your predictions, and track your accuracy as the results come in. Free on Lindy's Five.`;
@@ -55,6 +54,7 @@ export default async function PickTeamPage({ params }: PickPageProps) {
   const team = findNFLTeamByPickSlug(pickSlug);
   if (!team) notFound();
 
+  const SEASON = nflSeasonYear();
   const fullName = `${team.city} ${team.name}`;
   const url = `https://www.lindysfive.com/pick-the-${team.pickSlug}`;
 

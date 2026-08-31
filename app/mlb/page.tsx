@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
 import { mlbSeasonYear } from '@/lib/utils/mlbSeason';
+
+// Revalidate daily — with no revalidate and no fetches this page was fully
+// static, freezing the season year (title, FAQ, JSON-LD) at deploy time.
+export const revalidate = 86400;
 import Link from 'next/link';
 import FavoriteTeamsGrid from '@/components/landing/FavoriteTeamsGrid';
 import SiteFooter from '@/components/SiteFooter';

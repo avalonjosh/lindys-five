@@ -38,6 +38,22 @@ async function fetchWithRetry(url: string, retries = 3): Promise<Response> {
 }
 
 const FINAL_STATUSES = new Set(['STATUS_FINAL']);
+
+/**
+ * NFL season start year for today (Eastern). Seasons run Sept-Feb, so January
+ * and February still belong to the prior year's season — a bare getFullYear()
+ * would flip the pick pages to a nonexistent season on Jan 1, mid-playoffs.
+ */
+export function nflSeasonYear(): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    month: 'numeric',
+    year: 'numeric',
+  }).formatToParts(new Date());
+  const month = Number(parts.find((p) => p.type === 'month')?.value);
+  const year = Number(parts.find((p) => p.type === 'year')?.value);
+  return month <= 2 ? year - 1 : year;
+}
 const LIVE_STATUSES = new Set(['STATUS_IN_PROGRESS', 'STATUS_HALFTIME', 'STATUS_END_PERIOD']);
 
 /**

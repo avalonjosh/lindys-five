@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { NFLTeamConfig } from '@/lib/teamConfig/nflTeams';
 import type { NFLGameResult } from '@/lib/types/nfl';
-import { fetchNFLSchedule } from '@/lib/services/nflApi';
+import { fetchNFLSchedule, nflSeasonYear } from '@/lib/services/nflApi';
 import NFLPickNav from './NFLPickNav';
 import WhatIfStickyBar from '@/components/WhatIfStickyBar';
 import HeaderProfileIcon from '@/components/HeaderProfileIcon';
@@ -59,7 +59,7 @@ export default function PickSeasonTracker({ team, initialGames }: PickSeasonTrac
   const [boxOffscreen, setBoxOffscreen] = useState(false);
   const outlookBoxRef = useRef<HTMLDivElement | null>(null);
 
-  const season = String(new Date().getFullYear());
+  const season = String(nflSeasonYear());
   const fullName = `${team.city} ${team.name}`;
 
   const loadData = async () => {
