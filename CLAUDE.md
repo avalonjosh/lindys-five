@@ -249,8 +249,8 @@ Embedded via `<script type="application/ld+json">` with `dangerouslySetInnerHTML
 | Home | WebSite + Organization (`@id` `https://www.lindysfive.com/#organization`, name Lindy's Five, parentOrganization JRR Apps). All other `publisher`/`creator` fields say Lindy's Five; JRR Apps appears only in visible copyright lines |
 | NHL/MLB Hub | WebPage + BreadcrumbList + FAQPage |
 | Playoff Odds (NHL/MLB) | WebPage (+ `dateModified`) + Dataset (+ `dateModified`, `variableMeasured`) + BreadcrumbList + FAQPage |
-| Playoffs bracket | WebPage (+ `dateModified`) + BreadcrumbList + SportsEvent (per active series) |
-| Scores hub | BreadcrumbList |
+| Playoffs bracket | WebPage (+ `dateModified`) + BreadcrumbList (SportsEvent deliberately removed after Search Console flagged it) |
+| Scores hub | BreadcrumbList (+ sr-only server-rendered list of today's games with box score links) |
 | Box score (NHL/MLB) | BreadcrumbList + SportsEvent (teams, startDate, venue, final score; server-fetched landing/schedule, revalidate 300) |
 | Team Tracker (NHL/MLB) | WebPage (+ `dateModified`) + SportsTeam + FAQPage (3 Qs) + BreadcrumbList |
 | Team History (NHL) | WebPage + BreadcrumbList + SportsTeam |
@@ -329,4 +329,4 @@ The interactive odds tables (`PlayoffOddsClient`, `MLBPlayoffOddsClient`) are cl
 
 ### Known opportunities (from SEO/GEO audit, not yet done)
 - `/nfl/pick/:team` (the rewrite target for `/pick-the-:team`) 301s back to the pretty URL so it is never a second live URL.
-- ~~Differentiate MLB team-page visible content~~ — DONE (July 2026): MLB team pages now SSR the tracker's initial schedule (`initialGames` prop), render a visible "Season So Far" summary + division standings table with rival links (`serverSummary` prop), and include SiteFooter — served HTML went from ~106 visible chars / 0 links to ~7,300 chars / 74 links. The sr-only block was removed (fallback `<p>` only when data unavailable). Still Josh's move: request indexing in GSC after deploys and watch coverage. Note from diagnosis: NHL team pages are equally thin in served HTML (and their `/api/v1` data fetch is robots-blocked for rendering) but index anyway on age/links/authority — left untouched deliberately.
+- ~~Differentiate MLB team-page visible content~~ — DONE (July 2026): MLB team pages now SSR the tracker's initial schedule (`initialGames` prop), render a visible "Season So Far" summary + division standings table with rival links (`serverSummary` prop), and include SiteFooter — served HTML went from ~106 visible chars / 0 links to ~7,300 chars / 74 links. The sr-only block was removed (fallback `<p>` only when data unavailable). Still Josh's move: request indexing in GSC after deploys and watch coverage. NHL team pages have since gotten the same treatment (SSR'd `initialGames` + server summary + division table in `app/nhl/[team]/page.tsx`).
