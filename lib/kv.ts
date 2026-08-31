@@ -11,6 +11,18 @@ export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
   return post;
 }
 
+/** Hydrate posts by id in mget batches — one round trip per 50 posts instead
+ * of one sequential get per post (each get is an HTTP call on Vercel KV). */
+export async function getPostsByIds(postIds: string[]): Promise<(BlogPost | null)[]> {
+  const out: (BlogPost | null)[] = [];
+  for (let i = 0; i < postIds.length; i += 50) {
+    const chunk = postIds.slice(i, i + 50);
+    const posts = await kv.mget<(BlogPost | null)[]>(...chunk.map((id) => `blog:post:${id}`));
+    out.push(...posts);
+  }
+  return out;
+}
+
 export async function getPublishedPosts(team?: string, type?: string): Promise<BlogPost[]> {
   // blog:posts is a sorted set (zadd), so use zrange not smembers
   // Fetch all IDs in reverse score order (newest first)
@@ -23,8 +35,7 @@ export async function getPublishedPosts(team?: string, type?: string): Promise<B
 
   const posts: BlogPost[] = [];
 
-  for (const id of postIds) {
-    const post = await kv.get<BlogPost>(`blog:post:${id}`);
+  for (const post of await getPostsByIds(postIds)) {
     if (!post || post.status !== 'published') continue;
     if (team && !key.includes(team) && post.team !== team) continue;
     if (type && !key.includes(type) && post.type !== type) continue;

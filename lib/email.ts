@@ -1928,14 +1928,12 @@ export async function getVerifiedSubscribersForTeam(team: string): Promise<Newsl
   const subscriberIds = await kv.smembers<string[]>(`email:subscribers:team:${team}`);
   if (!subscriberIds || subscriberIds.length === 0) return [];
 
-  const subscribers: NewsletterSubscriber[] = [];
-  for (const id of subscriberIds) {
-    const sub = await kv.get<NewsletterSubscriber>(`email:subscriber:${id}`);
-    if (sub && sub.verified && !sub.unsubscribedAt) {
-      subscribers.push(sub);
-    }
-  }
-  return subscribers;
+  const results = await kv.mget<(NewsletterSubscriber | null)[]>(
+    ...subscriberIds.map((id) => `email:subscriber:${id}`)
+  );
+  return results.filter(
+    (sub): sub is NewsletterSubscriber => !!sub && sub.verified && !sub.unsubscribedAt
+  );
 }
 
 export async function getAllSubscribers(): Promise<NewsletterSubscriber[]> {

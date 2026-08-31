@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { sendVerificationEmail } from '@/lib/email';
+import { findSubscriberByEmail } from '@/lib/newsletter';
 import { rateLimit, clientIp } from '@/lib/perfectseason/server/ratelimit';
 import { NHL_TEAMS, MLB_TEAMS, NFL_TEAMS } from '@/lib/teamConfig';
 import type { NewsletterSubscriber, EmailVerificationToken } from '@/lib/types';
@@ -32,37 +33,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
     }
 
-    // Check if already subscribed (by email lookup)
-    const existingIds = await kv.smembers<string[]>('email:subscribers');
-    if (existingIds) {
-      for (const id of existingIds) {
-        const existing = await kv.get<NewsletterSubscriber>(`email:subscriber:${id}`);
-        if (existing && existing.email === email.toLowerCase()) {
-          if (existing.unsubscribedAt) {
-            // Re-subscribe: clear unsubscribed, update teams, re-verify
-            const updated: NewsletterSubscriber = {
-              ...existing,
-              teams,
-              unsubscribedAt: undefined,
-              verified: false,
-              source: source || existing.source,
-            };
-            await kv.set(`email:subscriber:${existing.id}`, updated);
-            // Update team indexes
-            for (const team of teams) {
-              await kv.sadd(`email:subscribers:team:${team}`, existing.id);
-            }
-            await sendVerificationToken(existing.id, email.toLowerCase());
-            return NextResponse.json({ success: true, message: 'Check your email to re-confirm your subscription' });
-          }
-          if (!existing.verified) {
-            // Resend verification
-            await sendVerificationToken(existing.id, email.toLowerCase());
-            return NextResponse.json({ success: true, message: 'Verification email resent. Check your inbox.' });
-          }
-          return NextResponse.json({ success: true, message: 'You are already subscribed!' });
+    // Check if already subscribed (batched email lookup)
+    const existing = await findSubscriberByEmail(email);
+    if (existing) {
+      if (existing.unsubscribedAt) {
+        // Re-subscribe: clear unsubscribed, update teams, re-verify
+        const updated: NewsletterSubscriber = {
+          ...existing,
+          teams,
+          unsubscribedAt: undefined,
+          verified: false,
+          source: source || existing.source,
+        };
+        await kv.set(`email:subscriber:${existing.id}`, updated);
+        // Update team indexes
+        for (const team of teams) {
+          await kv.sadd(`email:subscribers:team:${team}`, existing.id);
         }
+        await sendVerificationToken(existing.id, email.toLowerCase());
+        return NextResponse.json({ success: true, message: 'Check your email to re-confirm your subscription' });
       }
+      if (!existing.verified) {
+        // Resend verification
+        await sendVerificationToken(existing.id, email.toLowerCase());
+        return NextResponse.json({ success: true, message: 'Verification email resent. Check your inbox.' });
+      }
+      return NextResponse.json({ success: true, message: 'You are already subscribed!' });
     }
 
     // Create new subscriber

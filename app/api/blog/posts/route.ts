@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { jwtVerify } from 'jose';
 import { truncateAtWordBoundary } from '@/lib/fetchWithRetry';
+import { getPostsByIds } from '@/lib/kv';
 import { TEAMS } from '@/lib/teamConfig';
 import { tweetPublishedPost, type TweetPublishResult } from '@/lib/utils/postToX';
 
@@ -84,11 +85,10 @@ export async function GET(request: NextRequest) {
 
     // Lightweight lookup mode for game recap → slug mapping
     if (lookup === 'game-recap' && team) {
-      const postIds = await kv.zrange(`blog:posts:${team}`, 0, -1) || [];
+      const postIds = (await kv.zrange(`blog:posts:${team}`, 0, -1) || []) as string[];
       const recaps: Record<string, string> = {};
 
-      for (const id of postIds) {
-        const post: any = await kv.get(`blog:post:${id}`);
+      for (const post of (await getPostsByIds(postIds)) as any[]) {
         if (post && post.type === 'game-recap' && post.status === 'published' && post.gameId) {
           recaps[post.gameId] = post.slug;
         }
@@ -108,10 +108,9 @@ export async function GET(request: NextRequest) {
     // Check admin status once
     const isAdmin = await verifyAdmin(request);
 
-    // Fetch post data
+    // Fetch post data (batched mget instead of one get per post)
     const posts: any[] = [];
-    for (const id of postIds) {
-      const post: any = await kv.get(`blog:post:${id}`);
+    for (const post of (await getPostsByIds(postIds as string[])) as any[]) {
       if (post) {
         // Apply filters
         if (status && post.status !== status) continue;
@@ -120,18 +119,22 @@ export async function GET(request: NextRequest) {
         // For public requests, only show published posts
         if (!isAdmin && post.status !== 'published') continue;
 
-        // Include view count for admin
-        if (isAdmin) {
-          const views = await kv.get(`blog:views:${id}`) || 0;
-          post.views = views;
-        }
-
         posts.push(post);
       }
     }
 
     // Apply pagination
     const paginatedPosts = posts.slice(offset, offset + limit);
+
+    // Include view counts for admin — only for the page being returned
+    if (isAdmin && paginatedPosts.length > 0) {
+      const views = await kv.mget<(number | null)[]>(
+        ...paginatedPosts.map((p) => `blog:views:${p.id}`)
+      );
+      paginatedPosts.forEach((p, i) => {
+        p.views = views[i] || 0;
+      });
+    }
 
     return NextResponse.json({
       posts: paginatedPosts,

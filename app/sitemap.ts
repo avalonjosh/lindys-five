@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { kv } from '@vercel/kv';
+import { getPostsByIds } from '@/lib/kv';
 import { NFL_TEAMS } from '@/lib/teamConfig/nflTeams';
 
 const NHL_TEAM_ROUTES = [
@@ -145,11 +146,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Dynamic blog posts from KV
   try {
-    const postIds = (await kv.zrange('blog:posts', 0, -1, { rev: true })) || [];
+    const postIds = ((await kv.zrange('blog:posts', 0, -1, { rev: true })) || []) as string[];
 
-    for (const id of postIds) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const post: any = await kv.get(`blog:post:${id}`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const post of (await getPostsByIds(postIds)) as any[]) {
       // Auto game/set recaps are noindexed on the post page; keep them out here too.
       if (post && post.status === 'published' && post.type !== 'game-recap' && post.type !== 'set-recap') {
         const lastModified = post.updatedAt

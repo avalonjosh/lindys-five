@@ -6,7 +6,7 @@
  */
 
 import { kv } from '@vercel/kv';
-import { sendVerificationEmail, sendWelcomeEmail } from '@/lib/email';
+import { sendVerificationEmail, sendWelcomeEmail, getAllSubscribers } from '@/lib/email';
 import type { NewsletterSubscriber, EmailVerificationToken } from '@/lib/types';
 
 /** Single opt-in acknowledgment. Best-effort — never block signup on a send. */
@@ -37,16 +37,12 @@ async function sendVerificationToken(subscriberId: string, email: string): Promi
  * confirmation email (use when the email was just actively given via a checkbox
  * or a subscribe button). Otherwise double opt-in (send a verification link).
  */
-/** The subscriber record for an email, or null. Linear scan — the list is small
- * and there is no email→id index; same approach as ensureSubscriber below. */
+/** The subscriber record for an email, or null. Scans the full list (there is
+ * no email→id index) but hydrates it in one batched mget. */
 export async function findSubscriberByEmail(email: string): Promise<NewsletterSubscriber | null> {
   const lower = email.toLowerCase();
-  const ids = await kv.smembers<string[]>('email:subscribers');
-  for (const id of ids ?? []) {
-    const sub = await kv.get<NewsletterSubscriber>(`email:subscriber:${id}`);
-    if (sub?.email === lower) return sub;
-  }
-  return null;
+  const subs = await getAllSubscribers();
+  return subs.find((sub) => sub.email === lower) ?? null;
 }
 
 /** Soft-delete a subscription: mark unsubscribed and drop the team indexes.
@@ -70,10 +66,8 @@ export async function ensureSubscriber(
   const single = opts.single === true;
   const now = new Date().toISOString();
 
-  const existingIds = await kv.smembers<string[]>('email:subscribers');
-  for (const id of existingIds ?? []) {
-    const existing = await kv.get<NewsletterSubscriber>(`email:subscriber:${id}`);
-    if (!existing || existing.email !== lower) continue;
+  const existing = await findSubscriberByEmail(lower);
+  if (existing) {
     if (existing.verified && !existing.unsubscribedAt) return; // already on the list
     const updated: NewsletterSubscriber = {
       ...existing,
