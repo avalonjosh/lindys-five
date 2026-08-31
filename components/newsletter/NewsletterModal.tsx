@@ -267,6 +267,15 @@ export default function NewsletterModal({
     }
   }
 
+  // Escape closes the modal (same pattern as the other modals)
+  useEffect(() => {
+    if (!visible) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && dismiss();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
   if (!visible) return null;
 
   return (
@@ -278,6 +287,9 @@ export default function NewsletterModal({
       }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Newsletter signup"
         className="relative w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
         style={{ backgroundColor: '#ffffff' }}
       >
@@ -290,6 +302,7 @@ export default function NewsletterModal({
         >
           <button
             onClick={dismiss}
+            aria-label="Close"
             className="absolute top-3 right-3 text-white/60 hover:text-white transition-colors"
           >
             <X className="w-5 h-5" />
