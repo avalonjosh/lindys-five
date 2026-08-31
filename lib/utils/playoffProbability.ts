@@ -271,11 +271,16 @@ export function computeSeriesWinProbability(
   }
 
   const prob = dp(winsNeeded, lossesAllowed, 0) * 100;
-  // Cap the final series-win output to [15%, 85%].
-  // Real playoff hockey has inherent variance — even extreme favorites lose series regularly, and
-  // heavy underdogs win them. This bound acknowledges that no statistical model should be more
-  // confident than ~85% about a best-of-7 outcome.
-  return Math.max(15, Math.min(85, Math.round(prob)));
+  // Humility cap [15%, 85%] applies only before the series starts — playoff
+  // hockey has inherent variance, so no pre-series model should be more
+  // confident than ~85% about a best-of-7. Once games are played the model
+  // must be allowed past it: a 3-0 lead is a real ~95-98%, and capping it at
+  // 85% distorts the displayed series odds and everything chained off them
+  // (Cup odds). Mid-series output keeps a softer [2%, 98%] bound.
+  if (gamesPlayed === 0) {
+    return Math.max(15, Math.min(85, Math.round(prob)));
+  }
+  return Math.max(2, Math.min(98, Math.round(prob)));
 }
 
 /**

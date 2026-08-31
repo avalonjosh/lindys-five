@@ -107,7 +107,7 @@ function probTeamBeatsRival(team: MLBStandingsTeam, rival: MLBStandingsTeam): nu
 function findDivisionRival(team: MLBStandingsTeam, standings: MLBStandingsTeam[]): MLBStandingsTeam | null {
   const divTeams = standings
     .filter(t => t.division === team.division)
-    .sort((a, b) => b.wins - a.wins);
+    .sort((a, b) => b.winPct - a.winPct || b.wins - a.wins);
   if (divTeams.length < 2) return null;
   const isLeader = divTeams[0].teamAbbrev === team.teamAbbrev;
   return isLeader ? divTeams[1] : divTeams[0];
@@ -140,13 +140,13 @@ function findWildCardRival(team: MLBStandingsTeam, standings: MLBStandingsTeam[]
   const divisions = Array.from(new Set(leagueTeams.map(t => t.division)));
   const divWinners = new Set(
     divisions
-      .map(d => leagueTeams.filter(t => t.division === d).sort((a, b) => b.wins - a.wins)[0])
+      .map(d => leagueTeams.filter(t => t.division === d).sort((a, b) => b.winPct - a.winPct || b.wins - a.wins)[0])
       .filter((t): t is MLBStandingsTeam => !!t)
       .map(t => t.teamAbbrev)
   );
   const wcContenders = leagueTeams
     .filter(t => !divWinners.has(t.teamAbbrev))
-    .sort((a, b) => b.wins - a.wins);
+    .sort((a, b) => b.winPct - a.winPct || b.wins - a.wins);
   const idx = wcContenders.findIndex(t => t.teamAbbrev === team.teamAbbrev);
   if (idx < 0) return null;
   return idx <= 2 ? (wcContenders[3] || null) : (wcContenders[2] || null);
