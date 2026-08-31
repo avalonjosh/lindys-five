@@ -3,6 +3,50 @@ import SiteFooter from '@/components/SiteFooter';
 import ScoresPageClient from '@/components/scores/ScoresPageClient';
 import { getCurrentNHLSeason, formatSeasonLabel } from '@/lib/utils/season';
 import { getPlayoffsOutcome, getUpcomingSeasonInfo } from '@/lib/services/nhlOffseason';
+import { fetchJsonWithRetry } from '@/lib/fetchWithRetry';
+
+interface ServerScoreGame {
+  id: number;
+  gameState: string;
+  awayAbbrev: string;
+  homeAbbrev: string;
+  awayScore?: number;
+  homeScore?: number;
+  startTimeET?: string;
+}
+
+// Today's slate fetched server-side so crawlers see real games and box score
+// links — the interactive scoreboard is client-rendered through robots-blocked
+// /api/v1 routes, which left this page indexable on its title alone.
+async function fetchTodayGamesServer(): Promise<ServerScoreGame[]> {
+  try {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    const data = await fetchJsonWithRetry(`https://api-web.nhle.com/v1/score/${today}`);
+    return (data.games || []).map((g: any) => ({
+      id: g.id,
+      gameState: g.gameState,
+      awayAbbrev: g.awayTeam?.abbrev || '',
+      homeAbbrev: g.homeTeam?.abbrev || '',
+      awayScore: g.awayTeam?.score,
+      homeScore: g.homeTeam?.score,
+      startTimeET: g.startTimeUTC
+        ? new Date(g.startTimeUTC).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })
+        : undefined,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function gameLine(g: ServerScoreGame): string {
+  if (g.gameState === 'FINAL' || g.gameState === 'OFF') {
+    return `${g.awayAbbrev} ${g.awayScore ?? 0}, ${g.homeAbbrev} ${g.homeScore ?? 0} (Final)`;
+  }
+  if (g.gameState === 'LIVE' || g.gameState === 'CRIT') {
+    return `${g.awayAbbrev} ${g.awayScore ?? 0}, ${g.homeAbbrev} ${g.homeScore ?? 0} (Live)`;
+  }
+  return `${g.awayAbbrev} at ${g.homeAbbrev}${g.startTimeET ? `, ${g.startTimeET} ET` : ''}`;
+}
 
 export const revalidate = 300;
 
@@ -80,12 +124,26 @@ export default async function ScoresPageWrapper() {
     ],
   };
 
+  const todayGames = seasonComplete && !preseason ? [] : await fetchTodayGamesServer();
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
+      {todayGames.length > 0 && (
+        <section className="sr-only">
+          <h2>Today&apos;s NHL games</h2>
+          <ul>
+            {todayGames.map((g) => (
+              <li key={g.id}>
+                <a href={`/nhl/scores/${g.id}`}>{gameLine(g)}</a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <ScoresPageClient
         seasonComplete={seasonComplete}
         championName={championName}
