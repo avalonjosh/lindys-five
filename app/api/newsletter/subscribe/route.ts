@@ -1,18 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { sendVerificationEmail } from '@/lib/email';
+import { rateLimit, clientIp } from '@/lib/perfectseason/server/ratelimit';
+import { NHL_TEAMS, MLB_TEAMS, NFL_TEAMS } from '@/lib/teamConfig';
 import type { NewsletterSubscriber, EmailVerificationToken } from '@/lib/types';
+
+const VALID_TEAM_SLUGS = new Set([
+  ...Object.keys(NHL_TEAMS),
+  ...Object.keys(MLB_TEAMS),
+  ...Object.keys(NFL_TEAMS),
+]);
 
 export async function POST(request: NextRequest) {
   try {
     const { email, teams, source } = await request.json();
 
-    if (!email || !email.includes('@')) {
+    if (!email || typeof email !== 'string' || !email.includes('@') || email.length > 200) {
       return NextResponse.json({ error: 'Valid email is required' }, { status: 400 });
     }
 
-    if (!teams || !Array.isArray(teams) || teams.length === 0) {
+    if (!teams || !Array.isArray(teams) || teams.length === 0 || teams.length > 10) {
       return NextResponse.json({ error: 'At least one team is required' }, { status: 400 });
+    }
+
+    if (!teams.every((t) => typeof t === 'string' && VALID_TEAM_SLUGS.has(t))) {
+      return NextResponse.json({ error: 'Unknown team' }, { status: 400 });
+    }
+
+    // Same key as quick-subscribe so the two endpoints share one budget
+    if (!(await rateLimit(`ps:rl:subscribe:${clientIp(request)}`, 10, 3600))) {
+      return NextResponse.json({ error: 'Too many requests. Try again later.' }, { status: 429 });
     }
 
     // Check if already subscribed (by email lookup)
@@ -80,6 +97,6 @@ async function sendVerificationToken(subscriberId: string, email: string) {
     subscriberId,
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
   };
-  await kv.set(`email:verification:${token}`, verification);
+  await kv.set(`email:verification:${token}`, verification, { ex: 24 * 60 * 60 });
   await sendVerificationEmail(email, token);
 }

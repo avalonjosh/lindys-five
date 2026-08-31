@@ -24,7 +24,7 @@ async function sendVerificationToken(subscriberId: string, email: string): Promi
     subscriberId,
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
   };
-  await kv.set(`email:verification:${token}`, verification);
+  await kv.set(`email:verification:${token}`, verification, { ex: 24 * 60 * 60 });
   await sendVerificationEmail(email, token);
 }
 
