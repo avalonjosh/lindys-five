@@ -1,3 +1,4 @@
+import { getCurrentNHLSeason } from '@/lib/utils/season';
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
@@ -221,7 +222,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const schedule = await fetchJsonWithRetry(`${NHL_API_BASE}/club-schedule-season/BUF/20252026`);
+    const schedule = await fetchJsonWithRetry(`${NHL_API_BASE}/club-schedule-season/BUF/${getCurrentNHLSeason()}`);
     const now = new Date();
     const cutoff = new Date(now.getTime() - 48 * 60 * 60 * 1000);
 

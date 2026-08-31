@@ -106,7 +106,7 @@ async function fetchBracket(): Promise<PlayoffBracketResponse | null> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(`${NHL_API}/playoff-bracket/20252026`, {
+    const res = await fetch(`${NHL_API}/playoff-bracket/${getCurrentNHLSeason()}`, {
       next: { revalidate: 60 },
       signal: controller.signal,
     });

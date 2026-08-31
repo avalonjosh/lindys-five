@@ -1,3 +1,4 @@
+import { getCurrentNHLSeason } from '@/lib/utils/season';
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { jwtVerify } from 'jose';
@@ -197,7 +198,7 @@ async function fetchSetData(setNumber: number) {
   const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
   try {
-    const scheduleRes = await fetch(`${NHL_API_BASE}/club-schedule-season/BUF/20252026`);
+    const scheduleRes = await fetch(`${NHL_API_BASE}/club-schedule-season/BUF/${getCurrentNHLSeason()}`);
     const schedule = await scheduleRes.json();
 
     const completedGames = (schedule.games || [])

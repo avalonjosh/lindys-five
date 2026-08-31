@@ -1,3 +1,4 @@
+import { getCurrentNHLSeason } from '@/lib/utils/season';
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
@@ -67,7 +68,7 @@ async function fetchSabresContext() {
     const [standingsData, roster, schedule] = await Promise.all([
       fetchJsonWithRetry(`${NHL_API_BASE}/standings/${today}`),
       fetchJsonWithRetry(`${NHL_API_BASE}/roster/BUF/current`),
-      fetchJsonWithRetry(`${NHL_API_BASE}/club-schedule-season/BUF/20252026`)
+      fetchJsonWithRetry(`${NHL_API_BASE}/club-schedule-season/BUF/${getCurrentNHLSeason()}`)
     ]);
 
     const sabres = standingsData.standings?.find((t: any) => t.teamAbbrev?.default === 'BUF');

@@ -1,3 +1,4 @@
+import { getCurrentNHLSeason } from '@/lib/utils/season';
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
@@ -261,7 +262,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const scheduleRes = await fetch(`${NHL_API_BASE}/club-schedule-season/BUF/20252026`);
+    const scheduleRes = await fetch(`${NHL_API_BASE}/club-schedule-season/BUF/${getCurrentNHLSeason()}`);
     const schedule = await scheduleRes.json();
 
     const weekGames = (schedule.games || [])

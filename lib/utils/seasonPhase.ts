@@ -1,5 +1,5 @@
 import type { SeasonPhase } from '@/lib/types/playoffs';
-import { getCurrentSeasonGameCount } from '@/lib/utils/season';
+import { getCurrentSeasonGameCount, getCurrentNHLSeason } from '@/lib/utils/season';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
@@ -7,7 +7,7 @@ const NHL_API_BASE = 'https://api-web.nhle.com/v1';
  * Detect current season phase by checking the bracket API and standings.
  * Called server-side with ISR caching.
  */
-export async function detectSeasonPhase(season: string = '20252026'): Promise<{
+export async function detectSeasonPhase(season: string = getCurrentNHLSeason()): Promise<{
   phase: SeasonPhase;
   playoffsStartDate?: string;
 }> {

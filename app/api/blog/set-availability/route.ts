@@ -1,3 +1,4 @@
+import { getCurrentNHLSeason } from '@/lib/utils/season';
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { jwtVerify } from 'jose';
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // Fetch season schedule
-    const schedule = await fetchJsonWithRetry(`${NHL_API_BASE}/club-schedule-season/BUF/20252026`);
+    const schedule = await fetchJsonWithRetry(`${NHL_API_BASE}/club-schedule-season/BUF/${getCurrentNHLSeason()}`);
 
     // Get all completed regular season games
     const completedGames = (schedule.games || [])

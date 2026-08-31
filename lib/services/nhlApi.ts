@@ -1,5 +1,6 @@
 import type { NHLGame, GameResult, DetailedGameStats } from '../types';
 import type { PlayoffBracketResponse } from '../types/playoffs';
+import { getCurrentNHLSeason, previousNHLSeason, getRegularSeasonGameCount } from '../utils/season';
 
 const API_BASE = '/api/v1';
 
@@ -174,7 +175,7 @@ export interface TeamStandings {
   divisionSequence?: number;
 }
 
-export async function fetchSabresSchedule(season: string = '20252026', teamAbbrev: string = 'BUF', teamId: number = 7): Promise<GameResult[]> {
+export async function fetchSabresSchedule(season: string = getCurrentNHLSeason(), teamAbbrev: string = 'BUF', teamId: number = 7): Promise<GameResult[]> {
   // Check cache first
   const cacheKey = `${teamAbbrev}-${season}`;
   const cached = scheduleCache.get(cacheKey);
@@ -333,11 +334,14 @@ export async function fetchSabresSchedule(season: string = '20252026', teamAbbre
 
 export async function fetchLastSeasonComparison(currentGamesPlayed: number, teamAbbrev: string = 'BUF', teamId: number = 7): Promise<{ pointsLastYear: number; recordLastYear: string } | null> {
   try {
-    // Fetch 2024-2025 season data
-    const lastSeasonGames = await fetchSabresSchedule('20242025', teamAbbrev, teamId);
+    const lastSeason = previousNHLSeason(getCurrentNHLSeason());
+    const lastSeasonGames = await fetchSabresSchedule(lastSeason, teamAbbrev, teamId);
 
-    // Get the first N games from last season (matching current games played)
-    const gamesAtSamePoint = lastSeasonGames.slice(0, currentGamesPlayed);
+    // Get the first N games from last season (matching current games played),
+    // capped at last season's regular-season length — the schedule array also
+    // contains playoff games, which must not bleed into the comparison.
+    const cap = Math.min(currentGamesPlayed, getRegularSeasonGameCount(lastSeason));
+    const gamesAtSamePoint = lastSeasonGames.slice(0, cap);
 
     // Calculate total points at that point last season
     const pointsLastYear = gamesAtSamePoint.reduce((sum, game) => sum + game.points, 0);
@@ -499,7 +503,7 @@ export async function fetchDetailedGameStats(gameId: number, isHome: boolean, te
 
 export async function fetchTeamStandings(teamAbbrev: string, teamId: number): Promise<TeamStandings | null> {
   try {
-    const schedule = await fetchSabresSchedule('20252026', teamAbbrev, teamId);
+    const schedule = await fetchSabresSchedule(getCurrentNHLSeason(), teamAbbrev, teamId);
 
     // Calculate current points and record from played games
     const playedGames = schedule.filter(game => game.outcome !== 'PENDING');
@@ -722,7 +726,7 @@ export async function fetchScoresByDate(date: string): Promise<NHLGame[]> {
 }
 
 // Fetch the NHL playoff bracket
-export async function fetchPlayoffBracket(season: string = '20252026'): Promise<PlayoffBracketResponse | null> {
+export async function fetchPlayoffBracket(season: string = getCurrentNHLSeason()): Promise<PlayoffBracketResponse | null> {
   try {
     const response = await fetchWithRetry(`${API_BASE}/playoff-bracket/${season}`);
     const data = await response.json();

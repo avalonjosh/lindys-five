@@ -1,3 +1,4 @@
+import { getCurrentNHLSeason } from '@/lib/utils/season';
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
@@ -172,7 +173,7 @@ export async function GET(request: NextRequest) {
   const forceRegenerate = request.nextUrl.searchParams.get('force') === 'true';
 
   try {
-    const schedule = await fetchJsonWithRetry(`${NHL_API_BASE}/club-schedule-season/BUF/20252026`);
+    const schedule = await fetchJsonWithRetry(`${NHL_API_BASE}/club-schedule-season/BUF/${getCurrentNHLSeason()}`);
     const completedGames = (schedule.games || []).filter((g: any) => g.gameType === 2).filter((g: any) => g.gameState === 'FINAL' || g.gameState === 'OFF');
     const totalGames = completedGames.length;
     const completedSetCount = Math.floor(totalGames / 5);

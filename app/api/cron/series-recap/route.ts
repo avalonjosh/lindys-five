@@ -1,3 +1,4 @@
+import { getCurrentNHLSeason } from '@/lib/utils/season';
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
@@ -80,7 +81,7 @@ export async function GET(request: NextRequest) {
   const force = request.nextUrl.searchParams.get('force') === 'true';
 
   try {
-    const bracketRes = await fetchJsonWithRetry(`${NHL_API_BASE}/playoff-bracket/20252026`);
+    const bracketRes = await fetchJsonWithRetry(`${NHL_API_BASE}/playoff-bracket/${getCurrentNHLSeason()}`);
     if (!bracketRes?.rounds || bracketRes.rounds.length === 0) {
       return NextResponse.json({ success: true, message: 'No playoff bracket data available', seriesProcessed: 0 });
     }

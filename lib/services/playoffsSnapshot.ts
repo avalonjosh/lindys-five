@@ -1,10 +1,10 @@
 import { TEAMS } from '@/lib/teamConfig';
+import { getCurrentNHLSeason } from '@/lib/utils/season';
 import { buildCupOdds } from '@/lib/utils/cupOdds';
 import type { StandingsTeam } from '@/lib/types/boxscore';
 import type { PlayoffBracketResponse, StanleyCupOddsEntry } from '@/lib/types/playoffs';
 
 const NHL_API = 'https://api-web.nhle.com/v1';
-const DEFAULT_SEASON = '20252026';
 
 interface CarouselSide {
   id: number;
@@ -109,7 +109,7 @@ export interface PlayoffsSnapshot {
 
 // Server-side fetch + assembly of the playoff bracket, standings, and Cup odds.
 // Shared by /api/playoffs/bracket and the newsletter email pipeline so both see the same data.
-export async function fetchPlayoffsSnapshot(season: string = DEFAULT_SEASON): Promise<PlayoffsSnapshot> {
+export async function fetchPlayoffsSnapshot(season: string = getCurrentNHLSeason()): Promise<PlayoffsSnapshot> {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 
   const [carouselRes, standingsRes] = await Promise.all([
