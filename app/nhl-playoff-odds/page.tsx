@@ -274,8 +274,32 @@ export default async function NHLPlayoffOddsPage() {
   // league-wide way-too-early odds instead of last season's final standings.
   const context = await resolveSeasonContext('BUF');
   if (context.isPreseason) {
+    const preseasonEndYear = formatSeasonEndYear(context.season);
+    const faqLd = {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: [
+        {
+          '@type': 'Question',
+          name: `Which NHL teams will make the playoffs in ${preseasonEndYear}?`,
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: `Sixteen NHL teams qualify for the ${preseasonEndYear} Stanley Cup Playoffs — eight per conference. The top three teams in each division and two wild cards per conference advance. Way-too-early playoff odds for all 32 teams are shown on this page and switch to live odds once the season starts.`,
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'How are NHL playoff odds calculated?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: `Each team's playoff probability projects their points pace over the full season, then compares that projection to the projected third-place divisional and second wild card cut lines. A logistic curve converts the gap into a probability; before opening night the projection is seeded from last season's results.`,
+          },
+        },
+      ],
+    };
     return (
       <>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
         <NHLPreseasonOddsView
           season={context.season}
           seasonLabel={context.seasonLabel}
