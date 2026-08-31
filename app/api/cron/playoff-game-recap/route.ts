@@ -1,3 +1,6 @@
+// Heavy route (AI generation and/or batch email sends) — allow up to 5 minutes
+export const maxDuration = 300;
+
 import { getCurrentNHLSeason } from '@/lib/utils/season';
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';

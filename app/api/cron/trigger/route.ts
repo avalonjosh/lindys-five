@@ -1,3 +1,6 @@
+// Waits on the forwarded cron route, so needs the same ceiling
+export const maxDuration = 300;
+
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 
