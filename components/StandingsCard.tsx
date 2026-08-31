@@ -179,23 +179,28 @@ export default function StandingsCard({
     }
   }, []);
 
+  // Whether any of today's games are live. Derived outside the poll effect so
+  // the effect re-runs when a game flips FUT->LIVE (the game count doesn't
+  // change on that transition, so depending on todayGames.length missed it).
+  const hasLiveToday = todayGames.some(
+    g => g.gameState === 'LIVE' || g.gameState === 'CRIT'
+  );
+
   // Fetch games when standings is expanded (always needed for desktop, toggle-controlled for mobile)
   useEffect(() => {
     if (expanded) {
       fetchTodayGames();
 
-      // Check if any games are live
-      const hasLiveGames = todayGames.some(
-        g => g.gameState === 'LIVE' || g.gameState === 'CRIT'
-      );
-
       // Poll more frequently if there are live games
-      const pollInterval = hasLiveGames ? 15000 : 60000;
-      const interval = setInterval(fetchTodayGames, pollInterval);
+      const pollInterval = hasLiveToday ? 15000 : 60000;
+      const interval = setInterval(() => {
+        if (document.visibilityState !== 'visible') return;
+        fetchTodayGames();
+      }, pollInterval);
 
       return () => clearInterval(interval);
     }
-  }, [expanded, fetchTodayGames, todayGames.length]);
+  }, [expanded, fetchTodayGames, hasLiveToday]);
 
   // Create a lookup map for today's games by team abbreviation
   const gamesByTeam = new Map<string, NHLGame>();

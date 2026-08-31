@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import type { NHLGame } from '@/lib/types';
@@ -85,6 +85,7 @@ export default function ScoresPageClient({
   });
   const [games, setGames] = useState<NHLGame[]>([]);
   const [loading, setLoading] = useState(true);
+  const pollCountRef = useRef(0);
   const [error, setError] = useState<string | null>(null);
   const [favoriteTeamAbbrev, setFavoriteTeamAbbrev] = useState<string | null>(null);
   const [standings, setStandings] = useState<StandingsTeam[]>([]);
@@ -181,12 +182,17 @@ export default function ScoresPageClient({
     // Live games: lightweight poll every 15s, full refresh every 5 min
     // Pending games only: check every 60s for game starts
     const pollInterval = hasLiveGames ? 15000 : 60000;
-    let pollCount = 0;
 
     const interval = setInterval(() => {
-      pollCount++;
+      // Skip while the tab is hidden — nobody's watching and the NHL API
+      // budget is shared with live viewers.
+      if (document.visibilityState !== 'visible') return;
+      // The count lives in a ref: this effect re-runs on every poll (pollGames
+      // is recreated when games change), so a local counter would reset to 0
+      // and the full refresh would never fire.
+      pollCountRef.current++;
       // Full refresh every 20 polls (5 min for live, 20 min for pending)
-      if (pollCount % 20 === 0) {
+      if (pollCountRef.current % 20 === 0) {
         fetchGames();
       } else {
         pollGames();

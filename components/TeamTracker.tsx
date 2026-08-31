@@ -399,6 +399,7 @@ export default function TeamTracker({
   const [yearOverYearLoading, setYearOverYearLoading] = useState(false);
   const [pollingInterval, setPollingInterval] = useState(60000); // Start with 60 seconds
   const pollingIntervalRef = useRef(60000); // Ref to avoid re-renders
+  const hasDataRef = useRef(hasInitial); // Whether a schedule has ever loaded — read inside loadData, where `chunks` is a stale closure
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // Bounded initial-load retry
   const [recapSlugs, setRecapSlugs] = useState<Map<number, string>>(new Map()); // gameId -> slug mapping
 
@@ -678,6 +679,7 @@ export default function TeamTracker({
       if (schedule && schedule.length > 0) {
         const calculatedChunks = calculateChunks(schedule, totalGames);
         setChunks(calculatedChunks);
+        hasDataRef.current = true;
 
         const seasonStats = calculateSeasonStats(calculatedChunks, totalGames);
         setStats(seasonStats);
@@ -697,7 +699,7 @@ export default function TeamTracker({
       } else {
         console.warn('Received empty schedule data, keeping existing data');
         // With no existing data this is an initial-load miss — retry before erroring.
-        if (chunks.length === 0 && !scheduleRetry()) {
+        if (!hasDataRef.current && !scheduleRetry()) {
           setError(true);
         }
       }
@@ -711,7 +713,7 @@ export default function TeamTracker({
       // No existing data means the initial load failed — auto-retry (transient
       // rate-limit/timeout) instead of leaving a blank schedule with no recovery.
       // Only surface the error state once retries are exhausted, never blank.
-      if (chunks.length === 0 && !scheduleRetry()) {
+      if (!hasDataRef.current && !scheduleRetry()) {
         setError(true);
       }
     } finally {
@@ -760,11 +762,27 @@ export default function TeamTracker({
     // Still clear any pending initial-load retry so it can't fire for a stale team.
     if (seasonComplete || isPreseason) return clearRetry;
 
-    // Auto-refresh with dynamic interval using ref
-    const interval = setInterval(loadData, pollingIntervalRef.current);
+    // Auto-refresh via a self-rescheduling timeout that reads the interval ref
+    // each cycle — a setInterval would capture the initial 60s forever, so live
+    // games never actually got the 15s cadence. The cancelled flag stops the
+    // chain even if a fetch is in flight when the component unmounts.
+    let cancelled = false;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+    const poll = () => {
+      pollTimer = setTimeout(async () => {
+        if (cancelled) return;
+        // Skip the fetch while the tab is hidden; keep the chain alive.
+        if (document.visibilityState === 'visible') {
+          await loadData();
+        }
+        if (!cancelled) poll();
+      }, pollingIntervalRef.current);
+    };
+    poll();
 
     return () => {
-      clearInterval(interval);
+      cancelled = true;
+      if (pollTimer) clearTimeout(pollTimer);
       clearRetry();
     };
   }, [team, seasonComplete, isPreseason, season]); // REMOVED pollingInterval from dependencies

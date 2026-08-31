@@ -70,7 +70,7 @@ export default function ThreeStars({
                   {star.headshot ? (
                     <img
                       src={star.headshot}
-                      alt={star.name.default}
+                      alt={star.name?.default ?? ''}
                       className="w-full h-full object-cover"
                     />
                   ) : (

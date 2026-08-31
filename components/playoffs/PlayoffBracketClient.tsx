@@ -65,10 +65,16 @@ export default function PlayoffBracketClient({
   }, []);
 
   useEffect(() => {
-    if (!hasLive) return;
-    const interval = setInterval(pollBracket, 15000);
+    // Projected brackets are standings-driven; nothing live to poll.
+    if (isProjected) return;
+    // Poll at 60s even with no live games — hasLive only updates via the poll
+    // itself, so a page loaded before puck drop would otherwise stay static.
+    const interval = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      pollBracket();
+    }, hasLive ? 15000 : 60000);
     return () => clearInterval(interval);
-  }, [hasLive, pollBracket]);
+  }, [hasLive, pollBracket, isProjected]);
 
   // Get all available rounds
   const rounds = Array.from(

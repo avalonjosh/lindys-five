@@ -79,6 +79,12 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
   const [boxscore, setBoxscore] = useState<BoxscoreResponse | null>(null);
   const [landing, setLanding] = useState<LandingResponse | null>(null);
   const [standings, setStandings] = useState<StandingsTeam[]>([]);
+  // Mirror for the poll interval, whose closure captures `standings` from when
+  // the effect ran (typically [] if standings resolved after polling started).
+  const standingsRef = useRef<StandingsTeam[]>([]);
+  useEffect(() => {
+    standingsRef.current = standings;
+  }, [standings]);
   const [rightRail, setRightRail] = useState<RightRailResponse | null>(null);
   const [seriesStatus, setSeriesStatus] = useState<{ topSeedAbbrev: string; topSeedWins: number; bottomSeedWins: number } | null>(null);
   const [playoffPreGame, setPlayoffPreGame] = useState<PlayoffPreGameContext | null>(null);
@@ -176,6 +182,7 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
     }
 
     pollIntervalRef.current = setInterval(async () => {
+      if (document.visibilityState !== 'visible') return;
       try {
         const data: BoxScoreData = await fetchBoxScoreData(gameId);
         setBoxscore(data.boxscore);
@@ -190,7 +197,7 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
             data.boxscore.homeTeam.abbrev,
             data.boxscore.awayTeam.abbrev,
             season,
-            standings,
+            standingsRef.current,
             gameId
           ).then(setSeriesHub);
         }

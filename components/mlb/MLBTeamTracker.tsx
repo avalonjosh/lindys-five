@@ -290,14 +290,26 @@ export default function MLBTeamTracker({ team, initialGames, serverSummary, faq 
 
   useEffect(() => {
     loadData();
+    // The cancelled flag stops the chain even when cleanup runs while a
+    // loadData fetch is in flight — clearTimeout alone can't reach the
+    // reschedule queued by that fetch's .then.
+    let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
     const poll = () => {
-      timer = setTimeout(() => {
-        loadData().then(poll);
+      timer = setTimeout(async () => {
+        if (cancelled) return;
+        // Skip the fetch while the tab is hidden; keep the chain alive.
+        if (document.visibilityState === 'visible') {
+          await loadData();
+        }
+        if (!cancelled) poll();
       }, pollingIntervalRef.current);
     };
     poll();
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [team.mlbId]);
 
   // Reset year-over-year state when team changes
