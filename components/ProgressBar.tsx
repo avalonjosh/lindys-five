@@ -895,11 +895,12 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
   // Format as "YY-YY" (e.g., "24-25")
   const lastSeasonLabel = `${String(lastSeasonStartYear).slice(-2)}-${String(lastSeasonEndYear).slice(-2)}`;
 
-  // Share functionality
-  const hostname = window.location.hostname;
-  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-  const baseUrl = isLocalhost ? `http://${hostname}:${window.location.port}` : 'https://www.lindysfive.com';
-  const teamUrl = `${baseUrl}/team/${teamId}`;
+  // Share functionality (window is undefined during SSR — this component renders server-side on team pages)
+  const teamUrl = typeof window !== 'undefined'
+    ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? `${window.location.origin}/nhl/${teamId}`
+      : `https://www.lindysfive.com/nhl/${teamId}`)
+    : `https://www.lindysfive.com/nhl/${teamId}`;
 
   const tweetText = `Track the ${teamName}'s road to the playoffs! 🏒
 ${teamUrl}
