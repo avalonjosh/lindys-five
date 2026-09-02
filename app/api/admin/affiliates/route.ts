@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { verifyAdmin } from '@/lib/adminAuth';
 import { fetchImpactSummary, fetchPartnerizeSummary, type NetworkSummary } from '@/lib/services/affiliateNetworks';
-import { fetchFirstPartyClicks, type FirstPartyClicks } from '@/lib/services/affiliateFirstParty';
+import { fetchFirstPartyClicks, emptyFirstPartyClicks, type FirstPartyClicks } from '@/lib/services/affiliateFirstParty';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const range = (Object.keys(RANGE_DAYS).includes(params.get('range') || '') ? params.get('range') : '30d') as Range;
   const refresh = params.get('refresh') === '1';
-  const cacheKey = `affiliates:summary:${range}`;
+  const cacheKey = `affiliates:summary:v2:${range}`;
 
   if (!refresh) {
     try {
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
   const [fanatics, stubhub, firstParty] = await Promise.all([
     fetchImpactSummary(from, to),
     fetchPartnerizeSummary(from, to),
-    fetchFirstPartyClicks(RANGE_DAYS[range]).catch(() => ({ total: 0, byBucket: [], byLabel: [] })),
+    fetchFirstPartyClicks(RANGE_DAYS[range]).catch(() => emptyFirstPartyClicks()),
   ]);
 
   const payload: AffiliatesPayload = {

@@ -5,6 +5,8 @@
  * Both normalise to the same shape so the admin can show them side by side.
  */
 
+import { normalizeTeamKey, normalizeMatchupKey } from './affiliateTeamKey';
+
 export interface NetworkDaily {
   date: string; // YYYY-MM-DD
   clicks: number;
@@ -167,7 +169,7 @@ export async function fetchImpactSummary(from: Date, to: Date): Promise<NetworkS
     const teams = new Map<string, NetworkBreakdownRow>();
     for (const r of bySub.Records || []) {
       const key = Object.keys(r).find((k) => /subid1/i.test(k));
-      const name = (key && r[key]) || '(untagged)';
+      const name = key && r[key] ? normalizeTeamKey(r[key]) : '(untagged)';
       addRow(teams, name, num(r.Clicks), num(r.Actions), num(r.Earnings ?? r.Action_Cost));
     }
     s.byTeam = sortRows(teams);
@@ -249,14 +251,14 @@ async function pzPaged<T>(type: 'click' | 'conversion', from: Date, to: Date, ke
   return out;
 }
 
-/** pubref "buf-vs-tor" → team "nhl-buf" (venue/home team); "hub-sabres" → team "sabres". */
+/** pubref "buf-vs-tor" (venue/home team) or "hub-sabres" → normalised "nhl-sabres". */
 function pzTeamFromRef(ref: string): string {
   if (!ref) return '(untagged)';
-  const m = ref.match(/^([a-z]{2,3})-vs-/i);
-  if (m) return m[1].toLowerCase();
+  const m = ref.match(/^([a-z]{2,3})-vs-([a-z]{2,3})/i);
+  if (m) return normalizeMatchupKey(m[1], m[2]);
   const h = ref.match(/^hub-(.+)$/i);
-  if (h) return h[1];
-  return ref;
+  if (h) return normalizeTeamKey(h[1]);
+  return normalizeTeamKey(ref);
 }
 const pzPlacementFromRef = (ref: string) => (!ref ? '(untagged)' : /-vs-/.test(ref) ? 'game-link' : /^hub-/.test(ref) ? 'tickets-hub' : 'other');
 

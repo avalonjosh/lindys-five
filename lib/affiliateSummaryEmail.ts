@@ -5,7 +5,7 @@
  */
 import { Resend } from 'resend';
 import { fetchImpactSummary, fetchPartnerizeSummary, type NetworkSummary, type NetworkBreakdownRow, type NetworkSale } from '@/lib/services/affiliateNetworks';
-import { fetchFirstPartyClicks } from '@/lib/services/affiliateFirstParty';
+import { fetchFirstPartyClicks, emptyFirstPartyClicks } from '@/lib/services/affiliateFirstParty';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.lindysfive.com';
 const FROM_EMAIL = "Lindy's Five <noreply@lindysfive.com>";
@@ -39,7 +39,7 @@ async function loadPeriod(daysAgoEnd: number): Promise<Period> {
   const [fanatics, stubhub, fp] = await Promise.all([
     fetchImpactSummary(from, to),
     fetchPartnerizeSummary(from, to),
-    fetchFirstPartyClicks(7, daysAgoEnd).catch(() => ({ total: 0, byBucket: [], byLabel: [] })),
+    fetchFirstPartyClicks(7, daysAgoEnd).catch(() => emptyFirstPartyClicks()),
   ]);
   return { from, to, networks: [fanatics, stubhub], onSiteClicks: fp.total, onSiteByBucket: fp.byBucket };
 }

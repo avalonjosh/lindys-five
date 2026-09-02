@@ -371,8 +371,8 @@ function AffiliatesSnapshot({ data }: { data: AffiliatesPayload | null }) {
         <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-5">
           <div className="grid grid-cols-3 gap-3 lg:col-span-3">
             <MiniStat label="Commission" value={money(totals.commission)} sub={totals.pending > 0 ? `${money(totals.pending)} pending` : 'all approved'} strong />
-            <MiniStat label="Sales" value={String(totals.sales)} sub={totals.clicks > 0 ? `${((totals.sales / totals.clicks) * 100).toFixed(1)}% of clicks` : 'no clicks yet'} />
-            <MiniStat label="Clicks" value={totals.clicks.toLocaleString()} sub={`${onSite.toLocaleString()} on-site`} />
+            <MiniStat label="Sales" value={String(totals.sales)} sub={onSite > 0 ? `${((totals.sales / onSite) * 100).toFixed(1)}% of on-site clicks` : 'no on-site clicks yet'} />
+            <MiniStat label="On-site clicks" value={onSite.toLocaleString()} sub={`${totals.clicks.toLocaleString()} network incl. crawlers`} />
           </div>
           <div className="space-y-2 lg:col-span-2">
             {data.networks.map((n) => (

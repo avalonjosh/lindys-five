@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { RefreshCw, ShoppingBag, Ticket, MousePointerClick, DollarSign } from 'lucide-react';
 import { Card, PageHeader, SectionHeading, Segmented, Badge, Button, Spinner, StatCard, WarningBanner, Table, Th, Td } from './ui';
 import type { NetworkSummary, NetworkBreakdownRow, NetworkSale } from '@/lib/services/affiliateNetworks';
+import type { FirstPartyClicks } from '@/lib/services/affiliateFirstParty';
 import type { AffiliatesPayload } from '@/app/api/admin/affiliates/route';
+import { getDateKey } from '@/lib/analytics';
 
 type Range = 'today' | '7d' | '30d' | '90d' | '365d';
 const RANGE_LABEL: Record<Range, string> = { today: 'today', '7d': 'last 7 days', '30d': 'last 30 days', '90d': 'last 90 days', '365d': 'last 12 months' };
@@ -12,6 +14,16 @@ const RANGE_LABEL: Record<Range, string> = { today: 'today', '7d': 'last 7 days'
 const money = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const pct = (num: number, den: number) => (den > 0 ? `${((num / den) * 100).toFixed(1)}%` : '—');
 const epc = (commission: number, clicks: number) => (clicks > 0 ? money(commission / clicks) : '—');
+const ratio = (network: number, human: number) => (human > 0 ? `${(network / human).toFixed(1)}× on-site` : 'no on-site clicks');
+
+/** Network rows joined with on-site (human) clicks on the normalised team/placement key. */
+interface JoinedRow {
+  name: string;
+  humanClicks: number;
+  networkClicks: number;
+  conversions: number;
+  commission: number;
+}
 
 export default function AffiliatesDashboard() {
   const [range, setRange] = useState<Range>('today');
@@ -43,6 +55,9 @@ export default function AffiliatesDashboard() {
     (acc, n) => ({ clicks: acc.clicks + n.clicks, conversions: acc.conversions + n.conversions, sales: acc.sales + n.sales, commission: acc.commission + n.commission, pending: acc.pending + n.pendingCommission }),
     { clicks: 0, conversions: 0, sales: 0, commission: 0, pending: 0 },
   );
+  const human = data?.firstParty.total ?? 0;
+  const byVendor = data?.firstParty.byVendor ?? { stubhub: 0, fanatics: 0, amazon: 0 };
+  const partialCoverage = !!data && data.firstParty.coveredDays < ({ today: 1, '7d': 7, '30d': 30, '90d': 90, '365d': 365 } as Record<Range, number>)[range];
   const recent: NetworkSale[] = (data?.networks || []).flatMap((n) => n.recentSales).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30);
 
   return (
@@ -83,31 +98,36 @@ export default function AffiliatesDashboard() {
               <WarningBanner><strong>{n.label}:</strong> {n.error}</WarningBanner>
             </div>
           ))}
+          {partialCoverage && (
+            <div className="mb-4">
+              <WarningBanner>On-site click history is kept for 90 days, so human-click rates in this range are based on the last {data.firstParty.coveredDays} days only.</WarningBanner>
+            </div>
+          )}
 
-          {/* Totals across networks */}
+          {/* Totals: humans first, network clicks demoted to a diagnostic */}
           <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
             <StatCard label="Commission earned" value={money(totals.commission)} sub={totals.pending > 0 ? `${money(totals.pending)} still pending` : 'all approved'} icon={<DollarSign className="h-6 w-6" />} />
             <StatCard label="Sales" value={totals.conversions} sub={`${money(totals.sales)} order value`} icon={<ShoppingBag className="h-6 w-6" />} />
-            <StatCard label="Network clicks" value={totals.clicks} sub={`${pct(totals.conversions, totals.clicks)} conversion · ${epc(totals.commission, totals.clicks)} per click · includes crawler hits`} icon={<MousePointerClick className="h-6 w-6" />} />
-            <StatCard label="On-site clicks (humans)" value={data.firstParty.total} sub={data.firstParty.byBucket.map((b) => `${b.name} ${b.count}`).join(' · ') || 'no clicks tracked'} icon={<Ticket className="h-6 w-6" />} />
+            <StatCard label="On-site clicks (humans)" value={human} sub={`${pct(totals.conversions, human)} conversion · ${epc(totals.commission, human)} per click`} icon={<Ticket className="h-6 w-6" />} />
+            <StatCard label="Network clicks" value={totals.clicks} sub={`includes crawlers · ${ratio(totals.clicks, human)}`} icon={<MousePointerClick className="h-6 w-6" />} />
           </div>
 
           {/* Per network */}
           <div className="mb-6 grid gap-4 lg:grid-cols-2">
-            {fanatics && <NetworkCard s={fanatics} rate="8% of sale · 30-day window" />}
-            {stubhub && <NetworkCard s={stubhub} rate="4% of ticket price + fees · 30-day cookie" />}
+            {fanatics && <NetworkCard s={fanatics} rate="8% of sale · 30-day window" humanClicks={byVendor.fanatics} />}
+            {stubhub && <NetworkCard s={stubhub} rate="4% of ticket price + fees · 30-day cookie" humanClicks={byVendor.stubhub} />}
           </div>
 
           {/* Daily chart */}
           <Card className="mb-6">
-            <SectionHeading>Clicks and commission by day</SectionHeading>
-            <DailyChart networks={data.networks} />
+            <SectionHeading>On-site clicks and commission by day</SectionHeading>
+            <DailyChart firstParty={data.firstParty} networks={data.networks} />
           </Card>
 
           {/* Breakdowns */}
           <div className="mb-6 grid gap-4 lg:grid-cols-3">
-            <BreakdownTable title="By team" note="Fanatics subId1 · StubHub pubref venue" rows={mergeRows(data.networks.map((n) => n.byTeam))} />
-            <BreakdownTable title="By placement" note="Fanatics subId2 (sales only) · StubHub link type" rows={mergeRows(data.networks.map((n) => n.byPlacement))} />
+            <BreakdownTable title="By team" note="On-site clicks · network sales + commission" rows={joinRows(data.networks.map((n) => n.byTeam), data.firstParty.byTeam)} />
+            <BreakdownTable title="By placement" note="On-site clicks · Fanatics subId2 + StubHub link type" rows={joinRows(data.networks.map((n) => n.byPlacement), data.firstParty.byPlacement)} />
             <Card>
               <SectionHeading>On-site clicks by link</SectionHeading>
               <p className="-mt-2 mb-3 text-xs text-gray-400">First-party tracking, before the redirect. Last 90 days max.</p>
@@ -156,9 +176,10 @@ export default function AffiliatesDashboard() {
           </Card>
 
           <p className="mt-6 text-center text-xs text-gray-400">
-            Network clicks count every redirect through the affiliate link, including search-engine crawlers following
-            outbound links, so they run well above the on-site count. On-site clicks need JavaScript and skip known bots,
-            so they are the better read on real fans. Amazon Associates has no reporting API; check Associates Central for Amazon earnings.
+            Click counts, conversion rates and per-click earnings use on-site clicks: they need JavaScript and skip known bots,
+            so they are the closest read on real fans. Network clicks count every redirect through the affiliate link, including
+            search-engine crawlers, and are shown only as a health check (if they drop to zero while on-site clicks continue, a link is broken).
+            Sales can land up to 30 days after the click, so rates are directional. Amazon Associates has no reporting API; check Associates Central for Amazon earnings.
           </p>
         </div>
       )}
@@ -166,7 +187,7 @@ export default function AffiliatesDashboard() {
   );
 }
 
-function NetworkCard({ s, rate }: { s: NetworkSummary; rate: string }) {
+function NetworkCard({ s, rate, humanClicks }: { s: NetworkSummary; rate: string; humanClicks: number }) {
   return (
     <Card>
       <div className="mb-3 flex items-start justify-between">
@@ -177,13 +198,14 @@ function NetworkCard({ s, rate }: { s: NetworkSummary; rate: string }) {
         <Badge variant={!s.configured ? 'neutral' : s.error ? 'warning' : 'success'}>{!s.configured ? 'not configured' : s.error ? 'error' : 'connected'}</Badge>
       </div>
       <div className="grid grid-cols-3 gap-3 text-center">
-        <Stat label="Clicks" value={s.clicks.toLocaleString()} />
-        <Stat label="Sales" value={s.conversions.toLocaleString()} sub={pct(s.conversions, s.clicks)} />
-        <Stat label="Commission" value={money(s.commission)} sub={epc(s.commission, s.clicks) + '/click'} />
+        <Stat label="On-site clicks" value={humanClicks.toLocaleString()} sub="humans" />
+        <Stat label="Sales" value={s.conversions.toLocaleString()} sub={`${pct(s.conversions, humanClicks)} of clicks`} />
+        <Stat label="Commission" value={money(s.commission)} sub={epc(s.commission, humanClicks) + '/click'} />
       </div>
-      <div className="mt-3 flex justify-between border-t border-gray-100 pt-3 text-xs text-gray-500">
+      <div className="mt-3 flex flex-wrap justify-between gap-x-4 gap-y-1 border-t border-gray-100 pt-3 text-xs text-gray-500">
         <span>Order value {money(s.sales)}</span>
         <span>Approved {money(s.approvedCommission)} · Pending {money(s.pendingCommission)}</span>
+        <span className="w-full text-gray-400">Network reported {s.clicks.toLocaleString()} clicks (incl. crawlers, {ratio(s.clicks, humanClicks)})</span>
       </div>
     </Card>
   );
@@ -199,18 +221,25 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
   );
 }
 
-function mergeRows(lists: NetworkBreakdownRow[][]): NetworkBreakdownRow[] {
-  const m = new Map<string, NetworkBreakdownRow>();
-  for (const list of lists) for (const r of list) {
-    const row = m.get(r.name) || { name: r.name, clicks: 0, conversions: 0, commission: 0 };
-    row.clicks += r.clicks; row.conversions += r.conversions; row.commission += r.commission;
-    m.set(r.name, row);
+function joinRows(networkLists: NetworkBreakdownRow[][], humanRows: { name: string; count: number }[]): JoinedRow[] {
+  const m = new Map<string, JoinedRow>();
+  const get = (name: string) => {
+    const row = m.get(name) || { name, humanClicks: 0, networkClicks: 0, conversions: 0, commission: 0 };
+    m.set(name, row);
+    return row;
+  };
+  for (const list of networkLists) for (const r of list) {
+    const row = get(r.name);
+    row.networkClicks += r.clicks; row.conversions += r.conversions; row.commission += r.commission;
   }
-  return Array.from(m.values()).sort((a, b) => b.commission - a.commission || b.conversions - a.conversions || b.clicks - a.clicks).slice(0, 30);
+  for (const r of humanRows) get(r.name).humanClicks += r.count;
+  return Array.from(m.values())
+    .sort((a, b) => b.commission - a.commission || b.conversions - a.conversions || b.humanClicks - a.humanClicks || b.networkClicks - a.networkClicks)
+    .slice(0, 30);
 }
 
-function BreakdownTable({ title, note, rows }: { title: string; note: string; rows: NetworkBreakdownRow[] }) {
-  const max = Math.max(1, ...rows.map((r) => r.clicks));
+function BreakdownTable({ title, note, rows }: { title: string; note: string; rows: JoinedRow[] }) {
+  const max = Math.max(1, ...rows.map((r) => r.humanClicks));
   return (
     <Card>
       <SectionHeading>{title}</SectionHeading>
@@ -220,15 +249,15 @@ function BreakdownTable({ title, note, rows }: { title: string; note: string; ro
       ) : (
         <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
           {rows.map((r) => (
-            <div key={r.name}>
+            <div key={r.name} title={`${r.networkClicks} network clicks (incl. crawlers)`}>
               <div className="mb-0.5 flex justify-between text-sm">
-                <span className="truncate text-gray-700" title={r.name}>{r.name}</span>
+                <span className="truncate text-gray-700">{r.name}</span>
                 <span className="ml-2 shrink-0 tabular-nums text-gray-500">
-                  {r.clicks} clk · {r.conversions} sale{r.conversions === 1 ? '' : 's'} · <span className="font-semibold text-gray-700">{money(r.commission)}</span>
+                  {r.humanClicks} clk · {r.conversions} sale{r.conversions === 1 ? '' : 's'} · <span className="font-semibold text-gray-700">{money(r.commission)}</span>
                 </span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
-                <div className="h-full rounded-full bg-sabres-blue" style={{ width: `${(r.clicks / max) * 100}%` }} />
+                <div className="h-full rounded-full bg-sabres-blue" style={{ width: `${(r.humanClicks / max) * 100}%` }} />
               </div>
             </div>
           ))}
@@ -238,38 +267,48 @@ function BreakdownTable({ title, note, rows }: { title: string; note: string; ro
   );
 }
 
-function DailyChart({ networks }: { networks: NetworkSummary[] }) {
-  const dates = Array.from(new Set(networks.flatMap((n) => n.daily.map((d) => d.date)))).sort();
+const VENDOR_SERIES = [
+  { key: 'stubhub', label: 'StubHub', color: '#d97706' },
+  { key: 'fanatics', label: 'Fanatics', color: '#003087' },
+  { key: 'amazon', label: 'Amazon', color: '#6b7280' },
+] as const;
+
+function DailyChart({ firstParty, networks }: { firstParty: FirstPartyClicks; networks: NetworkSummary[] }) {
+  // Only chart the window first-party data covers (90 days max), so a 12-month view isn't mostly empty.
+  const start = new Date();
+  start.setDate(start.getDate() - (firstParty.coveredDays - 1));
+  const startKey = getDateKey(start);
+  const commissionByDate = new Map<string, number>();
+  for (const n of networks) for (const d of n.daily) if (d.commission > 0 && d.date >= startKey) commissionByDate.set(d.date, (commissionByDate.get(d.date) || 0) + d.commission);
+  const humanByDate = new Map(firstParty.daily.map((d) => [d.date, d]));
+  const dates = Array.from(new Set([...humanByDate.keys(), ...commissionByDate.keys()])).sort();
   if (dates.length === 0) return <p className="py-4 text-sm text-gray-400">No activity in this window</p>;
-  const series = networks.map((n) => ({
-    label: n.network === 'fanatics' ? 'Fanatics' : 'StubHub',
-    color: n.network === 'fanatics' ? '#003087' : '#d97706',
-    byDate: new Map(n.daily.map((d) => [d.date, d])),
-  }));
-  const maxClicks = Math.max(1, ...dates.map((d) => series.reduce((s, x) => s + (x.byDate.get(d)?.clicks || 0), 0)));
+  const maxClicks = Math.max(1, ...dates.map((d) => humanByDate.get(d)?.clicks || 0));
   const W = 900, H = 160, pad = 24;
   const bw = Math.max(2, (W - pad * 2) / dates.length - 2);
 
   return (
     <div className="overflow-x-auto">
-      <svg viewBox={`0 0 ${W} ${H + 24}`} className="w-full min-w-[600px]" role="img" aria-label="Daily affiliate clicks by network">
+      <svg viewBox={`0 0 ${W} ${H + 24}`} className="w-full min-w-[600px]" role="img" aria-label="Daily on-site affiliate clicks by vendor">
         {dates.map((d, i) => {
           let y = H;
           const x = pad + i * ((W - pad * 2) / dates.length);
+          const row = humanByDate.get(d);
+          const commission = commissionByDate.get(d) || 0;
           return (
             <g key={d}>
-              {series.map((s) => {
-                const row = s.byDate.get(d);
-                const h = ((row?.clicks || 0) / maxClicks) * (H - 10);
+              {VENDOR_SERIES.map((s) => {
+                const clicks = row?.[s.key] || 0;
+                const h = (clicks / maxClicks) * (H - 10);
                 y -= h;
                 return (
-                  <rect key={s.label} x={x} y={y} width={bw} height={h} fill={s.color} opacity={0.85}>
-                    <title>{`${d} · ${s.label}: ${row?.clicks || 0} clicks, ${row?.conversions || 0} sales, ${money(row?.commission || 0)}`}</title>
+                  <rect key={s.key} x={x} y={y} width={bw} height={h} fill={s.color} opacity={0.85}>
+                    <title>{`${d} · ${s.label}: ${clicks} on-site clicks`}</title>
                   </rect>
                 );
               })}
-              {series.some((s) => (s.byDate.get(d)?.commission || 0) > 0) && (
-                <circle cx={x + bw / 2} cy={y - 6} r={3} fill="#16a34a"><title>{`${d}: commission earned`}</title></circle>
+              {commission > 0 && (
+                <circle cx={x + bw / 2} cy={y - 6} r={3} fill="#16a34a"><title>{`${d}: ${money(commission)} commission`}</title></circle>
               )}
               {(dates.length <= 14 || i % Math.ceil(dates.length / 12) === 0) && (
                 <text x={x + bw / 2} y={H + 16} fontSize={10} textAnchor="middle" fill="#9ca3af">{d.slice(5)}</text>
@@ -278,9 +317,9 @@ function DailyChart({ networks }: { networks: NetworkSummary[] }) {
           );
         })}
       </svg>
-      <div className="mt-2 flex gap-4 text-xs text-gray-500">
-        {series.map((s) => (
-          <span key={s.label} className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: s.color }} />{s.label} clicks</span>
+      <div className="mt-2 flex flex-wrap gap-4 text-xs text-gray-500">
+        {VENDOR_SERIES.map((s) => (
+          <span key={s.key} className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: s.color }} />{s.label} clicks</span>
         ))}
         <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full bg-green-600" />day with commission</span>
       </div>
