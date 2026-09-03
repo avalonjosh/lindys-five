@@ -2118,6 +2118,8 @@ export interface DigestRace {
 export interface WeeklyDigestContent {
   latestPosts?: { title: string; url: string; image?: string; date?: string }[];
   races?: DigestRace[];
+  /** The recipient's team, for the gear/tickets footer links. Omitted = generic footer. */
+  team?: { sport: 'nhl' | 'mlb'; slug: string; city: string; name: string };
 }
 
 const digestUtm = (path: string, content: string) =>
@@ -2178,6 +2180,17 @@ export function renderWeeklyDigestEmail(content: WeeklyDigestContent, unsubscrib
         </table>`)
     : '';
 
+  // Footer: odds links for the recipient's sport(s), gear/tickets for their team.
+  const linkStyle = `style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;"`;
+  const team = content.team;
+  const footerLinks: string[] = [];
+  if (!team || team.sport === 'nhl') footerLinks.push(`<a href="${digestUtm('/nhl-playoff-odds', 'nhl-odds')}" ${linkStyle}>NHL odds</a>`);
+  if (!team || team.sport === 'mlb') footerLinks.push(`<a href="${digestUtm('/mlb/playoff-odds', 'mlb-odds')}" ${linkStyle}>MLB odds</a>`);
+  if (team) {
+    footerLinks.push(`<a href="${generateMerchLink(team.sport, team.slug, team.city, team.name, 'email-digest')}" rel="sponsored" ${linkStyle}>${team.name} gear</a>`);
+    footerLinks.push(`<a href="${digestUtm(`/${team.sport}/${team.slug}/tickets`, 'tickets')}" ${linkStyle}>${team.name} tickets</a>`);
+  }
+
   const body = `
     <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#94a3b8;">${today}</p>
     <p style="margin:0 0 18px;font-size:15px;color:#475569;line-height:1.6;">Here&rsquo;s what&rsquo;s moving across the playoff races this week.</p>
@@ -2190,10 +2203,7 @@ export function renderWeeklyDigestEmail(content: WeeklyDigestContent, unsubscrib
       ${emailButton('Play 162-0 (MLB)', digestUtm('/162-0', 'play-mlb'), { filled: false })}`)}
     ${sectionLabel('More from Lindy&rsquo;s Five')}
     <p style="margin:0;font-size:14px;color:#64748b;line-height:1.8;">
-      <a href="${digestUtm('/nhl-playoff-odds', 'nhl-odds')}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">NHL odds</a> &nbsp;&middot;&nbsp;
-      <a href="${digestUtm('/mlb/playoff-odds', 'mlb-odds')}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">MLB odds</a> &nbsp;&middot;&nbsp;
-      <a href="${generateMerchLink('nhl', 'sabres', 'Buffalo', 'Sabres', 'email-digest')}" rel="sponsored" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">Team gear</a> &nbsp;&middot;&nbsp;
-      <a href="${digestUtm('/nhl/sabres/tickets', 'tickets')}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">Tickets</a>
+      ${footerLinks.join(' &nbsp;&middot;&nbsp;\n      ')}
     </p>`;
   return brandEmailShell({ headerBg: EMAIL_NAVY, label: 'Weekly Rundown', heroImage: WEEKLY_BANNER, body, unsubscribeUrl });
 }
@@ -2374,19 +2384,31 @@ export async function sendMLBGameRecap(
 }
 
 /**
- * Send the weekly digest. With opts.testEmail, sends a single email to that
- * address only (review/QA) and records nothing. Otherwise sends to all verified,
- * active subscribers.
+ * Send the weekly digest. `contentFor` builds each recipient's personalized
+ * content from their subscribed teams; returning null skips that recipient
+ * (nothing relevant to say this week). With opts.testEmail, sends a single email
+ * to that address only (review/QA) and records nothing; opts.testTeams stands in
+ * for the test address's subscribed teams.
  */
 export async function sendWeeklyDigest(
   subscribers: NewsletterSubscriber[],
-  content: WeeklyDigestContent,
-  opts?: { testEmail?: string },
-): Promise<{ sent: number }> {
-  const recipients: NewsletterSubscriber[] = opts?.testEmail
-    ? [{ id: 'test', email: opts.testEmail, teams: [], createdAt: new Date().toISOString(), verified: true }]
+  contentFor: (sub: NewsletterSubscriber) => WeeklyDigestContent | null,
+  opts?: { testEmail?: string; testTeams?: string[] },
+): Promise<{ sent: number; skipped: number }> {
+  const candidates: NewsletterSubscriber[] = opts?.testEmail
+    ? [{ id: 'test', email: opts.testEmail, teams: opts.testTeams ?? [], createdAt: new Date().toISOString(), verified: true }]
     : subscribers.filter((s) => s.verified && !s.unsubscribedAt);
-  if (recipients.length === 0) return { sent: 0 };
+
+  const personalized = new Map<string, WeeklyDigestContent>();
+  const recipients: NewsletterSubscriber[] = [];
+  for (const sub of candidates) {
+    const content = contentFor(sub);
+    if (!content) continue;
+    personalized.set(sub.id, content);
+    recipients.push(sub);
+  }
+  const skipped = candidates.length - recipients.length;
+  if (recipients.length === 0) return { sent: 0, skipped };
 
   const subject = 'Your Lindy’s Five weekly rundown';
   const sendId = opts?.testEmail ? undefined : await recordEmailSend('weekly-digest', recipients.length, subject, 'weekly-digest');
@@ -2394,10 +2416,10 @@ export async function sendWeeklyDigest(
   const sent = await sendPersonalizedBatch(
     recipients,
     subject,
-    (_sub, unsubscribeUrl) => renderWeeklyDigestEmail(content, unsubscribeUrl),
+    (sub, unsubscribeUrl) => renderWeeklyDigestEmail(personalized.get(sub.id)!, unsubscribeUrl),
     sendId,
   );
-  return { sent };
+  return { sent, skipped };
 }
 
 export async function getSendRecordIdForResendEmail(resendEmailId: string): Promise<string | null> {

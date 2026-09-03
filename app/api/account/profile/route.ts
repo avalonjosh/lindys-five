@@ -3,6 +3,7 @@ import { kv } from '@vercel/kv';
 import { getUserId } from '@/lib/perfectseason/server/session';
 import { easternDateString } from '@/lib/perfectseason/seed';
 import { findTeam } from '@/lib/teamConfig';
+import { syncSubscriberFavorite } from '@/lib/newsletter';
 import {
   userKey,
   userBoardsKey,
@@ -189,6 +190,14 @@ export async function PATCH(request: NextRequest) {
   if (clear) delete updated.favoriteTeam;
   else updated.favoriteTeam = favoriteTeam;
   await kv.set(userKey(userId), updated);
+
+  // Keep the newsletter subscription (if any) following the favorite, so recap
+  // emails switch teams with it. Best-effort: never fail the profile update.
+  try {
+    await syncSubscriberFavorite(user.email, user.favoriteTeam, updated.favoriteTeam);
+  } catch (err) {
+    console.error('Subscriber favorite sync failed:', err);
+  }
 
   return NextResponse.json({ favoriteTeam: updated.favoriteTeam ?? null });
 }

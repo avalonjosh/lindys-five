@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { TEAMS } from '@/lib/teamConfig';
 import { MLB_TEAMS } from '@/lib/teamConfig/mlbTeams';
 import { getTeamUrl } from '@/lib/teamConfig';
+import { readFavorites, onFavoritesChange } from '@/lib/favorites';
 
 const nhlGradients: Record<string, { from: string; to: string; border: string; accent: string }> = {
   sabres: { from: '#002654', to: '#001a3d', border: '#FCB514', accent: '#FCB514' },
@@ -198,14 +199,9 @@ export default function FavoriteTeamsGrid({ sport, playoffsActive, seasonLabel }
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('favorite-teams');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) setFavorites(parsed);
-      }
-    } catch { /* ignore */ }
+    setFavorites(readFavorites());
     setLoaded(true);
+    return onFavoritesChange(setFavorites);
   }, []);
 
   const allTeamIds = sport === 'nhl' ? nhlTeamIds : mlbTeamIds;

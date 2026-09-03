@@ -8,6 +8,7 @@ import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
 import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import AuthModal from '@/components/perfectseason/board/AuthModal';
 import { logout } from '@/lib/perfectseason/account';
+import { swapFavorite } from '@/lib/favorites';
 import { fetchWhatIfSaves, deleteWhatIfSave, updateWhatIfSaveLabel } from '@/lib/whatif/client';
 import { fetchSabresSchedule } from '@/lib/services/nhlApi';
 import { fetchMLBSchedule } from '@/lib/services/mlbApi';
@@ -347,15 +348,7 @@ export default function AccountPage() {
         setUser({ ...user, favoriteTeam: slug || undefined });
         // Keep the hamburger/home-grid favorites in step: this is a switch, so
         // the old favorite is replaced in the list, not accumulated.
-        try {
-          const saved = JSON.parse(localStorage.getItem('favorite-teams') ?? '[]');
-          const list: string[] = Array.isArray(saved) ? saved : [];
-          const withoutOld = previous ? list.filter(t => t !== previous) : list;
-          const next = slug ? [slug, ...withoutOld.filter(t => t !== slug)] : withoutOld;
-          localStorage.setItem('favorite-teams', JSON.stringify(next));
-        } catch {
-          if (slug) localStorage.setItem('favorite-teams', JSON.stringify([slug]));
-        }
+        swapFavorite(previous, slug || null);
       }
     } finally {
       setSavingFavorite(false);

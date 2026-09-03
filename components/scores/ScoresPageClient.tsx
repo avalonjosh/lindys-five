@@ -10,6 +10,7 @@ import { fetchStandingsForDate } from '@/lib/services/boxscoreApi';
 import ScoreCard from '@/components/scores/ScoreCard';
 import DateNavigation from '@/components/scores/DateNavigation';
 import { TEAMS } from '@/lib/teamConfig';
+import { readFavorites, onFavoritesChange } from '@/lib/favorites';
 
 // Get today's date in YYYY-MM-DD format (Eastern Time)
 const getTodayString = (): string => {
@@ -32,22 +33,8 @@ const formatOpenerDate = (dateStr: string): string =>
     day: 'numeric',
   });
 
-// Get favorite team slug from localStorage
-const getFavoriteTeamSlug = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  try {
-    const saved = localStorage.getItem('favorite-teams');
-    if (saved) {
-      const favorites = JSON.parse(saved);
-      if (Array.isArray(favorites) && favorites.length > 0) {
-        return favorites[0];
-      }
-    }
-  } catch {
-    // Ignore parse errors
-  }
-  return null;
-};
+// First favorited team slug (any sport)
+const getFavoriteTeamSlug = (): string | null => readFavorites()[0] ?? null;
 
 // Get favorite team abbreviation from slug
 const getFavoriteTeamAbbrev = (slug: string | null): string | null => {
@@ -90,12 +77,14 @@ export default function ScoresPageClient({
   const [favoriteTeamAbbrev, setFavoriteTeamAbbrev] = useState<string | null>(null);
   const [standings, setStandings] = useState<StandingsTeam[]>([]);
 
-  // Read localStorage on mount to avoid hydration mismatch
+  // Read localStorage on mount (avoids hydration mismatch), then follow changes
   useEffect(() => {
-    const slug = getFavoriteTeamSlug();
-    if (slug) {
-      setFavoriteTeamAbbrev(getFavoriteTeamAbbrev(slug));
-    }
+    const apply = () => {
+      const slug = getFavoriteTeamSlug();
+      setFavoriteTeamAbbrev(slug ? getFavoriteTeamAbbrev(slug) : null);
+    };
+    apply();
+    return onFavoritesChange(apply);
   }, []);
 
   // Fetch standings once on mount for playoff stakes display

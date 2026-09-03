@@ -7,6 +7,8 @@ import { TEAMS } from '@/lib/teamConfig';
 import { fetchMLBStandings } from '@/lib/services/mlbApi';
 import { type TeamStandings } from '@/lib/services/nhlApi';
 import type { MLBStandingsTeam } from '@/lib/types/mlb';
+import { readFavorites, writeFavorites, onFavoritesChange } from '@/lib/favorites';
+import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
 
 interface TeamColors {
   primary: string;
@@ -41,25 +43,17 @@ export default function MLBTeamNav({ currentTeamId, teamColors, defaultTab = 'ml
   const [nhlExpandedDivisions, setNhlExpandedDivisions] = useState<Record<string, boolean>>({
     'Atlantic Division': true, 'Metropolitan Division': true,
   });
-  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
   const [nhlPlayoffsActive, setNhlPlayoffsActive] = useState(false);
   const router = useRouter();
 
-  // Load favorites from localStorage on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('favorite-teams');
-      if (saved) setFavorites(JSON.parse(saved));
-    } catch { /* ignore */ }
-    setFavoritesLoaded(true);
-  }, []);
+  // Loads the signed-in account (if any) and merges its favorite into local favorites.
+  useCurrentUser();
 
-  // Save favorites to localStorage after initial load
+  // Load favorites on mount, then follow changes written elsewhere
   useEffect(() => {
-    if (favoritesLoaded) {
-      localStorage.setItem('favorite-teams', JSON.stringify(favorites));
-    }
-  }, [favorites, favoritesLoaded]);
+    setFavorites(readFavorites());
+    return onFavoritesChange(setFavorites);
+  }, []);
 
   // Detect ACTIVE NHL playoffs — hides the redundant "Playoff Odds" link only while
   // playoffs are in progress (push users to the live Bracket). A completed bracket
@@ -165,7 +159,10 @@ export default function MLBTeamNav({ currentTeamId, teamColors, defaultTab = 'ml
   };
 
   const toggleFavorite = (teamId: string) => {
-    setFavorites(prev => prev.includes(teamId) ? prev.filter(id => id !== teamId) : [...prev, teamId]);
+    const current = readFavorites();
+    const next = current.includes(teamId) ? current.filter(id => id !== teamId) : [...current, teamId];
+    writeFavorites(next);
+    setFavorites(next);
   };
 
   const toggleDivision = (division: string) => {

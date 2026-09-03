@@ -7,6 +7,7 @@ import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import type { MLBScoreGame } from '@/lib/types/mlb';
 import { fetchMLBScores } from '@/lib/services/mlbApi';
 import { MLB_TEAMS } from '@/lib/teamConfig/mlbTeams';
+import { readFavorites, onFavoritesChange } from '@/lib/favorites';
 import { generateGameTicketLink } from '@/lib/utils/affiliateLinks';
 import { trackClick } from '@/lib/analytics';
 import DateNavigation from '@/components/scores/DateNavigation';
@@ -15,17 +16,7 @@ const getTodayString = (): string => {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 };
 
-const getFavoriteMLBSlug = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  try {
-    const saved = localStorage.getItem('favorite-teams');
-    if (saved) {
-      const favorites = JSON.parse(saved);
-      if (Array.isArray(favorites)) return favorites.find((id: string) => MLB_TEAMS[id]) || null;
-    }
-  } catch { /* ignore */ }
-  return null;
-};
+const getFavoriteMLBSlug = (): string | null => readFavorites().find((id) => MLB_TEAMS[id]) || null;
 
 function findSlugByAbbrev(abbrev: string): string | null {
   const team = Object.values(MLB_TEAMS).find(t => t.abbreviation === abbrev);
@@ -39,13 +30,12 @@ export default function MLBScoresPageClient() {
   const [error, setError] = useState<string | null>(null);
   const [favoriteAbbrev, setFavoriteAbbrev] = useState<string | null>(null);
   useEffect(() => {
-    const slug = getFavoriteMLBSlug();
-    if (slug) {
-      const team = MLB_TEAMS[slug];
-      if (team) {
-        setFavoriteAbbrev(team.abbreviation);
-      }
-    }
+    const apply = () => {
+      const slug = getFavoriteMLBSlug();
+      setFavoriteAbbrev(slug ? MLB_TEAMS[slug]?.abbreviation ?? null : null);
+    };
+    apply();
+    return onFavoritesChange(apply);
   }, []);
 
   const sortedGames = useMemo(() => {

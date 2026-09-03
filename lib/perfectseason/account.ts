@@ -64,15 +64,25 @@ export const setNewsletterSubscribed = (subscribed: boolean) =>
 export const deleteAccount = (password: string, unsubscribe: boolean) =>
   postSimple('/api/account/delete', { password, unsubscribe });
 
-export async function me(): Promise<PublicUser | null> {
-  try {
-    const res = await fetch('/api/account/me', { credentials: 'include' });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.user ?? null;
-  } catch {
-    return null;
-  }
+// Several components on one page ask "who am I?" at mount (nav, tracker, board).
+// Share the in-flight request so they cost one round trip, not one each.
+let meInFlight: Promise<PublicUser | null> | null = null;
+
+export function me(): Promise<PublicUser | null> {
+  if (meInFlight) return meInFlight;
+  meInFlight = (async () => {
+    try {
+      const res = await fetch('/api/account/me', { credentials: 'include' });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.user ?? null;
+    } catch {
+      return null;
+    } finally {
+      meInFlight = null;
+    }
+  })();
+  return meInFlight;
 }
 
 export interface SubmitResult {

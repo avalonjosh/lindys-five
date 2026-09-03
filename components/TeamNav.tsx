@@ -8,6 +8,8 @@ import { MLB_TEAMS } from '@/lib/teamConfig/mlbTeams';
 import { fetchMLBStandings } from '@/lib/services/mlbApi';
 import type { MLBStandingsTeam } from '@/lib/types/mlb';
 import AboutModal from './AboutModal';
+import { readFavorites, writeFavorites, onFavoritesChange } from '@/lib/favorites';
+import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
 
 interface DarkModeColors {
   background: string;
@@ -34,11 +36,9 @@ interface TeamNavProps {
 export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, teamColors, refreshTrigger }: TeamNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return [];
-    const saved = localStorage.getItem('favorite-teams');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [favorites, setFavorites] = useState<string[]>(() => readFavorites());
+  // Loads the signed-in account (if any) and merges its favorite into local favorites.
+  useCurrentUser();
   const [expandedDivisions, setExpandedDivisions] = useState<Record<string, boolean>>(() => {
     if (typeof window === 'undefined') return { 'Atlantic Division': true, 'Metropolitan Division': true };
     const saved = localStorage.getItem('expanded-divisions');
@@ -60,10 +60,8 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
   // For vintage Jets (dark mode), use classic sidebar styling
   const useClassicStyling = currentTeamId === 'jets' && isGoatMode ? false : isGoatMode;
 
-  // Save favorites to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('favorite-teams', JSON.stringify(favorites));
-  }, [favorites]);
+  // Follow favorites written elsewhere (account sync, profile page, other tabs)
+  useEffect(() => onFavoritesChange(setFavorites), []);
 
   // Detect whether the NHL playoffs are currently active — used to hide the redundant
   // "Playoff Odds" nav item once playoffs go live. A completed bracket (champion
@@ -244,22 +242,18 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
   };
 
   const toggleFavorite = (teamId: string) => {
-    setFavorites(prev => {
-      const wasAlreadyFavorite = prev.includes(teamId);
-      const next = wasAlreadyFavorite
-        ? prev.filter(id => id !== teamId)
-        : [...prev, teamId];
+    const current = readFavorites();
+    const wasAlreadyFavorite = current.includes(teamId);
+    const next = wasAlreadyFavorite
+      ? current.filter(id => id !== teamId)
+      : [...current, teamId];
+    writeFavorites(next);
+    setFavorites(next);
 
-      // Dispatch event when a team is starred (not un-starred)
-      // Deferred to avoid setState-during-render warning
-      if (!wasAlreadyFavorite) {
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('team-starred', { detail: { teamId } }));
-        }, 0);
-      }
-
-      return next;
-    });
+    // Dispatch event when a team is starred (not un-starred)
+    if (!wasAlreadyFavorite) {
+      window.dispatchEvent(new CustomEvent('team-starred', { detail: { teamId } }));
+    }
   };
 
   const toggleDivision = (division: string) => {

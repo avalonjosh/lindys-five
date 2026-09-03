@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
   // Best-effort: never fail account creation on a newsletter/email hiccup.
   if (body.subscribe) {
     try {
-      await ensureSubscriber(email, [], 'perfectseason', { single: true });
+      await ensureSubscriber(email, favoriteTeam ? [favoriteTeam] : [], 'perfectseason', { single: true });
     } catch (err) {
       console.error('Newsletter opt-in failed during signup:', err);
     }

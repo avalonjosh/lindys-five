@@ -56,6 +56,41 @@ export async function unsubscribeByEmail(email: string): Promise<void> {
   }
 }
 
+/** Attach teams to an existing subscriber (record + per-team index). No-op if nothing is new. */
+async function addSubscriberTeams(sub: NewsletterSubscriber, teams: string[]): Promise<void> {
+  const current = sub.teams ?? [];
+  const missing = teams.filter((t) => !current.includes(t));
+  if (missing.length === 0) return;
+  await kv.set(`email:subscriber:${sub.id}`, { ...sub, teams: [...current, ...missing] });
+  for (const team of missing) await kv.sadd(`email:subscribers:team:${team}`, sub.id);
+}
+
+/**
+ * Mirror an account favorite-team change onto the newsletter subscription, if
+ * this email has an active one: the old favorite is swapped out for the new one
+ * (matching the profile page's "switch" semantics). Never creates a subscriber.
+ */
+export async function syncSubscriberFavorite(
+  email: string,
+  previous: string | undefined,
+  next: string | undefined,
+): Promise<void> {
+  if (previous === next) return;
+  const sub = await findSubscriberByEmail(email);
+  if (!sub || sub.unsubscribedAt) return;
+
+  let teams = sub.teams ?? [];
+  if (previous && teams.includes(previous)) {
+    teams = teams.filter((t) => t !== previous);
+    await kv.srem(`email:subscribers:team:${previous}`, sub.id);
+  }
+  if (next && !teams.includes(next)) {
+    teams = [next, ...teams];
+    await kv.sadd(`email:subscribers:team:${next}`, sub.id);
+  }
+  await kv.set(`email:subscriber:${sub.id}`, { ...sub, teams });
+}
+
 export async function ensureSubscriber(
   email: string,
   teams: string[],
@@ -68,7 +103,11 @@ export async function ensureSubscriber(
 
   const existing = await findSubscriberByEmail(lower);
   if (existing) {
-    if (existing.verified && !existing.unsubscribedAt) return; // already on the list
+    if (existing.verified && !existing.unsubscribedAt) {
+      // Already on the list: just make sure any newly requested teams are attached.
+      await addSubscriberTeams(existing, teams);
+      return;
+    }
     const updated: NewsletterSubscriber = {
       ...existing,
       teams: Array.from(new Set([...(existing.teams ?? []), ...teams])),

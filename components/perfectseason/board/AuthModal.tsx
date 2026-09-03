@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { login, signup } from '@/lib/perfectseason/account';
 import type { PublicUser } from '@/lib/perfectseason/leaderboard';
 import { NHL_TEAMS, MLB_TEAMS, findTeam } from '@/lib/teamConfig';
+import { readFavorites, mergeFavorite } from '@/lib/favorites';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -18,27 +19,7 @@ interface AuthModalProps {
 
 /** First locally-favorited team that still maps to a real team config. */
 function storedFavorite(): string | null {
-  try {
-    const saved = JSON.parse(localStorage.getItem('favorite-teams') ?? '[]');
-    if (Array.isArray(saved)) {
-      for (const slug of saved) if (typeof slug === 'string' && findTeam(slug)) return slug;
-    }
-  } catch {
-    // Ignore malformed localStorage.
-  }
-  return null;
-}
-
-/** Keep the hamburger/home-grid favorites in sync with the account's favorite. */
-function mergeFavoriteIntoLocalStorage(slug: string | undefined) {
-  if (!slug || !findTeam(slug)) return;
-  try {
-    const saved = JSON.parse(localStorage.getItem('favorite-teams') ?? '[]');
-    const list = Array.isArray(saved) ? saved : [];
-    if (!list.includes(slug)) localStorage.setItem('favorite-teams', JSON.stringify([slug, ...list]));
-  } catch {
-    localStorage.setItem('favorite-teams', JSON.stringify([slug]));
-  }
+  return readFavorites().find((slug) => findTeam(slug)) ?? null;
 }
 
 const teamOptions = (teams: Record<string, { city: string; name: string }>) =>
@@ -86,9 +67,8 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
       : await signup(email, username, password, subscribe, favoriteTeam || undefined);
     setSubmitting(false);
     if (result.ok) {
-      // Sync the account favorite into local favorites at explicit auth moments
-      // only (never on passive page loads), so local removals stick.
-      mergeFavoriteIntoLocalStorage(result.user.favoriteTeam);
+      // Star the account favorite in the hamburger/home grid right away.
+      if (result.user.favoriteTeam && findTeam(result.user.favoriteTeam)) mergeFavorite(result.user.favoriteTeam);
       onSuccess(result.user);
     } else setError(result.error);
   };
