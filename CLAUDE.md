@@ -330,3 +330,13 @@ The interactive odds tables (`PlayoffOddsClient`, `MLBPlayoffOddsClient`) are cl
 ### Known opportunities (from SEO/GEO audit, not yet done)
 - `/nfl/pick/:team` (the rewrite target for `/pick-the-:team`) 301s back to the pretty URL so it is never a second live URL.
 - ~~Differentiate MLB team-page visible content~~ — DONE (July 2026): MLB team pages now SSR the tracker's initial schedule (`initialGames` prop), render a visible "Season So Far" summary + division standings table with rival links (`serverSummary` prop), and include SiteFooter — served HTML went from ~106 visible chars / 0 links to ~7,300 chars / 74 links. The sr-only block was removed (fallback `<p>` only when data unavailable). Still Josh's move: request indexing in GSC after deploys and watch coverage. NHL team pages have since gotten the same treatment (SSR'd `initialGames` + server summary + division table in `app/nhl/[team]/page.tsx`).
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
