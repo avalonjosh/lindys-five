@@ -13,8 +13,9 @@ import type {
   SeriesTeam,
   StanleyCupOddsEntry,
 } from '@/lib/types/playoffs';
-import { computeSeriesWinProbability } from '@/lib/utils/playoffProbability';
+import { computeSeriesWinProbability, seriesOptionsFor } from '@/lib/utils/playoffProbability';
 import { buildCupOdds } from '@/lib/utils/cupOdds';
+import { buildProjectedFirstRound } from '@/lib/utils/projectedBracket';
 import PlayoffBracketClient from '@/components/playoffs/PlayoffBracketClient';
 import GameTicker from '@/components/landing/GameTicker';
 import { getCurrentNHLSeason, getCurrentSeasonGameCount, formatSeasonEndYear } from '@/lib/utils/season';
@@ -296,29 +297,9 @@ function buildMatchup(
       // V2 model — same math as Cup Odds tab + team tracker Win Odds
       const topStanding = standingsMap.get(topSeed.abbrev);
       const botStanding = standingsMap.get(bottomSeed.abbrev);
-      const strengthFor = (st: StandingsTeam | undefined) => {
-        if (!st) return {};
-        const gp = st.gamesPlayed || 0;
-        const homeGP = (st.homeWins || 0) + (st.homeLosses || 0) + (st.homeOtLosses || 0);
-        const roadGP = (st.roadWins || 0) + (st.roadLosses || 0) + (st.roadOtLosses || 0);
-        return {
-          goalDiffPerGame: gp > 0 ? ((st.goalFor || 0) - (st.goalAgainst || 0)) / gp : undefined,
-          homeWinPct: homeGP > 0 ? (st.homeWins || 0) / homeGP : undefined,
-          roadWinPct: roadGP > 0 ? (st.roadWins || 0) / roadGP : undefined,
-        };
-      };
-      const topS = strengthFor(topStanding);
-      const botS = strengthFor(botStanding);
       topSeedSeriesWinPct = computeSeriesWinProbability(
         topSeed.pointPctg, bottomSeed.pointPctg, topWins, bottomWins, true,
-        {
-          teamGoalDiffPerGame: topS.goalDiffPerGame,
-          oppGoalDiffPerGame: botS.goalDiffPerGame,
-          teamHomeWinPct: topS.homeWinPct,
-          teamRoadWinPct: topS.roadWinPct,
-          oppHomeWinPct: botS.homeWinPct,
-          oppRoadWinPct: botS.roadWinPct,
-        }
+        seriesOptionsFor(topStanding, botStanding)
       );
       bottomSeedSeriesWinPct = 100 - topSeedSeriesWinPct;
     }
@@ -378,140 +359,28 @@ function buildConferenceBrackets(
 
 // ── Projected bracket from standings (regular season) ──
 
-function standingToSeriesTeam(st: StandingsTeam, seed: number): SeriesTeam {
-  return {
-    id: 0,
-    abbrev: st.teamAbbrev.default,
-    name: st.teamCommonName?.default || st.teamName.default,
-    logo: st.teamLogo,
-    seed,
-    pointPctg: st.pointPctg,
-  };
-}
-
-function makeProjectedMatchup(
-  home: StandingsTeam,
-  away: StandingsTeam,
-  homeSeed: number,
-  awaySeed: number,
-  letter: string
-): BracketMatchup {
-  const topSeed = standingToSeriesTeam(home, homeSeed);
-  const bottomSeed = standingToSeriesTeam(away, awaySeed);
-  const topPct = computeSeriesWinProbability(topSeed.pointPctg, bottomSeed.pointPctg, 0, 0, true);
-  return {
-    seriesLetter: letter,
-    topSeed,
-    bottomSeed,
-    topSeedWins: 0,
-    bottomSeedWins: 0,
-    isComplete: false,
-    winningSeed: null,
-    topSeedSeriesWinPct: topPct,
-    bottomSeedSeriesWinPct: 100 - topPct,
-    games: [],
-  };
-}
-
 function buildProjectedBracket(standings: StandingsTeam[]): {
   eastern: ConferenceBracket;
   western: ConferenceBracket;
   cupOdds: StanleyCupOddsEntry[];
 } | null {
-  if (standings.length === 0) return null;
+  const projected = buildProjectedFirstRound(standings);
+  if (!projected) return null;
 
-  const conferences: ConferenceBracket[] = [];
-  const allMatchups: BracketMatchup[] = [];
-  let letterIdx = 0;
-  const letters = 'ABCDEFGH';
+  const standingsMap = new Map<string, StandingsTeam>();
+  standings.forEach(t => standingsMap.set(t.teamAbbrev.default, t));
 
-  for (const confName of ['Eastern', 'Western']) {
-    const confTeams = standings.filter(t => t.conferenceName === confName);
-    if (confTeams.length < 8) return null;
-
-    const divOrder = confName === 'Eastern'
-      ? ['Atlantic', 'Metropolitan']
-      : ['Central', 'Pacific'];
-
-    const divisionData = divOrder.map(divName => {
-      const divTeams = confTeams
-        .filter(t => t.divisionName === divName)
-        .sort((a, b) => a.divisionSequence - b.divisionSequence || b.pointPctg - a.pointPctg);
-      return { name: divName, teams: divTeams };
-    });
-
-    // Sort divisions by leader's points, then pointPctg tiebreaker (A = better record)
-    divisionData.sort((a, b) => b.teams[0].points - a.teams[0].points || b.teams[0].pointPctg - a.teams[0].pointPctg);
-    const [divA, divB] = divisionData;
-
-    // Wild cards: teams ranked 4+ in their division, sorted by conference-wide points
-    const wildcards = confTeams
-      .filter(t => t.divisionSequence > 3)
-      .sort((a, b) => b.points - a.points || b.pointPctg - a.pointPctg)
-      .slice(0, 2);
-
-    const wc1 = wildcards[0]; // Better WC → plays divB leader
-    const wc2 = wildcards[1]; // Worse WC → plays divA leader
-
-    if (!divA.teams[2] || !divB.teams[2] || !wc1 || !wc2) return null;
-
-    // NHL seeding: divA leader = 1, divB leader = 2
-    // divA: (1) leader vs (WC2), (3) 2nd vs (6) 3rd
-    // divB: (2) leader vs (WC1), (4) 2nd vs (5) 3rd
-    const matchups = [
-      makeProjectedMatchup(divA.teams[0], wc2, 1, 4, letters[letterIdx++]),     // 1 vs WC2
-      makeProjectedMatchup(divA.teams[1], divA.teams[2], 2, 3, letters[letterIdx++]), // A2 vs A3
-      makeProjectedMatchup(divB.teams[0], wc1, 1, 4, letters[letterIdx++]),     // 2 vs WC1
-      makeProjectedMatchup(divB.teams[1], divB.teams[2], 2, 3, letters[letterIdx++]), // B2 vs B3
-    ];
-
-    allMatchups.push(...matchups);
-
-    conferences.push({
-      conferenceName: confName,
-      rounds: [{ roundNumber: 1, matchups }],
-    });
-  }
-
-  // Compute Cup odds for all 16 projected playoff teams
-  const cupOdds: StanleyCupOddsEntry[] = [];
-  for (const matchup of allMatchups) {
-    for (const team of [matchup.topSeed, matchup.bottomSeed]) {
-      if (!team) continue;
-      const isTop = team === matchup.topSeed;
-      const currentP = isTop ? matchup.topSeedSeriesWinPct : matchup.bottomSeedSeriesWinPct;
-      // Build stages: R1 uses currentP, R2-Cup chained vs avg opponent
-      const stageOdds: number[] = [currentP, 0, 0, 0];
-      let running = currentP / 100;
-      for (let stage = 2; stage <= 4; stage++) {
-        const p = computeSeriesWinProbability(team.pointPctg, 0.5, 0, 0, team.seed <= 2);
-        running *= p / 100;
-        stageOdds[stage - 1] = running * 100;
-      }
-      const cupProb = Math.round(stageOdds[3] * 10) / 10;
-      cupOdds.push({
-        abbrev: team.abbrev,
-        name: team.name,
-        logo: team.logo,
-        seed: team.seed,
-        conferenceName: conferences.find(c =>
-          c.rounds[0]?.matchups.some(m => m.topSeed?.abbrev === team.abbrev || m.bottomSeed?.abbrev === team.abbrev)
-        )?.conferenceName || '',
-        cupOdds: cupProb,
-        currentSeriesOdds: Math.round(currentP),
-        isEliminated: false,
-        oddsR1: Math.round(stageOdds[0] * 10) / 10,
-        oddsR2: Math.round(stageOdds[1] * 10) / 10,
-        oddsConf: Math.round(stageOdds[2] * 10) / 10,
-        oddsCup: cupProb,
-      });
-    }
-  }
+  // Same series odds (buildMatchup) and the same bracket-aware Cup model as the
+  // live bracket, run on the projected first round.
+  const toBracket = (name: string, series: PlayoffSeries[]): ConferenceBracket => ({
+    conferenceName: name,
+    rounds: [{ roundNumber: 1, matchups: series.map(s => buildMatchup(s, standingsMap)) }],
+  });
 
   return {
-    eastern: conferences.find(c => c.conferenceName === 'Eastern')!,
-    western: conferences.find(c => c.conferenceName === 'Western')!,
-    cupOdds,
+    eastern: toBracket('Eastern', projected.eastern),
+    western: toBracket('Western', projected.western),
+    cupOdds: buildCupOdds({ rounds: [{ roundNumber: 1, series: projected.series }] }, standingsMap),
   };
 }
 

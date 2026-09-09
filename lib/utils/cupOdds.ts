@@ -1,165 +1,248 @@
 import type { StandingsTeam } from '@/lib/types/boxscore';
-import type { PlayoffBracketResponse, StanleyCupOddsEntry } from '@/lib/types/playoffs';
-import { computeSeriesWinProbability } from '@/lib/utils/playoffProbability';
+import type { PlayoffBracketResponse, PlayoffSeries, StanleyCupOddsEntry } from '@/lib/types/playoffs';
+import { seriesWinProbabilityRaw, seriesOptionsFor } from '@/lib/utils/playoffProbability';
 
-interface TeamStrength {
-  goalDiffPerGame?: number;
-  homeWinPct?: number;
-  roadWinPct?: number;
+// Bracket-aware Stanley Cup odds.
+//
+// The NHL bracket is a fixed tree: series letters A-H (round 1) feed I-L
+// (round 2) in pairs (A+B → I, C+D → J, ...), I-L feed M-N, and M+N feed the
+// Final (O). Given that structure, the probability a team wins any series is
+//
+//   P(win node) = P(reach node) × Σ_opp P(opp reaches node from the other side) × P(beat opp)
+//
+// with P(reach) = P(win the feeder series). The two feeders are disjoint
+// subtrees, so the terms are independent and the sum is a proper mixture over
+// every possible opponent. No "average playoff opponent" assumption is needed,
+// and every stage's odds sum to exactly the number of survivors of that stage
+// (the Cup odds sum to 100% across the field).
+//
+// Series in progress use their actual game count; future series start 0-0 with
+// home ice going to the team with the better regular-season record.
+
+interface TeamInfo {
+  abbrev: string;
+  name: string;
+  logo: string;
+  seed: number;
+  conferenceName: string;
+  standing?: StandingsTeam;
+  /** Round-1 node index (0-7); the team's path through the tree follows from it. */
+  r1Index: number;
 }
 
-function strengthFor(st: StandingsTeam | undefined): TeamStrength {
-  if (!st) return {};
-  const gp = st.gamesPlayed || 0;
-  const homeGP = (st.homeWins || 0) + (st.homeLosses || 0) + (st.homeOtLosses || 0);
-  const roadGP = (st.roadWins || 0) + (st.roadLosses || 0) + (st.roadOtLosses || 0);
-  return {
-    goalDiffPerGame: gp > 0 ? ((st.goalFor || 0) - (st.goalAgainst || 0)) / gp : undefined,
-    homeWinPct: homeGP > 0 ? (st.homeWins || 0) / homeGP : undefined,
-    roadWinPct: roadGP > 0 ? (st.roadWins || 0) / roadGP : undefined,
-  };
+interface Node {
+  round: number;
+  index: number;
+  series?: PlayoffSeries;
+  topAbbrev?: string;
+  bottomAbbrev?: string;
+  topWins: number;
+  bottomWins: number;
+  feeders: [Node, Node] | null;
+  /** P(team plays in this series) */
+  reach: Map<string, number>;
+  /** P(team wins this series) */
+  win: Map<string, number>;
 }
 
-// V2 model — chains the team's current series win % with projected future-round odds vs an
-// average playoff opponent. Mirrors the math used on /playoffs and the team-tracker Win Odds.
+const ROUND_SIZES = [8, 4, 2, 1];
+
+function letterIndex(series: PlayoffSeries, roundNumber: number, fallback: number): number {
+  const letter = series.seriesLetter?.toUpperCase();
+  if (!letter || letter.length !== 1) return fallback;
+  // A-H → 0-7, I-L → 0-3, M-N → 0-1, O → 0
+  const roundStart = [0, 8, 12, 14][roundNumber - 1] ?? 0;
+  const idx = letter.charCodeAt(0) - 65 - roundStart;
+  return idx >= 0 && idx < ROUND_SIZES[roundNumber - 1] ? idx : fallback;
+}
+
+/** Which team hosts games 1, 2, 5, 7 of a future series. */
+function hasHomeIce(a: StandingsTeam | undefined, b: StandingsTeam | undefined): boolean {
+  if (!a) return false;
+  if (!b) return true;
+  if (a.points !== b.points) return a.points > b.points;
+  if (a.pointPctg !== b.pointPctg) return a.pointPctg > b.pointPctg;
+  return (a.regulationWins || 0) >= (b.regulationWins || 0);
+}
+
 export function buildCupOdds(
   bracket: PlayoffBracketResponse,
   standingsMap: Map<string, StandingsTeam>
 ): StanleyCupOddsEntry[] {
-  const entries: StanleyCupOddsEntry[] = [];
+  // ── Build the tree ──
+  const nodes: Node[][] = ROUND_SIZES.map((size, r) =>
+    Array.from({ length: size }, (_, i) => ({
+      round: r + 1,
+      index: i,
+      topWins: 0,
+      bottomWins: 0,
+      feeders: null,
+      reach: new Map(),
+      win: new Map(),
+    }))
+  );
+  for (let r = 1; r < 4; r++) {
+    for (const node of nodes[r]) {
+      node.feeders = [nodes[r - 1][node.index * 2], nodes[r - 1][node.index * 2 + 1]];
+    }
+  }
 
-  const teamsInBracket = new Map<string, {
-    abbrev: string; name: string; logo: string; seed: number;
-    ptPctg: number; conferenceName: string; isEliminated: boolean;
-    currentSeriesWinPct: number; roundsToWin: number;
-    strength: TeamStrength;
-  }>();
+  const teams = new Map<string, TeamInfo>();
 
   for (const round of bracket.rounds || []) {
-    for (const series of round.series || []) {
+    const r = round.roundNumber;
+    if (r < 1 || r > 4) continue;
+    (round.series || []).forEach((series, i) => {
+      const idx = letterIndex(series, r, i);
+      const node = nodes[r - 1][idx];
+      if (!node) return;
+      node.series = series;
+      node.topWins = series.topSeedWins || 0;
+      node.bottomWins = series.bottomSeedWins || 0;
       for (const mt of series.matchupTeams || []) {
         const abbrev = mt.team.abbrev;
-        const standing = standingsMap.get(abbrev);
-        const isTop = mt.seed?.isTop;
-        const losses = isTop ? series.bottomSeedWins : series.topSeedWins;
-        const newRoundsToWin = 5 - round.roundNumber;
-        const existing = teamsInBracket.get(abbrev);
-        if (existing) {
-          // Team advanced — update to their current (latest) round.
-          if (newRoundsToWin < existing.roundsToWin) {
-            existing.roundsToWin = newRoundsToWin;
-            existing.isEliminated = losses >= 4;
-          }
-          continue;
+        if (mt.seed?.isTop) node.topAbbrev = abbrev;
+        else node.bottomAbbrev = abbrev;
+        if (!teams.has(abbrev)) {
+          const standing = standingsMap.get(abbrev);
+          teams.set(abbrev, {
+            abbrev,
+            name: mt.team.commonName?.default || mt.team.name?.default || abbrev,
+            logo: mt.team.logo,
+            seed: mt.seed?.rank || 0,
+            conferenceName: standing?.conferenceName || '',
+            standing,
+            r1Index: r === 1 ? idx : idx * Math.pow(2, r - 1),
+          });
         }
-        teamsInBracket.set(abbrev, {
-          abbrev,
-          name: mt.team.commonName?.default || mt.team.name?.default || abbrev,
-          logo: mt.team.logo,
-          seed: mt.seed?.rank || 0,
-          ptPctg: standing?.pointPctg || 0.5,
-          conferenceName: standing?.conferenceName || '',
-          isEliminated: losses >= 4,
-          currentSeriesWinPct: 50,
-          roundsToWin: newRoundsToWin,
-          strength: strengthFor(standing),
-        });
       }
-    }
+    });
   }
 
-  for (const round of bracket.rounds || []) {
-    for (const series of round.series || []) {
-      const topMt = series.matchupTeams?.find(t => t.seed?.isTop);
-      const bottomMt = series.matchupTeams?.find(t => !t.seed?.isTop);
-      if (!topMt || !bottomMt) continue;
-      const topData = teamsInBracket.get(topMt.team.abbrev);
-      const bottomData = teamsInBracket.get(bottomMt.team.abbrev);
-      if (!topData || !bottomData) continue;
-      const topWins = series.topSeedWins || 0;
-      const bottomWins = series.bottomSeedWins || 0;
-      if (topWins >= 4 || bottomWins >= 4) {
-        topData.currentSeriesWinPct = topWins >= 4 ? 100 : 0;
-        bottomData.currentSeriesWinPct = bottomWins >= 4 ? 100 : 0;
+  // ── Probability of beating an opponent in a given node ──
+  const pairCache = new Map<string, number>();
+  function pBeats(node: Node, t: string, o: string): number {
+    const key = `${node.round}:${node.index}:${t}:${o}`;
+    const cached = pairCache.get(key);
+    if (cached !== undefined) return cached;
+
+    const ti = teams.get(t);
+    const oi = teams.get(o);
+    let tWins = 0;
+    let oWins = 0;
+    let tHome: boolean;
+    if (node.topAbbrev === t && node.bottomAbbrev === o) {
+      tWins = node.topWins;
+      oWins = node.bottomWins;
+      tHome = true;
+    } else if (node.topAbbrev === o && node.bottomAbbrev === t) {
+      tWins = node.bottomWins;
+      oWins = node.topWins;
+      tHome = false;
+    } else {
+      tHome = hasHomeIce(ti?.standing, oi?.standing);
+    }
+
+    const p = seriesWinProbabilityRaw(
+      ti?.standing?.pointPctg ?? 0.5,
+      oi?.standing?.pointPctg ?? 0.5,
+      tWins,
+      oWins,
+      tHome,
+      seriesOptionsFor(ti?.standing, oi?.standing)
+    );
+    pairCache.set(key, p);
+    pairCache.set(`${node.round}:${node.index}:${o}:${t}`, 1 - p);
+    return p;
+  }
+
+  // ── Walk the tree ──
+  for (let r = 0; r < 4; r++) {
+    for (const node of nodes[r]) {
+      let sideA: Map<string, number>;
+      let sideB: Map<string, number>;
+      if (node.feeders) {
+        sideA = node.feeders[0].win;
+        sideB = node.feeders[1].win;
       } else {
-        const topP = computeSeriesWinProbability(
-          topData.ptPctg, bottomData.ptPctg, topWins, bottomWins, true,
-          {
-            teamGoalDiffPerGame: topData.strength.goalDiffPerGame,
-            oppGoalDiffPerGame: bottomData.strength.goalDiffPerGame,
-            teamHomeWinPct: topData.strength.homeWinPct,
-            teamRoadWinPct: topData.strength.roadWinPct,
-            oppHomeWinPct: bottomData.strength.homeWinPct,
-            oppRoadWinPct: bottomData.strength.roadWinPct,
-          }
-        );
-        topData.currentSeriesWinPct = topP;
-        bottomData.currentSeriesWinPct = 100 - topP;
+        sideA = new Map(node.topAbbrev ? [[node.topAbbrev, 1]] : []);
+        sideB = new Map(node.bottomAbbrev ? [[node.bottomAbbrev, 1]] : []);
       }
+      for (const [t, p] of sideA) if (p > 0) node.reach.set(t, p);
+      for (const [t, p] of sideB) if (p > 0) node.reach.set(t, p);
+
+      const compute = (mine: Map<string, number>, theirs: Map<string, number>) => {
+        for (const [t, pReach] of mine) {
+          if (pReach <= 0) continue;
+          let total = 0;
+          let oppMass = 0;
+          for (const [o, pOpp] of theirs) {
+            if (pOpp <= 0) continue;
+            oppMass += pOpp;
+            total += pOpp * pBeats(node, t, o);
+          }
+          // If the other side is unknown (no data at all), treat as a coin flip
+          // against an unknown opponent rather than a bye.
+          const pWin = oppMass > 0 ? total / oppMass : 0.5;
+          node.win.set(t, pReach * pWin);
+        }
+      };
+      compute(sideA, sideB);
+      compute(sideB, sideA);
     }
   }
 
-  for (const [, team] of teamsInBracket) {
-    if (team.isEliminated) {
-      // Team won every round before the one they lost — show 100% for those.
-      const eliminatedAtRound = 5 - team.roundsToWin;
-      const elimStageOdds = [0, 0, 0, 0];
-      for (let stage = 1; stage < eliminatedAtRound; stage++) {
-        elimStageOdds[stage - 1] = 100;
+  // ── Per-team entries ──
+  const entries: StanleyCupOddsEntry[] = [];
+  for (const [abbrev, team] of teams) {
+    const path = ROUND_SIZES.map((_, r) => nodes[r][Math.floor(team.r1Index / Math.pow(2, r))]);
+
+    // Current round = the last node on the path with real series data that
+    // includes this team. Eliminated = lost that series.
+    let currentIdx = 0;
+    let eliminated = false;
+    for (let r = 0; r < 4; r++) {
+      const node = path[r];
+      const inSeries = node.topAbbrev === abbrev || node.bottomAbbrev === abbrev;
+      if (!inSeries) break;
+      currentIdx = r;
+      const losses = node.topAbbrev === abbrev ? node.bottomWins : node.topWins;
+      if (losses >= 4) {
+        eliminated = true;
+        break;
       }
+    }
+
+    const stage = path.map((node) => (node.win.get(abbrev) || 0) * 100);
+    const round1 = (v: number) => Math.round(v * 10) / 10;
+
+    if (eliminated) {
+      const stageOdds = [0, 0, 0, 0];
+      for (let r = 0; r < currentIdx; r++) stageOdds[r] = 100;
       entries.push({
-        abbrev: team.abbrev, name: team.name, logo: team.logo, seed: team.seed,
-        conferenceName: team.conferenceName, cupOdds: 0, currentSeriesOdds: 0, isEliminated: true,
-        oddsR1: elimStageOdds[0], oddsR2: elimStageOdds[1], oddsConf: elimStageOdds[2], oddsCup: elimStageOdds[3],
+        abbrev, name: team.name, logo: team.logo, seed: team.seed,
+        conferenceName: team.conferenceName,
+        cupOdds: 0, currentSeriesOdds: 0, isEliminated: true,
+        oddsR1: stageOdds[0], oddsR2: stageOdds[1], oddsConf: stageOdds[2], oddsCup: stageOdds[3],
       });
       continue;
     }
 
-    const currentRoundIdx = 5 - team.roundsToWin;
-    const stageOdds: number[] = [0, 0, 0, 0];
+    const current = path[currentIdx];
+    const reach = current.reach.get(abbrev) || 1;
+    const currentSeriesOdds = Math.round(((current.win.get(abbrev) || 0) / reach) * 100);
+    // Anything is possible until they're mathematically out: show at least 0.1%.
+    const cupOdds = Math.max(round1(stage[3]), 0.1);
 
-    for (let stage = 1; stage < currentRoundIdx; stage++) {
-      stageOdds[stage - 1] = 100;
-    }
-    stageOdds[currentRoundIdx - 1] = team.currentSeriesWinPct;
-
-    // Future rounds: chain vs an average playoff opponent (above-league-average by definition).
-    // Bumped slightly above pure playoff averages to compress favorites' chained projections —
-    // small per-round adjustments compound over 3 future rounds, and the prior values left top
-    // contenders 5-8 pts higher than felt right at a glance.
-    const PLAYOFF_OPP_PT_PCTG = 0.640;
-    const PLAYOFF_OPP_GOAL_DIFF = 0.25;
-    const PLAYOFF_OPP_HOME_WIN_PCT = 0.55;
-    const PLAYOFF_OPP_ROAD_WIN_PCT = 0.45;
-    let running = team.currentSeriesWinPct / 100;
-    for (let stage = currentRoundIdx + 1; stage <= 4; stage++) {
-      const p = computeSeriesWinProbability(
-        team.ptPctg, PLAYOFF_OPP_PT_PCTG, 0, 0, team.seed <= 4,
-        {
-          teamGoalDiffPerGame: team.strength.goalDiffPerGame,
-          oppGoalDiffPerGame: PLAYOFF_OPP_GOAL_DIFF,
-          teamHomeWinPct: team.strength.homeWinPct,
-          teamRoadWinPct: team.strength.roadWinPct,
-          oppHomeWinPct: PLAYOFF_OPP_HOME_WIN_PCT,
-          oppRoadWinPct: PLAYOFF_OPP_ROAD_WIN_PCT,
-        }
-      );
-      running *= p / 100;
-      stageOdds[stage - 1] = running * 100;
-    }
-
-    // Floor non-eliminated teams at 1% — anything is possible until they're mathematically out.
-    const rawCupOdds = Math.round(stageOdds[3] * 10) / 10;
-    const cupOdds = Math.max(rawCupOdds, 1);
     entries.push({
-      abbrev: team.abbrev, name: team.name, logo: team.logo, seed: team.seed,
+      abbrev, name: team.name, logo: team.logo, seed: team.seed,
       conferenceName: team.conferenceName,
       cupOdds,
-      currentSeriesOdds: Math.round(team.currentSeriesWinPct),
+      currentSeriesOdds,
       isEliminated: false,
-      oddsR1: Math.round(stageOdds[0] * 10) / 10,
-      oddsR2: Math.round(stageOdds[1] * 10) / 10,
-      oddsConf: Math.round(stageOdds[2] * 10) / 10,
+      oddsR1: round1(stage[0]),
+      oddsR2: round1(stage[1]),
+      oddsConf: round1(stage[2]),
       oddsCup: cupOdds,
     });
   }

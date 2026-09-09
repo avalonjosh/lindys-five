@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import { MoreHorizontal, X as XIcon, Link as LinkIcon, Check, ChevronDown } from 'lucide-react';
 import type { SeasonStats } from '@/lib/types';
+import type { StandingsTeam } from '@/lib/types/boxscore';
 import { getProbabilityColor, probabilityForFinalPoints, computePositionAwareProbability } from '@/lib/utils/playoffProbability';
+import { getCutLines, getModelProjectedPoints, isInPlayoffPosition } from '@/lib/utils/standingsCalc';
 import { PlayoffOddsPill, CollapsibleOddsPanel } from '@/components/PlayoffOddsToggle';
 import { trackClick } from '@/lib/analytics';
-
-const HISTORICAL_FLOOR = 94;
 
 interface CutLineState {
   effectiveCutLine: number;
@@ -693,10 +693,10 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
   // Projected/Odds read "—" instead of a misleading 0-game extrapolation.
   const projectionReady = !preseasonSim || stats.gamesPlayed > 0;
 
-  // Fetch cut line data on mount (when enough games played). Skipped in
+  // Fetch cut line data on mount (once the season is under way). Skipped in
   // preseason sim: the coming season has no live standings to read.
   useEffect(() => {
-    if (!preseasonSim && !cutLineData && !cutLineLoading && stats.gamesPlayed >= 10) {
+    if (!preseasonSim && !cutLineData && !cutLineLoading && stats.gamesPlayed >= 1) {
       fetchCutLine();
     }
   }, [stats.gamesPlayed]);
@@ -706,7 +706,7 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
     setCutLineError(false);
 
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
       let response = await fetch(`/api/v1/standings/${today}`);
 
       if (!response.ok) {
@@ -730,108 +730,34 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
         }
       }
 
-      interface StandingTeam {
-        teamAbbrev: string;
-        points: number;
-        gamesPlayed: number;
-        divisionRank: number;
-        conferenceName: string;
-        divisionName: string;
-        clinchIndicator?: string;
-      }
-
-      const parsedStandings: StandingTeam[] = data.standings.map((team: any) => ({
-        teamAbbrev: team.teamAbbrev?.default || '',
-        points: team.points || 0,
-        gamesPlayed: team.gamesPlayed || 0,
-        divisionRank: team.divisionSequence || 0,
-        conferenceName: team.conferenceName || '',
-        divisionName: team.divisionName || '',
-        clinchIndicator: team.clinchIndicator || undefined,
-      }));
-
-      // Find user's team
-      const userTeam = parsedStandings.find(t => t.teamAbbrev === teamAbbrev);
+      const standings = data.standings as StandingsTeam[];
+      const userTeam = standings.find(t => t.teamAbbrev?.default === teamAbbrev);
       if (!userTeam) {
         throw new Error('Team not found in standings');
       }
 
-      const userConference = userTeam.conferenceName;
-      const userDivision = userTeam.divisionName;
+      // Same cut lines and position logic as the odds page, box scores and
+      // emails (lib/utils/standingsCalc), so every surface agrees.
+      const cutLines = getCutLines(userTeam, standings);
+      const inPlayoffPosition = isInPlayoffPosition(userTeam);
 
-      // --- Division cut line ---
-      // Sort division teams by points descending
-      const divisionTeams = parsedStandings
-        .filter(t => t.divisionName === userDivision)
-        .sort((a, b) => b.points - a.points);
-
-      const div3Team = divisionTeams[2]; // 3rd place - last division playoff spot
-      const div4Team = divisionTeams[3]; // 4th place - first team out of division
-
-      let divisionCutLine: number;
-      let divBubbleTeamAbbrev = '';
-      if (div3Team && div4Team && div3Team.gamesPlayed > 0 && div4Team.gamesPlayed > 0) {
-        const div3Projected = (div3Team.points / div3Team.gamesPlayed) * stats.totalGames;
-        const div4Projected = (div4Team.points / div4Team.gamesPlayed) * stats.totalGames;
-        divisionCutLine = Math.ceil((div3Projected + div4Projected) / 2);
-        divBubbleTeamAbbrev = div4Team.teamAbbrev;
-      } else if (div3Team && div3Team.gamesPlayed > 0) {
-        divisionCutLine = Math.ceil((div3Team.points / div3Team.gamesPlayed) * stats.totalGames);
-        divBubbleTeamAbbrev = div3Team.teamAbbrev;
-      } else {
-        divisionCutLine = 90; // fallback
-      }
-      // Floor of 90 for division cut line
-      divisionCutLine = Math.max(divisionCutLine, 90);
-
-      // --- Wildcard cut line ---
-      const wildcardTeams = parsedStandings
-        .filter(t => t.conferenceName === userConference && t.divisionRank > 3)
-        .sort((a, b) => b.points - a.points);
-
-      const wc2Team = wildcardTeams[1]; // Second wild card - last team IN
-      const wc3Team = wildcardTeams[2]; // Third wild card - first team OUT
-
-      if (!wc2Team) {
-        throw new Error('Could not determine WC2 team');
-      }
-
-      const wc2Pace = wc2Team.gamesPlayed > 0 ? wc2Team.points / wc2Team.gamesPlayed : 0;
-      const wc2Projected = wc2Pace * stats.totalGames;
-
-      let wildcardCutLine: number;
-      if (wc3Team && wc3Team.gamesPlayed > 0) {
-        const wc3Pace = wc3Team.points / wc3Team.gamesPlayed;
-        const wc3Projected = wc3Pace * stats.totalGames;
-        wildcardCutLine = Math.ceil((wc2Projected + wc3Projected) / 2);
-      } else {
-        wildcardCutLine = Math.ceil(wc2Projected);
-      }
-      // Floor of 94 for wildcard cut line
-      wildcardCutLine = Math.max(wildcardCutLine, HISTORICAL_FLOOR);
-
-      // --- Determine playoff position ---
-      const isInPlayoffPosition = userTeam.divisionRank <= 3 ||
-        (wildcardTeams.length >= 2 && userTeam.points >= wildcardTeams[1].points && userTeam.divisionRank > 3);
-
-      // --- Compute position-aware probability ---
       const result = computePositionAwareProbability(
-        stats.projectedPoints,
+        getModelProjectedPoints(stats.totalPoints, stats.gamesPlayed),
         stats.gamesPlayed,
-        divisionCutLine,
-        wildcardCutLine,
-        isInPlayoffPosition,
+        cutLines.divCutLine,
+        cutLines.wcCutLine,
+        inPlayoffPosition,
         userTeam.clinchIndicator
       );
 
       setCutLineData({
         effectiveCutLine: result.effectiveCutLine,
-        divisionCutLine,
-        wildcardCutLine,
+        divisionCutLine: cutLines.divCutLine,
+        wildcardCutLine: cutLines.wcCutLine,
         activePath: result.activePath,
-        wc2TeamAbbrev: wc2Team.teamAbbrev,
-        divBubbleTeamAbbrev,
-        isInPlayoffPosition,
+        wc2TeamAbbrev: cutLines.wc2TeamAbbrev,
+        divBubbleTeamAbbrev: cutLines.divBubbleTeamAbbrev,
+        isInPlayoffPosition: inPlayoffPosition,
         clinchIndicator: userTeam.clinchIndicator,
       });
 
@@ -848,9 +774,10 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
 
   // Calculate playoff probabilities
   // Main probability uses position-aware model when cut line data available
-  const rawProbability = cutLineData
+  // 99% stays 99% until the NHL's clinch flag says otherwise.
+  const probability = cutLineData
     ? computePositionAwareProbability(
-        stats.projectedPoints,
+        getModelProjectedPoints(stats.totalPoints, stats.gamesPlayed),
         stats.gamesPlayed,
         cutLineData.divisionCutLine,
         cutLineData.wildcardCutLine,
@@ -858,14 +785,13 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
         cutLineData.clinchIndicator
       ).probability
     : probabilityForFinalPoints(stats.projectedPoints, stats.gamesPlayed, stats.playoffTarget);
-  const probability = rawProbability === 99 ? 100 : rawProbability;
-  // Lindy's Five probability always uses the fixed 96-point target
-  const rawLindysFiveProbability = probabilityForFinalPoints(
+  // Lindy's Five probability always uses the fixed 96-point target (98 over 84
+  // games) against the raw pace projection: "if they keep this up, do they hit it?"
+  const lindysFiveProbability = probabilityForFinalPoints(
     stats.projectedPoints,
     stats.gamesPlayed,
     stats.playoffTarget
   );
-  const lindysFiveProbability = rawLindysFiveProbability === 99 ? 100 : rawLindysFiveProbability;
   const probabilityColorRaw = getProbabilityColor();
   const probabilityColor = probabilityColorRaw === 'team'
     ? (isGoatMode ? darkModeColors.accent : teamColors.primary)

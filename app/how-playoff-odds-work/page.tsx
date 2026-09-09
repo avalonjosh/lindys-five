@@ -35,7 +35,7 @@ const FAQ = [
   },
   {
     q: 'How does Lindy\'s Five calculate NHL playoff odds?',
-    a: 'We project each team\'s final point total from its current points pace, compute the projected division (top 3) and wild card cut lines from live standings, and convert the gap between the projection and the cut line into a probability with a logistic curve. Teams currently holding a playoff spot get a small position bonus after 25 games. NHL clinch and elimination flags override the model at 100% and 0%.',
+    a: 'We project each team\'s final point total from its points so far plus its remaining games at a pace regressed toward the league average, compute the projected division (top 3) and wild card cut lines from live standings, and convert the gap between the projection and the cut line into a probability with a logistic curve that sharpens as games run out. Teams currently holding a playoff spot get a small position bonus that grows through the season. NHL clinch and elimination flags override the model at 100% and 0%.',
   },
   {
     q: 'How does Lindy\'s Five calculate MLB playoff odds?',
@@ -127,30 +127,38 @@ export default function HowPlayoffOddsWorkPage() {
             <H2>NHL playoff odds, step by step</H2>
             <ol className="list-decimal space-y-3 pl-6">
               <li>
-                <strong>Project final points.</strong> A team&apos;s points pace (points per game so far) is extended
-                over the full schedule: 84 games from 2026-27, 82 before that. A team at 1.20 points per game projects to
-                about 101 points.
+                <strong>Project final points.</strong> Points already banked stay banked. The remaining games are
+                projected at the team&apos;s points pace regressed toward the league average (about 1.12 points per
+                game) with a 30-game prior, so a 7-3-0 start counts for something but does not project to 115 points.
+                By midseason the prior has little pull, and by April almost none. The full schedule is 84 games from
+                2026-27, 82 before that. The &quot;on pace for&quot; number shown on team pages is the raw pace
+                extrapolation; the odds run on the regressed projection.
               </li>
               <li>
                 <strong>Find the cut lines.</strong> An NHL team qualifies by finishing top three in its division or as
-                one of two conference wild cards. We project both thresholds from the current standings: the projected
-                points of the third-place team in the division, and of the second wild card in the conference.
+                one of two conference wild cards. We project both thresholds from the current standings using the same
+                regressed projection: the division line is the midpoint between the third- and fourth-place teams&apos;
+                projections, and the wild card line is the midpoint between the second and third wild cards. Each line
+                has a historical floor (90 and 94 points over 82 games, scaled to the schedule) so early-season
+                standings cannot drag a cut line below where NHL cut lines actually land.
               </li>
               <li>
                 <strong>Convert the gap to a probability.</strong> The difference between the team&apos;s projection
                 and each cut line runs through a logistic (S-shaped) curve. At the cut line the odds are 50%; a few points
-                either side moves them quickly; far above or below, the curve flattens toward 99% or 1%. The curve is
-                steeper for the division path (fewer competitors) than for the wild card path (more), and it gets steeper
-                as the season progresses, because there is less time for the standings to change.
+                either side moves them quickly; far above or below, the curve flattens toward 99% or 1%. The curve&apos;s
+                width is tied to the square root of the games remaining, matching how much an NHL team&apos;s point total
+                can still move: about 12 points of spread with a full season left, 8 or 9 at the halfway mark, and
+                barely one with a game to go, so a team sitting above the line in the final week is near-certain.
+                The curve is slightly steeper for the division path (fewer competitors) than for the wild card path.
               </li>
               <li>
                 <strong>Take the better path.</strong> The team&apos;s playoff probability is the higher of its division
                 and wild card probabilities. Team pages show which path is active.
               </li>
               <li>
-                <strong>Position bonus.</strong> After 25 games, a team currently holding a playoff spot gets a small
-                edge (up to 1.5 points shaved off the cut line by season&apos;s end), reflecting that incumbents are
-                displaced less often than pace alone suggests.
+                <strong>Position bonus.</strong> A team currently holding a playoff spot gets a small edge that grows
+                through the season (up to 1.5 points shaved off the cut line by season&apos;s end), reflecting that
+                incumbents are displaced less often than pace alone suggests.
               </li>
               <li>
                 <strong>Clinch and elimination.</strong> The NHL&apos;s official x/y/z/p clinch indicators set odds to
@@ -160,8 +168,12 @@ export default function HowPlayoffOddsWorkPage() {
             <p>
               Stanley Cup odds on the <Link href="/playoffs" className="text-sabres-blue underline">bracket page</Link>{' '}
               use a separate series model: point percentage and goal differential set each team&apos;s strength, a
-              logistic curve turns the strength gap into a single-game win probability adjusted for home ice, and a
-              best-of-seven distribution turns that into series and championship probabilities.
+              logistic curve turns the strength gap into a single-game win probability adjusted for home ice (a .600
+              team is about a 55% favorite per game and a 63% favorite in a series against a .500 team), and a
+              best-of-seven calculation over the remaining games turns that into series odds. Championship odds walk
+              the actual bracket: each future round weighs every opponent a team could meet by that opponent&apos;s own
+              chance of getting there, so the field&apos;s Cup odds always add up to 100%. Before the bracket is set,
+              the first round is projected from the current standings.
             </p>
 
             <H2>MLB playoff odds, step by step</H2>

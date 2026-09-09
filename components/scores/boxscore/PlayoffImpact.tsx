@@ -3,7 +3,7 @@
 import type { StandingsTeam } from '@/lib/types/boxscore';
 import { TEAMS } from '@/lib/teamConfig';
 import { getDivCutLine, getWcCutLine, computeProb } from '@/lib/utils/standingsCalc';
-import { computeSeriesWinProbability } from '@/lib/utils/playoffProbability';
+import { computeSeriesWinProbability, seriesOptionsFor } from '@/lib/utils/playoffProbability';
 
 interface PlayoffImpactProps {
   homeTeam: { id: number; abbrev: string; score: number; logo: string; commonName: { default: string } };
@@ -151,8 +151,7 @@ function FinalImpact({
       standing.gamesPlayed,
       divCutLine,
       wcCutLine,
-      standing,
-      standings
+      standing
     );
 
     const pointsToSubtract = getPointsToSubtract(side);
@@ -166,8 +165,7 @@ function FinalImpact({
       beforeGP,
       divCutLine,
       wcCutLine,
-      standing,
-      standings
+      standing
     );
 
     const teamConfig = Object.values(TEAMS).find(t => t.abbreviation === teamInfo.abbrev);
@@ -245,8 +243,7 @@ function LiveImpact({
       standing.gamesPlayed,
       divCutLine,
       wcCutLine,
-      standing,
-      standings
+      standing
     );
 
     // If this team wins (+2 pts, +1 GP)
@@ -255,8 +252,7 @@ function LiveImpact({
       standing.gamesPlayed + 1,
       divCutLine,
       wcCutLine,
-      standing,
-      standings
+      standing
     );
 
     // If this team loses (+0 pts, +1 GP)
@@ -265,8 +261,7 @@ function LiveImpact({
       standing.gamesPlayed + 1,
       divCutLine,
       wcCutLine,
-      standing,
-      standings
+      standing
     );
 
     const teamConfig = Object.values(TEAMS).find(t => t.abbreviation === teamInfo.abbrev);
@@ -358,11 +353,13 @@ function SeriesImpact({
   const bottomStanding = homeIsTop ? awayStanding : homeStanding;
 
   const { topSeedWins, bottomSeedWins } = seriesStatus;
+  // Same strength inputs (goal differential, home/road splits) as the bracket page
+  const seriesOptions = seriesOptionsFor(topStanding, bottomStanding);
 
   // Current series win probability
   const currentTopPct = computeSeriesWinProbability(
     topStanding.pointPctg, bottomStanding.pointPctg,
-    topSeedWins, bottomSeedWins, true
+    topSeedWins, bottomSeedWins, true, seriesOptions
   );
 
   if (isFinal) {
@@ -378,7 +375,7 @@ function SeriesImpact({
     const beforeTopPct = prevTopWins >= 0 && prevBottomWins >= 0
       ? computeSeriesWinProbability(
           topStanding.pointPctg, bottomStanding.pointPctg,
-          prevTopWins, prevBottomWins, true
+          prevTopWins, prevBottomWins, true, seriesOptions
         )
       : 50;
 
@@ -423,11 +420,11 @@ function SeriesImpact({
   // Live/Future: show win/loss scenarios
   const topWinPct = computeSeriesWinProbability(
     topStanding.pointPctg, bottomStanding.pointPctg,
-    topSeedWins + 1, bottomSeedWins, true
+    topSeedWins + 1, bottomSeedWins, true, seriesOptions
   );
   const topLossPct = computeSeriesWinProbability(
     topStanding.pointPctg, bottomStanding.pointPctg,
-    topSeedWins, bottomSeedWins + 1, true
+    topSeedWins, bottomSeedWins + 1, true, seriesOptions
   );
 
   const scenarios = [

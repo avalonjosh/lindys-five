@@ -1,64 +1,114 @@
 import type { StandingsTeam } from '@/lib/types/boxscore';
-import { computePositionAwareProbability } from './playoffProbability';
+import { computePositionAwareProbability, projectPointsWithPrior } from './playoffProbability';
 import { getCurrentSeasonGameCount } from './season';
 
 // 82-game-era historical floors, scaled to the season in progress (84 games from 2026-27)
-const WC_HISTORICAL_FLOOR = () => Math.round(94 * getCurrentSeasonGameCount() / 82);
-const DIV_HISTORICAL_FLOOR = () => Math.round(90 * getCurrentSeasonGameCount() / 82);
+const WC_HISTORICAL_FLOOR = (totalGames: number) => Math.round(94 * totalGames / 82);
+const DIV_HISTORICAL_FLOOR = (totalGames: number) => Math.round(90 * totalGames / 82);
 
-/** Project a team's final point total (integer). Standings are always the
- * current season's, so the season length (82, or 84 from 2026-27) comes from
- * the calendar. */
-export function getProjectedPoints(points: number, gamesPlayed: number): number {
+/** Raw "on pace for" projection (integer): points / gp × season length. This is
+ * the display number; the probability model uses getModelProjectedPoints. */
+export function getProjectedPoints(
+  points: number,
+  gamesPlayed: number,
+  totalGames: number = getCurrentSeasonGameCount()
+): number {
   if (gamesPlayed === 0) return 0;
-  return Math.round((points / gamesPlayed) * getCurrentSeasonGameCount());
+  return Math.round((points / gamesPlayed) * totalGames);
 }
 
-/** Division cut line: average of 3rd & 4th place projected points, ceil, floor 90. */
-export function getDivCutLine(team: StandingsTeam, standings: StandingsTeam[]): number {
+/** Model projection: banked points plus remaining games at a pace regressed
+ * toward the league average. Feed this to computePositionAwareProbability. */
+export function getModelProjectedPoints(
+  points: number,
+  gamesPlayed: number,
+  totalGames: number = getCurrentSeasonGameCount()
+): number {
+  return projectPointsWithPrior(points, gamesPlayed, totalGames);
+}
+
+export interface CutLines {
+  divCutLine: number;
+  wcCutLine: number;
+  /** 4th-place team in the division (first team out of a division spot), or 3rd if no 4th. */
+  divBubbleTeamAbbrev: string;
+  /** Second wild card (last team in). */
+  wc2TeamAbbrev: string;
+}
+
+/** Division cut line: average of the 3rd and 4th place teams' model
+ * projections, ceil, floored at the historical minimum. Uses the NHL's own
+ * divisionSequence so ordering matches the official standings tiebreakers. */
+export function getDivCutLine(
+  team: StandingsTeam,
+  standings: StandingsTeam[],
+  totalGames: number = getCurrentSeasonGameCount()
+): number {
+  return getCutLines(team, standings, totalGames).divCutLine;
+}
+
+/** Wildcard cut line: average of WC2 and WC3 model projections, ceil, floored
+ * at the historical minimum. Uses the NHL's wildcardSequence. */
+export function getWcCutLine(
+  team: StandingsTeam,
+  standings: StandingsTeam[],
+  totalGames: number = getCurrentSeasonGameCount()
+): number {
+  return getCutLines(team, standings, totalGames).wcCutLine;
+}
+
+export function getCutLines(
+  team: StandingsTeam,
+  standings: StandingsTeam[],
+  totalGames: number = getCurrentSeasonGameCount()
+): CutLines {
+  const project = (t: StandingsTeam) => projectPointsWithPrior(t.points, t.gamesPlayed, totalGames);
+
+  // --- Division ---
   const divTeams = standings
     .filter(t => t.divisionName === team.divisionName)
-    .sort((a, b) => b.points - a.points);
-
+    .sort((a, b) => a.divisionSequence - b.divisionSequence || b.points - a.points);
   const div3Team = divTeams[2];
   const div4Team = divTeams[3];
 
-  const totalGames = getCurrentSeasonGameCount();
-  let cutLine: number;
-  if (div3Team && div4Team && div3Team.gamesPlayed > 0 && div4Team.gamesPlayed > 0) {
-    const div3Projected = (div3Team.points / div3Team.gamesPlayed) * totalGames;
-    const div4Projected = (div4Team.points / div4Team.gamesPlayed) * totalGames;
-    cutLine = Math.ceil((div3Projected + div4Projected) / 2);
-  } else if (div3Team && div3Team.gamesPlayed > 0) {
-    cutLine = Math.ceil((div3Team.points / div3Team.gamesPlayed) * totalGames);
+  const divFloor = DIV_HISTORICAL_FLOOR(totalGames);
+  let divCutLine: number;
+  let divBubbleTeamAbbrev = '';
+  if (div3Team && div4Team) {
+    divCutLine = Math.ceil((project(div3Team) + project(div4Team)) / 2);
+    divBubbleTeamAbbrev = div4Team.teamAbbrev.default;
+  } else if (div3Team) {
+    divCutLine = Math.ceil(project(div3Team));
+    divBubbleTeamAbbrev = div3Team.teamAbbrev.default;
   } else {
-    cutLine = DIV_HISTORICAL_FLOOR();
+    divCutLine = divFloor;
   }
-  return Math.max(cutLine, DIV_HISTORICAL_FLOOR());
-}
+  divCutLine = Math.max(divCutLine, divFloor);
 
-/** Wildcard cut line: average of WC2 & WC3 projected points, ceil, floor 94. */
-export function getWcCutLine(team: StandingsTeam, standings: StandingsTeam[]): number {
+  // --- Wild card ---
   const wcTeams = standings
     .filter(t => t.conferenceName === team.conferenceName && t.divisionSequence > 3)
-    .sort((a, b) => b.points - a.points);
-
+    .sort((a, b) => a.wildcardSequence - b.wildcardSequence || b.points - a.points);
   const wc2Team = wcTeams[1];
   const wc3Team = wcTeams[2];
 
-  if (!wc2Team || wc2Team.gamesPlayed === 0) return WC_HISTORICAL_FLOOR();
-
-  const totalGames = getCurrentSeasonGameCount();
-  const wc2Projected = (wc2Team.points / wc2Team.gamesPlayed) * totalGames;
-
-  let cutLine: number;
-  if (wc3Team && wc3Team.gamesPlayed > 0) {
-    const wc3Projected = (wc3Team.points / wc3Team.gamesPlayed) * totalGames;
-    cutLine = Math.ceil((wc2Projected + wc3Projected) / 2);
+  const wcFloor = WC_HISTORICAL_FLOOR(totalGames);
+  let wcCutLine: number;
+  if (wc2Team && wc3Team) {
+    wcCutLine = Math.ceil((project(wc2Team) + project(wc3Team)) / 2);
+  } else if (wc2Team) {
+    wcCutLine = Math.ceil(project(wc2Team));
   } else {
-    cutLine = Math.ceil(wc2Projected);
+    wcCutLine = wcFloor;
   }
-  return Math.max(cutLine, WC_HISTORICAL_FLOOR());
+  wcCutLine = Math.max(wcCutLine, wcFloor);
+
+  return {
+    divCutLine,
+    wcCutLine,
+    divBubbleTeamAbbrev,
+    wc2TeamAbbrev: wc2Team?.teamAbbrev.default || '',
+  };
 }
 
 /** Whether a team currently holds a playoff spot (top 3 in division or WC1/WC2). */
@@ -68,33 +118,34 @@ export function isInPlayoffPosition(team: StandingsTeam): boolean {
 }
 
 /** Full playoff probability for a team given current standings. */
-export function getPlayoffProbability(team: StandingsTeam, standings: StandingsTeam[]): number {
-  if (team.gamesPlayed < 5) return 50;
-  const projected = getProjectedPoints(team.points, team.gamesPlayed);
-  const divCutLine = getDivCutLine(team, standings);
-  const wcCutLine = getWcCutLine(team, standings);
+export function getPlayoffProbability(
+  team: StandingsTeam,
+  standings: StandingsTeam[],
+  totalGames: number = getCurrentSeasonGameCount()
+): number {
+  const projected = getModelProjectedPoints(team.points, team.gamesPlayed, totalGames);
+  const { divCutLine, wcCutLine } = getCutLines(team, standings, totalGames);
   const inPlayoffs = isInPlayoffPosition(team);
 
   const { probability } = computePositionAwareProbability(
-    projected, team.gamesPlayed, divCutLine, wcCutLine, inPlayoffs, team.clinchIndicator
+    projected, team.gamesPlayed, divCutLine, wcCutLine, inPlayoffs, team.clinchIndicator, totalGames
   );
-  return probability === 99 ? 100 : probability;
+  return probability;
 }
 
 /**
  * Compute probability for a hypothetical points/GP scenario.
  * Cut lines are pre-computed and passed in so callers can reuse them.
+ * `team` supplies the playoff-position flag and clinch indicator.
  */
 export function computeProb(
   points: number,
   gamesPlayed: number,
   divCutLine: number,
   wcCutLine: number,
-  team: StandingsTeam,
-  standings: StandingsTeam[]
+  team: StandingsTeam
 ): number {
-  if (gamesPlayed <= 0) return 50;
-  const projected = getProjectedPoints(points, gamesPlayed);
+  const projected = getModelProjectedPoints(points, gamesPlayed);
   const inPlayoffs = isInPlayoffPosition(team);
   const { probability } = computePositionAwareProbability(
     projected, gamesPlayed, divCutLine, wcCutLine, inPlayoffs, team.clinchIndicator

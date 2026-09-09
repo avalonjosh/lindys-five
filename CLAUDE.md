@@ -77,7 +77,9 @@ All endpoints use base URL `https://api-web.nhle.com/v1` (proxied through `/api/
 
 ## Common Patterns
 - Box score components receive team abbreviations and use `teamConfig.ts` for colors
-- Playoff probability uses `computePositionAwareProbability()` from `lib/utils/playoffProbability.ts`
+- Playoff probability uses `computePositionAwareProbability()` from `lib/utils/playoffProbability.ts`, fed by `getModelProjectedPoints()` (pace regressed toward league average, 30-game prior) and `getCutLines()` from `lib/utils/standingsCalc.ts`. `getProjectedPoints()` is the raw "on pace for" display number only. Never re-implement cut lines in a component; import them
+- Series odds: always pass `seriesOptionsFor(teamStanding, oppStanding)` to `computeSeriesWinProbability()` so every surface uses the same strength inputs. Cup odds: `buildCupOdds()` in `lib/utils/cupOdds.ts` walks the real bracket (letters A+B feed I, etc.) and sums to 100%; `buildProjectedFirstRound()` in `lib/utils/projectedBracket.ts` synthesizes round 1 from standings before the bracket exists
+- Backtest the NHL model with `npx tsx scripts/backtest-nhl-odds.ts --season 20252026` (Brier score + calibration table) before tuning any constant
 - Live game polling: 15s intervals, stop when game transitions to FINAL
 - Portal pattern for tooltips that need to escape `overflow-hidden` containers (see ScoringTimeline.tsx)
 

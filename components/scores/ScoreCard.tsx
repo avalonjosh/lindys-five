@@ -7,7 +7,7 @@ import type { StandingsTeam } from '@/lib/types/boxscore';
 import { TEAMS } from '@/lib/teamConfig';
 import { generateGameTicketLink } from '@/lib/utils/affiliateLinks';
 import { trackClick } from '@/lib/analytics';
-import { getProjectedPoints, getDivCutLine, getWcCutLine, isInPlayoffPosition } from '@/lib/utils/standingsCalc';
+import { getModelProjectedPoints, getDivCutLine, getWcCutLine, isInPlayoffPosition } from '@/lib/utils/standingsCalc';
 import { computePositionAwareProbability } from '@/lib/utils/playoffProbability';
 
 interface ScoreCardProps {
@@ -79,23 +79,23 @@ const getWinner = (game: NHLGame): 'home' | 'away' | null => {
 };
 
 function computeStakes(standing: StandingsTeam, standings: StandingsTeam[]): { winDelta: number; lossDelta: number } | null {
-  if (standing.gamesPlayed < 5) return null;
+  if (standing.gamesPlayed < 1) return null;
 
   const divCutLine = getDivCutLine(standing, standings);
   const wcCutLine = getWcCutLine(standing, standings);
   const inPlayoffs = isInPlayoffPosition(standing);
-  const projected = getProjectedPoints(standing.points, standing.gamesPlayed);
+  const projected = getModelProjectedPoints(standing.points, standing.gamesPlayed);
 
   const current = computePositionAwareProbability(
     projected, standing.gamesPlayed, divCutLine, wcCutLine, inPlayoffs, standing.clinchIndicator
   ).probability;
 
-  const winProjected = getProjectedPoints(standing.points + 2, standing.gamesPlayed + 1);
+  const winProjected = getModelProjectedPoints(standing.points + 2, standing.gamesPlayed + 1);
   const winProb = computePositionAwareProbability(
     winProjected, standing.gamesPlayed + 1, divCutLine, wcCutLine, inPlayoffs, standing.clinchIndicator
   ).probability;
 
-  const lossProjected = getProjectedPoints(standing.points, standing.gamesPlayed + 1);
+  const lossProjected = getModelProjectedPoints(standing.points, standing.gamesPlayed + 1);
   const lossProb = computePositionAwareProbability(
     lossProjected, standing.gamesPlayed + 1, divCutLine, wcCutLine, inPlayoffs, standing.clinchIndicator
   ).probability;

@@ -5,8 +5,8 @@ import type { LandingResponse, StandingsTeam, ScoringGoal, ThreeStar } from './t
 import { TEAMS } from './teamConfig';
 import { fetchJsonWithRetry } from './fetchWithRetry';
 import { generateGameTicketLink, generateMerchLink } from './utils/affiliateLinks';
-import { getProjectedPoints, getDivCutLine, getWcCutLine, isInPlayoffPosition, getPlayoffProbability } from './utils/standingsCalc';
-import { computePositionAwareProbability, computeSeriesWinProbability } from './utils/playoffProbability';
+import { getProjectedPoints, getModelProjectedPoints, getDivCutLine, getWcCutLine, isInPlayoffPosition, getPlayoffProbability } from './utils/standingsCalc';
+import { computePositionAwareProbability, computeSeriesWinProbability, seriesOptionsFor } from './utils/playoffProbability';
 import { fetchPlayoffsSnapshot, type PlayoffsSnapshot } from './services/playoffsSnapshot';
 import type { PlayoffSeries, PlayoffGame } from './types/playoffs';
 
@@ -327,7 +327,7 @@ async function sendBoxscoreRecapForTeam(
     else if (otGame) pointsBefore -= 1;
     const gpBefore = standing.gamesPlayed - 1;
     if (gpBefore <= 0) return { before: 50, after };
-    const projectedBefore = getProjectedPoints(pointsBefore, gpBefore);
+    const projectedBefore = getModelProjectedPoints(pointsBefore, gpBefore);
     const divCutLine = getDivCutLine(standing, standings);
     const wcCutLine = getWcCutLine(standing, standings);
     const inPlayoffs = isInPlayoffPosition(standing);
@@ -856,31 +856,12 @@ function buildPlayoffRecapData(
   // Series win odds — before (undo this game) + after (current)
   const teamStanding = snapshot.standings.find((t) => t.teamAbbrev?.default === teamConfig.abbreviation);
   const oppStanding = snapshot.standings.find((t) => t.teamAbbrev?.default === oppAbbrev);
-  const strengthFor = (st: StandingsTeam | undefined) => {
-    if (!st) return {};
-    const gp = st.gamesPlayed || 0;
-    const homeGP = (st.homeWins || 0) + (st.homeLosses || 0) + (st.homeOtLosses || 0);
-    const roadGP = (st.roadWins || 0) + (st.roadLosses || 0) + (st.roadOtLosses || 0);
-    return {
-      goalDiffPerGame: gp > 0 ? ((st.goalFor || 0) - (st.goalAgainst || 0)) / gp : undefined,
-      homeWinPct: homeGP > 0 ? (st.homeWins || 0) / homeGP : undefined,
-      roadWinPct: roadGP > 0 ? (st.roadWins || 0) / roadGP : undefined,
-    };
-  };
-  const teamS = strengthFor(teamStanding);
-  const oppS = strengthFor(oppStanding);
   const teamPctg = teamStanding?.pointPctg ?? 0.5;
   const oppPctg = oppStanding?.pointPctg ?? 0.5;
+  const seriesOptions = seriesOptionsFor(teamStanding, oppStanding);
 
   const computeTeamSeriesP = (myWins: number, theirWins: number) =>
-    computeSeriesWinProbability(teamPctg, oppPctg, myWins, theirWins, teamIsTopSeed, {
-      teamGoalDiffPerGame: teamS.goalDiffPerGame,
-      oppGoalDiffPerGame: oppS.goalDiffPerGame,
-      teamHomeWinPct: teamS.homeWinPct,
-      teamRoadWinPct: teamS.roadWinPct,
-      oppHomeWinPct: oppS.homeWinPct,
-      oppRoadWinPct: oppS.roadWinPct,
-    });
+    computeSeriesWinProbability(teamPctg, oppPctg, myWins, theirWins, teamIsTopSeed, seriesOptions);
 
   const seriesWinOddsAfter = Math.round(computeTeamSeriesP(teamSeriesWins, oppSeriesWins));
   const beforeMyWins = teamWon ? Math.max(0, teamSeriesWins - 1) : teamSeriesWins;

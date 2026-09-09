@@ -6,7 +6,8 @@ import { TEAMS } from '@/lib/teamConfig';
 import type { StandingsTeam } from '@/lib/types/boxscore';
 import type { PlayoffBracketResponse } from '@/lib/types/playoffs';
 import { getProjectedPoints, getPlayoffProbability, isInPlayoffPosition } from '@/lib/utils/standingsCalc';
-import { computeSeriesWinProbability } from '@/lib/utils/playoffProbability';
+import { buildCupOdds } from '@/lib/utils/cupOdds';
+import { buildProjectedFirstRound } from '@/lib/utils/projectedBracket';
 import PlayoffOddsClient, { type TeamData } from '@/components/PlayoffOddsClient';
 import StanleyCupOddsTable, { type CupOddsTeam } from '@/components/playoffs/StanleyCupOddsTable';
 import NewsletterModal from '@/components/newsletter/NewsletterModal';
@@ -130,72 +131,49 @@ const ROUND_LABELS: Record<number, string> = {
   4: 'Cup Final',
 };
 
+function seriesStatusLabel(wins: number, losses: number): string {
+  if (wins >= 4) return 'Won';
+  if (losses >= 4) return 'Lost';
+  if (wins === losses) return `Tied ${wins}-${losses}`;
+  if (wins > losses) return `Leads ${wins}-${losses}`;
+  return `Trails ${wins}-${losses}`;
+}
+
+// Same bracket-aware Cup model as /playoffs (lib/utils/cupOdds), plus each
+// team's latest round and series record for the table.
 function buildCupOddsTeams(
   bracket: PlayoffBracketResponse,
   standingsMap: Map<string, StandingsTeam>
 ): CupOddsTeam[] {
-  const teams: CupOddsTeam[] = [];
-
+  const status = new Map<string, { round: number; label: string }>();
   for (const round of bracket.rounds || []) {
     for (const series of round.series || []) {
       for (const mt of series.matchupTeams || []) {
-        const abbrev = mt.team.abbrev;
-        if (teams.some(t => t.abbrev === abbrev)) continue;
-
-        const standing = standingsMap.get(abbrev);
         const isTop = mt.seed?.isTop;
         const wins = isTop ? series.topSeedWins : series.bottomSeedWins;
         const losses = isTop ? series.bottomSeedWins : series.topSeedWins;
-        const isEliminated = losses >= 4;
-
-        // Compute current series win probability
-        const oppMt = series.matchupTeams?.find(t => t.team.abbrev !== abbrev);
-        const oppStanding = oppMt ? standingsMap.get(oppMt.team.abbrev) : null;
-        let currentSeriesOdds = 50;
-        if (standing && oppStanding && !isEliminated && wins < 4) {
-          currentSeriesOdds = computeSeriesWinProbability(
-            standing.pointPctg, oppStanding.pointPctg, wins, losses, !!isTop
-          );
-        } else if (wins >= 4) {
-          currentSeriesOdds = 100;
-        } else if (isEliminated) {
-          currentSeriesOdds = 0;
+        const existing = status.get(mt.team.abbrev);
+        // Rounds are walked in order, so the last write is the team's latest series.
+        if (!existing || round.roundNumber >= existing.round) {
+          status.set(mt.team.abbrev, { round: round.roundNumber, label: seriesStatusLabel(wins || 0, losses || 0) });
         }
-
-        // Simple chain for cup odds
-        const roundsRemaining = 5 - round.roundNumber;
-        let cupOdds = currentSeriesOdds / 100;
-        for (let r = 1; r < roundsRemaining; r++) {
-          const p = computeSeriesWinProbability(
-            standing?.pointPctg || 0.5, 0.5, 0, 0, (mt.seed?.rank || 8) <= 4
-          );
-          cupOdds *= p / 100;
-        }
-
-        const seriesStatusParts = [];
-        if (wins >= 4) seriesStatusParts.push('Won');
-        else if (isEliminated) seriesStatusParts.push('Lost');
-        else if (wins === losses) seriesStatusParts.push(`Tied ${wins}-${losses}`);
-        else if (wins > losses) seriesStatusParts.push(`Leads ${wins}-${losses}`);
-        else seriesStatusParts.push(`Trails ${wins}-${losses}`);
-
-        const slug = abbrevToSlug[abbrev] || '';
-
-        teams.push({
-          abbrev,
-          name: mt.team.commonName?.default || mt.team.name?.default || abbrev,
-          logo: mt.team.logo,
-          slug,
-          cupOdds: isEliminated ? 0 : Math.round(cupOdds * 1000) / 10,
-          currentRound: ROUND_LABELS[round.roundNumber] || `R${round.roundNumber}`,
-          seriesStatus: seriesStatusParts.join(''),
-          isEliminated,
-        });
       }
     }
   }
 
-  return teams;
+  return buildCupOdds(bracket, standingsMap).map(entry => {
+    const st = status.get(entry.abbrev);
+    return {
+      abbrev: entry.abbrev,
+      name: entry.name,
+      logo: entry.logo,
+      slug: abbrevToSlug[entry.abbrev] || '',
+      cupOdds: entry.cupOdds,
+      currentRound: st ? (ROUND_LABELS[st.round] || `R${st.round}`) : 'First Round',
+      seriesStatus: st?.label || '',
+      isEliminated: entry.isEliminated,
+    };
+  });
 }
 
 function buildTeamData(standings: StandingsTeam[]): TeamData[] {
@@ -224,49 +202,22 @@ function buildTeamData(standings: StandingsTeam[]): TeamData[] {
 }
 
 function buildCupOddsFromStandings(standings: StandingsTeam[]): CupOddsTeam[] | null {
-  const teams: CupOddsTeam[] = [];
-
-  for (const confName of ['Eastern', 'Western']) {
-    const confTeams = standings.filter(t => t.conferenceName === confName);
-    const divOrder = confName === 'Eastern' ? ['Atlantic', 'Metropolitan'] : ['Central', 'Pacific'];
-    const divisionData = divOrder.map(divName => ({
-      teams: confTeams.filter(t => t.divisionName === divName).sort((a, b) => a.divisionSequence - b.divisionSequence),
-    }));
-    divisionData.sort((a, b) => b.teams[0]?.points - a.teams[0]?.points);
-    const [divA, divB] = divisionData;
-
-    const wildcards = confTeams
-      .filter(t => t.divisionSequence > 3)
-      .sort((a, b) => b.points - a.points)
-      .slice(0, 2);
-
-    const playoffTeams = [
-      ...(divA?.teams.slice(0, 3) || []),
-      ...(divB?.teams.slice(0, 3) || []),
-      ...wildcards,
-    ];
-
-    for (const st of playoffTeams) {
-      const slug = abbrevToSlug[st.teamAbbrev.default] || '';
-      // Simple cup odds: chain series win probabilities vs average
-      let cupProb = 1;
-      for (let r = 0; r < 4; r++) {
-        const p = computeSeriesWinProbability(st.pointPctg, 0.5, 0, 0, true);
-        cupProb *= p / 100;
-      }
-      teams.push({
-        abbrev: st.teamAbbrev.default,
-        name: st.teamCommonName?.default || st.teamName.default,
-        logo: st.teamLogo,
-        slug,
-        cupOdds: Math.round(cupProb * 1000) / 10,
-        currentRound: 'First Round',
-        seriesStatus: 'Starts soon',
-        isEliminated: false,
-      });
-    }
-  }
-  return teams.length > 0 ? teams : null;
+  // Regular season is over but the bracket isn't published yet: project the
+  // first round from the final standings and run the same Cup model on it.
+  const projected = buildProjectedFirstRound(standings);
+  if (!projected) return null;
+  const standingsMap = new Map(standings.map(t => [t.teamAbbrev.default, t]));
+  const entries = buildCupOdds({ rounds: [{ roundNumber: 1, series: projected.series }] }, standingsMap);
+  return entries.map(entry => ({
+    abbrev: entry.abbrev,
+    name: entry.name,
+    logo: entry.logo,
+    slug: abbrevToSlug[entry.abbrev] || '',
+    cupOdds: entry.cupOdds,
+    currentRound: 'First Round',
+    seriesStatus: 'Starts soon',
+    isEliminated: false,
+  }));
 }
 
 export default async function NHLPlayoffOddsPage() {
@@ -292,7 +243,7 @@ export default async function NHLPlayoffOddsPage() {
           name: 'How are NHL playoff odds calculated?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: `Each team's playoff probability projects their points pace over the full season, then compares that projection to the projected third-place divisional and second wild card cut lines. A logistic curve converts the gap into a probability; before opening night the projection is seeded from last season's results.`,
+            text: `Each team's playoff probability projects their final points (points banked plus remaining games at a pace regressed toward the league average), then compares that projection to the projected division and wild card cut lines. A logistic curve that sharpens as games run out converts the gap into a probability; before opening night the projection is seeded from last season's results.`,
           },
         },
       ],
@@ -451,7 +402,7 @@ export default async function NHLPlayoffOddsPage() {
                   name: 'How are NHL playoff odds calculated?',
                   acceptedAnswer: {
                     '@type': 'Answer',
-                    text: `Each team's playoff probability projects their current points pace over the full season, then compares that projection to two cut lines: the projected third-place divisional total and the projected second wild card total. A logistic curve converts the gap between projected points and each cut line into a probability, and the higher of the two paths is shown. Confidence grows as the season progresses.`,
+                    text: `Each team's playoff probability projects their final points (points banked plus remaining games at a pace regressed toward the league average), then compares that projection to two cut lines: the projected third-place divisional total and the projected second wild card total. A logistic curve converts the gap between projected points and each cut line into a probability, and the higher of the two paths is shown. The curve sharpens as games run out, so confidence grows as the season progresses.`,
                   },
                 },
                 {

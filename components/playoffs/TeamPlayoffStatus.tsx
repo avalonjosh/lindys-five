@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { computeSeriesWinProbability } from '@/lib/utils/playoffProbability';
+import { computeSeriesWinProbability, seriesOptionsFor, type SeriesOddsOptions } from '@/lib/utils/playoffProbability';
 
 interface TeamPlayoffStatusProps {
   teamAbbrev: string;
@@ -19,6 +19,7 @@ interface SeriesData {
   oppWins: number;
   teamIsTop: boolean;
   teamPtPctg: number;
+  seriesOptions: SeriesOddsOptions;
   oppPtPctg: number;
   isEliminated: boolean;
   seriesComplete: boolean;
@@ -74,6 +75,7 @@ export default function TeamPlayoffStatus({ teamAbbrev, teamName, primaryColor }
               teamIsTop,
               teamPtPctg: teamStanding?.pointPctg || 0.5,
               oppPtPctg: oppStanding?.pointPctg || 0.5,
+              seriesOptions: seriesOptionsFor(teamStanding, oppStanding),
               isEliminated: oppWins >= 4,
               seriesComplete: teamWins >= 4 || oppWins >= 4,
               teamWonSeries: teamWins >= 4,
@@ -97,7 +99,8 @@ export default function TeamPlayoffStatus({ teamAbbrev, teamName, primaryColor }
         series.teamPtPctg, series.oppPtPctg,
         series.teamIsTop ? series.teamWins : series.oppWins,
         series.teamIsTop ? series.oppWins : series.teamWins,
-        series.teamIsTop
+        series.teamIsTop,
+        series.seriesOptions
       ));
 
   const actualTeamPct = series.teamIsTop ? seriesWinPct : 100 - seriesWinPct;

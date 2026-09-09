@@ -10,7 +10,7 @@ import { isRateLimitError } from '@/lib/services/nhlApi';
 import { getFinalStandings } from '@/lib/services/nhlOffseason';
 import { fetchTeamScheduleServer, fetchStandingsServer, ordinal, possessive } from '@/lib/services/nhlTeamPageData';
 import { calculateChunks, calculateSeasonStats } from '@/lib/utils/chunkCalculator';
-import { getDivCutLine, getWcCutLine } from '@/lib/utils/standingsCalc';
+import { getDivCutLine, getWcCutLine, getModelProjectedPoints, isInPlayoffPosition as standingInPlayoffPosition } from '@/lib/utils/standingsCalc';
 import { computePositionAwareProbability, getPlayoffStatusMessage } from '@/lib/utils/playoffProbability';
 import { playoffResultText } from '@/lib/utils/seasonSummary';
 import { formatSeasonEndYear, getRegularSeasonGameCount, previousNHLSeason } from '@/lib/utils/season';
@@ -180,9 +180,9 @@ export default async function TeamPage({ params }: TeamPageProps) {
         // and the visible odds agree.
         const divCutLine = getDivCutLine(teamStanding, allTeams);
         const wcCutLine = getWcCutLine(teamStanding, allTeams);
-        const isInPlayoffPosition = teamStanding.divisionSequence <= 3 || (teamStanding.wildcardSequence > 0 && teamStanding.wildcardSequence <= 2);
+        const isInPlayoffPosition = standingInPlayoffPosition(teamStanding);
         const { probability } = computePositionAwareProbability(
-          seasonStats.projectedPoints, seasonStats.gamesPlayed, divCutLine, wcCutLine, isInPlayoffPosition, teamStanding.clinchIndicator,
+          getModelProjectedPoints(seasonStats.totalPoints, seasonStats.gamesPlayed), seasonStats.gamesPlayed, divCutLine, wcCutLine, isInPlayoffPosition, teamStanding.clinchIndicator,
         );
         const statusMessage = getPlayoffStatusMessage(probability, seasonStats.gamesPlayed);
         const pct = Math.round(probability);

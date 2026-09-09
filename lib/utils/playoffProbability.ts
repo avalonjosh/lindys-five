@@ -1,74 +1,38 @@
-import type { SeasonStats } from '../types';
+import type { StandingsTeam } from '@/lib/types/boxscore';
 import { getCurrentSeasonGameCount } from './season';
 
+// ── Points projection ────────────────────────────────────────────────────────
+
+// League-average NHL points pace (≈92 over 82 games, ≈94 over 84).
+export const LEAGUE_AVG_PACE = 1.12;
+// Regression prior for a team's points pace, expressed as phantom games played
+// at the league average. Empirically the spread of NHL true talent is about
+// 0.15 pts/game (sd) against ~0.93 pts/game of single-game noise, which puts
+// the ideal prior near 35-40 games; 30 keeps early-season odds honest without
+// dragging strong teams too hard by midseason. Tune with scripts/backtest-nhl-odds.ts.
+export const PACE_PRIOR_GAMES = 30;
+
 /**
- * Calculate playoff probability based on current performance
- * Uses a simplified model based on:
- * 1. How far above/below playoff pace they are
- * 2. Games remaining (more variance early season)
- * 3. Historical playoff thresholds
+ * Model projection of a team's final point total. Banked points stay banked;
+ * the remaining games are played at a pace regressed toward the league average
+ * with a PACE_PRIOR_GAMES-game prior. At zero games played every team projects
+ * to the league average; by late season the prior has almost no pull.
+ *
+ * This is the projection the probability model runs on. The raw "on pace for"
+ * number shown in the UI is a different quantity (points / gp × season length).
  */
-export function calculatePlayoffProbability(stats: SeasonStats): number {
-  const { totalPoints, gamesPlayed, gamesRemaining, projectedPoints, playoffTarget } = stats;
-
-  // Need at least 5 games to have meaningful data
-  if (gamesPlayed < 5) {
-    return 50; // Default to 50% with limited data
-  }
-
-  // Calculate points needed in remaining games
-  const pointsNeeded = playoffTarget - totalPoints;
-  const maxPossiblePoints = gamesRemaining * 2;
-
-  // If mathematically impossible, 0%
-  if (pointsNeeded > maxPossiblePoints) {
-    return 0;
-  }
-
-  // If already clinched (have enough points), 100%
-  if (totalPoints >= playoffTarget) {
-    return 100;
-  }
-
-  // Required pace for remaining games to make playoffs
-  const requiredPaceRemaining = pointsNeeded / gamesRemaining;
-
-  // Current pace (points per game)
-  const currentPace = totalPoints / gamesPlayed;
-
-  // Base probability from projection difference
-  // Each point above/below target shifts probability
-  const projectionDiff = projectedPoints - playoffTarget;
-
-  // Scale factor - how much each projected point changes probability
-  // More games played = more confidence in projection
-  const totalGames = gamesPlayed + gamesRemaining; // 82, or 84 from 2026-27
-  const confidenceFactor = Math.min(gamesPlayed / totalGames, 1);
-
-  // Base calculation: 50% + (projection diff * scale factor)
-  // Scale so ~20 points above/below target = near 100%/0%
-  const pointScale = 2.5 * confidenceFactor;
-  let probability = 50 + (projectionDiff * pointScale);
-
-  // Adjust for feasibility of required pace
-  // If they need to play at an unrealistic pace, reduce probability
-  if (requiredPaceRemaining > 1.5) {
-    // Needing more than 1.5 pts/game is very difficult
-    probability *= Math.max(0.3, 1 - ((requiredPaceRemaining - 1.5) * 0.5));
-  }
-
-  // Bonus if current pace is well above what's needed
-  if (currentPace > requiredPaceRemaining + 0.2) {
-    probability += 5;
-  }
-
-  // Early season variance - less certainty
-  const varianceFactor = 1 - (gamesRemaining / totalGames * 0.2);
-  probability = 50 + (probability - 50) * varianceFactor;
-
-  // Clamp between 0 and 100
-  return Math.max(0, Math.min(100, Math.round(probability)));
+export function projectPointsWithPrior(
+  points: number,
+  gamesPlayed: number,
+  totalGames: number = getCurrentSeasonGameCount()
+): number {
+  const gp = Math.max(0, gamesPlayed);
+  const remaining = Math.max(0, totalGames - gp);
+  const regressedPace = (points + LEAGUE_AVG_PACE * PACE_PRIOR_GAMES) / (gp + PACE_PRIOR_GAMES);
+  return points + regressedPace * remaining;
 }
+
+// ── Playoff probability ──────────────────────────────────────────────────────
 
 /**
  * Get a message describing the playoff situation
@@ -101,44 +65,53 @@ export function getProbabilityColor(): string {
   return 'team';
 }
 
+// Steepness of the logistic curve at a full season remaining. With the curve's
+// spread tied to the square root of games remaining, this reproduces the
+// binomial spread of an NHL team's points (≈0.93 pts/game of noise on both the
+// team and the cut line): ~12 points of sd with 84 games left, ~8.5 at the
+// halfway mark, ~1.3 with one game left.
+const K_FULL_SEASON = 0.15 * Math.sqrt(84);
+// Never let the curve go fully vertical: with no games left the cut line is
+// still an estimate (average of two teams' projections), so keep a sliver of
+// uncertainty rather than a hard step.
+const MIN_EFFECTIVE_GAMES_REMAINING = 0.5;
+
 /**
  * Calculate probability for a hypothetical final point total
  * Uses a logistic (S-curve) function for more realistic probability distribution:
  * - Steep changes near the cut line where each point matters most
  * - Flattens at extremes (diminishing returns for being way above/below)
+ * - Sharpens as games run out, so a team that is above the cut line with a few
+ *   games left is near-certain, and one that is below with none left is out
  *
  * @param finalPoints - The hypothetical final point total
- * @param gamesPlayed - Games played so far (affects curve steepness)
- * @param cutLine - The current season's projected cut line (defaults to 96)
+ * @param gamesPlayed - Games played so far (sets how many games remain)
+ * @param cutLine - The current season's projected cut line (defaults to 96, scaled to season length)
  * @param pathType - Optional path type to tune steepness: 'division' (steeper), 'wildcard' (flatter), or 'default'
+ * @param totalGames - Season length; defaults to the season in progress
  */
 export function probabilityForFinalPoints(
   finalPoints: number,
   gamesPlayed: number,
   cutLine: number = Math.round(96 * getCurrentSeasonGameCount() / 82),
-  pathType: 'division' | 'wildcard' | 'default' = 'default'
+  pathType: 'division' | 'wildcard' | 'default' = 'default',
+  totalGames: number = getCurrentSeasonGameCount()
 ): number {
   // How far above/below the current season's projected cut line
   const diff = finalPoints - cutLine;
 
-  // Confidence factor increases as season progresses (current-season length:
-  // these functions always run against live-season data)
-  const confidenceFactor = Math.min(gamesPlayed / getCurrentSeasonGameCount(), 1);
+  const gamesRemaining = Math.max(MIN_EFFECTIVE_GAMES_REMAINING, totalGames - gamesPlayed);
+  let k = K_FULL_SEASON / Math.sqrt(gamesRemaining);
 
-  // Steepness (k) of the S-curve varies by path type
   // Division: fewer competitors, less volatile → steeper curve
   // Wildcard: more competitors, more volatile → flatter curve
   // Default: used for breakdown table
-  let k: number;
   switch (pathType) {
     case 'division':
-      k = 0.18 + (confidenceFactor * 0.22); // 0.18–0.40
+      k *= 1.15;
       break;
     case 'wildcard':
-      k = 0.14 + (confidenceFactor * 0.18); // 0.14–0.32
-      break;
-    default:
-      k = 0.15 + (confidenceFactor * 0.20); // 0.15–0.35
+      k *= 0.92;
       break;
   }
 
@@ -155,27 +128,59 @@ export function probabilityForFinalPoints(
  * A team makes the playoffs if they finish top 3 in their division OR wildcard 1-2.
  * We calculate probability for both paths and take the max.
  *
- * @param projectedPoints - Team's projected final point total
+ * @param projectedPoints - Team's projected final point total (use projectPointsWithPrior)
  * @param gamesPlayed - Games played so far
  * @param divCutLine - Projected division cut line (top 3 threshold)
  * @param wcCutLine - Projected wildcard cut line
  * @param isInPlayoffPosition - Whether team currently holds a playoff spot
+ * @param clinchIndicator - NHL clinch/elimination flag (x/y/z/p/e)
+ * @param totalGames - Season length; defaults to the season in progress
  */
-/**
- * Compute the probability that a team wins a best-of-7 series.
- *
- * Uses team point-percentages as a strength proxy.  A logistic function converts
- * the strength gap into a single-game win probability, and a binomial
- * (negative-binomial) distribution converts that into a series-win probability.
- *
- * Home-ice advantage: the higher seed hosts games 1, 2, 5, 7.
- *
- * @param teamPtPctg - Team's regular-season point percentage (0-1)
- * @param oppPtPctg  - Opponent's regular-season point percentage (0-1)
- * @param teamWins   - Games won so far in the series (0-4)
- * @param oppWins    - Games lost so far in the series (0-4)
- * @param hasHomeIce - Whether this team has home-ice advantage
- */
+export function computePositionAwareProbability(
+  projectedPoints: number,
+  gamesPlayed: number,
+  divCutLine: number,
+  wcCutLine: number,
+  isInPlayoffPosition: boolean,
+  clinchIndicator?: string,
+  totalGames: number = getCurrentSeasonGameCount()
+): { probability: number; activePath: 'division' | 'wildcard'; effectiveCutLine: number } {
+  // Teams that have clinched a playoff spot are guaranteed 100%
+  // x = clinched playoff, y = clinched division, z = clinched conference, p = Presidents' Trophy
+  if (clinchIndicator && ['x', 'y', 'z', 'p'].includes(clinchIndicator)) {
+    return { probability: 100, activePath: 'division', effectiveCutLine: 0 };
+  }
+  // Eliminated teams are 0%
+  if (clinchIndicator === 'e') {
+    return { probability: 0, activePath: 'wildcard', effectiveCutLine: 0 };
+  }
+
+  // Position bonus: teams currently holding a playoff spot are displaced less
+  // often than pace alone suggests. Ramps linearly with season progress, up to
+  // 1.5 points shaved off the cut line at season's end.
+  let positionBonus = 0;
+  if (isInPlayoffPosition) {
+    const seasonProgress = Math.min(gamesPlayed / totalGames, 1);
+    positionBonus = 1.5 * seasonProgress;
+  }
+
+  const adjustedDivCutLine = divCutLine - positionBonus;
+  const adjustedWcCutLine = wcCutLine - positionBonus;
+
+  const divProb = probabilityForFinalPoints(projectedPoints, gamesPlayed, adjustedDivCutLine, 'division', totalGames);
+  const wcProb = probabilityForFinalPoints(projectedPoints, gamesPlayed, adjustedWcCutLine, 'wildcard', totalGames);
+
+  const probability = Math.max(divProb, wcProb);
+  const activePath = divProb >= wcProb ? 'division' : 'wildcard';
+  const effectiveCutLine = activePath === 'division'
+    ? Math.round(adjustedDivCutLine)
+    : Math.round(adjustedWcCutLine);
+
+  return { probability, activePath, effectiveCutLine };
+}
+
+// ── Series (best-of-seven) model ─────────────────────────────────────────────
+
 export interface SeriesOddsOptions {
   // Goal differential per game — blended with point % for a stronger team-strength signal
   teamGoalDiffPerGame?: number;
@@ -187,6 +192,65 @@ export interface SeriesOddsOptions {
   oppRoadWinPct?: number;
 }
 
+export interface SeriesStrength {
+  goalDiffPerGame?: number;
+  homeWinPct?: number;
+  roadWinPct?: number;
+}
+
+/** Strength inputs for the series model, derived from a standings row. */
+export function seriesStrengthFor(st: StandingsTeam | undefined | null): SeriesStrength {
+  if (!st) return {};
+  const gp = st.gamesPlayed || 0;
+  const homeGP = (st.homeWins || 0) + (st.homeLosses || 0) + (st.homeOtLosses || 0);
+  const roadGP = (st.roadWins || 0) + (st.roadLosses || 0) + (st.roadOtLosses || 0);
+  return {
+    goalDiffPerGame: gp > 0 ? ((st.goalFor || 0) - (st.goalAgainst || 0)) / gp : undefined,
+    homeWinPct: homeGP > 0 ? (st.homeWins || 0) / homeGP : undefined,
+    roadWinPct: roadGP > 0 ? (st.roadWins || 0) / roadGP : undefined,
+  };
+}
+
+/** Pack two teams' strengths into the options bag computeSeriesWinProbability expects. */
+export function seriesOptionsFor(
+  team: StandingsTeam | undefined | null,
+  opp: StandingsTeam | undefined | null
+): SeriesOddsOptions {
+  const t = seriesStrengthFor(team);
+  const o = seriesStrengthFor(opp);
+  return {
+    teamGoalDiffPerGame: t.goalDiffPerGame,
+    oppGoalDiffPerGame: o.goalDiffPerGame,
+    teamHomeWinPct: t.homeWinPct,
+    teamRoadWinPct: t.roadWinPct,
+    oppHomeWinPct: o.homeWinPct,
+    oppRoadWinPct: o.roadWinPct,
+  };
+}
+
+// Logistic slope for single-game win probability from the strength gap.
+// k=2.2 puts a .600 team at ≈55.5% per game against a .500 team, in line with
+// public NHL Elo/MoneyPuck single-game odds; with home ice that is a ≈63%
+// series favorite. (The old k=4.5 gave 61% per game and a 74% series, well
+// hotter than any public model.)
+const SERIES_K = 2.2;
+
+/**
+ * Compute the probability that a team wins a best-of-7 series.
+ *
+ * Uses team point-percentages (optionally blended with goal differential) as a
+ * strength proxy. A logistic function converts the strength gap into a
+ * single-game win probability, and a dynamic program over the remaining games
+ * (2-2-1-1-1 home/road pattern) converts that into a series-win probability.
+ *
+ * Home-ice advantage: the higher seed hosts games 1, 2, 5, 7.
+ *
+ * @param teamPtPctg - Team's regular-season point percentage (0-1)
+ * @param oppPtPctg  - Opponent's regular-season point percentage (0-1)
+ * @param teamWins   - Games won so far in the series (0-4)
+ * @param oppWins    - Games lost so far in the series (0-4)
+ * @param hasHomeIce - Whether this team has home-ice advantage
+ */
 export function computeSeriesWinProbability(
   teamPtPctg: number,
   oppPtPctg: number,
@@ -195,8 +259,26 @@ export function computeSeriesWinProbability(
   hasHomeIce: boolean = true,
   options: SeriesOddsOptions = {}
 ): number {
+  return Math.round(
+    100 * seriesWinProbabilityRaw(teamPtPctg, oppPtPctg, teamWins, oppWins, hasHomeIce, options)
+  );
+}
+
+/**
+ * Unrounded series-win probability (0-1). Same model as
+ * computeSeriesWinProbability; the bracket-aware Cup model chains these so
+ * rounding does not compound across rounds.
+ */
+export function seriesWinProbabilityRaw(
+  teamPtPctg: number,
+  oppPtPctg: number,
+  teamWins: number = 0,
+  oppWins: number = 0,
+  hasHomeIce: boolean = true,
+  options: SeriesOddsOptions = {}
+): number {
   // If series already decided
-  if (teamWins >= 4) return 100;
+  if (teamWins >= 4) return 1;
   if (oppWins >= 4) return 0;
 
   // Composite strength: 60% point %, 40% normalized goal-diff per game.
@@ -211,12 +293,8 @@ export function computeSeriesWinProbability(
       ? 0.6 * oppPtPctg + 0.4 * normalizeGD(options.oppGoalDiffPerGame)
       : oppPtPctg;
 
-  // Logistic model for single-game win probability.
-  // k=4.5 tuned so 0.600 vs 0.500 ≈ 55% per game — matches public NHL Elo models.
-  // (Previously k=6 was too sensitive and produced series-win odds well above credible sources.)
-  const k = 4.5;
   const diff = teamStrength - oppStrength;
-  const baseP = 1 / (1 + Math.exp(-k * diff));
+  const baseP = 1 / (1 + Math.exp(-SERIES_K * diff));
 
   // Team-specific home-ice boost if splits are provided; otherwise flat 4% (historical league average).
   // Formula: half the team's own home-vs-road win-rate differential, capped at 10%.
@@ -270,7 +348,7 @@ export function computeSeriesWinProbability(
     return result;
   }
 
-  const prob = dp(winsNeeded, lossesAllowed, 0) * 100;
+  const prob = dp(winsNeeded, lossesAllowed, 0);
   // Humility cap [15%, 85%] applies only before the series starts — playoff
   // hockey has inherent variance, so no pre-series model should be more
   // confident than ~85% about a best-of-7. Once games are played the model
@@ -278,64 +356,7 @@ export function computeSeriesWinProbability(
   // 85% distorts the displayed series odds and everything chained off them
   // (Cup odds). Mid-series output keeps a softer [2%, 98%] bound.
   if (gamesPlayed === 0) {
-    return Math.max(15, Math.min(85, Math.round(prob)));
+    return Math.max(0.15, Math.min(0.85, prob));
   }
-  return Math.max(2, Math.min(98, Math.round(prob)));
-}
-
-/**
- * Simplified Stanley Cup odds computation from bracket data.
- * For each remaining team, chains the probability of winning each remaining round.
- */
-export function computeStanleyCupOddsSimple(
-  teamPtPctg: number,
-  remainingRounds: { oppPtPctg: number; hasHomeIce: boolean }[]
-): number {
-  let prob = 1;
-  for (const round of remainingRounds) {
-    const seriesP = computeSeriesWinProbability(teamPtPctg, round.oppPtPctg, 0, 0, round.hasHomeIce);
-    prob *= seriesP / 100;
-  }
-  return Math.max(0.1, Math.round(prob * 1000) / 10); // One decimal place
-}
-
-export function computePositionAwareProbability(
-  projectedPoints: number,
-  gamesPlayed: number,
-  divCutLine: number,
-  wcCutLine: number,
-  isInPlayoffPosition: boolean,
-  clinchIndicator?: string
-): { probability: number; activePath: 'division' | 'wildcard'; effectiveCutLine: number } {
-  // Teams that have clinched a playoff spot are guaranteed 100%
-  // x = clinched playoff, y = clinched division, z = clinched conference, p = Presidents' Trophy
-  if (clinchIndicator && ['x', 'y', 'z', 'p'].includes(clinchIndicator)) {
-    return { probability: 100, activePath: 'division', effectiveCutLine: 0 };
-  }
-  // Eliminated teams are 0%
-  if (clinchIndicator === 'e') {
-    return { probability: 0, activePath: 'wildcard', effectiveCutLine: 0 };
-  }
-
-  // Position bonus: teams currently holding a playoff spot have an advantage
-  // Scales with games played (more meaningful later in season)
-  let positionBonus = 0;
-  if (isInPlayoffPosition && gamesPlayed >= 25) {
-    const seasonProgress = Math.min(gamesPlayed / getCurrentSeasonGameCount(), 1);
-    positionBonus = 1.5 * seasonProgress; // Up to 1.5 points reduction
-  }
-
-  const adjustedDivCutLine = divCutLine - positionBonus;
-  const adjustedWcCutLine = wcCutLine - positionBonus;
-
-  const divProb = probabilityForFinalPoints(projectedPoints, gamesPlayed, adjustedDivCutLine, 'division');
-  const wcProb = probabilityForFinalPoints(projectedPoints, gamesPlayed, adjustedWcCutLine, 'wildcard');
-
-  const probability = Math.max(divProb, wcProb);
-  const activePath = divProb >= wcProb ? 'division' : 'wildcard';
-  const effectiveCutLine = activePath === 'division'
-    ? Math.round(adjustedDivCutLine)
-    : Math.round(adjustedWcCutLine);
-
-  return { probability, activePath, effectiveCutLine };
+  return Math.max(0.02, Math.min(0.98, prob));
 }
