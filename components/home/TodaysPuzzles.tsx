@@ -15,7 +15,7 @@ interface PuzzleStatus {
 
 const PUZZLES: { sport: Sport; title: string; league: string; href: string; blurb: string; bg: string; border: string; label: string }[] = [
   { sport: 'nhl', title: '82-0', league: 'NHL', href: '/82-0', blurb: 'Draft an all-time roster. Chase a perfect season.', bg: '#0b2463', border: '#1e40af', label: 'text-blue-200' },
-  { sport: 'mlb', title: '162-0', league: 'MLB', href: '/162-0', blurb: 'Nine spins, one all-time roster. Can it go perfect?', bg: '#041E42', border: '#E4002C', label: 'text-red-200' },
+  { sport: 'mlb', title: '162-0', league: 'MLB', href: '/162-0', blurb: 'Nine spins, one all-time roster. Can it go perfect?', bg: '#041E42', border: '#1e3a6e', label: 'text-red-200' },
 ];
 
 function readStatus(sport: Sport, today: string): PuzzleStatus {

@@ -46,7 +46,7 @@ const NAV_LINKS: { href: string; label: string; mobile?: boolean }[] = [
 
 const SPORT_TILES = [
   { href: '/nhl', label: 'NHL', note: '32 teams · playoff odds', className: 'bg-[#003087]' },
-  { href: '/mlb', label: 'MLB', note: '30 teams · playoff odds', className: 'bg-[#041E42] border border-[#E4002C]' },
+  { href: '/mlb', label: 'MLB', note: '30 teams · playoff odds', className: 'bg-[#041E42] border border-[#1e3a6e]' },
   { href: '#pick-the-team', label: 'NFL', note: 'Pick the team', className: 'bg-slate-800 border border-slate-700' },
 ];
 
