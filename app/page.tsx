@@ -1,8 +1,13 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import Image from 'next/image';
-import InlineEmailCapture from '@/components/newsletter/InlineEmailCapture';
 import SiteFooter from '@/components/SiteFooter';
+import TodaysPuzzles from '@/components/home/TodaysPuzzles';
+import YourTeamCard from '@/components/home/YourTeamCard';
+import TonightGames from '@/components/home/TonightGames';
+import HomeEmailSignup from '@/components/home/HomeEmailSignup';
+
+// Today's games are server-rendered, so refresh the page every minute.
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: { absolute: "NHL & MLB Playoff Odds, Standings & Scores | Lindy's Five" },
@@ -28,6 +33,22 @@ export const metadata: Metadata = {
     canonical: 'https://www.lindysfive.com/',
   },
 };
+
+const NAV_LINKS: { href: string; label: string; mobile?: boolean }[] = [
+  { href: '/nhl', label: 'NHL', mobile: true },
+  { href: '/mlb', label: 'MLB', mobile: true },
+  { href: '/nhl/scores', label: 'Scores', mobile: true },
+  { href: '/nhl-playoff-odds', label: 'Playoff Odds' },
+  { href: '/82-0', label: '82-0' },
+  { href: '/162-0', label: '162-0' },
+  { href: '/blog', label: 'Blog' },
+];
+
+const SPORT_TILES = [
+  { href: '/nhl', label: 'NHL', note: '32 teams · playoff odds', className: 'bg-[#003087]' },
+  { href: '/mlb', label: 'MLB', note: '30 teams · playoff odds', className: 'bg-[#041E42] border border-[#E4002C]' },
+  { href: '#pick-the-team', label: 'NFL', note: 'Pick the team', className: 'bg-slate-800 border border-slate-700' },
+];
 
 export default function LandingPage() {
   return (
@@ -62,92 +83,62 @@ export default function LandingPage() {
         }}
       />
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
-        <div className="flex flex-1 items-center justify-center p-4">
-          <div className="max-w-4xl w-full">
-          {/* Header */}
-          <div className="text-center mb-16">
-            <h1
-              className="text-5xl md:text-7xl font-bold text-white mb-4"
-              style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-            >
+      <div className="flex min-h-screen flex-col bg-slate-900 text-white">
+        <header className="border-b border-slate-800">
+          <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:h-16 sm:px-6">
+            <Link href="/" className="text-3xl leading-none sm:text-4xl" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
               Lindy&apos;s Five
+            </Link>
+            <nav aria-label="Main" className="flex items-center gap-4 text-sm font-semibold text-slate-200 sm:gap-6 sm:text-[15px]">
+              {NAV_LINKS.map((l) => (
+                <Link key={l.href} href={l.href} className={`hover:text-amber-400 ${l.mobile ? '' : 'hidden lg:inline'}`}>
+                  {l.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </header>
+
+        <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-5 sm:gap-8 sm:px-6 sm:py-8">
+          <div className="flex flex-col gap-1.5">
+            <h1 className="text-4xl leading-none sm:text-5xl" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+              Will your team make the playoffs?
             </h1>
-            <p className="text-lg md:text-xl text-gray-400">
-              Track Every Season, Five Games at a Time
+            <p className="max-w-2xl text-sm text-slate-300 sm:text-base">
+              Live odds for every NHL and MLB team, updated after every game and tracked five games at a time. Plus two free daily roster puzzles.
             </p>
           </div>
 
-          {/* Sport Badges */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16 max-w-3xl mx-auto">
-            {/* NHL Badge */}
-            <Link
-              href="/nhl"
-              className="group relative rounded-2xl p-6 md:p-14 shadow-2xl border-4 transition-all duration-300 hover:scale-105"
-              style={{
-                background: 'linear-gradient(to bottom right, #003087, #0A1128)',
-                borderColor: '#ffffff',
-              }}
-            >
-              <div className="flex flex-col items-center text-center">
-                <Image
-                  src="https://assets.nhle.com/logos/nhl/svg/NHL_light.svg"
-                  priority
-                  alt="NHL"
-                  width={200}
-                  height={200}
-                  className="w-40 h-40 md:w-48 md:h-48 mb-3 group-hover:scale-110 transition-transform duration-300"
-                />
-                <p className="text-xs sm:text-sm md:text-base text-white/60 mb-2 whitespace-nowrap">
-                  32 Teams &bull; Playoff Odds &bull; Stanley Cup Race
-                </p>
-                <p className="font-bold text-lg text-white/80">Enter →</p>
-              </div>
-            </Link>
-
-            {/* MLB Badge */}
-            <Link
-              href="/mlb"
-              className="group relative rounded-2xl p-6 md:p-14 shadow-2xl border-4 transition-all duration-300 hover:scale-105"
-              style={{
-                background: 'linear-gradient(to bottom right, #002D72, #041E42)',
-                borderColor: '#E4002C',
-              }}
-            >
-              <div className="flex flex-col items-center text-center">
-                <Image
-                  src="https://www.mlbstatic.com/team-logos/league-on-dark/1.svg"
-                  priority
-                  alt="MLB"
-                  width={200}
-                  height={200}
-                  className="w-40 h-40 md:w-48 md:h-48 mb-3 group-hover:scale-110 transition-transform duration-300"
-                />
-                <p className="text-xs sm:text-sm md:text-base text-white/60 mb-2 whitespace-nowrap">
-                  30 Teams &bull; Playoff Odds &bull; World Series Race
-                </p>
-                <p className="font-bold text-lg text-white/80">Enter →</p>
-              </div>
-            </Link>
-          </div>
-
-          {/* Games CTA */}
-          <div className="mx-auto mb-12 max-w-2xl rounded-2xl border border-slate-700 bg-slate-800/50 p-6 text-center">
-            <h2 className="text-xl font-bold text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>Can you go 82-0?</h2>
-            <p className="mx-auto mt-1 max-w-md text-sm text-gray-400">Draft an all-time roster from decade &amp; franchise spins and chase a perfect season — a free daily game.</p>
-            <div className="mt-4 flex flex-wrap justify-center gap-3">
-              <Link href="/82-0" className="rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-slate-900 transition-transform hover:scale-105">Play 82-0 · NHL</Link>
-              <Link href="/162-0" className="rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-slate-900 transition-transform hover:scale-105">Play 162-0 · MLB</Link>
+          <div className="grid gap-6 lg:grid-cols-12">
+            <div className="lg:order-2 lg:col-span-5">
+              <TodaysPuzzles />
+            </div>
+            <div className="lg:order-1 lg:col-span-7">
+              <YourTeamCard />
             </div>
           </div>
 
-          {/* Email capture */}
-          <div className="mx-auto mb-12 max-w-2xl">
-            <InlineEmailCapture source="home" theme="dark" />
-          </div>
+          <TonightGames />
 
+          <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
+            <nav aria-label="Sports" className="grid grid-cols-3 gap-2 sm:gap-3 lg:col-span-7">
+              {SPORT_TILES.map((t) => (
+                <Link
+                  key={t.label}
+                  href={t.href}
+                  className={`flex min-h-20 flex-col items-center justify-center gap-0.5 rounded-xl p-3 text-center transition-transform hover:scale-[1.03] sm:min-h-28 sm:items-start sm:justify-between sm:rounded-2xl sm:p-4 sm:text-left ${t.className}`}
+                >
+                  <span className="text-2xl leading-none sm:text-4xl" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>{t.label}</span>
+                  <span className="text-[11px] text-slate-300 sm:text-sm">{t.note}</span>
+                </Link>
+              ))}
+            </nav>
+            <div className="lg:col-span-5">
+              <HomeEmailSignup />
+            </div>
           </div>
-        </div>
+        </main>
+
         <SiteFooter />
       </div>
     </>

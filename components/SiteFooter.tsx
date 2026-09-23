@@ -72,7 +72,7 @@ export default function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-8">
+        <div id="pick-the-team" className="mt-8 scroll-mt-4">
           <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-300">
             Pick the Team (NFL)
           </h2>
