@@ -58,8 +58,9 @@ export default function TodaysPuzzles() {
           Today&apos;s Puzzles
         </h2>
         {today && (
-          <span className="text-xs text-slate-400 sm:text-sm">
-            {new Date(`${today}T12:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric' })}
+          <span className="whitespace-nowrap text-xs text-slate-400 sm:text-sm">
+            <span className="sm:hidden">{new Date(`${today}T12:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' })}</span>
+            <span className="hidden sm:inline">{new Date(`${today}T12:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric' })}</span>
           </span>
         )}
       </div>

@@ -110,10 +110,10 @@ export default function LandingPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-12">
-            <div className="lg:order-2 lg:col-span-5">
+            <div className="min-w-0 lg:order-2 lg:col-span-5">
               <TodaysPuzzles />
             </div>
-            <div className="lg:order-1 lg:col-span-7">
+            <div className="min-w-0 lg:order-1 lg:col-span-7">
               <YourTeamCard />
             </div>
           </div>
@@ -121,19 +121,19 @@ export default function LandingPage() {
           <TonightGames />
 
           <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
-            <nav aria-label="Sports" className="grid grid-cols-3 gap-2 sm:gap-3 lg:col-span-7">
+            <nav aria-label="Sports" className="grid min-w-0 grid-cols-3 gap-2 sm:gap-3 lg:col-span-7 lg:[&:has(+div:empty)]:col-span-12">
               {SPORT_TILES.map((t) => (
                 <Link
                   key={t.label}
                   href={t.href}
-                  className={`flex min-h-20 flex-col items-center justify-center gap-0.5 rounded-xl p-3 text-center transition-transform hover:scale-[1.03] sm:min-h-28 sm:items-start sm:justify-between sm:rounded-2xl sm:p-4 sm:text-left ${t.className}`}
+                  className={`flex min-h-20 min-w-0 flex-col items-center justify-start gap-1 rounded-xl p-3 text-center transition-transform hover:scale-[1.03] sm:min-h-28 sm:items-start sm:justify-between sm:rounded-2xl sm:p-4 sm:text-left ${t.className}`}
                 >
                   <span className="text-2xl leading-none sm:text-4xl" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>{t.label}</span>
                   <span className="text-[11px] text-slate-300 sm:text-sm">{t.note}</span>
                 </Link>
               ))}
             </nav>
-            <div className="lg:col-span-5">
+            <div className="min-w-0 lg:col-span-5 empty:hidden">
               <HomeEmailSignup />
             </div>
           </div>

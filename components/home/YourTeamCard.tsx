@@ -42,7 +42,7 @@ function darken(hex: string, amount: number): string {
 }
 
 /** Team config colors vary a lot (some accents equal the primary, some primaries are too light for white text), so pick a readable pair. */
-function cardColors(colors: { primary: string; secondary: string; accent: string }): { bg: string; accent: string } {
+export function cardColors(colors: { primary: string; secondary: string; accent: string }): { bg: string; accent: string } {
   let bg = colors.primary;
   for (let amount = 0.15; contrast(bg, '#FFFFFF') < 4.5 && amount <= 0.9; amount += 0.15) bg = darken(colors.primary, amount);
   const accent = [colors.accent, colors.secondary].find((c) => contrast(c, bg) >= 4.5) ?? '#FFFFFF';
@@ -148,6 +148,7 @@ export default function YourTeamCard() {
   const name = `${team.city} ${team.name}`;
   const href = favorite in NHL_TEAMS ? `/nhl/${favorite}` : `/mlb/${favorite}`;
   const nextSoon = snapshot?.next && snapshot.next.daysUntil > 1 ? `in ${snapshot.next.daysUntil} days` : snapshot?.next?.daysUntil === 1 ? 'tomorrow' : snapshot?.next ? 'today' : '';
+  const [matchup, time] = snapshot?.next?.text.split(' · ') ?? [];
 
   return (
     <section aria-labelledby="your-team-heading" className="flex flex-col gap-4 rounded-2xl border-2 p-4 sm:p-6" style={{ background: primary, borderColor: accent }}>
@@ -171,10 +172,9 @@ export default function YourTeamCard() {
           {snapshot.projection && <Stat label={snapshot.projection.label} value={snapshot.projection.value} note={snapshot.projection.note} />}
           {snapshot.next && (
             <div className="col-span-2 rounded-xl bg-black/25 p-3 sm:col-span-1 sm:p-4">
-              <div className="text-xs text-slate-200 sm:text-sm">
-                {snapshot.next.label} {nextSoon}
-              </div>
-              <div className="mt-1 text-base font-bold text-white sm:text-lg">{snapshot.next.text}</div>
+              <div className="text-xs text-slate-200 sm:text-sm">{snapshot.next.label}</div>
+              <div className="mt-1 text-base font-bold leading-snug text-white">{matchup}</div>
+              <div className="mt-0.5 text-xs text-slate-200 sm:text-sm">{[time, nextSoon].filter(Boolean).join(' · ')}</div>
             </div>
           )}
           {snapshot.odds === null && !snapshot.projection && !snapshot.next && (

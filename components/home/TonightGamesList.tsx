@@ -1,7 +1,10 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { NHL_TEAMS, MLB_TEAMS } from '@/lib/teamConfig';
+import { readFavorites, onFavoritesChange } from '@/lib/favorites';
+import { cardColors } from './YourTeamCard';
 
 export interface TonightGame {
   key: string;
@@ -19,20 +22,55 @@ export interface TonightGame {
 
 type Filter = 'nhl' | 'mlb';
 
+/** The MLB API's abbreviations where they differ from teamConfig. */
+const MLB_ABBREV_ALIASES: Record<string, string> = { AZ: 'ARI', ATH: 'OAK' };
+
+interface FavoriteTeam {
+  sport: Filter;
+  abbrev: string;
+  color: string;
+}
+
+function favoriteTeam(list: string[]): FavoriteTeam | null {
+  for (const slug of list) {
+    const team = NHL_TEAMS[slug] ?? MLB_TEAMS[slug];
+    if (team) return { sport: slug in NHL_TEAMS ? 'nhl' : 'mlb', abbrev: team.abbreviation, color: cardColors(team.colors).accent };
+  }
+  return null;
+}
+
+function plays(g: TonightGame, fav: FavoriteTeam | null): boolean {
+  if (!fav || g.sport !== fav.sport) return false;
+  const norm = (a: string) => (g.sport === 'mlb' ? MLB_ABBREV_ALIASES[a] ?? a : a);
+  return norm(g.away) === fav.abbrev || norm(g.home) === fav.abbrev;
+}
+
 export default function TonightGamesList({ games }: { games: TonightGame[] }) {
   const counts = { nhl: games.filter((g) => g.sport === 'nhl').length, mlb: games.filter((g) => g.sport === 'mlb').length };
   const [filter, setFilter] = useState<Filter>(counts.nhl > 0 ? 'nhl' : 'mlb');
+  const [fav, setFav] = useState<FavoriteTeam | null>(null);
   const listRef = useRef<HTMLUListElement>(null);
-  const shown = games.filter((g) => g.sport === filter);
+  const shown = games.filter((g) => g.sport === filter).sort((a, b) => Number(plays(b, fav)) - Number(plays(a, fav)));
+
+  useEffect(() => {
+    const read = (list: string[]) => {
+      const f = favoriteTeam(list);
+      setFav(f);
+      if (f && games.some((g) => plays(g, f))) setFilter(f.sport);
+    };
+    read(readFavorites());
+    return onFavoritesChange(read);
+  }, [games]);
+
+  // Scroll snap holds on to the snapped card when the favorite's game moves to the front.
+  useEffect(() => {
+    if (listRef.current) listRef.current.scrollLeft = 0;
+  }, [fav, filter]);
+
   const filters: { id: Filter; label: string }[] = [
     { id: 'nhl', label: 'NHL' },
     { id: 'mlb', label: 'MLB' },
   ];
-
-  const choose = (f: Filter) => {
-    setFilter(f);
-    if (listRef.current) listRef.current.scrollLeft = 0;
-  };
 
   return (
     <section aria-labelledby="tonight-heading" className="flex min-w-0 flex-col gap-2.5">
@@ -46,7 +84,7 @@ export default function TonightGamesList({ games }: { games: TonightGame[] }) {
               <button
                 key={f.id}
                 type="button"
-                onClick={() => choose(f.id)}
+                onClick={() => setFilter(f.id)}
                 aria-pressed={filter === f.id}
                 className={`min-h-9 rounded-md px-3 text-xs font-bold transition-colors sm:text-sm ${
                   filter === f.id ? 'bg-slate-600 text-white' : 'text-slate-400 hover:text-white'
@@ -58,12 +96,13 @@ export default function TonightGamesList({ games }: { games: TonightGame[] }) {
           </div>
         )}
       </div>
-      <ul ref={listRef} className="-mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-2 [scrollbar-color:#334155_transparent] [scrollbar-width:thin] sm:mx-0 sm:px-0">
+      <ul ref={listRef} className="-mx-4 flex snap-x scroll-px-4 gap-2 overflow-x-auto px-4 pb-2 [scrollbar-color:#334155_transparent] [scrollbar-width:thin] sm:mx-0 sm:scroll-px-0 sm:px-0">
         {shown.map((g) => (
           <li key={g.key} className="shrink-0 snap-start">
             <Link
               href={g.href}
               className="flex w-36 flex-col gap-1 rounded-xl border border-slate-700 bg-slate-800/70 p-2.5 transition-colors hover:border-slate-500"
+              style={plays(g, fav) ? { borderColor: fav?.color } : undefined}
             >
               <span className="flex h-4 items-center justify-between gap-1 whitespace-nowrap text-[11px] leading-none">
                 <span className="text-slate-400">{g.league}</span>
