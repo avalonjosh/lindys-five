@@ -3,6 +3,7 @@ import { kv } from '@vercel/kv';
 import type { BlogPost, NewsletterSubscriber, EmailSendRecord, EmailCampaign, GameResult, GameChunk } from './types';
 import type { LandingResponse, StandingsTeam, ScoringGoal, ThreeStar } from './types/boxscore';
 import { TEAMS } from './teamConfig';
+import { getCurrentNHLSeason } from './utils/season';
 import { fetchJsonWithRetry } from './fetchWithRetry';
 import { generateGameTicketLink, generateMerchLink } from './utils/affiliateLinks';
 import { getProjectedPoints, getModelProjectedPoints, getDivCutLine, getWcCutLine, isInPlayoffPosition, getPlayoffProbability } from './utils/standingsCalc';
@@ -236,7 +237,7 @@ export async function sendSetRecapForTeam(
   // send. Only the automated paths pass claim; manual/test sends skip it.
   let claimKey: string | null = null;
   if (opts.claim) {
-    const key = `email:set-recap-sent:${teamSlug}:${latestSet.chunkNumber}`;
+    const key = `email:set-recap-sent:${teamSlug}:${getCurrentNHLSeason()}:${latestSet.chunkNumber}`;
     const claimed = await kv.set(key, true, { nx: true });
     if (!claimed) return 'already-sent';
     claimKey = key;

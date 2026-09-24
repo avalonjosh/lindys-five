@@ -1,4 +1,4 @@
-import { getCurrentNHLSeason } from '@/lib/utils/season';
+import { getCurrentNHLSeason, formatSeasonLabel } from '@/lib/utils/season';
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { jwtVerify } from 'jose';
@@ -22,7 +22,7 @@ async function fetchSabresData() {
   const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
   try {
-    const scheduleRes = await fetch(`${NHL_API_BASE}/club-schedule-season/BUF/20242025`);
+    const scheduleRes = await fetch(`${NHL_API_BASE}/club-schedule-season/BUF/${getCurrentNHLSeason()}`);
     const schedule = await scheduleRes.json();
 
     const rosterRes = await fetch(`${NHL_API_BASE}/roster/BUF/current`);
@@ -480,7 +480,7 @@ function formatSetData(setData: any): string {
   return `
 ═══════════════════════════════════════════════════════
 VERIFIED SET DATA - Set #${setNumber}
-Buffalo Sabres | ${dateRange} | 2025-26 Season
+Buffalo Sabres | ${dateRange} | ${formatSeasonLabel(getCurrentNHLSeason())} Season
 Source: Official NHL API Box Scores
 ═══════════════════════════════════════════════════════
 
@@ -690,7 +690,7 @@ The article should be 400-600 words and follow the style guidelines provided.`;
       const verifiedSetData = formatSetData(setData);
       console.log(`Injected verified set data for ${setData.boxScores.length} games into prompt`);
 
-      const setRecapPrompt = `Write a set recap for the Buffalo Sabres' Set #${setNumber} of the 2025-26 season:
+      const setRecapPrompt = `Write a set recap for the Buffalo Sabres' Set #${setNumber} of the ${formatSeasonLabel(getCurrentNHLSeason())} season:
 
 ${verifiedSetData}
 

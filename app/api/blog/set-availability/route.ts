@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     // Build set availability info
     const sets = [];
     for (let setNum = 1; setNum <= completedSetCount; setNum++) {
-      const processed = await kv.sismember('blog:setrecap:processed', String(setNum));
+      const processed = await kv.sismember(`blog:setrecap:processed:${getCurrentNHLSeason()}`, String(setNum));
 
       // Get games for this set
       const setStartIndex = (setNum - 1) * 5;

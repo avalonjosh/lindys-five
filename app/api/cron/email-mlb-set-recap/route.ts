@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
         results.push({ team: team.slug, status: 'no-completed-set' });
         continue;
       }
-      const sentKey = `email:mlb-set-recap-sent:${team.slug}:${set.chunk.chunkNumber}`;
+      const sentKey = `email:mlb-set-recap-sent:${team.slug}:${season}:${set.chunk.chunkNumber}`;
       if (await kv.get(sentKey)) {
         results.push({ team: team.slug, status: 'already-sent', set: set.chunk.chunkNumber });
         continue;

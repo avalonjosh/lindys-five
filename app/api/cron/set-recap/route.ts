@@ -1,7 +1,7 @@
 // Heavy route (AI generation and/or batch email sends) — allow up to 5 minutes
 export const maxDuration = 300;
 
-import { getCurrentNHLSeason } from '@/lib/utils/season';
+import { getCurrentNHLSeason, formatSeasonLabel } from '@/lib/utils/season';
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
@@ -93,7 +93,7 @@ function formatSetData(setNumber: number, games: any[], boxScores: any[]) {
     context: `
 ═══════════════════════════════════════════════════════
 VERIFIED SET DATA - Set #${setNumber}
-Buffalo Sabres | ${dateRange} | 2025-26 Season
+Buffalo Sabres | ${dateRange} | ${formatSeasonLabel(getCurrentNHLSeason())} Season
 ═══════════════════════════════════════════════════════
 
 SET OVERVIEW:
@@ -159,10 +159,11 @@ async function createPost(postData: any) {
   return post;
 }
 
-async function hasSetBeenProcessed(setNumber: number) { return await kv.sismember('blog:setrecap:processed', String(setNumber)); }
+// Set numbers repeat every season, so the processed set and logs are keyed by season.
+async function hasSetBeenProcessed(setNumber: number) { return await kv.sismember(`blog:setrecap:processed:${getCurrentNHLSeason()}`, String(setNumber)); }
 async function markSetProcessed(setNumber: number, postId: string, metadata: any) {
-  await kv.sadd('blog:setrecap:processed', String(setNumber));
-  await kv.set(`blog:setrecap:log:${setNumber}`, { processedAt: new Date().toISOString(), postId, ...metadata });
+  await kv.sadd(`blog:setrecap:processed:${getCurrentNHLSeason()}`, String(setNumber));
+  await kv.set(`blog:setrecap:log:${getCurrentNHLSeason()}:${setNumber}`, { processedAt: new Date().toISOString(), postId, ...metadata });
 }
 
 export async function GET(request: NextRequest) {
@@ -218,7 +219,7 @@ export async function GET(request: NextRequest) {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-5', max_tokens: 8192,
       system: [{ type: 'text' as const, text: SET_RECAP_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' as const } }],
-      messages: [{ role: 'user', content: `Write a set recap for the Buffalo Sabres' Set #${targetSetNumber} of the 2025-26 season:\n\n${verifiedSetData}\n\nThe article should be 600-900 words.` }]
+      messages: [{ role: 'user', content: `Write a set recap for the Buffalo Sabres' Set #${targetSetNumber} of the ${formatSeasonLabel(getCurrentNHLSeason())} season:\n\n${verifiedSetData}\n\nThe article should be 600-900 words.` }]
     });
 
     const content = message.content.filter((block: any) => block.type === 'text').map((block: any) => block.text).join('\n');

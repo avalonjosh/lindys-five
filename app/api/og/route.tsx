@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { kv } from '@vercel/kv';
+import { getCurrentNHLSeason, formatSeasonLabel } from '@/lib/utils/season';
 import { generateOgImageResponse, type OgImageParams } from '@/lib/utils/ogImage';
 import { shareKey, type SharedTeam } from '@/lib/perfectseason/share';
 
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
         params = {
           type: 'sport-hub',
           sport,
-          title: searchParams.get('title') || (sport === 'mlb' ? 'MLB Playoff Odds 2026' : 'NHL Playoff Odds 2025-26'),
+          title: searchParams.get('title') || (sport === 'mlb' ? 'MLB Playoff Odds 2026' : `NHL Playoff Odds ${formatSeasonLabel(getCurrentNHLSeason())}`),
           subtitle: searchParams.get('subtitle') || (sport === 'mlb' ? 'Standings & Projections for All 30 Teams' : 'Standings & Projections for All 32 Teams'),
         };
         break;

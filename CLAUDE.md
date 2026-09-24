@@ -134,7 +134,7 @@ All crons are configured in `vercel.json` and authorized via `CRON_SECRET` Beare
 
 ### 3. Set Recap Email
 **Trigger:** `email-set-recap` cron (2pm UTC daily)
-**Flow:** Fetch season schedule → compute 5-game sets → find latest completed set → check dupe flag (`email:set-recap-sent:{team}:{setNumber}`, no expiry) → render email with set record, target met/missed, game results, playoff probability → batch send
+**Flow:** Fetch season schedule → compute 5-game sets → find latest completed set → check dupe flag (`email:set-recap-sent:{team}:{season}:{setNumber}`, no expiry) → render email with set record, target met/missed, game results, playoff probability → batch send
 **Manual:** `POST /api/newsletter/send` with `{ team, type: "set-recap" }`
 
 ### 4. Simple Blog Recap (fallback)
@@ -166,8 +166,8 @@ All crons are configured in `vercel.json` and authorized via `CRON_SECRET` Beare
 | `blog:gamerecap:processed` | Set | None | Processed Sabres game IDs |
 | `blog:bills-gamerecap:processed` | Set | None | Processed Bills game IDs |
 | `blog:gamerecap:log:{gameId}` | String (JSON) | None | Processing audit log |
-| `blog:setrecap:processed` | Set | None | Processed set numbers |
-| `blog:setrecap:log:{setNumber}` | String (JSON) | None | Set recap audit log |
+| `blog:setrecap:processed:{season}` | Set | None | Processed set numbers per season (e.g. `20262027`) |
+| `blog:setrecap:log:{season}:{setNumber}` | String (JSON) | None | Set recap audit log |
 | `blog:news:processed` | Set | None | Processed Sabres news story keys |
 | `blog:bills-news:processed` | Set | None | Processed Bills news story keys |
 | `blog:news:recent-keywords` | List | None | Last 50 story objects for dedup |
@@ -186,7 +186,7 @@ All crons are configured in `vercel.json` and authorized via `CRON_SECRET` Beare
 | `email:sends` | Sorted Set | None | Send IDs sorted by timestamp |
 | `email:resend-map:{resendId}` | String | 30 days | Resend email ID → send record ID (for webhook tracking) |
 | `email:game-recap-sent:{team}:{date}` | Boolean | 48h | Duplicate prevention per team/day |
-| `email:set-recap-sent:{team}:{setNumber}` | Boolean | None | Duplicate prevention per set |
+| `email:set-recap-sent:{team}:{season}:{setNumber}` | Boolean | None | Duplicate prevention per set (MLB: `email:mlb-set-recap-sent:{team}:{year}:{setNumber}`) |
 
 ### Analytics
 > **Architecture note (current):** The admin dashboard reads most metrics (pageviews, visitors, bounce, duration, top pages, referrers, devices, countries, UTM, realtime) from the **GA4 Data API** via `lib/ga4.ts`, gated on `GSC_CLIENT_EMAIL` / `GSC_PRIVATE_KEY` / `GA4_PROPERTY_ID` (a missing/expired key makes every panel return zeros, not an error). Only **team views** (`analytics:top:teams:*`) and **click targets** (`analytics:clicks:*`) are still written to KV, by `app/api/analytics/track/route.ts`. Team views depend on `extractTeamFromPath` matching `/nhl/{team}` and `/mlb/{team}` (and `/blog/{team}`). GA4 is excluded from `/admin` routes via `components/analytics/GoogleAnalytics.tsx`. Most of the KV keys below are legacy/no longer written.
