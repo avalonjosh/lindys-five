@@ -8,9 +8,10 @@ export const LEAGUE_AVG_PACE = 1.12;
 // Regression prior for a team's points pace, expressed as phantom games played
 // at the league average. Empirically the spread of NHL true talent is about
 // 0.15 pts/game (sd) against ~0.93 pts/game of single-game noise, which puts
-// the ideal prior near 35-40 games; 30 keeps early-season odds honest without
-// dragging strong teams too hard by midseason. Tune with scripts/backtest-nhl-odds.ts.
-export const PACE_PRIOR_GAMES = 30;
+// the ideal prior near 35-40 games. Backtests on 2024-25 and 2025-26 (see
+// scripts/backtest-nhl-odds.ts) confirmed 40 beats 20 and 30 on Brier score
+// in both seasons; 50 was mixed.
+export const PACE_PRIOR_GAMES = 40;
 
 /**
  * Model projection of a team's final point total. Banked points stay banked;
@@ -123,6 +124,10 @@ export function probabilityForFinalPoints(
   return Math.max(1, Math.min(99, Math.round(probability)));
 }
 
+// Backtested on 2024-25 and 2025-26: 3 points beat 1.5 in both seasons
+// (most of the gain after 60 GP); 4.5 and 6 were mixed; 0 was clearly worse.
+const POSITION_BONUS_MAX = 3;
+
 /**
  * Compute position-aware playoff probability considering both division and wildcard paths.
  * A team makes the playoffs if they finish top 3 in their division OR wildcard 1-2.
@@ -157,11 +162,11 @@ export function computePositionAwareProbability(
 
   // Position bonus: teams currently holding a playoff spot are displaced less
   // often than pace alone suggests. Ramps linearly with season progress, up to
-  // 1.5 points shaved off the cut line at season's end.
+  // POSITION_BONUS_MAX points shaved off the cut line at season's end.
   let positionBonus = 0;
   if (isInPlayoffPosition) {
     const seasonProgress = Math.min(gamesPlayed / totalGames, 1);
-    positionBonus = 1.5 * seasonProgress;
+    positionBonus = POSITION_BONUS_MAX * seasonProgress;
   }
 
   const adjustedDivCutLine = divCutLine - positionBonus;

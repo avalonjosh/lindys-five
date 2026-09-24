@@ -175,7 +175,7 @@ export async function sendSetRecapForTeam(
 
   // Fetch schedule and compute chunks
   const schedule = await fetchTeamSchedule(teamConfig.abbreviation, teamConfig.nhlId);
-  const chunks = computeChunksFromSchedule(schedule, teamConfig.nhlId);
+  const chunks = computeChunksFromSchedule(schedule);
 
   // Find the most recent completed set
   const completedChunks = chunks.filter((c) => c.isComplete);
@@ -499,7 +499,6 @@ function renderBoxscoreEmail(data: GameRecapData, blogPost?: BlogPost): string {
   const oppScore = isHome ? landing.awayTeam.score : landing.homeTeam.score;
   const oppAbbrev = isHome ? landing.awayTeam.abbrev : landing.homeTeam.abbrev;
   const oppConfig = Object.values(TEAMS).find((t) => t.abbreviation === oppAbbrev);
-  const won = teamScore > oppScore;
   const periodType = landing.gameOutcome?.lastPeriodType;
   const finalLabel = periodType === 'OT' ? 'FINAL/OT' : periodType === 'SO' ? 'FINAL/SO' : 'FINAL';
 
@@ -1343,7 +1342,7 @@ function renderGoalScorersSection(
 ): string {
   if (goals.team.length === 0 && goals.opponent.length === 0) return '';
 
-  const renderGoalList = (scorers: ScoringGoal[], abbrev: string) => {
+  const renderGoalList = (scorers: ScoringGoal[]) => {
     if (scorers.length === 0) return `<tr><td style="padding:4px 0;color:#94a3b8;font-size:13px;">No goals</td></tr>`;
     return scorers.map((g) => {
       const name = `${g.firstName?.default || ''} ${g.lastName?.default || ''}`.trim();
@@ -1363,12 +1362,12 @@ function renderGoalScorersSection(
             </td></tr>
             <tr><td style="padding:4px 16px 10px;">
               <span style="display:block;font-size:12px;font-weight:700;color:${primaryColor};margin-bottom:4px;">${teamAbbrev}</span>
-              <table cellpadding="0" cellspacing="0" width="100%">${renderGoalList(goals.team, teamAbbrev)}</table>
+              <table cellpadding="0" cellspacing="0" width="100%">${renderGoalList(goals.team)}</table>
             </td></tr>
             <tr><td style="padding:0 16px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="border-top:1px solid #e2e8f0;"></td></tr></table></td></tr>
             <tr><td style="padding:10px 16px 14px;">
               <span style="display:block;font-size:12px;font-weight:700;color:#64748b;margin-bottom:4px;">${oppAbbrev}</span>
-              <table cellpadding="0" cellspacing="0" width="100%">${renderGoalList(goals.opponent, oppAbbrev)}</table>
+              <table cellpadding="0" cellspacing="0" width="100%">${renderGoalList(goals.opponent)}</table>
             </td></tr>
           </table>
         </td></tr>`;
@@ -1464,7 +1463,7 @@ interface SetRecapEmailData {
 }
 
 function renderSetRecapEmail(data: SetRecapEmailData): string {
-  const { teamConfig, set, dateRange, targetPoints, targetMet, seasonStats, probAfter, primaryColor, trackerUrl, nextGame } = data;
+  const { set, dateRange, targetPoints, targetMet, seasonStats, probAfter, primaryColor, trackerUrl, nextGame } = data;
   const unsubscribeUrl = '{{UNSUBSCRIBE_URL}}';
 
   // Game results rows
@@ -1473,7 +1472,6 @@ function renderSetRecapEmail(data: SetRecapEmailData): string {
     .map((g) => {
       const oStyle = g.outcome === 'W' ? OUTCOME_STYLES.W : g.outcome === 'OTL' ? OUTCOME_STYLES.OTL : OUTCOME_STYLES.L;
       const outcomeLabel = g.outcome === 'W' ? 'WIN' : g.outcome === 'OTL' ? 'OTL' : 'LOSS';
-      const ptsLabel = g.outcome === 'W' ? '2 PTS' : g.outcome === 'OTL' ? '1 PT' : '0 PTS';
       const dateLabel = formatShortDate(g.date);
       const oppLogo = g.opponentLogo || '';
       const oppAbbrev = g.opponentAbbreviation || g.opponent;
@@ -1706,7 +1704,7 @@ async function fetchTeamSchedule(teamAbbrev: string, teamId: number): Promise<Ga
   });
 }
 
-function computeChunksFromSchedule(games: GameResult[], _teamId: number): GameChunk[] {
+function computeChunksFromSchedule(games: GameResult[]): GameChunk[] {
   const GAMES_PER_CHUNK = 5;
   // The season schedule is the source of truth for length (82, or 84 from 2026-27).
   const TOTAL_GAMES = games.length > 0 ? games.length : 82;
@@ -1877,11 +1875,12 @@ async function sendPersonalizedBatch(
       // SDK returns { data } where data could be:
       // - Array of { id } directly from batch endpoint
       // - Object with nested { data: [{ id }] }
-      const rawData = response.data as any;
-      const resendIds: any[] = Array.isArray(rawData)
+      const rawData: unknown = response.data;
+      const nested = rawData && typeof rawData === 'object' && 'data' in rawData ? (rawData as { data?: unknown }).data : undefined;
+      const resendIds: unknown[] = Array.isArray(rawData)
         ? rawData
-        : Array.isArray(rawData?.data)
-          ? rawData.data
+        : Array.isArray(nested)
+          ? nested
           : [];
       await Promise.all(
         resendIds.map((item) => {
@@ -2457,7 +2456,7 @@ export function renderMLBSetRecapEmail(d: MLBSetRecapEmailData, unsubscribeUrl: 
       <tr><td style="padding:12px 16px 4px;"><span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">${label}</span></td></tr>
       <tr><td style="padding:4px 16px 14px;">${inner}</td></tr>
     </table>`;
-  const coloredBox = (value: string, label: string, color: string, _bg: string) => statTile(value, label, color);
+  const coloredBox = (value: string, label: string, color: string) => statTile(value, label, color);
   const statCell = (label: string, value: string) =>
     `<td align="center" width="50%" style="padding:6px 0;"><span style="display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;">${label}</span><span style="display:block;font-size:16px;font-weight:700;color:#1e293b;">${value}</span></td>`;
 
@@ -2483,7 +2482,6 @@ export function renderMLBSetRecapEmail(d: MLBSetRecapEmailData, unsubscribeUrl: 
   const targetColor = d.targetMet ? '#16a34a' : '#dc2626';
   const targetText = d.targetMet ? `Target Met! (${d.targetWins}+ wins)` : `Missed Target (${d.wins} of ${d.targetWins}+)`;
   const runColor = d.runDiff >= 0 ? '#16a34a' : '#dc2626';
-  const runBg = d.runDiff >= 0 ? '#f0fdf4' : '#fef2f2';
 
   const body = `
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;"><tr>
@@ -2491,9 +2489,9 @@ export function renderMLBSetRecapEmail(d: MLBSetRecapEmailData, unsubscribeUrl: 
       <td align="right"><span style="display:block;${impact}font-size:32px;font-weight:800;color:${d.primaryColor};">${d.wins}</span><span style="display:block;font-size:12px;color:#64748b;">of ${d.totalGames} games</span></td>
     </tr></table>
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:14px;"><tr>
-      ${coloredBox(String(d.wins), 'Wins', '#16a34a', '#f0fdf4')}
-      ${coloredBox(String(d.losses), 'Losses', '#dc2626', '#fef2f2')}
-      ${coloredBox(`${d.runDiff >= 0 ? '+' : ''}${d.runDiff}`, 'Run Diff', runColor, runBg)}
+      ${coloredBox(String(d.wins), 'Wins', '#16a34a')}
+      ${coloredBox(String(d.losses), 'Losses', '#dc2626')}
+      ${coloredBox(`${d.runDiff >= 0 ? '+' : ''}${d.runDiff}`, 'Run Diff', runColor)}
     </tr></table>
     <div style="text-align:center;margin-bottom:18px;">${statusBadge(`${d.targetMet ? '&#10003;' : '&#10007;'} ${targetText}`, targetColor, targetBg)}</div>
     ${card('Game Results', `<table width="100%" cellpadding="0" cellspacing="0">${gameRows}</table>`)}

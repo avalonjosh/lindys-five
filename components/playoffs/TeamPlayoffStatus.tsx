@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import type { StandingsTeam } from '@/lib/types/boxscore';
+import type { PlayoffMatchupTeam } from '@/lib/types/playoffs';
 import { computeSeriesWinProbability, seriesOptionsFor, type SeriesOddsOptions } from '@/lib/utils/playoffProbability';
 
 interface TeamPlayoffStatusProps {
@@ -45,18 +47,18 @@ export default function TeamPlayoffStatus({ teamAbbrev, teamName, primaryColor }
         const data = await res.json();
         if (!data.bracket?.rounds) { setLoading(false); return; }
 
-        const standingsMap = new Map<string, any>();
+        const standingsMap = new Map<string, StandingsTeam>();
         for (const st of data.standings || []) {
           standingsMap.set(st.teamAbbrev.default, st);
         }
 
         for (const round of data.bracket.rounds) {
           for (const s of round.series || []) {
-            const teams = s.matchupTeams || [];
-            const myTeam = teams.find((t: any) => t.team.abbrev === teamAbbrev);
+            const teams: PlayoffMatchupTeam[] = s.matchupTeams || [];
+            const myTeam = teams.find((t) => t.team.abbrev === teamAbbrev);
             if (!myTeam) continue;
 
-            const oppTeam = teams.find((t: any) => t.team.abbrev !== teamAbbrev);
+            const oppTeam = teams.find((t) => t.team.abbrev !== teamAbbrev);
             if (!oppTeam) continue;
 
             const teamIsTop = !!myTeam.seed?.isTop;

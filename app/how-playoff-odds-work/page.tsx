@@ -129,7 +129,7 @@ export default function HowPlayoffOddsWorkPage() {
               <li>
                 <strong>Project final points.</strong> Points already banked stay banked. The remaining games are
                 projected at the team&apos;s points pace regressed toward the league average (about 1.12 points per
-                game) with a 30-game prior, so a 7-3-0 start counts for something but does not project to 115 points.
+                game) with a 40-game prior, so a 7-3-0 start counts for something but does not project to 115 points.
                 By midseason the prior has little pull, and by April almost none. The full schedule is 84 games from
                 2026-27, 82 before that. The &quot;on pace for&quot; number shown on team pages is the raw pace
                 extrapolation; the odds run on the regressed projection.
@@ -157,8 +157,9 @@ export default function HowPlayoffOddsWorkPage() {
               </li>
               <li>
                 <strong>Position bonus.</strong> A team currently holding a playoff spot gets a small edge that grows
-                through the season (up to 1.5 points shaved off the cut line by season&apos;s end), reflecting that
-                incumbents are displaced less often than pace alone suggests.
+                through the season (up to 3 points shaved off the cut line by season&apos;s end), reflecting that
+                incumbents are displaced less often than pace alone suggests. Both this and the prior were set by
+                backtesting the model against the 2024-25 and 2025-26 seasons.
               </li>
               <li>
                 <strong>Clinch and elimination.</strong> The NHL&apos;s official x/y/z/p clinch indicators set odds to
