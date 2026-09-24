@@ -195,7 +195,7 @@ export async function sendSetRecapForTeam(
   const seasonStats = teamStanding ? {
     gamesPlayed: teamStanding.gamesPlayed,
     points: teamStanding.points,
-    pace: (teamStanding.points / teamStanding.gamesPlayed).toFixed(2),
+    pace: teamStanding.gamesPlayed > 0 ? (teamStanding.points / teamStanding.gamesPlayed).toFixed(2) : '0.00',
     projected: getProjectedPoints(teamStanding.points, teamStanding.gamesPlayed),
     record: `${teamStanding.wins}-${teamStanding.losses}-${teamStanding.otLosses}`,
   } : { gamesPlayed: 0, points: 0, pace: '0.00', projected: 0, record: '0-0-0' };
@@ -344,7 +344,7 @@ async function sendBoxscoreRecapForTeam(
   const seasonStats = teamStanding ? {
     gamesPlayed: teamStanding.gamesPlayed,
     points: teamStanding.points,
-    pace: (teamStanding.points / teamStanding.gamesPlayed).toFixed(2),
+    pace: teamStanding.gamesPlayed > 0 ? (teamStanding.points / teamStanding.gamesPlayed).toFixed(2) : '0.00',
     projected: getProjectedPoints(teamStanding.points, teamStanding.gamesPlayed),
     record: `${teamStanding.wins}-${teamStanding.losses}-${teamStanding.otLosses}`,
   } : {
@@ -398,6 +398,7 @@ async function fetchRecentGame(teamAbbrev: string): Promise<LandingResponse | nu
         for (const game of gameWeek.games || []) {
           if (
             (game.homeTeam?.abbrev === teamAbbrev || game.awayTeam?.abbrev === teamAbbrev) &&
+            (game.gameType === 2 || game.gameType === 3) &&
             (game.gameState === 'FINAL' || game.gameState === 'OFF')
           ) {
             // Fetch the full landing page for this game

@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     const teamsWithGames = new Set<string>();
     for (const gameWeek of schedule.gameWeek || []) {
       for (const game of gameWeek.games || []) {
-        if (game.gameState === 'FINAL' || game.gameState === 'OFF') {
+        if ((game.gameType === 2 || game.gameType === 3) && (game.gameState === 'FINAL' || game.gameState === 'OFF')) {
           teamsWithGames.add(game.homeTeam.abbrev);
           teamsWithGames.add(game.awayTeam.abbrev);
         }
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       const todaySchedule = await fetchJsonWithRetry(`${NHL_API}/schedule/${todayStr}`);
       for (const gameWeek of todaySchedule.gameWeek || []) {
         for (const game of gameWeek.games || []) {
-          if (game.gameState === 'FINAL' || game.gameState === 'OFF') {
+          if ((game.gameType === 2 || game.gameType === 3) && (game.gameState === 'FINAL' || game.gameState === 'OFF')) {
             teamsWithGames.add(game.homeTeam.abbrev);
             teamsWithGames.add(game.awayTeam.abbrev);
           }
