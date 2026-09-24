@@ -15,11 +15,11 @@ const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
 const SET_RECAP_SYSTEM_PROMPT = `You are a professional sports journalist writing a set recap for "Lindy's Five", a Buffalo Sabres fan blog that tracks the season in 5-game "sets" (16-17 per season).
 
-Set evaluation: 6+ points = playoff pace, 5 = break-even, 0-4 = struggles. Max 10 points per set.
+Set evaluation: 6+ points = playoff pace, 5 = break-even, 0-4 = struggles. Max 10 points per set. The final set can be shorter (4 games, 8 max points, 5+ target); use the Target in the data.
 
 Write an analytical 600-900 word recap in Markdown with ## headers and **bold** for names/stats.
 
-Structure: Set result/points → 5-game narrative → what worked → concerns → season trajectory.
+Structure: Set result/points → game-by-game narrative → what worked → concerns → season trajectory.
 
 ACCURACY: Use ONLY data from the VERIFIED SET DATA block. Use pre-calculated totals instead of doing arithmetic. Never invent details.`;
 
@@ -38,7 +38,7 @@ function formatDate(dateStr: string) {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function formatSetData(setNumber: number, games: any[], boxScores: any[]) {
+function formatSetData(setNumber: number, totalSets: number, games: any[], boxScores: any[]) {
   const startDate = games[0].gameDate;
   const endDate = games[games.length - 1].gameDate;
   const dateRange = `${formatDate(startDate)} - ${formatDate(endDate)}`;
@@ -97,7 +97,8 @@ Buffalo Sabres | ${dateRange} | ${formatSeasonLabel(getCurrentNHLSeason())} Seas
 ═══════════════════════════════════════════════════════
 
 SET OVERVIEW:
-- Set Number: ${setNumber} of 17
+- Set Number: ${setNumber} of ${totalSets}${games.length < 5 ? ` (final set, ${games.length} games)` : ''}
+- Target: ${Math.ceil(maxPoints * 0.6)}+ points
 - Date Range: ${dateRange}
 - Record: ${totalWins}-${totalLosses}-${totalOTL} (${totalPoints} of ${maxPoints} points)
 - Opponents: ${opponents}
@@ -178,9 +179,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const schedule = await fetchJsonWithRetry(`${NHL_API_BASE}/club-schedule-season/BUF/${getCurrentNHLSeason()}`);
-    const completedGames = (schedule.games || []).filter((g: any) => g.gameType === 2).filter((g: any) => g.gameState === 'FINAL' || g.gameState === 'OFF');
+    const seasonGames = (schedule.games || []).filter((g: any) => g.gameType === 2);
+    const completedGames = seasonGames.filter((g: any) => g.gameState === 'FINAL' || g.gameState === 'OFF');
     const totalGames = completedGames.length;
-    const completedSetCount = Math.floor(totalGames / 5);
+    // The last set is short when the season length isn't a multiple of 5 (84 games -> Set 17 has 4)
+    const totalSets = Math.ceil(seasonGames.length / 5);
+    const setSize = (n: number) => Math.min(5, seasonGames.length - (n - 1) * 5);
+    const completedSetCount = totalGames >= seasonGames.length ? totalSets : Math.floor(totalGames / 5);
 
     if (completedSetCount === 0) {
       return NextResponse.json({ success: true, message: 'No completed sets yet', totalGames, completedSets: 0 });
@@ -202,16 +207,16 @@ export async function GET(request: NextRequest) {
     }
 
     const setGames = completedGames.slice((targetSetNumber - 1) * 5, targetSetNumber * 5);
-    if (setGames.length < 5) {
+    if (setGames.length < setSize(targetSetNumber)) {
       return NextResponse.json({ success: true, message: `Set ${targetSetNumber} not complete yet`, gamesInSet: setGames.length });
     }
 
     const boxScores = await Promise.all(setGames.map((game: any) => fetchGameBoxScore(game.id)));
-    if (boxScores.filter((b: any) => b !== null).length < 5) {
+    if (boxScores.filter((b: any) => b !== null).length < setGames.length) {
       return NextResponse.json({ error: 'Failed to fetch all box scores', fetched: boxScores.filter((b: any) => b !== null).length }, { status: 500 });
     }
 
-    const { context: verifiedSetData, stats, opponents } = formatSetData(targetSetNumber, setGames, boxScores);
+    const { context: verifiedSetData, stats, opponents } = formatSetData(targetSetNumber, totalSets, setGames, boxScores);
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const autoPublish = await getAutoPublishSetting('set-recap');
@@ -236,7 +241,7 @@ export async function GET(request: NextRequest) {
         wins: stats.wins,
         losses: stats.losses,
         otLosses: stats.otLosses,
-        targetMet: stats.points >= 6,
+        targetMet: stats.points >= Math.ceil(stats.maxPoints * 0.6),
       }, `set-recap-${targetSetNumber}-${stats.startDate}`);
     } catch (imgError) {
       console.error(`Failed to generate OG image for set ${targetSetNumber}:`, imgError);
