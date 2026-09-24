@@ -1,5 +1,6 @@
 import { NHL_TEAMS, MLB_TEAMS, getTeamUrl } from '@/lib/teamConfig';
 import { resolveSeasonContext } from '@/lib/utils/seasonContext';
+import { fetchWithRetry } from '@/lib/services/nhlApi';
 import { fetchTeamScheduleServer, fetchStandingsServer } from '@/lib/services/nhlTeamPageData';
 import { calculateChunks, calculateSeasonStats } from '@/lib/utils/chunkCalculator';
 import { getDivCutLine, getWcCutLine, getModelProjectedPoints, isInPlayoffPosition } from '@/lib/utils/standingsCalc';
@@ -43,6 +44,31 @@ function nextText(isoDate: string, isHome: boolean, opponent: string, time?: str
   return `${dayLabel(isoDate)} ${isHome ? 'vs' : 'at'} ${opponent}${time ? ` · ${time}` : ''}`;
 }
 
+function easternTime(startTimeUTC?: string): string | undefined {
+  return startTimeUTC
+    ? new Date(startTimeUTC).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })
+    : undefined;
+}
+
+/** Today's preseason game for the team, if one is still to be played or in progress. */
+async function preseasonGameToday(abbrev: string): Promise<TeamSnapshot['next']> {
+  try {
+    const today = easternToday();
+    const res = await fetchWithRetry(`https://api-web.nhle.com/v1/score/${today}`, 1);
+    const data = await res.json();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const game = (data.games || []).find((g: any) =>
+      g.gameType === 1 && (g.homeTeam?.abbrev === abbrev || g.awayTeam?.abbrev === abbrev) && g.gameState !== 'FINAL' && g.gameState !== 'OFF'
+    );
+    if (!game) return null;
+    const isHome = game.homeTeam.abbrev === abbrev;
+    const opponent = isHome ? game.awayTeam.abbrev : game.homeTeam.abbrev;
+    return { label: 'Preseason game', text: nextText(today, isHome, opponent, easternTime(game.startTimeUTC)), daysUntil: 0 };
+  } catch {
+    return null;
+  }
+}
+
 async function nhlSnapshot(slug: string): Promise<TeamSnapshot | null> {
   const team = NHL_TEAMS[slug];
   if (!team) return null;
@@ -70,11 +96,9 @@ async function nhlSnapshot(slug: string): Promise<TeamSnapshot | null> {
     }
     const opener = ctx.preseason?.opener;
     if (opener) {
-      const time = opener.startTimeUTC
-        ? new Date(opener.startTimeUTC).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })
-        : undefined;
-      snap.next = { label: 'Season opener', text: nextText(opener.date, opener.isHome, opener.opponent, time), daysUntil: daysFromToday(opener.date) };
+      snap.next = { label: 'Season opener', text: nextText(opener.date, opener.isHome, opener.opponent, easternTime(opener.startTimeUTC)), daysUntil: daysFromToday(opener.date) };
     }
+    snap.next = (await preseasonGameToday(team.abbreviation)) ?? snap.next;
     return snap;
   }
 
