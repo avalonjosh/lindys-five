@@ -61,30 +61,32 @@ function TeamPicker({ current, onDone }: { current: string | null; onDone?: () =
 
   return (
     <section aria-labelledby="pick-team-heading" className="flex flex-col gap-3 rounded-2xl border border-slate-700 bg-slate-800/60 p-4 sm:p-5">
-      <div className="flex items-center justify-between gap-3">
-        <h2 id="pick-team-heading" className="text-base font-extrabold text-white sm:text-lg">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="pick-team-heading" className="whitespace-nowrap text-base font-extrabold text-white sm:text-lg">
           {current ? 'Switch your team' : 'Pick your team'}
         </h2>
-        {onDone && current && (
-          <button type="button" onClick={onDone} className="min-h-11 px-2 text-sm text-slate-300 underline">
-            Cancel
-          </button>
-        )}
+        <div className="flex shrink-0 items-center gap-1">
+          <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-900 p-1" role="group" aria-label="League">
+            {(['nhl', 'mlb'] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSport(s)}
+                aria-pressed={sport === s}
+                className={`min-h-9 rounded-lg px-2.5 text-sm min-[360px]:px-3 font-bold transition-colors sm:px-5 ${sport === s ? 'bg-[#003087] text-white' : 'text-slate-400 hover:text-white'}`}
+              >
+                {s.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          {onDone && current && (
+            <button type="button" onClick={onDone} className="min-h-11 px-2 text-sm text-slate-300 underline">
+              Cancel
+            </button>
+          )}
+        </div>
       </div>
-      <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-900 p-1" role="group" aria-label="League">
-        {(['nhl', 'mlb'] as const).map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setSport(s)}
-            aria-pressed={sport === s}
-            className={`min-h-10 rounded-lg text-sm font-bold transition-colors ${sport === s ? 'bg-[#003087] text-white' : 'text-slate-400 hover:text-white'}`}
-          >
-            {s.toUpperCase()}
-          </button>
-        ))}
-      </div>
-      <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8">
+      <div className="grid grid-cols-7 gap-1 min-[360px]:grid-cols-8 sm:gap-1.5">
         {teams.map((t) => (
           <button
             key={t.id}
@@ -92,7 +94,7 @@ function TeamPicker({ current, onDone }: { current: string | null; onDone?: () =
             onClick={() => pick(t.id)}
             aria-label={`${t.city} ${t.name}`}
             title={`${t.city} ${t.name}`}
-            className={`flex aspect-square items-center justify-center rounded-xl border p-2 transition-colors hover:border-slate-500 hover:bg-slate-700/80 ${t.id === current ? 'border-amber-400 bg-slate-700/80 ring-1 ring-amber-400' : 'border-slate-700 bg-slate-700/40'}`}
+            className={`flex aspect-square items-center justify-center rounded-lg border p-1 transition-colors hover:border-slate-500 hover:bg-slate-700/80 sm:rounded-xl sm:p-2 ${t.id === current ? 'border-amber-400 bg-slate-700/80 ring-1 ring-amber-400' : 'border-slate-700 bg-slate-700/40'}`}
           >
             <img src={logoFor(t)} alt="" loading="lazy" className="h-full w-full object-contain" />
           </button>
