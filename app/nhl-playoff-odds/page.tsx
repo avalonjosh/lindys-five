@@ -15,6 +15,7 @@ import GameTicker from '@/components/landing/GameTicker';
 import GamePromo from '@/components/perfectseason/GamePromo';
 import { getCurrentNHLSeason, getCurrentSeasonGameCount, formatSeasonLabel, formatSeasonEndYear } from '@/lib/utils/season';
 import { getPlayoffsOutcome, getFinalStandings } from '@/lib/services/nhlOffseason';
+import { fetchPlayoffBracket } from '@/lib/services/playoffsSnapshot';
 import { resolveSeasonContext } from '@/lib/utils/seasonContext';
 import NHLPreseasonOddsView from '@/components/nhl/NHLPreseasonOddsView';
 
@@ -105,15 +106,10 @@ async function fetchStandings(): Promise<StandingsTeam[] | null> {
 
 async function fetchBracket(): Promise<PlayoffBracketResponse | null> {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(`${NHL_API}/playoff-bracket/${getCurrentNHLSeason()}`, {
+    return await fetchPlayoffBracket(getCurrentNHLSeason(), {
       next: { revalidate: 60 },
-      signal: controller.signal,
+      signal: AbortSignal.timeout(5000),
     });
-    clearTimeout(timeout);
-    if (!res.ok) return null;
-    return await res.json();
   } catch {
     return null;
   }

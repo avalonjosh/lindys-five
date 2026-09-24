@@ -1,4 +1,4 @@
-// Types for the NHL Playoff Bracket API (/playoff-bracket/20252026)
+// Playoff bracket types, as assembled by fetchPlayoffBracket() in lib/services/playoffsSnapshot.ts
 
 export interface PlayoffBracketResponse {
   // The bracket API returns rounds with series matchups

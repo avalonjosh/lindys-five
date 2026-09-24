@@ -2,6 +2,7 @@
 export const maxDuration = 300;
 
 import { getCurrentNHLSeason } from '@/lib/utils/season';
+import { fetchPlayoffBracket } from '@/lib/services/playoffsSnapshot';
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
@@ -84,8 +85,8 @@ export async function GET(request: NextRequest) {
   const force = request.nextUrl.searchParams.get('force') === 'true';
 
   try {
-    const bracketRes = await fetchJsonWithRetry(`${NHL_API_BASE}/playoff-bracket/${getCurrentNHLSeason()}`);
-    if (!bracketRes?.rounds || bracketRes.rounds.length === 0) {
+    const bracketRes = await fetchPlayoffBracket();
+    if (bracketRes.rounds.length === 0) {
       return NextResponse.json({ success: true, message: 'No playoff bracket data available', seriesProcessed: 0 });
     }
 
@@ -101,8 +102,9 @@ export async function GET(request: NextRequest) {
         // Only process completed series (one team has 4 wins)
         if (topWins < 4 && bottomWins < 4) continue;
 
+        const season = getCurrentNHLSeason();
         const seriesKey = `${series.seriesLetter}-R${round.roundNumber}`;
-        const processed = await kv.sismember('blog:series-recap:processed', seriesKey);
+        const processed = await kv.sismember(`blog:series-recap:processed:${season}`, seriesKey);
         if (processed && !force) continue;
 
         const topTeam = series.matchupTeams?.find((t: any) => t.seed?.isTop);
@@ -122,7 +124,7 @@ export async function GET(request: NextRequest) {
         for (const game of series.games || []) {
           if (game.gameState !== 'FINAL' && game.gameState !== 'OFF') continue;
           try {
-            const landing = await fetchJsonWithRetry(`${NHL_API_BASE}/gamecenter/${game.id}/landing`);
+            const landing = await fetchJsonWithRetry(`${NHL_API_BASE}/gamecenter/${game.gameId}/landing`);
             const homeAbbrev = landing?.homeTeam?.abbrev || '?';
             const awayAbbrev = landing?.awayTeam?.abbrev || '?';
             const homeScore = landing?.homeTeam?.score || 0;
@@ -202,8 +204,8 @@ ${gameResults.join('\n')}
             factCheck: { passed: factCheck.passed, issues: factCheck.issues, checkedAt: new Date().toISOString() },
           });
 
-          await kv.sadd('blog:series-recap:processed', seriesKey);
-          await kv.set(`blog:series-recap:log:${seriesKey}`, {
+          await kv.sadd(`blog:series-recap:processed:${season}`, seriesKey);
+          await kv.set(`blog:series-recap:log:${season}:${seriesKey}`, {
             processedAt: new Date().toISOString(), postId: post.id,
             matchup: `${winnerAbbrev} vs ${loserAbbrev}`, result: finalScore,
             autoPublish, factCheckPassed: factCheck.passed, factCheckIssues: factCheck.issues,

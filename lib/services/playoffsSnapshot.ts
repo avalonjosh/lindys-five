@@ -112,8 +112,8 @@ export interface PlayoffsSnapshot {
 export async function fetchPlayoffsSnapshot(season: string = getCurrentNHLSeason()): Promise<PlayoffsSnapshot> {
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 
-  const [carouselRes, standingsRes] = await Promise.all([
-    fetch(`${NHL_API}/playoff-series/carousel/${season}`, { cache: 'no-store' }),
+  const [bracket, standingsRes] = await Promise.all([
+    fetchPlayoffBracket(season),
     fetch(`${NHL_API}/standings/${today}`, { next: { revalidate: 300 } }),
   ]);
 
@@ -133,14 +133,31 @@ export async function fetchPlayoffsSnapshot(season: string = getCurrentNHLSeason
     }
   }
 
-  if (!carouselRes.ok) {
-    return {
-      bracket: { rounds: [], seasonId: Number(season) },
-      standings,
-      cupOdds: [],
-      hasLiveGames: false,
-    };
+  if (bracket.rounds.length === 0) {
+    return { bracket, standings, cupOdds: [], hasLiveGames: false };
   }
+
+  const hasLiveGames = bracket.rounds.some((r) =>
+    r.series.some((s) => s.games.some((g) => g.gameState === 'LIVE' || g.gameState === 'CRIT'))
+  );
+
+  const standingsMap = new Map<string, StandingsTeam>();
+  standings.forEach((t) => standingsMap.set(t.teamAbbrev.default, t));
+  const cupOdds = buildCupOdds(bracket, standingsMap);
+
+  return { bracket, standings, cupOdds, hasLiveGames };
+}
+
+// Assemble the bracket from /playoff-series/carousel/{season} + per-series schedules.
+// Don't use /playoff-bracket: it wants the season end year and returns a different shape.
+// `init` applies to the carousel fetch; returns empty rounds when no playoffs exist yet.
+export async function fetchPlayoffBracket(
+  season: string = getCurrentNHLSeason(),
+  init: RequestInit = { cache: 'no-store' }
+): Promise<PlayoffBracketResponse> {
+  const empty: PlayoffBracketResponse = { rounds: [], seasonId: Number(season) };
+  const carouselRes = await fetch(`${NHL_API}/playoff-series/carousel/${season}`, init).catch(() => null);
+  if (!carouselRes?.ok) return empty;
 
   const carousel = await carouselRes.json();
   const carouselRounds: CarouselRound[] = carousel.rounds || [];
@@ -194,14 +211,5 @@ export async function fetchPlayoffsSnapshot(season: string = getCurrentNHLSeason
     })
   );
 
-  const hasLiveGames = rounds.some((r) =>
-    r.series.some((s) => s.games.some((g) => g.gameState === 'LIVE' || g.gameState === 'CRIT'))
-  );
-
-  const bracket: PlayoffBracketResponse = { rounds, seasonId: Number(season) };
-  const standingsMap = new Map<string, StandingsTeam>();
-  standings.forEach((t) => standingsMap.set(t.teamAbbrev.default, t));
-  const cupOdds = buildCupOdds(bracket, standingsMap);
-
-  return { bracket, standings, cupOdds, hasLiveGames };
+  return { rounds, seasonId: Number(season) };
 }

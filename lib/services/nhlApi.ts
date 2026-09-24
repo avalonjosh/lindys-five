@@ -1,5 +1,4 @@
 import type { NHLGame, GameResult, DetailedGameStats } from '../types';
-import type { PlayoffBracketResponse } from '../types/playoffs';
 import { getCurrentNHLSeason, previousNHLSeason, getRegularSeasonGameCount } from '../utils/season';
 
 const API_BASE = '/api/v1';
@@ -722,18 +721,6 @@ export async function fetchScoresByDate(date: string): Promise<NHLGame[]> {
       console.error('❌ Error fetching scores for date:', date, error);
     }
     throw error;
-  }
-}
-
-// Fetch the NHL playoff bracket
-export async function fetchPlayoffBracket(season: string = getCurrentNHLSeason()): Promise<PlayoffBracketResponse | null> {
-  try {
-    const response = await fetchWithRetry(`${API_BASE}/playoff-bracket/${season}`);
-    const data = await response.json();
-    return data as PlayoffBracketResponse;
-  } catch (error) {
-    console.error('Failed to fetch playoff bracket:', error);
-    return null;
   }
 }
 

@@ -1,7 +1,7 @@
 // Heavy route (AI generation and/or batch email sends) — allow up to 5 minutes
 export const maxDuration = 300;
 
-import { getCurrentNHLSeason } from '@/lib/utils/season';
+import { fetchPlayoffBracket } from '@/lib/services/playoffsSnapshot';
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import Anthropic from '@anthropic-ai/sdk';
@@ -227,8 +227,8 @@ export async function GET(request: NextRequest) {
 
   try {
     // Fetch bracket to find completed playoff games
-    const bracketRes = await fetchJsonWithRetry(`${NHL_API_BASE}/playoff-bracket/${getCurrentNHLSeason()}`);
-    if (!bracketRes?.rounds || bracketRes.rounds.length === 0) {
+    const bracketRes = await fetchPlayoffBracket();
+    if (bracketRes.rounds.length === 0) {
       return NextResponse.json({ success: true, message: 'No playoff bracket data available', gamesProcessed: 0 });
     }
 
@@ -246,16 +246,16 @@ export async function GET(request: NextRequest) {
 
         for (const game of series.games || []) {
           if (game.gameState !== 'FINAL' && game.gameState !== 'OFF') continue;
-          if (new Date(game.gameDate) < cutoff) continue;
+          const gameStart = new Date(game.startTimeUTC || game.gameDate);
+          if (!(gameStart >= cutoff)) continue;
 
-          const gameId = String(game.id);
+          const gameId = String(game.gameId);
 
           // Check if already processed
           const processed = await kv.sismember('blog:playoff-gamerecap:processed', gameId);
           if (processed && !force) continue;
 
           // Buffer: wait 30min after estimated end
-          const gameStart = new Date(game.startTimeUTC || game.gameDate);
           const estimatedEnd = new Date(gameStart.getTime() + 3 * 60 * 60 * 1000);
           if (now.getTime() - estimatedEnd.getTime() < GAME_END_BUFFER_MS) continue;
 
@@ -332,7 +332,7 @@ export async function GET(request: NextRequest) {
             const post = await createPost({
               title, content, team: teamSlug, type: 'playoff-game-recap',
               status: shouldPublish ? 'published' : 'draft',
-              gameId: game.id, opponent: homeAbbrev === teamSlug ? awayAbbrev : homeAbbrev,
+              gameId: game.gameId, opponent: homeAbbrev === teamSlug ? awayAbbrev : homeAbbrev,
               gameDate: game.gameDate, metaDescription, aiModel: 'claude-sonnet-5',
               ogImage,
               factCheck: { passed: factCheck.passed, issues: factCheck.issues, checkedAt: new Date().toISOString() },
