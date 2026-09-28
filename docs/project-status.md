@@ -15,7 +15,8 @@ Cloud routines on Josh's claude.ai account email him at 9am ET for the items mar
 
 | Date | Item |
 |------|------|
-| Overdue (~2026-09-25) | SEO re-measure: 30-day GSC vs baseline (90d: 414 clicks / 118k impr / pos 20.8). Josh: Request Indexing in GSC for `/nhl-playoff-odds`, `/nhl`, `/how-playoff-odds-work`, NHL `/nhl/{rangers,kings,kraken,lightning,predators,avalanche}`, MLB `/mlb/{nationals,giants,dodgers,whitesox,mariners,rockies,twins,diamondbacks,orioles,rays}` |
+| Done 2026-09-28 | SEO re-measure (GSC 8/27-9/25): 467 clicks / 59k impr / pos 20.9 vs baseline pace ~138 / 39k per 30d (90d: 414 / 118k / 20.8). Prior 30d 245 clicks. Gains mostly /82-0 (173) and /pick-the-* pages. `/nhl-playoff-odds` impr 59 -> 4.6k but pos 36.7. 9 of 10 watched MLB pages plus /nhl/lightning and /nhl/predators still have zero impressions. Next re-measure ~2026-10-25 (baseline: this row) |
+| Josh, open | Request Indexing in GSC for `/nhl-playoff-odds`, `/nhl`, `/how-playoff-odds-work`, NHL `/nhl/{rangers,kings,kraken,lightning,predators,avalanche}`, MLB `/mlb/{nationals,giants,dodgers,whitesox,mariners,rockies,twins,diamondbacks,orioles,rays}` |
 | 2026-09-29 | League opener (MTL at TOR) |
 | 2026-10-01 | Sabres open at CBJ. First live day of the 84-game season: watch team pages flip preseason -> live, and check odds look continuous (Sabres preseason 59%, ~65% after a win, ~49% after a regulation loss) |
 | 2026-10-02 noon UTC | Verify no game recap email went out for a preseason game |
