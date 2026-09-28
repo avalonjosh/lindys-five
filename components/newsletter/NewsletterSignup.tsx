@@ -94,6 +94,9 @@ export default function NewsletterSignup({
   }
 
   if (variant === 'compact') {
+    // Many team configs repeat the primary as the accent; fall back to white
+    // so the button never disappears into the card.
+    const buttonBg = Math.abs(luminance(accentColor) - luminance(primaryColor)) < 0.25 ? '#ffffff' : accentColor;
     return (
       <div
         className="rounded-2xl p-5 shadow-lg border-2"
@@ -124,7 +127,7 @@ export default function NewsletterSignup({
             type="submit"
             disabled={status === 'loading'}
             className="px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:scale-105 disabled:opacity-50"
-            style={{ background: accentColor, color: primaryColor }}
+            style={{ background: buttonBg, color: primaryColor }}
           >
             {status === 'loading' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Subscribe'}
           </button>
@@ -258,4 +261,11 @@ function adjustColor(hex: string, amount: number): string {
   const g = Math.max(0, Math.min(255, ((num >> 8) & 0x00ff) + amount));
   const b = Math.max(0, Math.min(255, (num & 0x0000ff) + amount));
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
+function luminance(hex: string): number {
+  const m = hex.replace('#', '').match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+  if (!m) return 0;
+  const [r, g, b] = m.slice(1).map((x) => parseInt(x, 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }

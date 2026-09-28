@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { fetchMLBPostseason } from '@/lib/services/mlbPostseason';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -83,6 +84,7 @@ export default async function MLBTeamPage({ params }: MLBTeamPageProps) {
 
   const fullName = `${team.city} ${team.name}`;
   const year = mlbSeasonYear();
+  const postseason = await fetchMLBPostseason(team, year);
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -267,7 +269,7 @@ export default async function MLBTeamPage({ params }: MLBTeamPageProps) {
           {`${fullName} playoff odds and projections for the ${year} MLB season. Track ${possessive(fullName)} win pace, playoff picture, and probability, updated daily.`}
         </p>
       )}
-      <MLBTeamTracker team={team} initialGames={initialGames} serverSummary={serverSummary} faq={faqEntries} />
+      <MLBTeamTracker team={team} initialGames={initialGames} serverSummary={serverSummary} faq={faqEntries} postseason={postseason} />
       <SiteFooter />
       <NewsletterModal
         team={teamSlug}

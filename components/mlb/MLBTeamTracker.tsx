@@ -22,6 +22,9 @@ import { fetchLatestWhatIfSave } from '@/lib/whatif/client';
 import NewsletterSignup from '@/components/newsletter/NewsletterSignup';
 import type { WhatIfSave, WhatIfSubmission } from '@/lib/whatif/types';
 import { Tv } from 'lucide-react';
+import MLBPostseasonCard from './MLBPostseasonCard';
+import { mlbSeasonYear } from '@/lib/utils/mlbSeason';
+import type { MLBPostseason } from '@/lib/services/mlbPostseason';
 
 /** Late September through mid November: link the postseason TV guide. */
 function isPostseasonWindow(): boolean {
@@ -43,9 +46,11 @@ interface MLBTeamTrackerProps {
   serverSummary?: ReactNode;
   /** Visible FAQ mirroring the FAQPage JSON-LD. */
   faq?: { q: string; a: string }[];
+  /** This team's postseason (null when not in it). */
+  postseason?: MLBPostseason | null;
 }
 
-export default function MLBTeamTracker({ team, initialGames, serverSummary, faq }: MLBTeamTrackerProps) {
+export default function MLBTeamTracker({ team, initialGames, serverSummary, faq, postseason = null }: MLBTeamTrackerProps) {
   const router = useRouter();
   const hasInitial = Boolean(initialGames && initialGames.length > 0);
   const [chunks, setChunks] = useState<MLBGameChunk[]>(() =>
@@ -457,7 +462,9 @@ export default function MLBTeamTracker({ team, initialGames, serverSummary, faq 
               {fullName} Playoff Tracker 2026
             </h1>
             <p className="text-xs md:text-base opacity-90 px-2 leading-tight text-white">
-              5-Game Set Analysis &bull; Target: 3+ wins per set
+              {postseason && !postseason.eliminated
+                ? `${mlbSeasonYear()} Postseason \u2022 ${postseason.series[postseason.series.length - 1].short}`
+                : <>5-Game Set Analysis &bull; Target: 3+ wins per set</>}
             </p>
             <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
               <MerchCTA
@@ -483,6 +490,16 @@ export default function MLBTeamTracker({ team, initialGames, serverSummary, faq 
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
+        {postseason && (
+          <MLBPostseasonCard
+            postseason={postseason}
+            teamName={team.name}
+            teamSlug={team.slug}
+            color={team.colors.primary}
+            season={mlbSeasonYear()}
+          />
+        )}
+
         {/* Progress Bar — wrapped in a ref'd container so the sticky What-If
             bar knows when it scrolls off. */}
         <div ref={progressBoxRef}>
