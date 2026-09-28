@@ -7,6 +7,7 @@ import { getCurrentNHLSeason } from './utils/season';
 import { fetchJsonWithRetry } from './fetchWithRetry';
 import { generateGameTicketLink, generateFanaticsLink, FANATICS_ENABLED } from './utils/affiliateLinks';
 import { renderGearCard, gearCardTable, pickGearHero, espnLogoUrl, teamGearOptions, type EmailPlacement } from './emailOffers';
+import { nhlWatchInfo, watchSummary, type TvBroadcast } from './watch/nhlWatch';
 import { getProjectedPoints, getModelProjectedPoints, getDivCutLine, getWcCutLine, isInPlayoffPosition, getPlayoffProbability } from './utils/standingsCalc';
 import { computePositionAwareProbability, computeSeriesWinProbability, seriesOptionsFor } from './utils/playoffProbability';
 import { fetchPlayoffsSnapshot, type PlayoffsSnapshot } from './services/playoffsSnapshot';
@@ -251,6 +252,10 @@ interface NextGameInfo {
   time: string;
   ticketLink: string;
   home?: { opponent: string; date: string; ticketLink: string };
+  /** TV channel(s), e.g. "MSG Buffalo · Chicago Sports Network". */
+  tv?: string;
+  /** On-site watch guide for this team. */
+  watchUrl?: string;
 }
 
 interface GameRecapData {
@@ -442,6 +447,7 @@ async function fetchNextGame(
       gameState: string;
       homeTeam: { abbrev: string };
       awayTeam: { abbrev: string };
+      tvBroadcasts?: TvBroadcast[];
     }>;
 
     const upcoming = games.filter((g) => new Date(g.startTimeUTC) > now && g.gameState === 'FUT');
@@ -504,7 +510,10 @@ async function fetchNextGame(
       };
     }
 
-    return { opponent, date: dateStr, time: timeStr, ticketLink, home };
+    const tv = watchSummary(nhlWatchInfo(nextGame.tvBroadcasts)) ?? undefined;
+    const watchUrl = `${SITE_URL}/nhl/${teamConfig.slug}/watch?utm_source=newsletter&utm_medium=email&utm_campaign=${placement}&utm_content=watch`;
+
+    return { opponent, date: dateStr, time: timeStr, ticketLink, home, tv, watchUrl };
   } catch (error) {
     console.error('Error fetching next game:', error);
     return null;
@@ -1476,7 +1485,8 @@ function renderNextGameCTA(
             <tr><td style="padding:20px 16px;" align="center">
               <span style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Next Game</span>
               <span style="display:block;font-size:18px;font-weight:800;color:#ffffff;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;text-transform:uppercase;letter-spacing:1px;font-style:normal;">${nextGame.opponent}</span>
-              <span style="display:block;font-size:14px;color:rgba(255,255,255,0.8);margin:6px 0 16px;">${nextGame.date} &middot; ${nextGame.time} ET</span>
+              <span style="display:block;font-size:14px;color:rgba(255,255,255,0.8);margin:6px 0 ${nextGame.tv ? 4 : 16}px;">${nextGame.date} &middot; ${nextGame.time} ET</span>
+              ${nextGame.tv ? `<span style="display:block;font-size:13px;color:rgba(255,255,255,0.8);margin:0 0 16px;">TV: ${nextGame.tv}${nextGame.watchUrl ? ` &middot; <a href="${nextGame.watchUrl}" style="color:#ffffff;font-weight:700;text-decoration:underline;">Where to watch</a>` : ''}</span>` : ''}
               ${nextGame.home ? `<span style="display:block;font-size:13px;color:rgba(255,255,255,0.85);margin:0 0 12px;">Next home game: <strong>${nextGame.home.opponent}</strong> &middot; ${nextGame.home.date}</span>` : ''}
               <a href="${nextGame.home ? nextGame.home.ticketLink : nextGame.ticketLink}" style="display:inline-block;background:#ffffff;color:${primaryColor};padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">
                 ${nextGame.home ? 'Get Home Game Tickets' : 'Get Tickets'}

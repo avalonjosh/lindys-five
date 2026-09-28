@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
+import { Tv } from 'lucide-react';
 import HeaderProfileIcon from '@/components/HeaderProfileIcon';
 import { useRouter } from 'next/navigation';
 import type { GameChunk, SeasonStats, ChunkStats, GameResult } from '@/lib/types';
@@ -1225,7 +1226,7 @@ export default function TeamTracker({
                 ? `${seasonLabel} Season Preview • Schedule & 5-Game Sets`
                 : '5-Game Set Analysis • Target: 6+ points per set'}
           </p>
-          <div className="mt-2">
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
             <MerchCTA
               teamCity={team.city}
               teamName={team.name}
@@ -1234,6 +1235,14 @@ export default function TeamTracker({
               primaryColor={isGoatMode ? darkModeColors.accent : team.colors.accent}
               teamSlug={team.slug}
             />
+            <Link
+              href={`/nhl/${team.slug}/watch`}
+              className="inline-flex items-center gap-1.5 rounded-full border border-current px-3 py-1.5 text-xs font-semibold shadow-sm transition-all hover:scale-105"
+              style={{ color: (team.id === 'lightning' || team.id === 'penguins') && isGoatMode ? team.colors.primary : isVintageJetsMode ? '#041E42' : '#ffffff' }}
+            >
+              <Tv size={12} />
+              How to Watch
+            </Link>
           </div>
         </div>
       </div>

@@ -24,6 +24,9 @@ import GoalieMatchup from './GoalieMatchup';
 import SeasonSeries from './SeasonSeries';
 import TeamStatsPreview from './TeamStatsPreview';
 import SeriesHub from './SeriesHub';
+import WhereToWatch from '@/components/watch/WhereToWatch';
+import { nhlWatchInfo } from '@/lib/watch/nhlWatch';
+import { NHL_TEAMS } from '@/lib/teamConfig';
 
 async function fetchSeriesForGame(
   homeAbbrev: string,
@@ -246,6 +249,7 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
 
   const isFinal =
     boxscore?.gameState === 'FINAL' || boxscore?.gameState === 'OFF';
+  const teamNameFor = (abbrev: string) => Object.values(NHL_TEAMS).find((t) => t.abbreviation === abbrev)?.name ?? abbrev;
   const isFuture =
     boxscore?.gameState === 'FUT' || boxscore?.gameState === 'PRE';
 
@@ -277,6 +281,15 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
           <GameHeader boxscore={boxscore} landing={landing} />
 
           <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
+            {/* Where to watch: upcoming and live games */}
+            {!isFinal && (
+              <WhereToWatch
+                info={nhlWatchInfo(boxscore.tvBroadcasts)}
+                homeName={teamNameFor(boxscore.homeTeam.abbrev)}
+                awayName={teamNameFor(boxscore.awayTeam.abbrev)}
+                trackLabel={`boxscore-${gameId}`}
+              />
+            )}
             {/* Future game: playoff stakes + standings first, then preview
                 (skipped for preseason games — exhibitions carry no stakes) */}
             {isFuture && boxscore.gameType !== 1 && (

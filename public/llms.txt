@@ -15,7 +15,7 @@ The site is operated by JRR Apps. The full methodology, and how it compares to s
 
 ## NHL Team Trackers
 
-Each NHL team page shows current record, division and conference rank, projected final points, playoff probability, current 5-game set, last game, next game, and a full schedule with 5-game set color coding.
+Each NHL team page shows current record, division and conference rank, projected final points, playoff probability, current 5-game set, last game, next game, and a full schedule with 5-game set color coding. Each team also has a TV and streaming guide at /nhl/{team}/watch (e.g. [How to watch the Buffalo Sabres](https://www.lindysfive.com/nhl/sabres/watch)): every game's channel, local vs national broadcasts, and streaming options.
 
 - [Anaheim Ducks](https://www.lindysfive.com/nhl/ducks)
 - [Boston Bruins](https://www.lindysfive.com/nhl/bruins)

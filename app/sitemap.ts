@@ -102,9 +102,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // All 32 NHL team tracker routes + gear/tickets hubs
+  // All 32 NHL team tracker routes + watch guides + gear/tickets hubs
   for (const team of NHL_TEAM_ROUTES) {
     urls.push({ url: `${BASE_URL}/nhl/${team}`, changeFrequency: 'daily', priority: 0.9 });
+    urls.push({ url: `${BASE_URL}/nhl/${team}/watch`, changeFrequency: 'daily', priority: 0.7 });
     urls.push({ url: `${BASE_URL}/nhl/${team}/gear`, changeFrequency: 'weekly', priority: 0.5 });
     urls.push({ url: `${BASE_URL}/nhl/${team}/tickets`, changeFrequency: 'weekly', priority: 0.5 });
   }

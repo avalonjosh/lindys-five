@@ -45,6 +45,11 @@ Cloud routines on Josh's claude.ai account email him at 9am ET for the items mar
 
 ## In-progress projects
 
+### Where to watch (streaming affiliates, started 2026-09-28)
+Built: `lib/watch/nhlWatch.ts` maps NHL API `tvBroadcasts` codes to networks and streaming services; `WhereToWatch` card on NHL box scores (upcoming/live); `/nhl/{team}/watch` guide pages (in sitemap, llms.txt, "How to Watch" button in team header); NHL recap email next-game block shows TV + links to the guide (on-site, so no affiliate links in email). Links go direct until `NEXT_PUBLIC_WATCH_{ESPN,MAX,PRIME,FUBO,YOUTUBETV,SLING,DIRECTV,SPORTSNETPLUS,TSNPLUS}_URL` is set in Vercel.
+- **Josh to apply (no-betting vetted):** DirecTV / DirecTV Stream (CJ, biggest payouts), Fubo (Impact, US+CA, sportsbook shut 2022), Sling TV (CJ), Amazon Associates Prime Video bounties (Prime is local streaming home for CAR, ANA, CBJ, DAL, MIN, STL, SEA). Secondary: Max (Partnerize). YouTube TV has no program. Never ESPN (DraftKings exclusive sportsbook since Dec 2025, betting in the ESPN app): ESPN+ stays a plain informational link.
+- Not done: MLB (offseason) and NFL versions; regional network streaming specifics (team apps vary, we don't guess).
+
 ### Email affiliate conversion (started 2026-09-28)
 Baseline (all emails ever, to 2026-09-28): 30 active subscribers (15 Sabres, 8 NFL fans, 2 Habs, 1 Yankees, 1 Nats, 3 no team); 738 delivered, 29 clicks, 0 tracked affiliate clicks. Site-wide ~25 affiliate clicks per 30 days. List size is the main lever.
 - **Phase 1 (shipped):** email placements on every affiliate link (StubHub pubref suffix `_email-recap` etc., Fanatics subId2), webhook counts direct StubHub/Fanatics clicks, Partnerize placement report reads email placements. Gear card (`lib/emailOffers.ts`) in NHL game/set/playoff recaps, MLB recaps, digest (replaces footer link), welcome. Win recaps feature the star player (Fanatics player search). Ticket CTA points to the next home game. Welcome email now also sends after double opt-in and shows team gear + next home game.
