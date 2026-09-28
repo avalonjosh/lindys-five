@@ -155,7 +155,9 @@ export default async function MLBTeamPage({ params }: MLBTeamPageProps) {
       const currentChunk = chunks.find(c => !c.isComplete && c.games.some(g => g.outcome !== 'PENDING')) || chunks.find(c => !c.isComplete);
       const playedGames = games.filter(g => g.outcome !== 'PENDING');
       const lastGame = playedGames[playedGames.length - 1];
-      const nextGame = games.find(g => g.outcome === 'PENDING');
+      // Skip games that were postponed and never made up (still PENDING, date in the past).
+      const todayEt = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+      const nextGame = games.find(g => g.outcome === 'PENDING' && (!g.isoDate || g.isoDate.slice(0, 10) >= todayEt));
 
       const summaryText = [
         `The ${fullName} are ${teamStanding.wins}-${teamStanding.losses} (${teamStanding.winPct.toFixed(3).replace(/^0/, '')}) through ${seasonStats.gamesPlayed} games of the ${season} season — ${ordinal(teamStanding.divisionRank)} in the ${teamStanding.division}${teamStanding.gamesBack === 0 ? ', leading the division' : `, ${teamStanding.gamesBack} games back`}${teamStanding.wildCardRank ? `, and ${ordinal(teamStanding.wildCardRank)} in the wild card race${teamStanding.wildCardGamesBack > 0 ? ` (${teamStanding.wildCardGamesBack} GB)` : ''}` : ''}.`,

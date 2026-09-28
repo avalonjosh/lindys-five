@@ -21,8 +21,8 @@ import SavePicksModal from '@/components/whatif/SavePicksModal';
 import { fetchLatestWhatIfSave } from '@/lib/whatif/client';
 import NewsletterSignup from '@/components/newsletter/NewsletterSignup';
 import type { WhatIfSave, WhatIfSubmission } from '@/lib/whatif/types';
-import { Tv } from 'lucide-react';
-import MLBPostseasonCard from './MLBPostseasonCard';
+import { Tv, ChevronDown } from 'lucide-react';
+import MLBPlayoffJourney from './MLBPlayoffJourney';
 import { mlbSeasonYear } from '@/lib/utils/mlbSeason';
 import type { MLBPostseason } from '@/lib/services/mlbPostseason';
 
@@ -75,6 +75,25 @@ export default function MLBTeamTracker({ team, initialGames, serverSummary, faq,
   const [boxOffscreen, setBoxOffscreen] = useState(false);
   const progressBoxRef = useRef<HTMLDivElement | null>(null);
   const [yearOverYearMode, setYearOverYearMode] = useState(false);
+  const [ps, setPs] = useState<MLBPostseason | null>(postseason);
+  const [showRegularSeason, setShowRegularSeason] = useState(false);
+
+  // Postseason: refresh every 20s while a game is live, every 5 min otherwise.
+  useEffect(() => {
+    if (!ps) return;
+    const live = ps.series.some((s) => s.games.some((g) => g.state === 'live'));
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/mlb/postseason/${team.slug}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.postseason) setPs(data.postseason);
+      } catch {
+        /* keep the last snapshot */
+      }
+    }, live ? 20_000 : 300_000);
+    return () => clearInterval(id);
+  }, [ps, team.slug]);
   const [yearOverYearLoading, setYearOverYearLoading] = useState(false);
   const [lastSeasonData, setLastSeasonData] = useState<{ winsLastYear: number; lossesLastYear: number; recordLastYear: string } | null>(null);
   const pollingIntervalRef = useRef(60000);
@@ -462,8 +481,8 @@ export default function MLBTeamTracker({ team, initialGames, serverSummary, faq,
               {fullName} Playoff Tracker 2026
             </h1>
             <p className="text-xs md:text-base opacity-90 px-2 leading-tight text-white">
-              {postseason && !postseason.eliminated
-                ? `${mlbSeasonYear()} Postseason \u2022 ${postseason.series[postseason.series.length - 1].short}`
+              {ps && !ps.eliminated
+                ? `${mlbSeasonYear()} Postseason \u2022 ${ps.series[ps.series.length - 1].short}`
                 : <>5-Game Set Analysis &bull; Target: 3+ wins per set</>}
             </p>
             <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
@@ -490,16 +509,32 @@ export default function MLBTeamTracker({ team, initialGames, serverSummary, faq,
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
-        {postseason && (
-          <MLBPostseasonCard
-            postseason={postseason}
+        {ps && (
+          <MLBPlayoffJourney
+            postseason={ps}
             teamName={team.name}
+            teamCity={team.city}
+            teamLogo={team.logo}
             teamSlug={team.slug}
-            color={team.colors.primary}
-            season={mlbSeasonYear()}
+            colors={team.colors}
           />
         )}
 
+        {/* In postseason mode the regular season collapses under the journey (like NHL playoffs). */}
+        {ps && (
+          <button
+            type="button"
+            onClick={() => setShowRegularSeason((v) => !v)}
+            className="mb-4 flex w-full items-center justify-between rounded-2xl border-2 border-gray-200 bg-white px-4 py-3 text-left shadow-sm transition-colors hover:border-gray-300"
+          >
+            <span className="text-lg font-bold text-gray-900 md:text-xl">
+              Regular Season{stats ? ` · ${stats.totalWins}-${stats.totalLosses}` : ''}
+            </span>
+            <ChevronDown className={`h-5 w-5 text-gray-500 transition-transform ${showRegularSeason ? 'rotate-180' : ''}`} />
+          </button>
+        )}
+
+        {(!ps || showRegularSeason) && (<>
         {/* Progress Bar — wrapped in a ref'd container so the sticky What-If
             bar knows when it scrolls off. */}
         <div ref={progressBoxRef}>
@@ -683,6 +718,8 @@ export default function MLBTeamTracker({ team, initialGames, serverSummary, faq,
             </div>
           )}
         </div>
+
+        </>)}
 
         <div className="mt-8 max-w-2xl mx-auto">
           <GamePromo sport="mlb" />
