@@ -17,6 +17,7 @@ const PROGRAMS = [
   { key: 'weekly-digest-enabled', trigger: 'weekly-digest', label: 'Weekly Digest' },
   { key: 'mlb-recap-enabled', trigger: 'email-mlb-game-recap', label: 'MLB Game Recap' },
   { key: 'mlb-set-recap-enabled', trigger: 'email-mlb-set-recap', label: 'MLB Set Recap' },
+  { key: 'nfl-weekly-enabled', trigger: 'email-nfl-weekly', label: 'NFL Weekly' },
 ] as const;
 
 const CAMPAIGN_LABEL: Record<string, string> = {
@@ -26,6 +27,7 @@ const CAMPAIGN_LABEL: Record<string, string> = {
   'mlb-set-recap': 'MLB Set Recap',
   'weekly-digest': 'Weekly Digest',
   'welcome': 'Welcome',
+  'nfl-weekly': 'NFL Weekly',
   'announcement': 'Announcement',
   'other': 'Other',
 };

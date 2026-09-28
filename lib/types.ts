@@ -251,5 +251,6 @@ export type EmailCampaign =
   | 'mlb-game-recap'
   | 'mlb-set-recap'
   | 'weekly-digest'
+  | 'nfl-weekly'
   | 'welcome'
   | 'announcement';

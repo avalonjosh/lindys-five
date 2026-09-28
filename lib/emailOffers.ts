@@ -29,6 +29,7 @@ export type EmailPlacement =
   | 'email-playoff'
   | 'email-mlb-recap'
   | 'email-mlb-set'
+  | 'email-nfl'
   | 'email-welcome'
   | 'email-digest';
 

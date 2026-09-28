@@ -2472,6 +2472,107 @@ export async function sendMLBGameRecap(
   return { sent };
 }
 
+// ---------------------------------------------------------------------------
+// NFL weekly email (per team, the Tuesday after each game week). NFL fans
+// signed up from the Pick the {Team} pages; this is their team email.
+// ---------------------------------------------------------------------------
+
+export interface NFLWeeklyEmailData {
+  teamSlug: string;
+  teamCity: string;
+  teamName: string;
+  teamAbbrev: string;
+  pickSlug: string;
+  primaryColor: string;
+  week: number;
+  last: { oppAbbrev: string; oppName: string; isHome: boolean; teamScore: number; oppScore: number } | null;
+  record: string;
+  gamesLeft: number;
+  next: { label: string; date: string } | null;
+  /** Next home game tickets (StubHub search), when there is one. */
+  homeTickets: { label: string; date: string; link: string } | null;
+}
+
+const nflUtm = (path: string, content: string) =>
+  `${SITE_URL}${path}?utm_source=newsletter&utm_medium=email&utm_campaign=nfl-weekly&utm_content=${content}`;
+
+export function renderNFLWeeklyEmail(d: NFLWeeklyEmailData, unsubscribeUrl: string): string {
+  const impact = `font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;`;
+  const card = (label: string, inner: string) =>
+    `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+      <tr><td style="padding:12px 16px 4px;"><span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">${label}</span></td></tr>
+      <tr><td style="padding:4px 16px 14px;">${inner}</td></tr>
+    </table>`;
+  const statCell = (label: string, value: string) =>
+    `<td align="center" width="50%" style="padding:6px 0;"><span style="display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;">${label}</span><span style="display:block;font-size:16px;font-weight:700;color:#1e293b;">${value}</span></td>`;
+
+  let scoreBlock = '';
+  const won = !!d.last && d.last.teamScore > d.last.oppScore;
+  if (d.last) {
+    const l = d.last;
+    const away = l.isHome ? l.oppAbbrev : d.teamAbbrev;
+    const home = l.isHome ? d.teamAbbrev : l.oppAbbrev;
+    const awayScore = l.isHome ? l.oppScore : l.teamScore;
+    const homeScore = l.isHome ? l.teamScore : l.oppScore;
+    scoreBlock = `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:18px;"><tr>
+      <td align="center" width="35%"><img src="${espnLogoUrl('nfl', away)}" width="48" height="48" alt="" style="display:block;margin:0 auto 8px;" /><span style="font-size:14px;font-weight:700;color:#1e293b;">${away}</span></td>
+      <td align="center" width="30%">
+        <span style="${impact}font-size:32px;font-weight:800;"><span style="color:${awayScore > homeScore ? '#1e293b' : '#64748b'};">${awayScore}</span><span style="color:#94a3b8;font-size:18px;"> - </span><span style="color:${homeScore > awayScore ? '#1e293b' : '#64748b'};">${homeScore}</span></span>
+        <span style="display:block;margin-top:4px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;">Week ${d.week} Final</span>
+      </td>
+      <td align="center" width="35%"><img src="${espnLogoUrl('nfl', home)}" width="48" height="48" alt="" style="display:block;margin:0 auto 8px;" /><span style="font-size:14px;font-weight:700;color:#1e293b;">${home}</span></td>
+    </tr></table>`;
+  }
+
+  const seasonCard = card('Season So Far', `<table width="100%" cellpadding="0" cellspacing="0"><tr>${statCell('Record', d.record)}${statCell('Games Left', String(d.gamesLeft))}</tr></table>`);
+
+  const pickCard = d.gamesLeft > 0
+    ? card(`Pick the ${d.teamName}`, `<p style="margin:0 0 12px;font-size:14px;color:#475569;line-height:1.5;">Call every remaining game and see where the ${d.teamName} finish. Your picks grade themselves as the season plays out.</p>
+      ${emailButton('Make Your Picks', nflUtm(`/pick-the-${d.pickSlug}`, 'picks'), { color: d.primaryColor })}`)
+    : '';
+
+  const gearOptions = teamGearOptions(d.teamSlug, 'email-nfl');
+  const gearCard = gearOptions ? gearCardTable({ ...gearOptions, eyebrow: won ? 'Celebrate the win' : undefined }, 16) : '';
+
+  const nextCard = d.next
+    ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:6px;background:${d.primaryColor};border-radius:8px;"><tr><td style="padding:20px;text-align:center;">
+        <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">Next Game</div>
+        <div style="margin-top:6px;${impact}font-size:20px;font-weight:800;color:#ffffff;text-transform:uppercase;letter-spacing:1px;">${d.next.label}</div>
+        <div style="margin-top:2px;font-size:14px;color:rgba(255,255,255,0.85);">${d.next.date}</div>
+        ${d.homeTickets ? `${d.homeTickets.label !== d.next.label ? `<div style="margin-top:10px;font-size:13px;color:rgba(255,255,255,0.85);">Next home game: <strong>${d.homeTickets.label}</strong> &middot; ${d.homeTickets.date}</div>` : ''}
+        <a href="${d.homeTickets.link}" style="display:inline-block;margin-top:14px;background:#ffffff;color:${d.primaryColor};padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">${d.homeTickets.label !== d.next.label ? 'Get Home Game Tickets' : 'Get Tickets'}</a>` : ''}
+      </td></tr></table>`
+    : '';
+
+  const body = `${scoreBlock}${seasonCard}${gearCard}${pickCard}${nextCard}`;
+  return brandEmailShell({ headerBg: d.primaryColor, label: d.last ? `Week ${d.week} Recap` : `Week ${d.week}`, body, unsubscribeUrl, footerNote: `${d.teamCity} ${d.teamName} updates` });
+}
+
+export async function sendNFLWeekly(
+  subscribers: NewsletterSubscriber[],
+  data: NFLWeeklyEmailData,
+  opts?: { testEmail?: string },
+): Promise<{ sent: number }> {
+  const recipients: NewsletterSubscriber[] = opts?.testEmail
+    ? [{ id: 'test', email: opts.testEmail, teams: [], createdAt: new Date().toISOString(), verified: true }]
+    : subscribers.filter((s) => s.verified && !s.unsubscribedAt);
+  if (recipients.length === 0) return { sent: 0 };
+
+  const l = data.last;
+  const subject = l
+    ? `${data.teamName} ${l.teamScore > l.oppScore ? 'beat' : l.teamScore < l.oppScore ? 'fall to' : 'tie'} ${l.oppName} ${l.teamScore}-${l.oppScore} · ${data.record}`
+    : `${data.teamName} Week ${data.week}: ${data.record}`;
+  const sendId = opts?.testEmail ? undefined : await recordEmailSend(`nfl-weekly:${data.teamSlug}`, recipients.length, subject, 'nfl-weekly');
+
+  const sent = await sendPersonalizedBatch(
+    recipients,
+    subject,
+    (_sub, unsubscribeUrl) => renderNFLWeeklyEmail(data, unsubscribeUrl),
+    sendId,
+  );
+  return { sent };
+}
+
 /**
  * Send the weekly digest. `contentFor` builds each recipient's personalized
  * content from their subscribed teams; returning null skips that recipient

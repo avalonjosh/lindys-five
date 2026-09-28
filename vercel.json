@@ -63,6 +63,10 @@
       "schedule": "30 13 * * *"
     },
     {
+      "path": "/api/cron/email-nfl-weekly",
+      "schedule": "0 14 * * 2"
+    },
+    {
       "path": "/api/cron/affiliate-summary",
       "schedule": "0 13 * * 1"
     }

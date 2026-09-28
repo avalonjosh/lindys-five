@@ -44,6 +44,7 @@ const SETTINGS_KEYS: Record<string, string> = {
   'weekly-digest-enabled': 'blog:settings:weekly-digest-enabled',
   'mlb-recap-enabled': 'blog:settings:mlb-recap-enabled',
   'mlb-set-recap-enabled': 'blog:settings:mlb-set-recap-enabled',
+  'nfl-weekly-enabled': 'blog:settings:nfl-weekly-enabled',
 };
 
 // GET - fetch all settings (effective values: KV, falling back to env for auto-publish keys)
