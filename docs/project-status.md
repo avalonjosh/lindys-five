@@ -20,7 +20,7 @@ Cloud routines on Josh's claude.ai account email him at 9am ET for the items mar
 | 2026-09-29 | League opener (FLA at CAR, 5pm ET). All 32 team pages, the odds page and home cards flip to live at midnight ET (league-wide switch, not per team). Check a team that hasn't played (e.g. /nhl/sabres): odds match preseason, Projected reads "—" |
 | 2026-10-01 | Sabres open at CBJ. Sabres' first game: check odds move continuously from the preseason number (Sabres preseason 59%, ~65% after a win, ~49% after a regulation loss) |
 | 2026-10-02 noon UTC | Verify no game recap email went out for a preseason game |
-| 2026-10-05 (email) | StubHub re-harvest: MLB postseason events (how-to below) |
+| 2026-10-05 (email) | StubHub re-harvest: MLB postseason events (how-to below). Wild Card (12 games) done 2026-09-28. Division Series listings show opponent "TBD" until Wild Cards finish (~Oct 2), so harvest DS then, and LCS/WS as each is set; until then those buttons use the team ticket page |
 | ~2026-10-10 | Check home page pass 1 in GA4: new-visitor engagement 61% -> 70%+ target; tracker/odds/scores share of home clicks ~21% -> 35%+ |
 | 2026-10-10 (email) | Odds model check-in routine (computes all 32 teams, spot-checks live pages). Its prompt still says "30-game prior"; the model is 40 games plus team-specific priors now, ignore that wording |
 | Oct 2026 | Re-check GSC after opening night. What-If picks season-start dry run (verify grading UX against real results) |

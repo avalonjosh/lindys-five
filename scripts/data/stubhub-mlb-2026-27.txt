@@ -445,3 +445,15 @@
 159264161|0918|Athletics@Guardians
 159264162|0919|Athletics@Guardians
 159264163|0920|Athletics@Guardians
+161522484|0929|Phillies@Braves
+161522490|0930|Phillies@Braves
+161522493|1001|Phillies@Braves
+161794147|0929|Cubs@Padres
+161794146|0930|Cubs@Padres
+161794153|1001|Cubs@Padres
+161570744|0929|White Sox@Astros
+161570738|0930|White Sox@Astros
+161570736|1001|White Sox@Astros
+161554162|0929|Red Sox@Yankees
+161554165|0930|Red Sox@Yankees
+161554164|1001|Red Sox@Yankees

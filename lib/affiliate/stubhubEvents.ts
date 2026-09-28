@@ -4,7 +4,7 @@
  * from scripts/data/stubhub-*.txt; do not edit by hand. Regenerate after a fresh
  * browser harvest (see the script header) when the schedule changes.
  *
- * 1559 events. Canadian home venues are not listed on StubHub US and
+ * 1571 events. Canadian home venues are not listed on StubHub US and
  * fall back to a StubHub search.
  */
 export const STUBHUB_EVENT_IDS: Record<string, number> = {
@@ -34,6 +34,9 @@ export const STUBHUB_EVENT_IDS: Record<string, number> = {
   'mlb:ATL:PHI:2026-09-11': 159262174,
   'mlb:ATL:PHI:2026-09-12': 159262175,
   'mlb:ATL:PHI:2026-09-13': 159262176,
+  'mlb:ATL:PHI:2026-09-29': 161522484,
+  'mlb:ATL:PHI:2026-09-30': 161522490,
+  'mlb:ATL:PHI:2026-10-01': 161522493,
   'mlb:ATL:SF:2026-08-31': 159262134,
   'mlb:ATL:TB:2026-09-08': 159262171,
   'mlb:ATL:TB:2026-09-09': 159262172,
@@ -168,6 +171,9 @@ export const STUBHUB_EVENT_IDS: Record<string, number> = {
   'mlb:HOU:CWS:2026-09-01': 159262573,
   'mlb:HOU:CWS:2026-09-02': 159262574,
   'mlb:HOU:CWS:2026-09-03': 159262575,
+  'mlb:HOU:CWS:2026-09-29': 161570744,
+  'mlb:HOU:CWS:2026-09-30': 161570738,
+  'mlb:HOU:CWS:2026-10-01': 161570736,
   'mlb:HOU:KC:2026-09-15': 159262579,
   'mlb:HOU:KC:2026-09-16': 159262580,
   'mlb:HOU:KC:2026-09-17': 159262581,
@@ -279,6 +285,9 @@ export const STUBHUB_EVENT_IDS: Record<string, number> = {
   'mlb:NYY:BOS:2026-08-28': 159257456,
   'mlb:NYY:BOS:2026-08-29': 159257457,
   'mlb:NYY:BOS:2026-08-30': 159257458,
+  'mlb:NYY:BOS:2026-09-29': 161554162,
+  'mlb:NYY:BOS:2026-09-30': 161554165,
+  'mlb:NYY:BOS:2026-10-01': 161554164,
   'mlb:NYY:COL:2026-09-08': 159257459,
   'mlb:NYY:COL:2026-09-09': 159257460,
   'mlb:NYY:COL:2026-09-10': 159257461,
@@ -339,6 +348,9 @@ export const STUBHUB_EVENT_IDS: Record<string, number> = {
   'mlb:SD:ARI:2026-09-25': 159262420,
   'mlb:SD:ARI:2026-09-26': 159262421,
   'mlb:SD:ARI:2026-09-27': 159262422,
+  'mlb:SD:CHC:2026-09-29': 161794147,
+  'mlb:SD:CHC:2026-09-30': 161794146,
+  'mlb:SD:CHC:2026-10-01': 161794153,
   'mlb:SD:MIA:2026-09-18': 159262417,
   'mlb:SD:MIA:2026-09-19': 159262418,
   'mlb:SD:MIA:2026-09-20': 159262419,
