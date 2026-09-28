@@ -35,7 +35,11 @@ NHL playoff odds tracker and scores site. Tracks playoff probability for all 32 
 - Use `fetchWithRetry` from `lib/services/nhlApi.ts` for NHL API calls
 - Team colors come from `lib/teamConfig.ts` via team abbreviation lookup
 
+## Project Status & Resume Point
+**Read `docs/project-status.md` at the start of a session.** It holds dated reminders, open items, in-progress projects, and the current resume point. When Josh says "lets continue" with no other context, open it, verify `git log -1` / `git status`, and work its to-do list. Update it (commit + push) whenever an item ships or a new follow-up appears.
+
 ## Preferences
+- Never use em dashes in prose written for Josh (plans, commit bodies, docs, UI copy); use commas, periods, or parentheses
 - Don't add gambling/betting advertising or affiliate links
 - Keep UI clean and minimal - avoid over-engineering
 - When investigating issues, check if it's mobile AND desktop before assuming one or the other
