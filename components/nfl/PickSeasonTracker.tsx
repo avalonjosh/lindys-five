@@ -27,13 +27,26 @@ const NFL_PLAYOFF_TARGET = 10;
 
 type Pick = 'W' | 'L';
 
+/** Model playoff odds for this team (server-computed, see lib/utils/nflOdds). */
+export interface NFLTeamOddsView {
+  playoff: number;
+  divisionOdds: number;
+  topSeed: number;
+  projWins: number;
+  division: string;
+  conference: string;
+}
+
 interface PickSeasonTrackerProps {
   team: NFLTeamConfig;
   /** Server-fetched schedule so the full season renders in the initial HTML. */
   initialGames?: NFLGameResult[];
+  odds?: NFLTeamOddsView | null;
 }
 
-export default function PickSeasonTracker({ team, initialGames }: PickSeasonTrackerProps) {
+const pct = (p: number) => (p >= 99.5 && p < 100 ? '>99%' : p > 0 && p < 0.5 ? '<1%' : `${Math.round(p)}%`);
+
+export default function PickSeasonTracker({ team, initialGames, odds = null }: PickSeasonTrackerProps) {
   const router = useRouter();
   const [games, setGames] = useState<NFLGameResult[]>(initialGames ?? []);
   const [loading, setLoading] = useState(!initialGames?.length);
@@ -424,6 +437,34 @@ export default function PickSeasonTracker({ team, initialGames }: PickSeasonTrac
                 {outlook.projWins}/{NFL_PLAYOFF_TARGET} playoff-pace wins
               </span>
             </div>
+
+            {/* Model playoff odds (real results only; picks don't change them) */}
+            {odds && (
+              <Link
+                href="/nfl/playoff-odds"
+                className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-gray-200 p-2 transition-colors hover:border-gray-300 sm:grid-cols-4 md:p-3"
+              >
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Playoff Odds</div>
+                  <div className="text-xl font-bold md:text-2xl" style={{ color: team.colors.primary }}>{pct(odds.playoff)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Win {odds.division}</div>
+                  <div className="text-xl font-bold text-gray-900 md:text-2xl">{pct(odds.divisionOdds)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{odds.conference} #1 Seed</div>
+                  <div className="text-xl font-bold text-gray-900 md:text-2xl">{pct(odds.topSeed)}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">Model Projects</div>
+                  <div className="text-xl font-bold text-gray-900 md:text-2xl">{odds.projWins.toFixed(1)} wins</div>
+                </div>
+                <div className="col-span-2 text-[11px] text-gray-400 sm:col-span-4">
+                  From real results, not your picks. All 32 teams&apos; odds →
+                </div>
+              </Link>
+            )}
 
             {/* Auto-loaded notice: the page opened with their latest save applied */}
             {autoLoaded && latestSave && picks.size > 0 && (

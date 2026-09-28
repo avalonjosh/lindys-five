@@ -5,6 +5,7 @@ import { findNFLTeamByPickSlug, NFL_TEAMS } from '@/lib/teamConfig';
 import PickSeasonTracker from '@/components/nfl/PickSeasonTracker';
 import { fetchNFLSchedule, nflSeasonYear } from '@/lib/services/nflApi';
 import type { NFLGameResult } from '@/lib/types/nfl';
+import { computeNFLOdds, formatNFLOdds } from '@/lib/services/nflLeague';
 
 // Served publicly as /pick-the-{team} via a next.config rewrite.
 export const revalidate = 300;
@@ -66,6 +67,12 @@ export default async function PickTeamPage({ params }: PickPageProps) {
   } catch (err) {
     console.error(`NFL schedule SSR failed for ${team.abbreviation}:`, err);
   }
+  const oddsTable = await computeNFLOdds(SEASON);
+  const row = oddsTable?.teams.find((t) => t.abbr === team.abbreviation);
+  const odds = row
+    ? { playoff: row.playoff, divisionOdds: row.divisionOdds, topSeed: row.topSeed, projWins: row.projWins, division: row.division, conference: row.conference }
+    : null;
+
   const played = initialGames.filter((g) => g.outcome !== 'PENDING');
   const wins = played.filter((g) => g.outcome === 'W').length;
   const next = initialGames.find((g) => g.outcome === 'PENDING');
@@ -121,8 +128,15 @@ export default async function PickTeamPage({ params }: PickPageProps) {
             {next ? ` Next game: ${next.isHome ? 'vs' : 'at'} ${next.opponentName}, Week ${next.week}, ${next.date}.` : ''}
           </p>
         )}
+        {odds && (
+          <p>
+            {fullName} playoff odds: {formatNFLOdds(odds.playoff)} to make the {SEASON} playoffs,{' '}
+            {formatNFLOdds(odds.divisionOdds)} to win the {odds.division}, and {formatNFLOdds(odds.topSeed)} to earn the{' '}
+            {odds.conference} #1 seed. The model projects {odds.projWins.toFixed(1)} wins.
+          </p>
+        )}
       </div>
-      <PickSeasonTracker team={team} initialGames={initialGames} />
+      <PickSeasonTracker team={team} initialGames={initialGames} odds={odds} />
       <SiteFooter />
     </>
   );
