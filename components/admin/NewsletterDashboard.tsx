@@ -25,6 +25,7 @@ const CAMPAIGN_LABEL: Record<string, string> = {
   'mlb-game-recap': 'MLB Game Recap',
   'mlb-set-recap': 'MLB Set Recap',
   'weekly-digest': 'Weekly Digest',
+  'welcome': 'Welcome',
   'announcement': 'Announcement',
   'other': 'Other',
 };

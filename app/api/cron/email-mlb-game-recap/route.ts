@@ -58,7 +58,7 @@ async function buildData(game: MLBScoreGame, side: 'home' | 'away', standings: M
       nextGame = {
         opponent: `${up.isHome ? 'vs' : '@'} ${up.opponent}`,
         date: up.startTime ? `${up.date} · ${up.startTime} ET` : up.date,
-        ticketLink: generateTeamTicketsLink(cfg.slug, cfg.city, cfg.stubhubId),
+        ticketLink: generateTeamTicketsLink(cfg.slug, cfg.city, cfg.stubhubId, 'email-mlb-recap'),
       };
     }
   } catch {

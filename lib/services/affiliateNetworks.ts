@@ -254,13 +254,19 @@ async function pzPaged<T>(type: 'click' | 'conversion', from: Date, to: Date, ke
 /** pubref "buf-vs-tor" (venue/home team) or "hub-sabres" → normalised "nhl-sabres". */
 function pzTeamFromRef(ref: string): string {
   if (!ref) return '(untagged)';
+  ref = ref.replace(/_email-[a-z0-9-]+$/i, '');
   const m = ref.match(/^([a-z]{2,3})-vs-([a-z]{2,3})/i);
   if (m) return normalizeMatchupKey(m[1], m[2]);
   const h = ref.match(/^hub-(.+)$/i);
   if (h) return normalizeTeamKey(h[1]);
   return normalizeTeamKey(ref);
 }
-const pzPlacementFromRef = (ref: string) => (!ref ? '(untagged)' : /-vs-/.test(ref) ? 'game-link' : /^hub-/.test(ref) ? 'tickets-hub' : 'other');
+const pzPlacementFromRef = (ref: string) => {
+  if (!ref) return '(untagged)';
+  const email = ref.match(/_(email-[a-z0-9-]+)$/i);
+  if (email) return email[1].toLowerCase();
+  return /-vs-/.test(ref) ? 'game-link' : /^hub-/.test(ref) ? 'tickets-hub' : 'other';
+};
 
 export async function fetchPartnerizeSummary(from: Date, to: Date): Promise<NetworkSummary> {
   if (!hasPartnerizeCredentials()) return emptySummary('stubhub', 'StubHub (Partnerize)', false, 'PARTNERIZE_APP_KEY / PARTNERIZE_USER_KEY not set');

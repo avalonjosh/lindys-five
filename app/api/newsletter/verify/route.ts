@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import type { NewsletterSubscriber, EmailVerificationToken } from '@/lib/types';
+import { sendWelcomeEmail } from '@/lib/email';
 
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get('token');
@@ -36,6 +37,15 @@ export async function GET(request: NextRequest) {
 
     // Clean up token
     await kv.del(`email:verification:${token}`);
+
+    // First confirmation only; a best-effort send never blocks verifying.
+    if (!subscriber.verified) {
+      try {
+        await sendWelcomeEmail(subscriber.email, subscriber.id);
+      } catch (err) {
+        console.error('Welcome email failed:', err);
+      }
+    }
 
     return redirectWithMessage('success', 'Email verified! You will now receive game recaps.');
   } catch (error) {

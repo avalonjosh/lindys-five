@@ -7,7 +7,7 @@ import { getAllSubscribers, sendWeeklyDigest, renderWeeklyDigestEmail, type Week
 import { getPublishedPosts } from '@/lib/kv';
 import { fetchMLBStandings } from '@/lib/services/mlbApi';
 import { fetchNhlStandingsServer } from '@/lib/services/standingsFetch';
-import { NHL_TEAMS, MLB_TEAMS } from '@/lib/teamConfig';
+import { NHL_TEAMS, MLB_TEAMS, NFL_TEAMS } from '@/lib/teamConfig';
 import type { BlogPost, NewsletterSubscriber } from '@/lib/types';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.lindysfive.com';
@@ -123,7 +123,7 @@ async function buildPool(teamSlugs: Iterable<string>): Promise<DigestPool> {
 
 /**
  * One subscriber's digest: races for the sport(s) they follow, blog posts only
- * for their own teams, and gear/tickets links for their first NHL/MLB team.
+ * for their own teams, and a gear card for their first team (tickets link for NHL/MLB).
  * No teams at all = generic (every race, no blog). Returns null when there is
  * nothing relevant this week, so that recipient is skipped rather than spammed.
  */
@@ -146,10 +146,10 @@ function personalize(pool: DigestPool, teams: string[]): WeeklyDigestContent | n
 
   if (races.length === 0 && latestPosts.length === 0) return null;
 
-  const linkSlug = teams.find((t) => NHL_TEAMS[t] || MLB_TEAMS[t]);
-  const cfg = linkSlug ? NHL_TEAMS[linkSlug] || MLB_TEAMS[linkSlug] : undefined;
+  const linkSlug = teams.find((t) => NHL_TEAMS[t] || MLB_TEAMS[t] || NFL_TEAMS[t]);
+  const cfg = linkSlug ? NHL_TEAMS[linkSlug] || MLB_TEAMS[linkSlug] || NFL_TEAMS[linkSlug] : undefined;
   const team = linkSlug && cfg
-    ? { sport: NHL_TEAMS[linkSlug] ? ('nhl' as const) : ('mlb' as const), slug: linkSlug, city: cfg.city, name: cfg.name }
+    ? { sport: NHL_TEAMS[linkSlug] ? ('nhl' as const) : MLB_TEAMS[linkSlug] ? ('mlb' as const) : ('nfl' as const), slug: linkSlug, city: cfg.city, name: cfg.name }
     : undefined;
 
   return { latestPosts, races, team };

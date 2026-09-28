@@ -139,9 +139,10 @@ export function generateGameTicketLink(
   homeTeam: string,
   awayTeam: string,
   date?: string,
-  sport: 'nhl' | 'mlb' = 'nhl'
+  sport: 'nhl' | 'mlb' = 'nhl',
+  placement?: string
 ): string {
-  const trackingRef = generateGameTrackingRef(homeTeam, awayTeam, date);
+  const trackingRef = withPlacement(generateGameTrackingRef(homeTeam, awayTeam, date), placement);
   return generateStubHubLink({
     stubhubId: venueTeamStubhubId,
     trackingRef,
@@ -286,6 +287,20 @@ export function generateMerchLink(sport: FanaticsSport, teamSlug: string, teamCi
 }
 
 /** StubHub team-tickets landing (not game-specific) for the tickets hub. */
-export function generateTeamTicketsLink(teamSlug: string, teamCity: string, stubhubId: number): string {
-  return generateStubHubLink({ stubhubId, trackingRef: `hub-${teamSlug}`, teamSlug, teamCity });
+export function generateTeamTicketsLink(teamSlug: string, teamCity: string, stubhubId: number, placement?: string): string {
+  return generateStubHubLink({ stubhubId, trackingRef: withPlacement(`hub-${teamSlug}`, placement), teamSlug, teamCity });
+}
+
+/** Partnerize has one publisher-reference field, so an email placement rides
+ *  on the pubref as a `_email-recap` style suffix. The team parsers in
+ *  affiliateNetworks read the prefix, so existing reports are unaffected. */
+function withPlacement(ref: string, placement?: string): string {
+  return placement ? `${ref}_${placement}` : ref;
+}
+
+/** Fanatics search for one player's gear (e.g. after a big night), tagged
+ *  with the team and placement like every other Fanatics link. */
+export function generateFanaticsPlayerLink(sport: FanaticsSport | 'nfl', teamSlug: string, teamName: string, playerName: string, placement: string): string {
+  const query = `${playerName} ${teamName} jersey`;
+  return buildFanaticsDeepLink(`${FANATICS_BASE}/search?query=${encodeURIComponent(query)}`, { team: `${sport}-${teamSlug}`, placement });
 }

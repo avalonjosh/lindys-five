@@ -83,12 +83,12 @@ export async function POST(request: NextRequest) {
     const stat = EVENT_TO_STAT[type as ResendEventType];
     await incrementSendStat(sendRecordId, stat);
 
-    // On a click, also attribute gear/tickets hub links as affiliate clicks —
-    // an owned proxy for email-driven affiliate traffic. Resend puts the clicked
-    // URL on data.click.link.
+    // On a click, also count affiliate clicks: direct StubHub (Partnerize) and
+    // Fanatics (Impact) links, plus the on-site gear/tickets hubs. Resend puts
+    // the clicked URL on data.click.link.
     if (type === 'email.clicked') {
       const link: string = data.click?.link || data.link || '';
-      if (/\/(gear|tickets)(\/|\?|$)/.test(link)) {
+      if (/stubhub\.prf\.hn|fanatics|\/(gear|tickets)(\/|\?|$)/i.test(link)) {
         await incrementSendStat(sendRecordId, 'affiliateClicks');
       }
     }

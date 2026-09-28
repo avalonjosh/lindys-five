@@ -43,6 +43,14 @@ Cloud routines on Josh's claude.ai account email him at 9am ET for the items mar
 
 ## In-progress projects
 
+### Email affiliate conversion (started 2026-09-28)
+Baseline (all emails ever, to 2026-09-28): 30 active subscribers (15 Sabres, 8 NFL fans, 2 Habs, 1 Yankees, 1 Nats, 3 no team); 738 delivered, 29 clicks, 0 tracked affiliate clicks. Site-wide ~25 affiliate clicks per 30 days. List size is the main lever.
+- **Phase 1 (shipped):** email placements on every affiliate link (StubHub pubref suffix `_email-recap` etc., Fanatics subId2), webhook counts direct StubHub/Fanatics clicks, Partnerize placement report reads email placements. Gear card (`lib/emailOffers.ts`) in NHL game/set/playoff recaps, MLB recaps, digest (replaces footer link), welcome. Win recaps feature the star player (Fanatics player search). Ticket CTA points to the next home game. Welcome email now also sends after double opt-in and shows team gear + next home game.
+- **Phase 2:** NFL fans get nothing today (digest skips them: no races, no posts). Weekly game-day email per NFL team with score, pick-the-team link, team gear.
+- **Phase 3:** list growth: stronger capture at the end of a 82-0 / 162-0 run, inline "get {Team} recaps" on team pages.
+- **Phase 4 (dated):** holiday gift guide email per team, build by ~Nov 15, send ~Nov 24 (Black Friday week). Playoff clinch email (Fanatics clinch gear + playoff tickets), build by March.
+- Measure: Admin > Newsletter affiliate clicks, Admin > Affiliates placements `email-*`.
+
 ### Home page redesign
 Pass 1 + polish shipped (3683e04, d6afd42, 770de48). Mockup canvas: https://claude.ai/artifact/LaBeaTyxRko4H3SERSqASK (re-read for Josh's comments before building).
 

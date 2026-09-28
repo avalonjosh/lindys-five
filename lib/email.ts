@@ -5,7 +5,8 @@ import type { LandingResponse, StandingsTeam, ScoringGoal, ThreeStar } from './t
 import { TEAMS } from './teamConfig';
 import { getCurrentNHLSeason } from './utils/season';
 import { fetchJsonWithRetry } from './fetchWithRetry';
-import { generateGameTicketLink, generateMerchLink } from './utils/affiliateLinks';
+import { generateGameTicketLink } from './utils/affiliateLinks';
+import { renderGearCard, gearCardTable, pickGearHero, espnLogoUrl, teamGearOptions, type EmailPlacement } from './emailOffers';
 import { getProjectedPoints, getModelProjectedPoints, getDivCutLine, getWcCutLine, isInPlayoffPosition, getPlayoffProbability } from './utils/standingsCalc';
 import { computePositionAwareProbability, computeSeriesWinProbability, seriesOptionsFor } from './utils/playoffProbability';
 import { fetchPlayoffsSnapshot, type PlayoffsSnapshot } from './services/playoffsSnapshot';
@@ -21,19 +22,6 @@ function getResend(): Resend {
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.lindysfive.com';
 const FROM_EMAIL = "Lindy's Five <noreply@lindysfive.com>";
-
-// PNG team logos for email. Team SVGs (nhle.com / mlbstatic) don't render in
-// Gmail/Outlook, so we use ESPN's PNG CDN. ESPN codes are the lowercased
-// abbreviation except for these (verified against the CDN — all 62 teams 200):
-const ESPN_NHL_CODES: Record<string, string> = { TBL: 'tb', NJD: 'nj', LAK: 'la', SJS: 'sj', UTA: 'utah' };
-// CWS = teamConfig abbrev; AZ = MLB-API abbrev for Arizona (used for opponents).
-const ESPN_MLB_CODES: Record<string, string> = { CWS: 'chw', AZ: 'ari' };
-
-function espnLogoUrl(sport: 'nhl' | 'mlb', abbrev: string): string {
-  const a = (abbrev || '').toUpperCase();
-  const code = (sport === 'nhl' ? ESPN_NHL_CODES[a] : ESPN_MLB_CODES[a]) ?? a.toLowerCase();
-  return `https://a.espncdn.com/i/teamlogos/${sport}/500/${code}.png`;
-}
 
 // Brand assets rendered with the site's Bebas Neue font (email clients strip
 // web fonts, so the wordmark ships as an image; alt text covers image-off).
@@ -202,7 +190,7 @@ export async function sendSetRecapForTeam(
   } : { gamesPlayed: 0, points: 0, pace: '0.00', projected: 0, record: '0-0-0' };
 
   // Next game
-  const nextGame = await fetchNextGame(teamConfig);
+  const nextGame = await fetchNextGame(teamConfig, 'email-set');
 
   // Date range for the set
   const completedGames = latestSet.games.filter((g) => g.outcome !== 'PENDING');
@@ -255,12 +243,22 @@ export async function sendSetRecapForTeam(
 
 // ─── Boxscore Recap Email ────────────────────────────────────────
 
+/** Next game, plus the next home game when the next one is on the road:
+ *  local fans buy home tickets, so that is the ticket offer. */
+interface NextGameInfo {
+  opponent: string;
+  date: string;
+  time: string;
+  ticketLink: string;
+  home?: { opponent: string; date: string; ticketLink: string };
+}
+
 interface GameRecapData {
   teamSlug: string;
   teamConfig: typeof TEAMS[string];
   landing: LandingResponse;
   standings: StandingsTeam[];
-  nextGame: { opponent: string; date: string; time: string; ticketLink: string } | null;
+  nextGame: NextGameInfo | null;
   probBefore: number;
   probAfter: number;
   oppProbBefore: number;
@@ -353,7 +351,7 @@ async function sendBoxscoreRecapForTeam(
   };
 
   // Fetch next game
-  const nextGame = await fetchNextGame(teamConfig);
+  const nextGame = await fetchNextGame(teamConfig, 'email-recap');
 
   const data: GameRecapData = {
     teamSlug,
@@ -428,8 +426,9 @@ async function fetchStandings(): Promise<StandingsTeam[]> {
 }
 
 async function fetchNextGame(
-  teamConfig: typeof TEAMS[string]
-): Promise<{ opponent: string; date: string; time: string; ticketLink: string } | null> {
+  teamConfig: typeof TEAMS[string],
+  placement: EmailPlacement
+): Promise<NextGameInfo | null> {
   try {
     const schedule = await fetchJsonWithRetry(
       `${NHL_API}/club-schedule-season/${teamConfig.abbreviation}/now`
@@ -445,10 +444,8 @@ async function fetchNextGame(
       awayTeam: { abbrev: string };
     }>;
 
-    const nextGame = games.find((g) => {
-      const gameDate = new Date(g.startTimeUTC);
-      return gameDate > now && g.gameState === 'FUT';
-    });
+    const upcoming = games.filter((g) => new Date(g.startTimeUTC) > now && g.gameState === 'FUT');
+    const nextGame = upcoming[0];
 
     if (!nextGame) return null;
 
@@ -457,13 +454,14 @@ async function fetchNextGame(
     const oppConfig = Object.values(TEAMS).find((t) => t.abbreviation === oppAbbrev);
     const opponent = oppConfig ? `${isHome ? 'vs' : '@'} ${oppConfig.city} ${oppConfig.name}` : oppAbbrev;
 
-    const gameDate = new Date(nextGame.startTimeUTC);
-    const dateStr = gameDate.toLocaleDateString('en-US', {
+    const shortDate = (utc: string) => new Date(utc).toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
       timeZone: 'America/New_York',
     });
+    const gameDate = new Date(nextGame.startTimeUTC);
+    const dateStr = shortDate(nextGame.startTimeUTC);
     const timeStr = gameDate.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
@@ -480,11 +478,33 @@ async function fetchNextGame(
           homeConfig.stubhubId,
           nextGame.homeTeam.abbrev,
           nextGame.awayTeam.abbrev,
-          nextGame.gameDate
+          nextGame.gameDate,
+          'nhl',
+          placement
         )
       : '#';
 
-    return { opponent, date: dateStr, time: timeStr, ticketLink };
+    let home: NextGameInfo['home'];
+    const nextHome = isHome ? undefined : upcoming.find((g) => g.homeTeam.abbrev === teamConfig.abbreviation);
+    if (nextHome) {
+      const visitor = Object.values(TEAMS).find((t) => t.abbreviation === nextHome.awayTeam.abbrev);
+      home = {
+        opponent: visitor ? `vs ${visitor.city} ${visitor.name}` : `vs ${nextHome.awayTeam.abbrev}`,
+        date: shortDate(nextHome.startTimeUTC),
+        ticketLink: generateGameTicketLink(
+          teamConfig.slug,
+          teamConfig.city,
+          teamConfig.stubhubId,
+          nextHome.homeTeam.abbrev,
+          nextHome.awayTeam.abbrev,
+          nextHome.gameDate,
+          'nhl',
+          placement
+        ),
+      };
+    }
+
+    return { opponent, date: dateStr, time: timeStr, ticketLink, home };
   } catch (error) {
     console.error('Error fetching next game:', error);
     return null;
@@ -686,6 +706,19 @@ function renderBoxscoreEmail(data: GameRecapData, blogPost?: BlogPost): string {
         <!-- Three Stars -->
         ${renderThreeStarsSection(threeStars)}
 
+        <!-- Gear offer: the star of a win, else team gear -->
+        ${renderGearCard({
+          sport: 'nhl',
+          teamSlug: data.teamSlug,
+          teamCity: teamConfig.city,
+          teamName: teamConfig.name,
+          logoUrl: teamLogo,
+          color: primaryColor,
+          placement: 'email-recap',
+          hero: teamScore > oppScore ? pickGearHero(landing, teamConfig.abbreviation, oppScore) : null,
+          eyebrow: teamScore > oppScore ? undefined : `${teamConfig.name} fan shop`,
+        })}
+
         <!-- Next Game CTA -->
         ${nextGame ? renderNextGameCTA(nextGame, primaryColor) : ''}
 
@@ -742,7 +775,7 @@ interface PlayoffGameRecapData {
   cupOddsRank: { rank: number; total: number } | null;
   totalPlayoffWins: number; // across all rounds
   // Next game
-  nextGame: { opponent: string; date: string; time: string; ticketLink: string } | null;
+  nextGame: NextGameInfo | null;
 }
 
 const PLAYOFF_ROUND_LABELS: Record<number, string> = {
@@ -767,7 +800,7 @@ async function sendPlayoffBoxscoreRecap(
 ) {
   const snapshot = await fetchPlayoffsSnapshot();
   const data = buildPlayoffRecapData(teamSlug, teamConfig, landing, snapshot);
-  data.nextGame = await fetchNextGame(teamConfig);
+  data.nextGame = await fetchNextGame(teamConfig, 'email-playoff');
 
   // Subject line
   const teamScore = landing.homeTeam.abbrev === teamConfig.abbreviation ? landing.homeTeam.score : landing.awayTeam.score;
@@ -1118,6 +1151,19 @@ function renderPlayoffBoxscoreEmail(data: PlayoffGameRecapData, blogPost?: BlogP
         <!-- Three Stars -->
         ${renderThreeStarsSection(threeStars)}
 
+        <!-- Gear offer -->
+        ${data.seriesState === 'eliminated' ? '' : renderGearCard({
+          sport: 'nhl',
+          teamSlug: data.teamSlug,
+          teamCity: teamConfig.city,
+          teamName: teamConfig.name,
+          logoUrl: teamLogo,
+          color: primaryColor,
+          placement: 'email-playoff',
+          hero: data.teamWon ? pickGearHero(landing, teamConfig.abbreviation, oppScore) : null,
+          eyebrow: data.teamWon ? undefined : 'Playoff gear',
+        })}
+
         <!-- Next Game CTA -->
         ${data.nextGame ? renderNextGameCTA(data.nextGame, primaryColor) : ''}
 
@@ -1421,7 +1467,7 @@ function renderThreeStarsSection(stars: ThreeStar[]): string {
 }
 
 function renderNextGameCTA(
-  nextGame: { opponent: string; date: string; time: string; ticketLink: string },
+  nextGame: NextGameInfo,
   primaryColor: string
 ): string {
   return `
@@ -1431,8 +1477,9 @@ function renderNextGameCTA(
               <span style="display:block;font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Next Game</span>
               <span style="display:block;font-size:18px;font-weight:800;color:#ffffff;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;text-transform:uppercase;letter-spacing:1px;font-style:normal;">${nextGame.opponent}</span>
               <span style="display:block;font-size:14px;color:rgba(255,255,255,0.8);margin:6px 0 16px;">${nextGame.date} &middot; ${nextGame.time} ET</span>
-              <a href="${nextGame.ticketLink}" style="display:inline-block;background:#ffffff;color:${primaryColor};padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">
-                Get Tickets
+              ${nextGame.home ? `<span style="display:block;font-size:13px;color:rgba(255,255,255,0.85);margin:0 0 12px;">Next home game: <strong>${nextGame.home.opponent}</strong> &middot; ${nextGame.home.date}</span>` : ''}
+              <a href="${nextGame.home ? nextGame.home.ticketLink : nextGame.ticketLink}" style="display:inline-block;background:#ffffff;color:${primaryColor};padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">
+                ${nextGame.home ? 'Get Home Game Tickets' : 'Get Tickets'}
               </a>
             </td></tr>
           </table>
@@ -1461,7 +1508,7 @@ interface SetRecapEmailData {
   probAfter: number;
   primaryColor: string;
   trackerUrl: string;
-  nextGame: { opponent: string; date: string; time: string; ticketLink: string } | null;
+  nextGame: NextGameInfo | null;
 }
 
 function renderSetRecapEmail(data: SetRecapEmailData): string {
@@ -1629,6 +1676,17 @@ function renderSetRecapEmail(data: SetRecapEmailData): string {
             </td></tr>
           </table>
         </td></tr>
+
+        <!-- Gear offer -->
+        ${renderGearCard({
+          sport: 'nhl',
+          teamSlug: data.teamConfig.slug,
+          teamCity: data.teamConfig.city,
+          teamName: data.teamConfig.name,
+          logoUrl: espnLogoUrl('nhl', data.teamConfig.abbreviation),
+          color: primaryColor,
+          placement: 'email-set',
+        })}
 
         <!-- Next Game CTA -->
         ${nextGame ? renderNextGameCTA(nextGame, primaryColor) : ''}
@@ -2100,8 +2158,8 @@ export interface DigestRace {
 export interface WeeklyDigestContent {
   latestPosts?: { title: string; url: string; image?: string; date?: string }[];
   races?: DigestRace[];
-  /** The recipient's team, for the gear/tickets footer links. Omitted = generic footer. */
-  team?: { sport: 'nhl' | 'mlb'; slug: string; city: string; name: string };
+  /** The recipient's team, for the gear card and tickets link. Omitted = generic footer. */
+  team?: { sport: 'nhl' | 'mlb' | 'nfl'; slug: string; city: string; name: string };
 }
 
 const digestUtm = (path: string, content: string) =>
@@ -2168,16 +2226,18 @@ export function renderWeeklyDigestEmail(content: WeeklyDigestContent, unsubscrib
   const footerLinks: string[] = [];
   if (!team || team.sport === 'nhl') footerLinks.push(`<a href="${digestUtm('/nhl-playoff-odds', 'nhl-odds')}" ${linkStyle}>NHL odds</a>`);
   if (!team || team.sport === 'mlb') footerLinks.push(`<a href="${digestUtm('/mlb/playoff-odds', 'mlb-odds')}" ${linkStyle}>MLB odds</a>`);
-  if (team) {
-    footerLinks.push(`<a href="${generateMerchLink(team.sport, team.slug, team.city, team.name, 'email-digest')}" rel="sponsored" ${linkStyle}>${team.name} gear</a>`);
+  if (team && team.sport !== 'nfl') {
     footerLinks.push(`<a href="${digestUtm(`/${team.sport}/${team.slug}/tickets`, 'tickets')}" ${linkStyle}>${team.name} tickets</a>`);
   }
+  const gearOptions = team ? teamGearOptions(team.slug, 'email-digest') : null;
+  const gearCard = gearOptions ? gearCardTable(gearOptions, 18) : '';
 
   const body = `
     <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#94a3b8;">${today}</p>
     <p style="margin:0 0 18px;font-size:15px;color:#475569;line-height:1.6;">Here&rsquo;s what&rsquo;s moving across the playoff races this week.</p>
     ${raceCards}
     ${blogCard}
+    ${gearCard}
     ${sectionCard(`
       ${sectionLabel('Can you go 82-0?')}
       <p style="margin:0 0 12px;font-size:14px;color:#475569;line-height:1.5;">Draft an all-time roster and see how far it takes you — new puzzle every day.</p>
@@ -2198,12 +2258,33 @@ export function renderWeeklyDigestEmail(content: WeeklyDigestContent, unsubscrib
 const welcomeUtm = (path: string, content: string) =>
   `${SITE_URL}${path}?utm_source=newsletter&utm_medium=email&utm_campaign=welcome&utm_content=${content}`;
 
-function renderWelcomeEmail(unsubscribeUrl: string): string {
+interface WelcomeTeamBlock {
+  name: string;
+  sport: 'nhl' | 'mlb' | 'nfl';
+  gearCard: string;
+  homeGame?: { opponent: string; date: string; ticketLink: string };
+}
+
+function renderWelcomeEmail(unsubscribeUrl: string, team?: WelcomeTeamBlock): string {
   const link = (label: string, href: string) =>
     `<a href="${href}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">${label}</a>`;
+  const intro = team
+    ? team.sport === 'nfl'
+      ? `You&rsquo;re set for ${team.name} updates, plus the NHL &amp; MLB playoff races and leaderboards. No spam, unsubscribe anytime.`
+      : `You&rsquo;ll get a ${team.name} recap after every game and a report after every 5-game set, plus the playoff races. No spam, unsubscribe anytime.`
+    : 'You&rsquo;ll get occasional updates on new games, the NHL &amp; MLB playoff races, and leaderboards. No spam, unsubscribe anytime.';
+  const homeGame = team?.homeGame
+    ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:20px;"><tr><td style="padding:14px 16px;">
+        <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;">Next home game</p>
+        <p style="margin:0 0 12px;font-size:16px;font-weight:800;color:#1e293b;">${team.homeGame.opponent} &middot; ${team.homeGame.date}</p>
+        ${emailButton('Get Tickets', team.homeGame.ticketLink)}
+      </td></tr></table>`
+    : '';
   const body = `
     <p style="margin:0 0 14px;font-size:16px;color:#1e293b;font-weight:700;">Thanks for subscribing! 🏒⚾</p>
-    <p style="margin:0 0 20px;font-size:15px;color:#64748b;line-height:1.6;">You&rsquo;ll get occasional updates on new games, the NHL &amp; MLB playoff races, and leaderboards — no spam, unsubscribe anytime.</p>
+    <p style="margin:0 0 20px;font-size:15px;color:#64748b;line-height:1.6;">${intro}</p>
+    ${team?.gearCard ? `<div style="margin-bottom:20px;">${team.gearCard}</div>` : ''}
+    ${homeGame}
     <p style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;">Jump in</p>
     <div>
       ${emailButton('Play 82-0 (NHL)', welcomeUtm('/82-0', 'play-nhl'))}
@@ -2213,19 +2294,34 @@ function renderWelcomeEmail(unsubscribeUrl: string): string {
   return brandEmailShell({ headerBg: EMAIL_NAVY, label: 'Welcome', body, unsubscribeUrl });
 }
 
-/** Send a one-off welcome email to a freshly opted-in subscriber. Best-effort. */
+/** The subscriber's first team: gear card, plus the next home game for NHL. */
+async function buildWelcomeTeamBlock(slug: string): Promise<WelcomeTeamBlock | undefined> {
+  const options = teamGearOptions(slug, 'email-welcome');
+  if (!options) return undefined;
+  const block: WelcomeTeamBlock = {
+    name: options.teamName,
+    sport: options.sport,
+    gearCard: gearCardTable({ ...options, eyebrow: 'Rep your team' }),
+  };
+  if (options.sport === 'nhl' && TEAMS[slug]) {
+    const next = await fetchNextGame(TEAMS[slug], 'email-welcome');
+    if (next?.home) block.homeGame = next.home;
+    else if (next && next.opponent.startsWith('vs ')) block.homeGame = { opponent: next.opponent, date: next.date, ticketLink: next.ticketLink };
+  }
+  return block;
+}
+
+/** Welcome a freshly opted-in subscriber (single opt-in, or after confirming
+ *  a double opt-in). Recorded like any send so clicks show in admin. */
 export async function sendWelcomeEmail(email: string, subscriberId: string): Promise<void> {
-  const unsubscribeUrl = `${SITE_URL}/api/newsletter/unsubscribe?id=${subscriberId}`;
-  await getResend().emails.send({
-    from: FROM_EMAIL,
-    to: email,
-    subject: 'Welcome to Lindy’s Five',
-    html: renderWelcomeEmail(unsubscribeUrl),
-    headers: {
-      'List-Unsubscribe': `<${unsubscribeUrl}>`,
-      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-    },
-  });
+  const subject = 'Welcome to Lindy’s Five';
+  const subscriber = await kv.get<NewsletterSubscriber>(`email:subscriber:${subscriberId}`);
+  const teamSlug = subscriber?.teams?.[0];
+  const team = teamSlug ? await buildWelcomeTeamBlock(teamSlug).catch(() => undefined) : undefined;
+  const html = renderWelcomeEmail('{{UNSUBSCRIBE_URL}}', team);
+  const recipient: NewsletterSubscriber = subscriber ?? { id: subscriberId, email, teams: [], createdAt: new Date().toISOString(), verified: true };
+  const sendId = await recordEmailSend(`welcome:${teamSlug || 'general'}`, 1, subject, 'welcome');
+  await sendBatchEmails([{ ...recipient, email }], subject, html, sendId);
 }
 
 // ---------------------------------------------------------------------------
@@ -2338,7 +2434,18 @@ export function renderMLBGameRecapEmail(d: MLBGameRecapEmailData, unsubscribeUrl
       </td></tr></table>`
     : '';
 
-  const body = `${scoreBlock}${impactCard}${probCard}${seasonCard}${nextGameCard}`;
+  const gearCard = gearCardTable({
+    sport: 'mlb',
+    teamSlug: d.teamSlug,
+    teamCity: d.teamCity,
+    teamName: d.teamName,
+    logoUrl: espnLogoUrl('mlb', d.teamAbbrev),
+    color: d.primaryColor,
+    placement: 'email-mlb-recap',
+    eyebrow: d.won ? 'Celebrate the win' : undefined,
+  }, 6);
+
+  const body = `${scoreBlock}${impactCard}${probCard}${seasonCard}${gearCard}${nextGameCard}`;
   return brandEmailShell({ headerBg: d.primaryColor, label: 'Game Recap', body, unsubscribeUrl, footerNote: `${d.teamCity} ${d.teamName} recaps` });
 }
 
@@ -2500,6 +2607,15 @@ export function renderMLBSetRecapEmail(d: MLBSetRecapEmailData, unsubscribeUrl: 
     ${card('Playoff Probability', `<table width="100%" cellpadding="0" cellspacing="0" style="background:#e2e8f0;border-radius:4px;"><tr><td style="width:${d.probAfter}%;background:${d.primaryColor};border-radius:4px;height:8px;font-size:0;line-height:0;">&nbsp;</td><td style="font-size:0;line-height:0;">&nbsp;</td></tr></table>
       <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:6px;"><tr><td><span style="font-size:20px;font-weight:800;color:#1e293b;">${d.probAfter}%</span></td><td align="right"><a href="${tracker}" style="font-size:12px;color:${d.primaryColor};text-decoration:none;font-weight:600;">View full tracker &rarr;</a></td></tr></table>`)}
     ${card('Season Progress', `<table width="100%" cellpadding="0" cellspacing="0"><tr>${statCell('Record', d.record)}${statCell('Win %', d.winPct)}</tr><tr>${statCell('Proj. Wins', String(d.projWins))}${statCell('Games Back', d.gamesBack)}</tr></table>`)}
+    ${gearCardTable({
+      sport: 'mlb',
+      teamSlug: d.teamSlug,
+      teamCity: d.teamCity,
+      teamName: d.teamName,
+      logoUrl: espnLogoUrl('mlb', d.teamAbbrev),
+      color: d.primaryColor,
+      placement: 'email-mlb-set',
+    }, 6)}
     ${d.nextGame ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:6px;background:${d.primaryColor};border-radius:8px;"><tr><td style="padding:20px;text-align:center;">
       <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">Next Game</div>
       <div style="margin-top:6px;${impact}font-size:20px;font-weight:800;color:#ffffff;text-transform:uppercase;letter-spacing:1px;">${d.nextGame.opponent}</div>

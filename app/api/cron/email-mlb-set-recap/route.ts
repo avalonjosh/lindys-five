@@ -44,7 +44,7 @@ function buildData(team: MLBTeamConfig, chunk: MLBGameChunk, standings: MLBStand
     ? {
         opponent: `${up.isHome ? 'vs' : '@'} ${up.opponent}`,
         date: up.startTime ? `${up.date} · ${up.startTime} ET` : up.date,
-        ticketLink: generateTeamTicketsLink(team.slug, team.city, team.stubhubId),
+        ticketLink: generateTeamTicketsLink(team.slug, team.city, team.stubhubId, 'email-mlb-set'),
       }
     : null;
 
