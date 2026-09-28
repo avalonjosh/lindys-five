@@ -38,7 +38,6 @@ Cloud routines on Josh's claude.ai account email him at 9am ET for the items mar
 - **Admin What-If tab**: click "Backfill Index" once on prod.
 - **What-If account checks** on prod: post-save email prompt, /account hero on mobile and with no favorite, cross-device favorite sync.
 - **Odds model**: one early-season game still swings odds ~15 pts (backtest does not support flattening more). League sum of odds early season is ~14.5 of 16 (cut-line floors). MLB pace-vs-talent display tension untouched.
-- **Old ~8 stranded June 2026 blog drafts** (two with leaked `<cite>` tags in titles) from when content generation was down.
 - **Deliberately not changed** (flag only if it becomes a problem): quick-subscribe/account-signup are single opt-in; `incrementSendStat` read-modify-write race (stats only).
 - **Possible future**: TeamTracker hydration refactor (~1.2s main thread on team pages).
 - **NHL Shop affiliate**: applied on Impact 2026-08-25, not needed (same inventory/rate as Fanatics). Ignore unless approved; don't nag.
