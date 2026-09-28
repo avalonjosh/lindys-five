@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 // Slim sticky readout shown while What If mode is active and the Season Progress
 // box has scrolled out of view, so the live projection follows the user as they
 // pick game outcomes further down the page. Pinned to the bottom on mobile
@@ -44,6 +46,12 @@ function oddsColor(odds: number): string {
   return odds >= 60 ? '#34d399' : odds >= 35 ? '#fbbf24' : '#f87171';
 }
 
+// Save nudge: after this many picks, pulse Save and show a one-line tooltip,
+// once per browser session.
+const NUDGE_AFTER_PICKS = 3;
+const NUDGE_KEY = 'whatif-save-nudge-shown';
+const NUDGE_MS = 8000;
+
 const AHEAD = '#34d399';
 const BEHIND = '#f87171';
 
@@ -67,6 +75,20 @@ export default function WhatIfStickyBar({
   darkModeColors,
 }: WhatIfStickyBarProps) {
   const bg = isGoatMode ? darkModeColors.cardBackground || darkModeColors.background : teamColors.primary;
+  const [nudge, setNudge] = useState(false);
+
+  useEffect(() => {
+    if (!show || gamesSimulated < NUDGE_AFTER_PICKS) return;
+    try {
+      if (sessionStorage.getItem(NUDGE_KEY) === '1') return;
+      sessionStorage.setItem(NUDGE_KEY, '1');
+    } catch {
+      return;
+    }
+    setNudge(true);
+    const t = setTimeout(() => setNudge(false), NUDGE_MS);
+    return () => clearTimeout(t);
+  }, [show, gamesSimulated]);
   // Same progress math as the Season Progress box: fill by current points toward
   // the target, with the expected-pace marker at where they should be by now.
   const currentProgress = playoffTarget > 0 ? (totalPoints / playoffTarget) * 100 : 0;
@@ -119,14 +141,35 @@ export default function WhatIfStickyBar({
             </button>
             {gamesSimulated > 0 && (
               <>
-                <button
-                  type="button"
-                  onClick={onSave}
-                  className="flex-shrink-0 rounded-md bg-white px-3 py-1 text-xs font-bold transition-opacity hover:opacity-90"
-                  style={{ color: isGoatMode ? darkModeColors.accent : teamColors.primary }}
-                >
-                  Save
-                </button>
+                <div className="relative flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNudge(false);
+                      onSave();
+                    }}
+                    className={`rounded-md bg-white px-3 py-1 text-xs font-bold transition-opacity hover:opacity-90 ${nudge ? 'animate-pulse ring-2 ring-white/70 ring-offset-2' : ''}`}
+                    style={{ color: isGoatMode ? darkModeColors.accent : teamColors.primary, ...(nudge ? { ['--tw-ring-offset-color' as string]: bg } : {}) }}
+                  >
+                    Save
+                  </button>
+                  {nudge && (
+                    <div
+                      role="status"
+                      className="absolute right-0 bottom-full mb-3 md:bottom-auto md:top-full md:mb-0 md:mt-3 w-56 rounded-lg bg-white py-2 pl-3 pr-6 text-xs font-semibold text-gray-800 shadow-xl"
+                    >
+                      Save these picks to track your accuracy
+                      <button
+                        type="button"
+                        onClick={() => setNudge(false)}
+                        aria-label="Dismiss"
+                        className="absolute right-1 top-1 px-1 text-gray-400 hover:text-gray-600"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={onReset}

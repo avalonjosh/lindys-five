@@ -22,8 +22,8 @@ Status as of 2026-07-27. This is the working plan for the saved-picks / account 
 ## Remaining roadmap
 
 3. **Phase 3 (optional) — public profiles** at `/u/{username}` for sharing pick history/accuracy; pairs well with season start.
-5. ~~Pick the Bills page~~ — SHIPPED as Pick the {Team} for all 32 NFL teams (de2d2f8). Still open: NFL playoff-odds model, weekly "make your pick" reminder email, radio-station onboarding (show them the backdate import).
-6. **Save nudge**: users should be prompted to save — currently opt-in buttons only; consider a gentle pulse/tooltip after N picks. Decide pushiness with Josh.
+5. ~~Pick the Bills page~~ — SHIPPED as Pick the {Team} for all 32 NFL teams (de2d2f8). Still open: NFL playoff-odds model, radio-station onboarding (show them the backdate import). The weekly reminder is covered by the NFL weekly email (2026-09-28), which links to Pick the {Team}.
+6. ~~Save nudge~~ — SHIPPED 2026-09-28 (Josh chose the gentle option): after 3 picks the sticky bar's Save pulses and a dismissible "Save these picks to track your accuracy" tooltip shows for 8s, once per browser session (`sessionStorage` `whatif-save-nudge-shown`). Shared bar, so NHL, MLB and NFL all get it.
 7. **Season-start dry run**: verify grading UX against real results when games begin (~Oct 2026); consider testing against a past season earlier.
 
 ## Why
