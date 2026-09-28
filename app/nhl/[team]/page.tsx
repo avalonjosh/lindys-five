@@ -182,7 +182,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
         const wcCutLine = getWcCutLine(teamStanding, allTeams);
         const isInPlayoffPosition = standingInPlayoffPosition(teamStanding);
         const { probability } = computePositionAwareProbability(
-          getModelProjectedPoints(seasonStats.totalPoints, seasonStats.gamesPlayed), seasonStats.gamesPlayed, divCutLine, wcCutLine, isInPlayoffPosition, teamStanding.clinchIndicator,
+          getModelProjectedPoints(seasonStats.totalPoints, seasonStats.gamesPlayed, teamStanding.teamAbbrev.default), seasonStats.gamesPlayed, divCutLine, wcCutLine, isInPlayoffPosition, teamStanding.clinchIndicator,
         );
         const statusMessage = getPlayoffStatusMessage(probability, seasonStats.gamesPlayed);
         const pct = Math.round(probability);

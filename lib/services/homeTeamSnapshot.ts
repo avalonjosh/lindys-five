@@ -117,7 +117,7 @@ async function nhlSnapshot(slug: string): Promise<TeamSnapshot | null> {
 
   if (standing && stats.gamesPlayed > 0) {
     const { probability } = computePositionAwareProbability(
-      getModelProjectedPoints(stats.totalPoints, stats.gamesPlayed),
+      getModelProjectedPoints(stats.totalPoints, stats.gamesPlayed, team.abbreviation),
       stats.gamesPlayed,
       getDivCutLine(standing, standings),
       getWcCutLine(standing, standings),

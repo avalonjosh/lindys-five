@@ -6,7 +6,7 @@ import NewsletterModal from '@/components/newsletter/NewsletterModal';
 import PreseasonOddsClient, { type PreseasonTeamData } from '@/components/PreseasonOddsClient';
 import { TEAMS } from '@/lib/teamConfig';
 import { previousNHLSeason, formatSeasonLabel } from '@/lib/utils/season';
-import { computePreseasonOdds } from '@/lib/utils/preseasonOdds';
+import { computeLeaguePreseasonOdds } from '@/lib/utils/preseasonOdds';
 import { getFinalStandings } from '@/lib/services/nhlOffseason';
 
 // Reverse lookup: NHL abbreviation -> our slug
@@ -24,8 +24,9 @@ function buildPreseasonTeams(
   standings: Awaited<ReturnType<typeof getFinalStandings>>,
   totalGames: number
 ): PreseasonTeamData[] {
+  const leagueOdds = computeLeaguePreseasonOdds(standings, totalGames);
   const teams: PreseasonTeamData[] = standings.map(t => {
-    const odds = computePreseasonOdds(t.points, t.gamesPlayed, totalGames);
+    const odds = leagueOdds.get(t.teamAbbrev.default)!;
     const abbrev = t.teamAbbrev.default;
     return {
       abbrev,

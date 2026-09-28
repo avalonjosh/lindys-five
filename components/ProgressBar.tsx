@@ -742,7 +742,7 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
       const inPlayoffPosition = isInPlayoffPosition(userTeam);
 
       const result = computePositionAwareProbability(
-        getModelProjectedPoints(stats.totalPoints, stats.gamesPlayed),
+        getModelProjectedPoints(stats.totalPoints, stats.gamesPlayed, teamAbbrev),
         stats.gamesPlayed,
         cutLines.divCutLine,
         cutLines.wcCutLine,
@@ -777,7 +777,7 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
   // 99% stays 99% until the NHL's clinch flag says otherwise.
   const probability = cutLineData
     ? computePositionAwareProbability(
-        getModelProjectedPoints(stats.totalPoints, stats.gamesPlayed),
+        getModelProjectedPoints(stats.totalPoints, stats.gamesPlayed, teamAbbrev),
         stats.gamesPlayed,
         cutLineData.divisionCutLine,
         cutLineData.wildcardCutLine,

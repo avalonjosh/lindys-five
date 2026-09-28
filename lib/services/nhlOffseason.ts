@@ -139,17 +139,26 @@ function maxRegularSeasonDate(games: any[]): string {
 }
 
 // Final regular-season standings (all 32 teams). `standings/now` is empty in the
-// offseason, so we derive the last regular-season date from a team's schedule
-// and query `standings/{date}`. Returns [] on failure.
+// offseason, so we query `standings/{date}` on the league's official standings
+// end date, falling back to a team's last regular-season game date (which can
+// be a day or two before the league's final day). Returns [] on failure.
 export async function getFinalStandings(season: string): Promise<StandingsTeam[]> {
   try {
-    // BUF is a stable reference team; any team's last regular-season date works.
-    const schedRes = await fetchWithRetry(
-      `${NHL_API}/club-schedule-season/BUF/${season}`,
-      1
-    );
-    const schedData = await schedRes.json();
-    const lastRegDate = maxRegularSeasonDate(schedData.games || []);
+    let lastRegDate = '';
+    const seasonsRes = await fetchWithRetry(`${NHL_API}/standings-season`, 1);
+    if (seasonsRes.ok) {
+      const seasonsData = await seasonsRes.json();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      lastRegDate = seasonsData.seasons?.find((s: any) => String(s.id) === season)?.standingsEnd || '';
+    }
+    if (!lastRegDate) {
+      const schedRes = await fetchWithRetry(
+        `${NHL_API}/club-schedule-season/BUF/${season}`,
+        1
+      );
+      const schedData = await schedRes.json();
+      lastRegDate = maxRegularSeasonDate(schedData.games || []);
+    }
     if (!lastRegDate) return [];
 
     const stRes = await fetchWithRetry(`${NHL_API}/standings/${lastRegDate}`, 1);

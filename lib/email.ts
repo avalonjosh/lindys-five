@@ -328,7 +328,7 @@ async function sendBoxscoreRecapForTeam(
     else if (otGame) pointsBefore -= 1;
     const gpBefore = standing.gamesPlayed - 1;
     if (gpBefore <= 0) return { before: 50, after };
-    const projectedBefore = getModelProjectedPoints(pointsBefore, gpBefore);
+    const projectedBefore = getModelProjectedPoints(pointsBefore, gpBefore, standing.teamAbbrev.default);
     const divCutLine = getDivCutLine(standing, standings);
     const wcCutLine = getWcCutLine(standing, standings);
     const inPlayoffs = isInPlayoffPosition(standing);

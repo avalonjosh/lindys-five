@@ -1,6 +1,7 @@
 import type { StandingsTeam } from '@/lib/types/boxscore';
 import { computePositionAwareProbability, projectPointsWithPrior } from './playoffProbability';
 import { getCurrentSeasonGameCount } from './season';
+import { getTeamPriorPace } from './nhlPriorPace';
 
 // 82-game-era historical floors, scaled to the season in progress (84 games from 2026-27)
 const WC_HISTORICAL_FLOOR = (totalGames: number) => Math.round(94 * totalGames / 82);
@@ -18,13 +19,15 @@ export function getProjectedPoints(
 }
 
 /** Model projection: banked points plus remaining games at a pace regressed
- * toward the league average. Feed this to computePositionAwareProbability. */
+ * toward the team's preseason talent estimate (league average if no abbrev).
+ * Feed this to computePositionAwareProbability. */
 export function getModelProjectedPoints(
   points: number,
   gamesPlayed: number,
+  teamAbbrev?: string,
   totalGames: number = getCurrentSeasonGameCount()
 ): number {
-  return projectPointsWithPrior(points, gamesPlayed, totalGames);
+  return projectPointsWithPrior(points, gamesPlayed, totalGames, getTeamPriorPace(teamAbbrev));
 }
 
 export interface CutLines {
@@ -36,9 +39,8 @@ export interface CutLines {
   wc2TeamAbbrev: string;
 }
 
-/** Division cut line: average of the 3rd and 4th place teams' model
- * projections, ceil, floored at the historical minimum. Uses the NHL's own
- * divisionSequence so ordering matches the official standings tiebreakers. */
+/** Division cut line: average of the 3rd and 4th best model projections in the
+ * division, ceil, floored at the historical minimum. */
 export function getDivCutLine(
   team: StandingsTeam,
   standings: StandingsTeam[],
@@ -47,8 +49,9 @@ export function getDivCutLine(
   return getCutLines(team, standings, totalGames).divCutLine;
 }
 
-/** Wildcard cut line: average of WC2 and WC3 model projections, ceil, floored
- * at the historical minimum. Uses the NHL's wildcardSequence. */
+/** Wildcard cut line: average of the 2nd and 3rd best model projections among
+ * conference teams outside their division's projected top 3, ceil, floored at
+ * the historical minimum. */
 export function getWcCutLine(
   team: StandingsTeam,
   standings: StandingsTeam[],
@@ -57,51 +60,55 @@ export function getWcCutLine(
   return getCutLines(team, standings, totalGames).wcCutLine;
 }
 
+// Cut lines rank teams by model projection, not the current standings order:
+// on opening night (all 0-0-0) the standings order is arbitrary, and late in
+// the season the two orders agree. Backtested neutral-to-better on 2023-24
+// through 2025-26. The bubble-team labels still follow the NHL's official
+// divisionSequence/wildcardSequence so they match the standings table.
 export function getCutLines(
   team: StandingsTeam,
   standings: StandingsTeam[],
   totalGames: number = getCurrentSeasonGameCount()
 ): CutLines {
-  const project = (t: StandingsTeam) => projectPointsWithPrior(t.points, t.gamesPlayed, totalGames);
+  return cutLinesFromProjections(
+    team,
+    standings,
+    t => getModelProjectedPoints(t.points, t.gamesPlayed, t.teamAbbrev.default, totalGames),
+    totalGames
+  );
+}
+
+/** Cut lines for any projection of final points; the preseason odds pass
+ * last season's regressed pace so they match the live model at zero games. */
+export function cutLinesFromProjections(
+  team: StandingsTeam,
+  standings: StandingsTeam[],
+  project: (t: StandingsTeam) => number,
+  totalGames: number
+): CutLines {
+  const byProjection = (ts: StandingsTeam[]) => [...ts].sort((a, b) => project(b) - project(a));
+  const midpoint = (ranked: StandingsTeam[], i: number, floor: number) => {
+    if (ranked.length > i + 1) return Math.max(Math.ceil((project(ranked[i]) + project(ranked[i + 1])) / 2), floor);
+    if (ranked.length > i) return Math.max(Math.ceil(project(ranked[i])), floor);
+    return floor;
+  };
 
   // --- Division ---
-  const divTeams = standings
-    .filter(t => t.divisionName === team.divisionName)
-    .sort((a, b) => a.divisionSequence - b.divisionSequence || b.points - a.points);
-  const div3Team = divTeams[2];
-  const div4Team = divTeams[3];
-
-  const divFloor = DIV_HISTORICAL_FLOOR(totalGames);
-  let divCutLine: number;
-  let divBubbleTeamAbbrev = '';
-  if (div3Team && div4Team) {
-    divCutLine = Math.ceil((project(div3Team) + project(div4Team)) / 2);
-    divBubbleTeamAbbrev = div4Team.teamAbbrev.default;
-  } else if (div3Team) {
-    divCutLine = Math.ceil(project(div3Team));
-    divBubbleTeamAbbrev = div3Team.teamAbbrev.default;
-  } else {
-    divCutLine = divFloor;
-  }
-  divCutLine = Math.max(divCutLine, divFloor);
+  const divTeams = standings.filter(t => t.divisionName === team.divisionName);
+  const divCutLine = midpoint(byProjection(divTeams), 2, DIV_HISTORICAL_FLOOR(totalGames));
+  const divBySequence = [...divTeams].sort((a, b) => a.divisionSequence - b.divisionSequence || b.points - a.points);
+  const divBubbleTeamAbbrev = (divBySequence[3] ?? divBySequence[2])?.teamAbbrev.default ?? '';
 
   // --- Wild card ---
-  const wcTeams = standings
-    .filter(t => t.conferenceName === team.conferenceName && t.divisionSequence > 3)
-    .sort((a, b) => a.wildcardSequence - b.wildcardSequence || b.points - a.points);
-  const wc2Team = wcTeams[1];
-  const wc3Team = wcTeams[2];
-
-  const wcFloor = WC_HISTORICAL_FLOOR(totalGames);
-  let wcCutLine: number;
-  if (wc2Team && wc3Team) {
-    wcCutLine = Math.ceil((project(wc2Team) + project(wc3Team)) / 2);
-  } else if (wc2Team) {
-    wcCutLine = Math.ceil(project(wc2Team));
-  } else {
-    wcCutLine = wcFloor;
-  }
-  wcCutLine = Math.max(wcCutLine, wcFloor);
+  const confTeams = standings.filter(t => t.conferenceName === team.conferenceName);
+  const projectedDivLeaders = new Set(
+    [...new Set(confTeams.map(t => t.divisionName))].flatMap(d =>
+      byProjection(confTeams.filter(t => t.divisionName === d)).slice(0, 3))
+  );
+  const wcCutLine = midpoint(byProjection(confTeams.filter(t => !projectedDivLeaders.has(t))), 1, WC_HISTORICAL_FLOOR(totalGames));
+  const wc2Team = confTeams
+    .filter(t => t.divisionSequence > 3)
+    .sort((a, b) => a.wildcardSequence - b.wildcardSequence || b.points - a.points)[1];
 
   return {
     divCutLine,
@@ -123,7 +130,7 @@ export function getPlayoffProbability(
   standings: StandingsTeam[],
   totalGames: number = getCurrentSeasonGameCount()
 ): number {
-  const projected = getModelProjectedPoints(team.points, team.gamesPlayed, totalGames);
+  const projected = getModelProjectedPoints(team.points, team.gamesPlayed, team.teamAbbrev.default, totalGames);
   const { divCutLine, wcCutLine } = getCutLines(team, standings, totalGames);
   const inPlayoffs = isInPlayoffPosition(team);
 
@@ -145,7 +152,7 @@ export function computeProb(
   wcCutLine: number,
   team: StandingsTeam
 ): number {
-  const projected = getModelProjectedPoints(points, gamesPlayed);
+  const projected = getModelProjectedPoints(points, gamesPlayed, team.teamAbbrev.default);
   const inPlayoffs = isInPlayoffPosition(team);
   const { probability } = computePositionAwareProbability(
     projected, gamesPlayed, divCutLine, wcCutLine, inPlayoffs, team.clinchIndicator

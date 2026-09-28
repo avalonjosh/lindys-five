@@ -1,10 +1,11 @@
 import type { StandingsTeam } from '@/lib/types/boxscore';
 import { getCurrentSeasonGameCount } from './season';
+import { LEAGUE_AVG_PACE } from './nhlPriorPace';
+
+export { LEAGUE_AVG_PACE };
 
 // ── Points projection ────────────────────────────────────────────────────────
 
-// League-average NHL points pace (≈92 over 82 games, ≈94 over 84).
-export const LEAGUE_AVG_PACE = 1.12;
 // Regression prior for a team's points pace, expressed as phantom games played
 // at the league average. Empirically the spread of NHL true talent is about
 // 0.15 pts/game (sd) against ~0.93 pts/game of single-game noise, which puts
@@ -15,9 +16,10 @@ export const PACE_PRIOR_GAMES = 40;
 
 /**
  * Model projection of a team's final point total. Banked points stay banked;
- * the remaining games are played at a pace regressed toward the league average
- * with a PACE_PRIOR_GAMES-game prior. At zero games played every team projects
- * to the league average; by late season the prior has almost no pull.
+ * the remaining games are played at a pace regressed toward `priorPace` (the
+ * team's preseason talent estimate, see nhlPriorPace.ts) with a
+ * PACE_PRIOR_GAMES-game prior. At zero games played a team projects to its
+ * prior; by late season the prior has almost no pull.
  *
  * This is the projection the probability model runs on. The raw "on pace for"
  * number shown in the UI is a different quantity (points / gp × season length).
@@ -25,11 +27,12 @@ export const PACE_PRIOR_GAMES = 40;
 export function projectPointsWithPrior(
   points: number,
   gamesPlayed: number,
-  totalGames: number = getCurrentSeasonGameCount()
+  totalGames: number = getCurrentSeasonGameCount(),
+  priorPace: number = LEAGUE_AVG_PACE
 ): number {
   const gp = Math.max(0, gamesPlayed);
   const remaining = Math.max(0, totalGames - gp);
-  const regressedPace = (points + LEAGUE_AVG_PACE * PACE_PRIOR_GAMES) / (gp + PACE_PRIOR_GAMES);
+  const regressedPace = (points + priorPace * PACE_PRIOR_GAMES) / (gp + PACE_PRIOR_GAMES);
   return points + regressedPace * remaining;
 }
 
@@ -76,6 +79,10 @@ const K_FULL_SEASON = 0.15 * Math.sqrt(84);
 // still an estimate (average of two teams' projections), so keep a sliver of
 // uncertainty rather than a hard step.
 const MIN_EFFECTIVE_GAMES_REMAINING = 0.5;
+// Uncertainty (sd, pts/game) in a team's true pace before any games. Backtested
+// on 2023-24 through 2025-26 with team priors: 0.12 shrank the one-game odds
+// swing ~25% and was flat-to-better on Brier; 0.16-0.20 gave no further gain.
+const TALENT_SD_PACE = 0.12;
 
 /**
  * Calculate probability for a hypothetical final point total
@@ -103,6 +110,12 @@ export function probabilityForFinalPoints(
 
   const gamesRemaining = Math.max(MIN_EFFECTIVE_GAMES_REMAINING, totalGames - gamesPlayed);
   let k = K_FULL_SEASON / Math.sqrt(gamesRemaining);
+  // Widen the curve for talent uncertainty: the projection's pace is itself an
+  // estimate, least certain early (prior-dominated) and shrinking as games are
+  // played, scaled by how many games that pace still has to cover.
+  const noiseSd = Math.PI / (Math.sqrt(3) * k);
+  const talentSd = TALENT_SD_PACE * Math.sqrt(PACE_PRIOR_GAMES / (Math.max(0, gamesPlayed) + PACE_PRIOR_GAMES)) * gamesRemaining;
+  k = Math.PI / (Math.sqrt(3) * Math.sqrt(noiseSd ** 2 + talentSd ** 2));
 
   // Division: fewer competitors, less volatile → steeper curve
   // Wildcard: more competitors, more volatile → flatter curve

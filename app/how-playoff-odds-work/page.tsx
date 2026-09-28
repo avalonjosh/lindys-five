@@ -35,7 +35,7 @@ const FAQ = [
   },
   {
     q: 'How does Lindy\'s Five calculate NHL playoff odds?',
-    a: 'We project each team\'s final point total from its points so far plus its remaining games at a pace regressed toward the league average, compute the projected division (top 3) and wild card cut lines from live standings, and convert the gap between the projection and the cut line into a probability with a logistic curve that sharpens as games run out. Teams currently holding a playoff spot get a small position bonus that grows through the season. NHL clinch and elimination flags override the model at 100% and 0%.',
+    a: 'We project each team\'s final point total from its points so far plus its remaining games at a pace regressed toward a preseason estimate of its strength, compute the projected division (top 3) and wild card cut lines from live standings, and convert the gap between the projection and the cut line into a probability with a logistic curve that sharpens as games run out. Teams currently holding a playoff spot get a small position bonus that grows through the season. NHL clinch and elimination flags override the model at 100% and 0%.',
   },
   {
     q: 'How does Lindy\'s Five calculate MLB playoff odds?',
@@ -128,9 +128,11 @@ export default function HowPlayoffOddsWorkPage() {
             <ol className="list-decimal space-y-3 pl-6">
               <li>
                 <strong>Project final points.</strong> Points already banked stay banked. The remaining games are
-                projected at the team&apos;s points pace regressed toward the league average (about 1.12 points per
-                game) with a 40-game prior, so a 7-3-0 start counts for something but does not project to 115 points.
-                By midseason the prior has little pull, and by April almost none. The full schedule is 84 games from
+                projected at the team&apos;s points pace regressed toward a preseason estimate of its strength (last
+                season&apos;s pace, pulled most of the way back to the league average of about 1.12 points per game)
+                with a 40-game prior, so a 7-3-0 start counts for something but does not project to 115 points, and
+                the odds do not lurch from the preseason number after one game. By midseason the prior has little
+                pull, and by April almost none. The full schedule is 84 games from
                 2026-27, 82 before that. The &quot;on pace for&quot; number shown on team pages is the raw pace
                 extrapolation; the odds run on the regressed projection.
               </li>
@@ -149,6 +151,8 @@ export default function HowPlayoffOddsWorkPage() {
                 width is tied to the square root of the games remaining, matching how much an NHL team&apos;s point total
                 can still move: about 12 points of spread with a full season left, 8 or 9 at the halfway mark, and
                 barely one with a game to go, so a team sitting above the line in the final week is near-certain.
+                Early in the season it is widened further for uncertainty about how good each team really is, an
+                allowance that fades as games are played.
                 The curve is slightly steeper for the division path (fewer competitors) than for the wild card path.
               </li>
               <li>
@@ -158,8 +162,8 @@ export default function HowPlayoffOddsWorkPage() {
               <li>
                 <strong>Position bonus.</strong> A team currently holding a playoff spot gets a small edge that grows
                 through the season (up to 3 points shaved off the cut line by season&apos;s end), reflecting that
-                incumbents are displaced less often than pace alone suggests. Both this and the prior were set by
-                backtesting the model against the 2024-25 and 2025-26 seasons.
+                incumbents are displaced less often than pace alone suggests. This, the prior, and the early-season
+                widening were set by backtesting the model against the 2023-24 through 2025-26 seasons.
               </li>
               <li>
                 <strong>Clinch and elimination.</strong> The NHL&apos;s official x/y/z/p clinch indicators set odds to
@@ -248,7 +252,8 @@ export default function HowPlayoffOddsWorkPage() {
             <p>
               Standings, schedules, scores, and clinch indicators come from the official NHL and MLB stats APIs and are
               refreshed every five minutes. Preseason &quot;way-too-early&quot; odds on team pages carry last season&apos;s
-              final standings forward until the new season has enough games.
+              final standings forward (regressed toward the league average) and use the same projection the live
+              odds start from, so opening night picks up where the preseason number left off.
             </p>
 
             <H2>Frequently asked questions</H2>

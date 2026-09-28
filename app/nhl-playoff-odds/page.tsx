@@ -239,7 +239,7 @@ export default async function NHLPlayoffOddsPage() {
           name: 'How are NHL playoff odds calculated?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: `Each team's playoff probability projects their final points (points banked plus remaining games at a pace regressed toward the league average), then compares that projection to the projected division and wild card cut lines. A logistic curve that sharpens as games run out converts the gap into a probability; before opening night the projection is seeded from last season's results.`,
+            text: `Each team's playoff probability projects their final points (points banked plus remaining games at a pace regressed toward a preseason estimate of the team's strength), then compares that projection to the projected division and wild card cut lines. A logistic curve that sharpens as games run out converts the gap into a probability; before opening night the projection is seeded from last season's results.`,
           },
         },
       ],
@@ -398,7 +398,7 @@ export default async function NHLPlayoffOddsPage() {
                   name: 'How are NHL playoff odds calculated?',
                   acceptedAnswer: {
                     '@type': 'Answer',
-                    text: `Each team's playoff probability projects their final points (points banked plus remaining games at a pace regressed toward the league average), then compares that projection to two cut lines: the projected third-place divisional total and the projected second wild card total. A logistic curve converts the gap between projected points and each cut line into a probability, and the higher of the two paths is shown. The curve sharpens as games run out, so confidence grows as the season progresses.`,
+                    text: `Each team's playoff probability projects their final points (points banked plus remaining games at a pace regressed toward a preseason estimate of the team's strength), then compares that projection to two cut lines: the projected third-place divisional total and the projected second wild card total. A logistic curve converts the gap between projected points and each cut line into a probability, and the higher of the two paths is shown. The curve sharpens as games run out, so confidence grows as the season progresses.`,
                   },
                 },
                 {

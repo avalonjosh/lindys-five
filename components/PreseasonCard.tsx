@@ -181,7 +181,7 @@ export default function PreseasonCard({
             >
               <span className="font-bold">Heads up — these are way-too-early preseason odds.</span>{' '}
               {lastSeasonSummary ? `${playoffResultText(lastSeasonSummary)} last season. ` : ''}
-              This projects last season&apos;s pace regressed toward the league average and ignores roster moves; the live model takes over once games start.
+              This projects last season&apos;s pace regressed toward the league average and ignores roster moves. It&apos;s the same model the live odds start from, so opening night picks up where this leaves off.
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -230,7 +230,7 @@ export default function PreseasonCard({
                   const anchor = Math.min(odds.cutLine, odds.projectedPoints) - 3;
                   const range = Array.from({ length: 8 }, (_, i) => anchor + i);
                   return range.map((pts) => {
-                    const prob = probabilityForFinalPoints(pts, 0, odds.cutLine);
+                    const prob = probabilityForFinalPoints(pts, 0, odds.cutLine, odds.activePath, odds.projectedGames);
                     const isProjected = pts === odds.projectedPoints;
                     const isCutLine = pts === odds.cutLine;
                     return (

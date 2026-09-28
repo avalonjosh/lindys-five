@@ -7,7 +7,8 @@ import {
   getRegularSeasonGameCount,
 } from '@/lib/utils/season';
 import { getSeasonState, type SeasonSummary } from '@/lib/utils/seasonSummary';
-import { computePreseasonOdds, type PreseasonOdds } from '@/lib/utils/preseasonOdds';
+import { computeLeaguePreseasonOdds, type PreseasonOdds } from '@/lib/utils/preseasonOdds';
+import { getFinalStandings } from '@/lib/services/nhlOffseason';
 
 // Season-state detection driven by the NHL API, so pages flip between live,
 // season-complete, and next-season-preview modes on their own as the schedule
@@ -110,14 +111,15 @@ async function buildPreseasonInfo(
   return info;
 }
 
-// Way-too-early odds for the coming season, projected from last season's record.
-function oddsFromLastSeason(
-  lastSeasonSummary: SeasonSummary | null,
+// Way-too-early odds for the coming season, projected from last season's final
+// standings (the whole league is needed for the projected cut lines).
+async function oddsFromLastSeason(
+  teamAbbrev: string,
+  lastSeason: string,
   projectedGames: number
-): PreseasonOdds | null {
-  const record = lastSeasonSummary?.finalRecord;
-  if (!record || record.gamesPlayed === 0) return null;
-  return computePreseasonOdds(record.points, record.gamesPlayed, projectedGames);
+): Promise<PreseasonOdds | null> {
+  const standings = await getFinalStandings(lastSeason);
+  return computeLeaguePreseasonOdds(standings, projectedGames).get(teamAbbrev) ?? null;
 }
 
 // Resolve which NHL season to display and in what phase. `teamAbbrev` is used
@@ -145,11 +147,12 @@ export async function resolveSeasonContext(teamAbbrev: string): Promise<SeasonCo
   if (dateKind === 'preseason' || dateKind === 'none') {
     // 'none' shouldn't happen for the current date season, but if the API has
     // no data yet, fall back to preview framing off whatever schedule exists.
-    const [preseason, lastSeasonState] = await Promise.all([
+    const [preseason, lastSeasonState, odds] = await Promise.all([
       buildPreseasonInfo(teamAbbrev, dateSeason),
       getSeasonState(teamAbbrev, previousNHLSeason(dateSeason)),
+      oddsFromLastSeason(teamAbbrev, previousNHLSeason(dateSeason), getRegularSeasonGameCount(dateSeason)),
     ]);
-    preseason.odds = oddsFromLastSeason(lastSeasonState.summary, preseason.totalGames);
+    preseason.odds = odds;
     return {
       season: dateSeason,
       seasonLabel: formatSeasonLabel(dateSeason),
@@ -168,11 +171,12 @@ export async function resolveSeasonContext(teamAbbrev: string): Promise<SeasonCo
   const nextKind = await classifySchedule(teamAbbrev, upcoming);
 
   if (nextKind === 'preseason' || nextKind === 'live') {
-    const [preseason, lastSeasonState] = await Promise.all([
+    const [preseason, lastSeasonState, odds] = await Promise.all([
       buildPreseasonInfo(teamAbbrev, upcoming),
       getSeasonState(teamAbbrev, dateSeason),
+      oddsFromLastSeason(teamAbbrev, dateSeason, getRegularSeasonGameCount(upcoming)),
     ]);
-    preseason.odds = oddsFromLastSeason(lastSeasonState.summary, preseason.totalGames);
+    preseason.odds = odds;
     return {
       season: upcoming,
       seasonLabel: formatSeasonLabel(upcoming),
