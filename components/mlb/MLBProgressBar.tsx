@@ -358,7 +358,7 @@ export default function MLBProgressBar({
           </div>
           <div className="w-full rounded-full h-8 relative shadow-inner bg-gray-200">
             <div
-              className="h-8 rounded-l-full transition-all duration-500 relative shadow-md flex items-center justify-end"
+              className={`h-8 rounded-l-full transition-all duration-500 relative shadow-md flex items-center justify-end${currentProgress >= 100 ? ' rounded-r-full' : ''}`}
               style={{ width: `${Math.max(Math.min(currentProgress, 100), 5)}%`, backgroundColor: teamColors.primary }}
             >
               {currentProgress > 0 && (
@@ -668,7 +668,7 @@ export default function MLBProgressBar({
               </div>
               <div className="w-full rounded-full h-8 relative shadow-inner bg-slate-200">
                 <div
-                  className="h-8 rounded-l-full transition-all duration-500 relative shadow-md flex items-center justify-end bg-slate-500"
+                  className={`h-8 rounded-l-full transition-all duration-500 relative shadow-md flex items-center justify-end bg-slate-500${lastYearWins >= playoffTarget ? ' rounded-r-full' : ''}`}
                   style={{ width: `${Math.max(Math.min((lastYearWins / playoffTarget) * 100, 100), 5)}%` }}
                 >
                   {lastYearWins > 0 && (
