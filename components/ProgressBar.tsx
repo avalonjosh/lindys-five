@@ -89,6 +89,7 @@ function SeasonSection({
   preseasonSim,
   seasonLabel,
   projectionReady = true,
+  oddsReady = true,
 }: {
   stats: SeasonStats;
   isGoatMode: boolean;
@@ -115,6 +116,7 @@ function SeasonSection({
   preseasonSim?: boolean;
   seasonLabel?: string;
   projectionReady?: boolean;
+  oddsReady?: boolean;
 }) {
   const { totalPoints, gamesPlayed, gamesRemaining, currentPace, projectedPoints, playoffTarget } = stats;
 
@@ -193,7 +195,7 @@ function SeasonSection({
           <div className="hidden md:flex absolute inset-0 justify-center items-center pointer-events-none">
             <PlayoffOddsPill
               label="Playoff Probability"
-              value={!projectionReady ? '—' : cutLineLoading && stats.gamesPlayed >= 10 ? '--%' : `${probability}%`}
+              value={!oddsReady ? '—' : cutLineLoading && stats.gamesPlayed >= 10 ? '--%' : `${probability}%`}
               expanded={!!playoffExpanded}
               onToggle={onPlayoffToggle}
               color={probabilityColor || ''}
@@ -461,7 +463,7 @@ function SeasonSection({
         <div className="flex md:hidden justify-center mt-3">
           <PlayoffOddsPill
             label="Playoff Probability"
-            value={cutLineLoading && stats.gamesPlayed >= 10 ? '--%' : `${probability}%`}
+            value={!oddsReady ? '—' : cutLineLoading && stats.gamesPlayed >= 10 ? '--%' : `${probability}%`}
             expanded={!!playoffExpanded}
             onToggle={onPlayoffToggle}
             color={probabilityColor || ''}
@@ -553,7 +555,7 @@ function SeasonSection({
                       className="text-base md:text-lg font-bold"
                       style={{ color: probabilityColor }}
                     >
-                      {probability}%
+                      {oddsReady ? `${probability}%` : '—'}
                     </span>
                   </div>
                 )}
@@ -605,7 +607,7 @@ function SeasonSection({
                     className="text-base md:text-lg font-bold"
                     style={{ color: probabilityColor }}
                   >
-                    {lindysFiveProbability}%
+                    {projectionReady ? `${lindysFiveProbability}%` : '—'}
                   </span>
                 </div>
               </div>
@@ -689,14 +691,16 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
   const [cutLineLoading, setCutLineLoading] = useState(false);
   const [cutLineError, setCutLineError] = useState(false);
 
-  // Preseason sim projects only once the user has simulated a game; before that
-  // Projected/Odds read "—" instead of a misleading 0-game extrapolation.
-  const projectionReady = !preseasonSim || stats.gamesPlayed > 0;
+  // Before any game is played (preseason sim, or opening week before a team's
+  // first game) Projected reads "—" instead of a misleading 0-game
+  // extrapolation. Live odds still show once the model's cut lines load.
+  const projectionReady = stats.gamesPlayed > 0;
+  const oddsReady = projectionReady || (!preseasonSim && !!cutLineData);
 
-  // Fetch cut line data on mount (once the season is under way). Skipped in
-  // preseason sim: the coming season has no live standings to read.
+  // Fetch cut line data on mount. Skipped in preseason sim: the coming season
+  // has no live standings to read.
   useEffect(() => {
-    if (!preseasonSim && !cutLineData && !cutLineLoading && stats.gamesPlayed >= 1) {
+    if (!preseasonSim && !cutLineData && !cutLineLoading) {
       fetchCutLine();
     }
   }, [stats.gamesPlayed]);
@@ -929,6 +933,7 @@ ${teamUrl}
           preseasonSim={preseasonSim}
           seasonLabel={seasonLabel}
           projectionReady={projectionReady}
+          oddsReady={oddsReady}
         />
 
         {/* Share Button - positioned relative to current season section, hidden when playoff dropdown is open or in playoff mode */}

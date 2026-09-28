@@ -1045,7 +1045,7 @@ export default function TeamTracker({
       gamesPlayed={whatIfBarStats?.gamesPlayed ?? 0}
       totalGames={whatIfBarStats?.totalGames ?? totalGames}
       playoffTarget={whatIfBarStats?.playoffTarget ?? 0}
-      projectionReady={!isPreseason || hypotheticalResults.size > 0}
+      projectionReady={(whatIfBarStats?.gamesPlayed ?? 0) > 0}
       onReset={() => setHypotheticalResults(new Map())}
       onSave={handleSaveClick}
       onJumpToBox={scrollToProgressBox}

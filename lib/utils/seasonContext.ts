@@ -46,6 +46,21 @@ async function classifySchedule(teamAbbrev: string, season: string): Promise<Sch
   }
 }
 
+// True once the league's regular season has begun (Eastern date on or after
+// opening day), so every team page flips to live together instead of each
+// waiting for its own first game.
+async function leagueSeasonStarted(season: string): Promise<boolean> {
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  try {
+    const res = await fetchWithRetry(`https://api-web.nhle.com/v1/schedule/${today}`, 1);
+    const data = await res.json();
+    const start: string | undefined = data.regularSeasonStartDate;
+    return !!start && start.slice(0, 4) === season.slice(0, 4) && today >= start;
+  } catch {
+    return false;
+  }
+}
+
 export interface PreseasonOpener {
   date: string; // YYYY-MM-DD (Eastern)
   startTimeUTC?: string;
@@ -126,7 +141,8 @@ async function oddsFromLastSeason(
 // as the schedule probe (any team works; the schedule shape is league-wide).
 export async function resolveSeasonContext(teamAbbrev: string): Promise<SeasonContext> {
   const dateSeason = getCurrentNHLSeason();
-  const dateKind = await classifySchedule(teamAbbrev, dateSeason);
+  let dateKind = await classifySchedule(teamAbbrev, dateSeason);
+  if (dateKind === 'preseason' && (await leagueSeasonStarted(dateSeason))) dateKind = 'live';
 
   // Date-based season is under way (or was): live tracker on that season.
   if (dateKind === 'live') {
