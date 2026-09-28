@@ -234,6 +234,7 @@ Your task is to write an engaging tweet to promote a new article. The tweet shou
 - Match the tone to the content (excited for wins, thoughtful for analysis, etc.)
 - Grab attention and encourage clicks
 - BE CONCISE: Keep the main text under 180 characters (this is critical - a link and hashtags will be added after)
+- Never use em dashes; use commas, periods, or parentheses instead
 
 Tweet styles to use:
 - For game recaps: Lead with the result, highlight a key moment or player

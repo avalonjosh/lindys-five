@@ -33,8 +33,7 @@ Cloud routines on Josh's claude.ai account email him at 9am ET for the items mar
 
 ## Open items (no date)
 
-- **X auto-posting** (working since 2026-08-17): enable Auto Recharge with a spend cap on the X pay-per-use credits (~$0.20 per post with a URL), or posts fail silently ("X failed" badges in /admin/posts). Auto-publish toggles at /admin/posts may still be off. Consider adding "no em dashes" to `TWEET_SYSTEM_PROMPT` in `lib/utils/postToX.ts`.
-- **`RESEND_WEBHOOK_SECRET`**: set in Vercel (from Resend webhook settings) to activate webhook signature verification. From the 2026-08-31 audit; not confirmed done.
+- **X auto-posting** (working since 2026-08-17): enable Auto Recharge with a spend cap on the X pay-per-use credits (~$0.20 per post with a URL), or posts fail silently ("X failed" badges in /admin/posts). Auto-publish toggles at /admin/posts may still be off.
 - **Admin What-If tab**: click "Backfill Index" once on prod.
 - **What-If account checks** on prod: post-save email prompt, /account hero on mobile and with no favorite, cross-device favorite sync.
 - **Odds model**: one early-season game still swings odds ~15 pts (backtest does not support flattening more). League sum of odds early season is ~14.5 of 16 (cut-line floors). MLB pace-vs-talent display tension untouched.
