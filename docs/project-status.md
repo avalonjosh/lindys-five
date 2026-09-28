@@ -25,6 +25,8 @@ Cloud routines on Josh's claude.ai account email him at 9am ET for the items mar
 | 2026-10-10 (email) | Odds model check-in routine (computes all 32 teams, spot-checks live pages). Its prompt still says "30-game prior"; the model is 40 games plus team-specific priors now, ignore that wording |
 | Oct 2026 | Re-check GSC after opening night. What-If picks season-start dry run (verify grading UX against real results) |
 | 2026-11-04 (email) | Home page pass 2 due; build early-to-mid Nov |
+| By 2026-11-23 | Send a gift guide test (`/api/cron/email-gift-guide?test=you@email&team=sabres`), then turn on Holiday Gift Guide in Admin > Newsletter (it sends Nov 24) |
+| By Mar 2027 | Turn on NHL Clinch in Admin > Newsletter before the first clinches |
 | 2026-12-07 (email) | StubHub re-harvest: MLB 2027 regular season |
 | 2027-04-12 (email) | StubHub re-harvest: NHL playoffs (as each round is set) |
 | First playoff night, Apr 2027 | Playoff crons (`playoff-game-recap`, `series-recap`) have never run for real; verify them. Bracket fetch fixed in a25ddd0 |
@@ -48,7 +50,7 @@ Baseline (all emails ever, to 2026-09-28): 30 active subscribers (15 Sabres, 8 N
 - **Phase 1 (shipped):** email placements on every affiliate link (StubHub pubref suffix `_email-recap` etc., Fanatics subId2), webhook counts direct StubHub/Fanatics clicks, Partnerize placement report reads email placements. Gear card (`lib/emailOffers.ts`) in NHL game/set/playoff recaps, MLB recaps, digest (replaces footer link), welcome. Win recaps feature the star player (Fanatics player search). Ticket CTA points to the next home game. Welcome email now also sends after double opt-in and shows team gear + next home game.
 - **Phase 2 (shipped, off until enabled):** `email-nfl-weekly` cron, Tuesdays 14:00 UTC, one email per NFL team with subscribers after a game week (skips byes): score, record, gear card, Pick the {Team} link, next home game StubHub search. Gated by `blog:settings:nfl-weekly-enabled` (toggle in Admin > Newsletter). Preview: `?preview=1&team=packers`.
 - **Phase 3 (shipped):** 82-0 / 162-0 result prompt now asks for a team (prefilled from favorites), so signups join a team recap list (source `ps-result`) instead of the general list. Team-colored inline "Get {Team} recaps" signup above Game Sets on NHL and MLB team pages (source `team-inline`, hidden once subscribed). Watch signups by source in Admin > Newsletter.
-- **Phase 4 (dated):** holiday gift guide email per team, build by ~Nov 15, send ~Nov 24 (Black Friday week). Playoff clinch email (Fanatics clinch gear + playoff tickets), build by March.
+- **Phase 4 (shipped, off until enabled):** `email-gift-guide` (Nov 24 15:00 UTC yearly, once per team per year; gear card, category buttons, next home game tickets) and `email-clinch` (daily 12:30 UTC, NHL, first clinch per team per season; playoff gear + playoff tickets). Toggles `gift-guide-enabled` / `clinch-enabled` in Admin > Newsletter; both support `?preview=1&team=` and `?test=`.
 - Measure: Admin > Newsletter affiliate clicks, Admin > Affiliates placements `email-*`.
 
 ### Home page redesign

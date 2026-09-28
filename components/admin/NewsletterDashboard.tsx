@@ -18,6 +18,8 @@ const PROGRAMS = [
   { key: 'mlb-recap-enabled', trigger: 'email-mlb-game-recap', label: 'MLB Game Recap' },
   { key: 'mlb-set-recap-enabled', trigger: 'email-mlb-set-recap', label: 'MLB Set Recap' },
   { key: 'nfl-weekly-enabled', trigger: 'email-nfl-weekly', label: 'NFL Weekly' },
+  { key: 'gift-guide-enabled', trigger: 'email-gift-guide', label: 'Holiday Gift Guide' },
+  { key: 'clinch-enabled', trigger: 'email-clinch', label: 'NHL Clinch' },
 ] as const;
 
 const CAMPAIGN_LABEL: Record<string, string> = {
@@ -28,6 +30,8 @@ const CAMPAIGN_LABEL: Record<string, string> = {
   'weekly-digest': 'Weekly Digest',
   'welcome': 'Welcome',
   'nfl-weekly': 'NFL Weekly',
+  'gift-guide': 'Gift Guide',
+  'clinch': 'Clinch',
   'announcement': 'Announcement',
   'other': 'Other',
 };

@@ -252,5 +252,7 @@ export type EmailCampaign =
   | 'mlb-set-recap'
   | 'weekly-digest'
   | 'nfl-weekly'
+  | 'gift-guide'
+  | 'clinch'
   | 'welcome'
   | 'announcement';

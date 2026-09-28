@@ -30,6 +30,8 @@ export type EmailPlacement =
   | 'email-mlb-recap'
   | 'email-mlb-set'
   | 'email-nfl'
+  | 'email-gift-guide'
+  | 'email-clinch'
   | 'email-welcome'
   | 'email-digest';
 

@@ -18,6 +18,8 @@ import { GET as weeklyDigestHandler } from '@/app/api/cron/weekly-digest/route';
 import { GET as mlbGameRecapHandler } from '@/app/api/cron/email-mlb-game-recap/route';
 import { GET as mlbSetRecapHandler } from '@/app/api/cron/email-mlb-set-recap/route';
 import { GET as nflWeeklyHandler } from '@/app/api/cron/email-nfl-weekly/route';
+import { GET as giftGuideHandler } from '@/app/api/cron/email-gift-guide/route';
+import { GET as clinchHandler } from '@/app/api/cron/email-clinch/route';
 import { GET as emailGameRecapHandler } from '@/app/api/cron/email-game-recap/route';
 import { GET as emailSetRecapHandler } from '@/app/api/cron/email-set-recap/route';
 import { GET as analyticsCleanupHandler } from '@/app/api/cron/analytics-cleanup/route';
@@ -53,6 +55,8 @@ const handlers: Record<string, (request: NextRequest) => Promise<NextResponse>> 
   'email-mlb-game-recap': mlbGameRecapHandler,
   'email-mlb-set-recap': mlbSetRecapHandler,
   'email-nfl-weekly': nflWeeklyHandler,
+  'email-gift-guide': giftGuideHandler,
+  'email-clinch': clinchHandler,
   'email-game-recap': emailGameRecapHandler,
   'email-set-recap': emailSetRecapHandler,
   // Maintenance

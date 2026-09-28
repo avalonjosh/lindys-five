@@ -34,6 +34,8 @@ const CRON_LABELS: Record<string, string> = {
   'email-mlb-game-recap': 'MLB Recap Emails',
   'email-mlb-set-recap': 'MLB Set Recap Emails',
   'email-nfl-weekly': 'NFL Weekly Emails',
+  'email-gift-guide': 'Holiday Gift Guide Email',
+  'email-clinch': 'NHL Clinch Emails',
   'analytics-cleanup': 'Analytics Cleanup',
   'affiliate-summary': 'Weekly Affiliate Summary',
 };

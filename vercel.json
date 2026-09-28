@@ -67,6 +67,14 @@
       "schedule": "0 14 * * 2"
     },
     {
+      "path": "/api/cron/email-gift-guide",
+      "schedule": "0 15 24 11 *"
+    },
+    {
+      "path": "/api/cron/email-clinch",
+      "schedule": "30 12 * * *"
+    },
+    {
       "path": "/api/cron/affiliate-summary",
       "schedule": "0 13 * * 1"
     }

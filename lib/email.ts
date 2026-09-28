@@ -5,7 +5,7 @@ import type { LandingResponse, StandingsTeam, ScoringGoal, ThreeStar } from './t
 import { TEAMS } from './teamConfig';
 import { getCurrentNHLSeason } from './utils/season';
 import { fetchJsonWithRetry } from './fetchWithRetry';
-import { generateGameTicketLink } from './utils/affiliateLinks';
+import { generateGameTicketLink, generateFanaticsLink, FANATICS_ENABLED } from './utils/affiliateLinks';
 import { renderGearCard, gearCardTable, pickGearHero, espnLogoUrl, teamGearOptions, type EmailPlacement } from './emailOffers';
 import { getProjectedPoints, getModelProjectedPoints, getDivCutLine, getWcCutLine, isInPlayoffPosition, getPlayoffProbability } from './utils/standingsCalc';
 import { computePositionAwareProbability, computeSeriesWinProbability, seriesOptionsFor } from './utils/playoffProbability';
@@ -2570,6 +2570,92 @@ export async function sendNFLWeekly(
     (_sub, unsubscribeUrl) => renderNFLWeeklyEmail(data, unsubscribeUrl),
     sendId,
   );
+  return { sent };
+}
+
+// ---------------------------------------------------------------------------
+// Moment emails: the holiday gift guide and the NHL playoff clinch. These are
+// the two moments sports fans buy most, so each is one focused offer email.
+// ---------------------------------------------------------------------------
+
+const momentUtm = (campaign: string, path: string, content: string) =>
+  `${SITE_URL}${path}?utm_source=newsletter&utm_medium=email&utm_campaign=${campaign}&utm_content=${content}`;
+
+/** A row of category buttons into Fanatics search, tagged with the placement. */
+function gearCategoryButtons(slug: string, categories: string[], placement: EmailPlacement): string {
+  const team = teamGearOptions(slug, placement);
+  if (!team || !FANATICS_ENABLED) return '';
+  return categories
+    .map((c) => emailButton(c, generateFanaticsLink(team.teamCity, team.teamName, c, { team: `${team.sport}-${slug}`, placement }), { color: team.color, filled: false }))
+    .join('');
+}
+
+export function renderGiftGuideEmail(slug: string, unsubscribeUrl: string, homeGame?: NextGameInfo['home']): string | null {
+  const team = teamGearOptions(slug, 'email-gift-guide');
+  if (!team) return null;
+  const buttons = gearCategoryButtons(slug, ['Jerseys', 'Hats', 'Hoodies', 'Kids'], 'email-gift-guide');
+  const body = `
+    <p style="margin:0 0 6px;font-size:22px;font-weight:800;color:#1e293b;">The ${team.teamName} gift guide</p>
+    <p style="margin:0 0 20px;font-size:15px;color:#64748b;line-height:1.6;">Shopping for a ${team.teamName} fan (or yourself)? Here&rsquo;s where to start this holiday season.</p>
+    <div style="margin-bottom:20px;">${gearCardTable({ ...team, eyebrow: 'Holiday gear' })}</div>
+    ${buttons ? `<p style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;">Shop by category</p><div style="margin-bottom:20px;">${buttons}</div>` : ''}
+    ${homeGame ? `<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;"><tr><td style="padding:14px 16px;">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;">Tickets make a great gift</p>
+      <p style="margin:0 0 12px;font-size:16px;font-weight:800;color:#1e293b;">Next home game: ${homeGame.opponent} &middot; ${homeGame.date}</p>
+      ${emailButton('Get Tickets', homeGame.ticketLink, { color: team.color })}
+    </td></tr></table>` : ''}`;
+  return brandEmailShell({ headerBg: team.color, label: 'Gift Guide', body, unsubscribeUrl, footerNote: `${team.teamCity} ${team.teamName} updates` });
+}
+
+export function renderClinchEmail(slug: string, clinch: string, unsubscribeUrl: string, ticketsLink?: string): string | null {
+  const team = teamGearOptions(slug, 'email-clinch');
+  if (!team) return null;
+  const headline = clinch === 'p' ? 'Presidents&rsquo; Trophy clinched'
+    : clinch === 'z' ? 'Conference title clinched'
+    : clinch === 'y' ? 'Division title clinched'
+    : 'Playoff spot clinched';
+  const shop = FANATICS_ENABLED
+    ? emailButton(`Shop ${team.teamName} Playoff Gear`, generateFanaticsLink(team.teamCity, team.teamName, 'Playoffs', { team: `nhl-${slug}`, placement: 'email-clinch' }), { color: team.color })
+    : '';
+  const body = `
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;"><tr>
+      <td width="64" valign="middle"><img src="${team.logoUrl}" width="56" height="56" alt="${team.teamName}" style="display:block;" /></td>
+      <td valign="middle" style="padding-left:12px;">
+        <p style="margin:0;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#64748b;">${team.teamCity} ${team.teamName}</p>
+        <p style="margin:2px 0 0;font-size:24px;font-weight:800;color:#1e293b;">${headline}!</p>
+      </td>
+    </tr></table>
+    <p style="margin:0 0 18px;font-size:15px;color:#475569;line-height:1.6;">The ${team.teamName} are going to the playoffs. Official playoff gear drops fast after a clinch, and home playoff tickets go quickly too.</p>
+    <div style="margin-bottom:8px;">${shop}${ticketsLink ? emailButton('Playoff Tickets', ticketsLink, { color: team.color, filled: false }) : ''}</div>
+    <p style="margin:6px 0 18px;font-size:11px;color:#94a3b8;">Lindy&rsquo;s Five earns a commission on purchases made through these links.</p>
+    <p style="margin:0;font-size:14px;color:#64748b;">Follow the race and the bracket: <a href="${momentUtm('clinch', `/nhl/${slug}`, 'tracker')}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">${team.teamName} tracker</a> &middot; <a href="${momentUtm('clinch', '/playoffs', 'bracket')}" style="color:${EMAIL_BLUE};font-weight:600;text-decoration:none;">Playoff bracket</a></p>`;
+  return brandEmailShell({ headerBg: team.color, label: 'Clinched', body, unsubscribeUrl, footerNote: `${team.teamCity} ${team.teamName} updates` });
+}
+
+/** Home game for the gift guide (NHL teams; null otherwise). */
+export async function nextHomeGameFor(slug: string, placement: EmailPlacement): Promise<NextGameInfo['home'] | undefined> {
+  if (!TEAMS[slug]) return undefined;
+  const next = await fetchNextGame(TEAMS[slug], placement);
+  if (next?.home) return next.home;
+  if (next && next.opponent.startsWith('vs ')) return { opponent: next.opponent, date: next.date, ticketLink: next.ticketLink };
+  return undefined;
+}
+
+/** Send one moment email to a team's list (or a single test address). */
+export async function sendMomentEmail(
+  subscribers: NewsletterSubscriber[],
+  subject: string,
+  campaign: 'gift-guide' | 'clinch',
+  slug: string,
+  htmlFor: (unsubscribeUrl: string) => string,
+  opts?: { testEmail?: string },
+): Promise<{ sent: number }> {
+  const recipients: NewsletterSubscriber[] = opts?.testEmail
+    ? [{ id: 'test', email: opts.testEmail, teams: [], createdAt: new Date().toISOString(), verified: true }]
+    : subscribers.filter((s) => s.verified && !s.unsubscribedAt);
+  if (recipients.length === 0) return { sent: 0 };
+  const sendId = opts?.testEmail ? undefined : await recordEmailSend(`${campaign}:${slug}`, recipients.length, subject, campaign);
+  const sent = await sendPersonalizedBatch(recipients, subject, (_sub, unsubscribeUrl) => htmlFor(unsubscribeUrl), sendId);
   return { sent };
 }
 
