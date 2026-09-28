@@ -127,7 +127,7 @@ export default function NhlDailyResult({ record, config, variant, streak, played
 
       {shareTeam && <ShareTeamModal team={shareTeam} onClose={() => setShareTeam(null)} />}
 
-      <NewsletterPrompt />
+      <NewsletterPrompt sport={config.sport === 'mlb' ? 'mlb' : 'nhl'} />
 
       <Link
         href={config.sport === 'mlb' ? '/82-0' : '/162-0'}

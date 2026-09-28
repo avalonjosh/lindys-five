@@ -90,7 +90,7 @@ export default function RinkResult({ result, config, mode, picks, data, state, v
         </button>
       </div>
 
-      <NewsletterPrompt />
+      <NewsletterPrompt sport={config.sport === 'mlb' ? 'mlb' : 'nhl'} />
 
       {shareTeam && <ShareTeamModal team={shareTeam} onClose={() => setShareTeam(null)} />}
     </div>

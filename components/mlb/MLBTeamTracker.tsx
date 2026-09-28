@@ -19,6 +19,7 @@ import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
 import AuthModal from '@/components/perfectseason/board/AuthModal';
 import SavePicksModal from '@/components/whatif/SavePicksModal';
 import { fetchLatestWhatIfSave } from '@/lib/whatif/client';
+import NewsletterSignup from '@/components/newsletter/NewsletterSignup';
 import type { WhatIfSave, WhatIfSubmission } from '@/lib/whatif/types';
 
 // Teams whose logo blends into their header background color
@@ -555,6 +556,20 @@ export default function MLBTeamTracker({ team, initialGames, serverSummary, faq 
 
         {/* Set Grid — matches NHL layout exactly */}
         <div className={`mb-4 ${whatIfMode ? '' : 'mt-4'}`}>
+          {/* Inline signup: a team's recap list is where the gear and ticket offers live */}
+          {!whatIfMode && (
+            <div className="mb-4">
+              <NewsletterSignup
+                teams={[team.slug]}
+                variant="compact"
+                source="team-inline"
+                teamDisplayName={team.name}
+                primaryColor={team.colors.primary}
+                accentColor={team.colors.accent}
+                hideIfSubscribed
+              />
+            </div>
+          )}
           <div className="flex justify-between items-center mb-3 gap-2">
             <h2
               className="text-lg md:text-2xl font-bold"

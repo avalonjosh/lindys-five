@@ -10,6 +10,8 @@ interface NewsletterSignupProps {
   teamDisplayName?: string;
   primaryColor?: string;
   accentColor?: string;
+  /** Render nothing for visitors who already subscribed on this browser. */
+  hideIfSubscribed?: boolean;
 }
 
 export default function NewsletterSignup({
@@ -19,7 +21,9 @@ export default function NewsletterSignup({
   teamDisplayName,
   primaryColor = '#003087',
   accentColor = '#FFB81C',
+  hideIfSubscribed = false,
 }: NewsletterSignupProps) {
+  const [hidden, setHidden] = useState(false);
   const [email, setEmail] = useState('');
   const [teams, setTeams] = useState<string[]>(initialTeams || []);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -41,6 +45,15 @@ export default function NewsletterSignup({
       }
     }
   }, [initialTeams]);
+
+  useEffect(() => {
+    if (!hideIfSubscribed) return;
+    try {
+      if (localStorage.getItem('newsletter-subscribed') === '1') setHidden(true);
+    } catch {
+      // ignore
+    }
+  }, [hideIfSubscribed]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,6 +86,8 @@ export default function NewsletterSignup({
       setMessage('Network error. Please try again.');
     }
   };
+
+  if (hidden) return null;
 
   if (status === 'success') {
     return <SuccessMessage message={message} variant={variant} primaryColor={primaryColor} />;

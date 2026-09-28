@@ -2,16 +2,28 @@
 
 import { useEffect, useState } from 'react';
 import { Check, Mail, X } from 'lucide-react';
+import { NHL_TEAMS, MLB_TEAMS } from '@/lib/teamConfig';
+import { readFavorites, mergeFavorite } from '@/lib/favorites';
 
 const DISMISS_KEY = 'l5ps.newsletter-dismissed';
+
+const teamOptions = (teams: Record<string, { city: string; name: string }>) =>
+  Object.entries(teams)
+    .map(([slug, t]) => ({ slug, label: `${t.city} ${t.name}`, name: t.name }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+const NHL_OPTIONS = teamOptions(NHL_TEAMS);
+const MLB_OPTIONS = teamOptions(MLB_TEAMS);
 
 /**
  * Lightweight, dismissible email-capture shown on the result screens — the
  * biggest growth lever, since it catches players who never make an account.
- * Single opt-in via /api/newsletter/quick-subscribe (general broadcast list).
+ * Single opt-in via /api/newsletter/quick-subscribe. Picking a team (defaults
+ * to the visitor's saved favorite) joins that team's recap list.
  */
-export default function NewsletterPrompt() {
+export default function NewsletterPrompt({ sport }: { sport: 'nhl' | 'mlb' }) {
+  const options = sport === 'mlb' ? MLB_OPTIONS : NHL_OPTIONS;
   const [show, setShow] = useState(false);
+  const [team, setTeam] = useState('');
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +35,9 @@ export default function NewsletterPrompt() {
     } catch {
       setShow(true);
     }
-  }, []);
+    const favorite = readFavorites().find((slug) => options.some((o) => o.slug === slug));
+    if (favorite) setTeam(favorite);
+  }, [options]);
 
   const remember = () => {
     try {
@@ -47,7 +61,7 @@ export default function NewsletterPrompt() {
       const res = await fetch('/api/newsletter/quick-subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, team: team || undefined, source: 'ps-result' }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -57,6 +71,7 @@ export default function NewsletterPrompt() {
       }
       setStatus('done');
       remember();
+      if (team) mergeFavorite(team);
     } catch {
       setError('Network error');
       setStatus('error');
@@ -66,11 +81,12 @@ export default function NewsletterPrompt() {
   if (status === 'done') {
     return (
       <div className="flex items-center justify-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-        <Check className="h-4 w-4" /> You&apos;re on the list — thanks!
+        <Check className="h-4 w-4" /> You&apos;re on the list. Check your inbox!
       </div>
     );
   }
   if (!show) return null;
+  const teamName = options.find((o) => o.slug === team)?.name;
 
   return (
     <div className="relative rounded-xl border-2 border-gray-200 bg-white p-3 shadow-sm">
@@ -79,9 +95,22 @@ export default function NewsletterPrompt() {
       </button>
       <div className="flex items-center gap-2 pr-6">
         <Mail className="h-4 w-4 shrink-0 text-sabres-blue" />
-        <p className="text-sm font-bold text-gray-900">Be first to know about new games</p>
+        <p className="text-sm font-bold text-gray-900">
+          {teamName ? `Get ${teamName} recaps in your inbox` : 'Get your team\u2019s recaps in your inbox'}
+        </p>
       </div>
-      <p className="mt-0.5 text-xs text-gray-500">Occasional updates from Lindy&apos;s Five. No spam, unsubscribe anytime.</p>
+      <p className="mt-0.5 text-xs text-gray-500">A recap after every game, plus new puzzles. No spam, unsubscribe anytime.</p>
+      <select
+        value={team}
+        onChange={(e) => setTeam(e.target.value)}
+        aria-label="Your team"
+        className="mt-2 w-full rounded-lg border-2 border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-sabres-blue focus:bg-white"
+      >
+        <option value="">Pick your team (optional)</option>
+        {options.map((o) => (
+          <option key={o.slug} value={o.slug}>{o.label}</option>
+        ))}
+      </select>
       <form onSubmit={submit} className="mt-2 flex gap-2">
         <input
           type="email"
