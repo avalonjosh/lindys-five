@@ -2,8 +2,6 @@ import Link from 'next/link';
 import MLBGameBox from './MLBGameBox';
 import type { MLBGameResult } from '@/lib/types/mlb';
 import MerchCTA from '@/components/affiliate/MerchCTA';
-import WhereToWatch from '@/components/watch/WhereToWatch';
-import { mlbWatchInfo } from '@/lib/watch/mlbWatch';
 import type { MLBPostseason, PostseasonGame, PostseasonRound, PostseasonSeries } from '@/lib/services/mlbPostseason';
 
 /**
@@ -153,8 +151,6 @@ function SeriesCard({ s, teamName, teamAbbrev, teamLogo, teamSlug, teamCity, col
       ? { borderColor: '#d1d5db', borderStyle: 'dashed' as const }
       : { borderColor: '#e5e7eb', borderStyle: 'solid' as const };
   const toClinch = Math.max(0, Math.ceil(s.bestOf / 2) - s.teamWins);
-  const next = s.games.find((g) => g.state !== 'final');
-  const nextWatch = next && !won && !lost ? mlbWatchInfo(next.broadcasts) : null;
 
   return (
     <div className="relative rounded-2xl border-2 bg-white p-4 shadow-lg sm:p-5" style={border}>
@@ -243,17 +239,6 @@ function SeriesCard({ s, teamName, teamAbbrev, teamLogo, teamSlug, teamCity, col
           />
         ))}
       </div>
-
-      {next && nextWatch && (
-        <WhereToWatch
-          className="mt-4"
-          info={nextWatch.info}
-          homeName={next.isHome ? teamName : s.oppName}
-          awayName={next.isHome ? s.oppName : teamName}
-          trackLabel={`mlb-journey-${teamSlug}`}
-          note={nextWatch.spanish.length ? `En español: ${nextWatch.spanish.join(', ')}` : undefined}
-        />
-      )}
 
       {won && (
         <div className="mt-4">
