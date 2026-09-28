@@ -27,9 +27,11 @@ interface MLBGameBoxProps {
   opponentLogos?: string[];
   extra?: React.ReactNode;
   ticketLinkOverride?: string | null;
+  /** Replaces the "Upcoming Game" line (e.g. "If Necessary"). */
+  upcomingText?: string;
 }
 
-export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, hypotheticalOutcome, teamAbbreviation = 'NYY', teamColors, label, opponentLogos, extra, ticketLinkOverride }: MLBGameBoxProps) {
+export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, hypotheticalOutcome, teamAbbreviation = 'NYY', teamColors, label, opponentLogos, extra, ticketLinkOverride, upcomingText }: MLBGameBoxProps) {
   const router = useRouter();
   const isLive = game.gameState === 'In Progress' || game.gameState === 'Warming Up';
   const isPostponed = game.gameState === 'Postponed';
@@ -262,7 +264,7 @@ export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, 
             ) : (
               <>
                 <div className="text-xs font-medium mb-2 text-gray-500">
-                  Upcoming Game
+                  {upcomingText ?? 'Upcoming Game'}
                 </div>
                 {ticketLink && (
                   <a

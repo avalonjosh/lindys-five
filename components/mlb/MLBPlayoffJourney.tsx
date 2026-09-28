@@ -236,11 +236,9 @@ function SeriesCard({ s, teamName, teamAbbrev, teamLogo, teamSlug, teamCity, col
             teamColors={colors}
             opponentLogos={s.oppLogos}
             ticketLinkOverride={g.ticketLink ?? null}
-            extra={g.state === 'upcoming' && (g.tv || g.ifNecessary) ? (
-              <div className="mb-2 space-y-0.5 text-[11px] font-semibold text-gray-500">
-                {g.tv && <div>{g.tv}</div>}
-                {g.ifNecessary && <div className="text-gray-400">If necessary</div>}
-              </div>
+            upcomingText={g.ifNecessary ? 'If Necessary' : undefined}
+            extra={g.state === 'upcoming' && g.tv ? (
+              <div className="mb-2 text-[11px] font-semibold text-gray-500">{g.tv}</div>
             ) : undefined}
           />
         ))}
