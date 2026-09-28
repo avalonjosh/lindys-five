@@ -3,22 +3,24 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
-import { NHL_TEAMS, MLB_TEAMS, type TeamConfig, type MLBTeamConfig } from '@/lib/teamConfig';
+import { NHL_TEAMS, MLB_TEAMS, NFL_TEAMS, type TeamConfig, type MLBTeamConfig, type NFLTeamConfig } from '@/lib/teamConfig';
 import { readFavorites, onFavoritesChange, mergeFavorite, swapFavorite } from '@/lib/favorites';
 import type { TeamSnapshot } from '@/lib/services/homeTeamSnapshot';
 
-type Sport = 'nhl' | 'mlb';
+type Sport = 'nhl' | 'mlb' | 'nfl';
 
 const NHL_LIST = Object.values(NHL_TEAMS).sort((a, b) => a.city.localeCompare(b.city));
 const MLB_LIST = Object.values(MLB_TEAMS).sort((a, b) => a.city.localeCompare(b.city));
+const NFL_LIST = Object.values(NFL_TEAMS).sort((a, b) => a.city.localeCompare(b.city));
 
 function firstTrackedFavorite(list: string[]): string | null {
-  return list.find((slug) => slug in NHL_TEAMS || slug in MLB_TEAMS) ?? null;
+  return list.find((slug) => slug in NHL_TEAMS || slug in MLB_TEAMS || slug in NFL_TEAMS) ?? null;
 }
 
 /** Config logos are the light-background versions; use the on-dark variants so dark marks (TBL, TOR) stay visible. */
-function logoFor(t: TeamConfig | MLBTeamConfig): string {
+function logoFor(t: TeamConfig | MLBTeamConfig | NFLTeamConfig): string {
   if ('mlbId' in t) return `https://www.mlbstatic.com/team-logos/team-cap-on-dark/${t.mlbId}.svg`;
+  if ('pickSlug' in t) return t.logo;
   return t.logo.replace(/_light\.svg$/, '_dark.svg');
 }
 
@@ -50,8 +52,8 @@ export function cardColors(colors: { primary: string; secondary: string; accent:
 }
 
 function TeamPicker({ current, onDone }: { current: string | null; onDone?: () => void }) {
-  const [sport, setSport] = useState<Sport>(current && current in MLB_TEAMS ? 'mlb' : 'nhl');
-  const teams = sport === 'nhl' ? NHL_LIST : MLB_LIST;
+  const [sport, setSport] = useState<Sport>(current && current in MLB_TEAMS ? 'mlb' : current && current in NFL_TEAMS ? 'nfl' : 'nhl');
+  const teams: (TeamConfig | MLBTeamConfig | NFLTeamConfig)[] = sport === 'nhl' ? NHL_LIST : sport === 'mlb' ? MLB_LIST : NFL_LIST;
 
   const pick = (slug: string) => {
     if (current) swapFavorite(current, slug);
@@ -66,8 +68,8 @@ function TeamPicker({ current, onDone }: { current: string | null; onDone?: () =
           {current ? 'Switch your team' : 'Pick your team'}
         </h2>
         <div className="flex shrink-0 items-center gap-1">
-          <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-900 p-1" role="group" aria-label="League">
-            {(['nhl', 'mlb'] as const).map((s) => (
+          <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-900 p-1" role="group" aria-label="League">
+            {(['nhl', 'mlb', 'nfl'] as const).map((s) => (
               <button
                 key={s}
                 type="button"
@@ -145,10 +147,10 @@ export default function YourTeamCard() {
   if (!mounted) return <div className="h-72 rounded-2xl bg-slate-800/40" aria-hidden="true" />;
   if (!favorite || picking) return <TeamPicker current={favorite} onDone={picking ? () => setPicking(false) : undefined} />;
 
-  const team = NHL_TEAMS[favorite] ?? MLB_TEAMS[favorite];
+  const team = NHL_TEAMS[favorite] ?? MLB_TEAMS[favorite] ?? NFL_TEAMS[favorite];
   const { bg: primary, accent } = cardColors(team.colors);
   const name = `${team.city} ${team.name}`;
-  const href = favorite in NHL_TEAMS ? `/nhl/${favorite}` : `/mlb/${favorite}`;
+  const href = favorite in NHL_TEAMS ? `/nhl/${favorite}` : favorite in MLB_TEAMS ? `/mlb/${favorite}` : `/pick-the-${NFL_TEAMS[favorite].pickSlug}`;
   const nextSoon = snapshot?.next && snapshot.next.daysUntil > 1 ? `in ${snapshot.next.daysUntil} days` : snapshot?.next?.daysUntil === 1 ? 'tomorrow' : snapshot?.next ? 'today' : '';
   const [matchup, time] = snapshot?.next?.text.split(' · ') ?? [];
 
@@ -190,7 +192,7 @@ export default function YourTeamCard() {
         className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl text-[15px] font-extrabold transition-transform hover:scale-[1.02] sm:self-start sm:px-6"
         style={{ background: accent, color: primary }}
       >
-        Open {team.name} tracker
+        {favorite in NFL_TEAMS ? `Pick the ${team.name}` : `Open ${team.name} tracker`}
         <ChevronRight className="h-4 w-4" aria-hidden="true" />
       </Link>
     </section>

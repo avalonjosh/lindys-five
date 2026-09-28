@@ -1,4 +1,6 @@
-import { NHL_TEAMS, MLB_TEAMS, getTeamUrl } from '@/lib/teamConfig';
+import { NHL_TEAMS, MLB_TEAMS, NFL_TEAMS, getTeamUrl } from '@/lib/teamConfig';
+import { fetchNFLSchedule, nflSeasonYear } from '@/lib/services/nflApi';
+import { computeNFLOdds } from '@/lib/services/nflLeague';
 import { resolveSeasonContext } from '@/lib/utils/seasonContext';
 import { fetchWithRetry } from '@/lib/services/nhlApi';
 import { fetchTeamScheduleServer, fetchStandingsServer } from '@/lib/services/nhlTeamPageData';
@@ -10,7 +12,7 @@ import { getMLBPlayoffProbability, getMLBProjectedWins } from '@/lib/utils/mlbSt
 
 /** Compact per-team summary for the home page "Your team" card. */
 export interface TeamSnapshot {
-  sport: 'nhl' | 'mlb';
+  sport: 'nhl' | 'mlb' | 'nfl';
   slug: string;
   name: string;
   shortName: string;
@@ -173,8 +175,43 @@ async function mlbSnapshot(slug: string): Promise<TeamSnapshot | null> {
   return snap;
 }
 
+async function nflSnapshot(slug: string): Promise<TeamSnapshot | null> {
+  const team = NFL_TEAMS[slug];
+  if (!team) return null;
+  const snap: TeamSnapshot = {
+    sport: 'nfl',
+    slug,
+    name: `${team.city} ${team.name}`,
+    shortName: team.name,
+    url: getTeamUrl(slug),
+    odds: null,
+    oddsNote: '',
+    projection: null,
+    record: null,
+    next: null,
+  };
+  const season = nflSeasonYear();
+  const [table, schedule] = await Promise.all([
+    computeNFLOdds(season),
+    fetchNFLSchedule(team.abbreviation, season).catch(() => null),
+  ]);
+  const row = table?.teams.find((t) => t.abbr === team.abbreviation);
+  if (row && row.wins + row.losses + row.ties > 0) {
+    snap.odds = Math.round(row.playoff);
+    snap.oddsNote = 'Updated after every game';
+    snap.record = `${row.wins}-${row.losses}${row.ties ? `-${row.ties}` : ''}`;
+    snap.projection = { value: row.projWins.toFixed(1), label: 'Projected wins' };
+  }
+  const next = schedule?.games.find((g) => g.outcome === 'PENDING' && daysFromToday(g.isoDate) >= 0);
+  if (next) {
+    snap.next = { label: 'Next game', text: nextText(next.isoDate, next.isHome, next.opponent, next.startTime), daysUntil: daysFromToday(next.isoDate) };
+  }
+  return snap;
+}
+
 export async function getTeamSnapshot(slug: string): Promise<TeamSnapshot | null> {
   if (NHL_TEAMS[slug]) return nhlSnapshot(slug);
   if (MLB_TEAMS[slug]) return mlbSnapshot(slug);
+  if (NFL_TEAMS[slug]) return nflSnapshot(slug);
   return null;
 }

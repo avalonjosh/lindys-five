@@ -2498,6 +2498,8 @@ export interface NFLWeeklyEmailData {
   last: { oppAbbrev: string; oppName: string; isHome: boolean; teamScore: number; oppScore: number } | null;
   record: string;
   gamesLeft: number;
+  /** Model playoff odds (0-100), when available. */
+  playoffOdds?: number | null;
   next: { label: string; date: string; tv?: string } | null;
   /** Next home game tickets (StubHub search), when there is one. */
   homeTickets: { label: string; date: string; link: string } | null;
@@ -2513,8 +2515,9 @@ export function renderNFLWeeklyEmail(d: NFLWeeklyEmailData, unsubscribeUrl: stri
       <tr><td style="padding:12px 16px 4px;"><span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;">${label}</span></td></tr>
       <tr><td style="padding:4px 16px 14px;">${inner}</td></tr>
     </table>`;
+  const cellWidth = d.playoffOdds != null ? '33%' : '50%';
   const statCell = (label: string, value: string) =>
-    `<td align="center" width="50%" style="padding:6px 0;"><span style="display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;">${label}</span><span style="display:block;font-size:16px;font-weight:700;color:#1e293b;">${value}</span></td>`;
+    `<td align="center" width="${cellWidth}" style="padding:6px 0;"><span style="display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;">${label}</span><span style="display:block;font-size:16px;font-weight:700;color:#1e293b;">${value}</span></td>`;
 
   let scoreBlock = '';
   const won = !!d.last && d.last.teamScore > d.last.oppScore;
@@ -2534,7 +2537,10 @@ export function renderNFLWeeklyEmail(d: NFLWeeklyEmailData, unsubscribeUrl: stri
     </tr></table>`;
   }
 
-  const seasonCard = card('Season So Far', `<table width="100%" cellpadding="0" cellspacing="0"><tr>${statCell('Record', d.record)}${statCell('Games Left', String(d.gamesLeft))}</tr></table>`);
+  const oddsCell = d.playoffOdds != null
+    ? `<td align="center" width="33%" style="padding:6px 0;"><a href="${nflUtm('/nfl/playoff-odds', 'odds')}" style="text-decoration:none;"><span style="display:block;font-size:11px;color:#94a3b8;text-transform:uppercase;">Playoff Odds</span><span style="display:block;font-size:16px;font-weight:700;color:${d.primaryColor};">${d.playoffOdds}%</span></a></td>`
+    : '';
+  const seasonCard = card('Season So Far', `<table width="100%" cellpadding="0" cellspacing="0"><tr>${statCell('Record', d.record)}${statCell('Games Left', String(d.gamesLeft))}${oddsCell}</tr></table>`);
 
   const pickCard = d.gamesLeft > 0
     ? card(`Pick the ${d.teamName}`, `<p style="margin:0 0 12px;font-size:14px;color:#475569;line-height:1.5;">Call every remaining game and see where the ${d.teamName} finish. Your picks grade themselves as the season plays out.</p>

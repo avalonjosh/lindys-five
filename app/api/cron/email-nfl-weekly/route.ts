@@ -6,6 +6,7 @@ import { kv } from '@vercel/kv';
 import { NFL_TEAMS, type NFLTeamConfig } from '@/lib/teamConfig';
 import { fetchNFLSchedule, nflSeasonYear } from '@/lib/services/nflApi';
 import { generateStubHubLink } from '@/lib/utils/affiliateLinks';
+import { computeNFLOdds } from '@/lib/services/nflLeague';
 import { getVerifiedSubscribersForTeam, sendNFLWeekly, renderNFLWeeklyEmail, type NFLWeeklyEmailData } from '@/lib/email';
 import type { NFLGameResult } from '@/lib/types/nfl';
 
@@ -72,8 +73,10 @@ function buildNFLWeeklyData(team: NFLTeamConfig, games: NFLGameResult[]): NFLWee
 async function dataFor(slug: string): Promise<{ data: NFLWeeklyEmailData; lastIso: string | null } | null> {
   const team = NFL_TEAMS[slug];
   if (!team) return null;
-  const { games } = await fetchNFLSchedule(team.abbreviation, nflSeasonYear());
+  const [{ games }, table] = await Promise.all([fetchNFLSchedule(team.abbreviation, nflSeasonYear()), computeNFLOdds(nflSeasonYear())]);
   const data = buildNFLWeeklyData(team, games);
+  const row = table?.teams.find((t) => t.abbr === team.abbreviation);
+  if (row) data.playoffOdds = Math.round(row.playoff);
   const finals = games.filter((g) => g.gameState === 'STATUS_FINAL');
   return { data, lastIso: finals[finals.length - 1]?.isoDate ?? null };
 }
