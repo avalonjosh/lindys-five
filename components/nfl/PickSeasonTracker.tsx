@@ -7,6 +7,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { Tv } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { NFLTeamConfig } from '@/lib/teamConfig/nflTeams';
 import type { NFLGameResult } from '@/lib/types/nfl';
@@ -338,6 +339,13 @@ export default function PickSeasonTracker({ team, initialGames }: PickSeasonTrac
             <p className="text-xs md:text-base opacity-90 px-2 leading-tight text-white">
               Predict every game &bull; Save your picks &bull; Track your accuracy
             </p>
+            <Link
+              href={`/nfl/${team.pickSlug}/watch`}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/60 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:scale-105 hover:bg-white/10"
+            >
+              <Tv size={12} />
+              How to Watch
+            </Link>
           </div>
         </div>
       </header>

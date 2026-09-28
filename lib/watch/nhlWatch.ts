@@ -17,7 +17,11 @@ export type WatchServiceId =
   | 'sling'
   | 'directv'
   | 'sportsnetplus'
-  | 'tsnplus';
+  | 'tsnplus'
+  | 'paramount'
+  | 'peacock'
+  | 'netflix'
+  | 'sundayticket';
 
 interface WatchServiceDef {
   name: string;
@@ -37,6 +41,10 @@ export const WATCH_SERVICES: Record<WatchServiceId, WatchServiceDef> = {
   directv: { name: 'DIRECTV', url: 'https://www.directv.com/stream/', affiliateUrl: process.env.NEXT_PUBLIC_WATCH_DIRECTV_URL },
   sportsnetplus: { name: 'Sportsnet+', url: 'https://watch.sportsnet.ca/', affiliateUrl: process.env.NEXT_PUBLIC_WATCH_SPORTSNETPLUS_URL },
   tsnplus: { name: 'TSN+', url: 'https://www.tsn.ca/plus', affiliateUrl: process.env.NEXT_PUBLIC_WATCH_TSNPLUS_URL },
+  paramount: { name: 'Paramount+', url: 'https://www.paramountplus.com/', affiliateUrl: process.env.NEXT_PUBLIC_WATCH_PARAMOUNT_URL },
+  peacock: { name: 'Peacock', url: 'https://www.peacocktv.com/', affiliateUrl: process.env.NEXT_PUBLIC_WATCH_PEACOCK_URL },
+  netflix: { name: 'Netflix', url: 'https://www.netflix.com/' },
+  sundayticket: { name: 'NFL Sunday Ticket', url: 'https://tv.youtube.com/learn/nflsundayticket/' },
 };
 
 export function watchServiceUrl(id: WatchServiceId): string {
@@ -57,7 +65,7 @@ interface NetworkDef {
 // NHL Network simulcasts alongside the teams' local broadcasts.
 const SHARED_NATIONAL = new Set(['NHLN']);
 
-const LIVE_TV: WatchServiceId[] = ['directv', 'fubo', 'sling', 'youtubetv'];
+export const LIVE_TV: WatchServiceId[] = ['directv', 'fubo', 'sling', 'youtubetv'];
 
 // US national broadcasts (market "N").
 const US_NATIONAL: Record<string, NetworkDef> = {

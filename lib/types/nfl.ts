@@ -16,6 +16,10 @@ export interface NFLGameResult {
   gameState: string; // ESPN status name, e.g. STATUS_SCHEDULED / STATUS_FINAL
   /** 2 = regular season, 3 = postseason (postseason only present when requested). */
   seasonType: number;
+  /** Kickoff, ISO UTC. */
+  startIso?: string;
+  /** Broadcast outlets from ESPN, e.g. ["CBS"] or ["ESPN", "ABC"]. */
+  tv?: string[];
 }
 
 export interface NFLScheduleData {

@@ -124,6 +124,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly',
       priority: team.id === 'bills' ? 0.8 : 0.7,
     });
+    urls.push({ url: `${BASE_URL}/nfl/${team.pickSlug}/watch`, changeFrequency: 'daily', priority: 0.7 });
   }
 
   // Blog pages

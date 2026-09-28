@@ -54,7 +54,7 @@ function buildNFLWeeklyData(team: NFLTeamConfig, games: NFLGameResult[]): NFLWee
       : null,
     record: ties ? `${wins}-${losses}-${ties}` : `${wins}-${losses}`,
     gamesLeft: upcoming.length,
-    next: next ? { label: gameLabel(next), date: `${next.date} · ${next.startTime} ET` } : null,
+    next: next ? { label: gameLabel(next), date: `${next.date} · ${next.startTime} ET`, tv: next.tv?.length ? next.tv.join(', ') : undefined } : null,
     homeTickets: nextHome
       ? {
           label: gameLabel(nextHome),

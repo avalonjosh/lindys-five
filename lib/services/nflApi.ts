@@ -134,6 +134,8 @@ export async function fetchNFLSchedule(
       isLive: LIVE_STATUSES.has(statusName),
       gameState: statusName,
       seasonType: type,
+      startIso: event.date,
+      tv: ((comp.broadcasts || []) as any[]).map((b: any) => b.media?.shortName).filter(Boolean), // eslint-disable-line @typescript-eslint/no-explicit-any
     });
   }
 

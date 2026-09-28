@@ -102,6 +102,7 @@ Predict the winner of every game of a team's NFL regular season, save dated pick
 
 - [Pick the Bills](https://www.lindysfive.com/pick-the-bills): Buffalo Bills season picks — the flagship page.
 - All 32 teams follow the same pattern: /pick-the-chiefs, /pick-the-eagles, /pick-the-cowboys, /pick-the-jets, /pick-the-giants, /pick-the-panthers, /pick-the-cardinals, /pick-the-49ers, and so on (team nicknames).
+- Each NFL team also has a TV and streaming guide at /nfl/{team}/watch, e.g. [How to watch the Buffalo Bills](https://www.lindysfive.com/nfl/bills/watch): every game's network, national vs regional games, and streaming options.
 
 ## Blog
 

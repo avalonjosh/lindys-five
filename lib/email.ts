@@ -2498,7 +2498,7 @@ export interface NFLWeeklyEmailData {
   last: { oppAbbrev: string; oppName: string; isHome: boolean; teamScore: number; oppScore: number } | null;
   record: string;
   gamesLeft: number;
-  next: { label: string; date: string } | null;
+  next: { label: string; date: string; tv?: string } | null;
   /** Next home game tickets (StubHub search), when there is one. */
   homeTickets: { label: string; date: string; link: string } | null;
 }
@@ -2549,6 +2549,7 @@ export function renderNFLWeeklyEmail(d: NFLWeeklyEmailData, unsubscribeUrl: stri
         <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1px;">Next Game</div>
         <div style="margin-top:6px;${impact}font-size:20px;font-weight:800;color:#ffffff;text-transform:uppercase;letter-spacing:1px;">${d.next.label}</div>
         <div style="margin-top:2px;font-size:14px;color:rgba(255,255,255,0.85);">${d.next.date}</div>
+        ${d.next.tv ? `<div style="margin-top:4px;font-size:13px;color:rgba(255,255,255,0.85);">TV: ${d.next.tv} &middot; <a href="${nflUtm(`/nfl/${d.pickSlug}/watch`, 'watch')}" style="color:#ffffff;font-weight:700;text-decoration:underline;">Where to watch</a></div>` : ''}
         ${d.homeTickets ? `${d.homeTickets.label !== d.next.label ? `<div style="margin-top:10px;font-size:13px;color:rgba(255,255,255,0.85);">Next home game: <strong>${d.homeTickets.label}</strong> &middot; ${d.homeTickets.date}</div>` : ''}
         <a href="${d.homeTickets.link}" style="display:inline-block;margin-top:14px;background:#ffffff;color:${d.primaryColor};padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">${d.homeTickets.label !== d.next.label ? 'Get Home Game Tickets' : 'Get Tickets'}</a>` : ''}
       </td></tr></table>`

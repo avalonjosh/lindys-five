@@ -46,12 +46,15 @@ export default function WhereToWatch({
   homeName,
   awayName,
   trackLabel,
+  note,
   className = '',
 }: {
   info: NHLWatchInfo;
   homeName: string;
   awayName: string;
   trackLabel: string;
+  /** Extra context line, e.g. NFL regional coverage. */
+  note?: string;
   className?: string;
 }) {
   const services = usStreamingServices(info);
@@ -101,6 +104,8 @@ export default function WhereToWatch({
           </div>
         </div>
       )}
+
+      {note && <p className="mt-2 text-xs text-gray-500">{note}</p>}
 
       {info.canada.length > 0 && (
         <p className="mt-2 text-xs text-gray-500">
