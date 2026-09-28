@@ -25,6 +25,8 @@ export interface PostseasonGame {
   teamScore?: number;
   oppScore?: number;
   liveInning?: string;
+  inning?: number;
+  inningHalf?: 'Top' | 'Bot';
   ifNecessary: boolean;
   tv?: string;
   ticketLink?: string;
@@ -38,6 +40,10 @@ export interface PostseasonSeries {
   oppName: string;
   oppId: number | null;
   oppLogo?: string;
+  /** "BOS", or "NYY/BOS" while the opponent is undecided. */
+  oppAbbrev: string;
+  /** One logo, or each possible opponent's while undecided. */
+  oppLogos: string[];
   bestOf: number;
   teamWins: number;
   oppWins: number;
@@ -285,6 +291,8 @@ export async function fetchMLBPostseason(team: MLBTeamConfig, season: number): P
         teamScore: state === 'upcoming' ? undefined : me.score,
         oppScore: state === 'upcoming' ? undefined : them.score,
         liveInning: state === 'live' && ls ? `${ls.isTopInning ? 'Top' : 'Bot'} ${ls.currentInning}` : undefined,
+        inning: state === 'live' ? ls?.currentInning : undefined,
+        inningHalf: state === 'live' && ls ? (ls.isTopInning ? 'Top' : 'Bot') : undefined,
         ifNecessary: g.ifNecessary === 'Y',
         tv: mlbWatchInfo(broadcasts).info.national.map((n) => n.name).join(', ') || undefined,
         ticketLink,
@@ -329,6 +337,10 @@ export async function fetchMLBPostseason(team: MLBTeamConfig, season: number): P
       oppName: opponentLabel(oppTeam),
       oppId: oppReal ? oppId : null,
       oppLogo: oppReal ? logoFor(oppId) : undefined,
+      oppAbbrev: oppReal ? MLB_ID_TO_TEAM.get(oppId)?.abbreviation ?? oppTeam.abbreviation ?? '' : oppTeam.abbreviation || oppTeam.name,
+      oppLogos: oppReal
+        ? [logoFor(oppId)]
+        : String(oppTeam.abbreviation || oppTeam.name).split('/').map((ab: string) => BY_ABBREV.get(ab.trim())).filter(Boolean).map((t) => logoFor(t!.mlbId)),
       bestOf: s.bestOf,
       teamWins,
       oppWins,

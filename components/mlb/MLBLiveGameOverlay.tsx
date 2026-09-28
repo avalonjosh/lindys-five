@@ -12,6 +12,8 @@ interface MLBLiveGameOverlayProps {
   gameNumber: number;
   teamAbbreviation: string;
   teamColors: TeamColors;
+  /** Replaces "#N" (e.g. "Game 3" in the postseason). */
+  label?: string;
 }
 
 function getInningText(inning: number, half: 'Top' | 'Bot'): string {
@@ -20,7 +22,7 @@ function getInningText(inning: number, half: 'Top' | 'Bot'): string {
   return `${half === 'Top' ? 'Top' : 'Bot'} ${ord}`;
 }
 
-export default function MLBLiveGameOverlay({ game, gameNumber, teamAbbreviation, teamColors }: MLBLiveGameOverlayProps) {
+export default function MLBLiveGameOverlay({ game, gameNumber, teamAbbreviation, teamColors, label }: MLBLiveGameOverlayProps) {
   const inning = game.inning || 1;
   const inningHalf = game.inningHalf || 'Top';
 
@@ -34,7 +36,7 @@ export default function MLBLiveGameOverlay({ game, gameNumber, teamAbbreviation,
     >
       {/* Game number and location */}
       <div className="flex justify-between items-center mb-2">
-        <span className="text-xs font-bold text-gray-500">#{gameNumber}</span>
+        <span className="text-xs font-bold text-gray-500">{label ?? `#${gameNumber}`}</span>
         <span className="text-xs font-bold" style={{ color: teamColors.primary }}>
           {game.isHome ? 'HOME' : 'AWAY'}
         </span>

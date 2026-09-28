@@ -513,6 +513,7 @@ export default function MLBTeamTracker({ team, initialGames, serverSummary, faq,
           <MLBPlayoffJourney
             postseason={ps}
             teamName={team.name}
+            teamAbbrev={team.abbreviation}
             teamCity={team.city}
             teamLogo={team.logo}
             teamSlug={team.slug}

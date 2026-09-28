@@ -21,9 +21,15 @@ interface MLBGameBoxProps {
   hypotheticalOutcome?: 'W' | 'L' | null;
   teamAbbreviation?: string;
   teamColors: TeamColors;
+  /** Postseason extras: "Game 1" label, undecided-opponent logos, TV/"if
+   *  necessary" line, and the playoff ticket link. */
+  label?: string;
+  opponentLogos?: string[];
+  extra?: React.ReactNode;
+  ticketLinkOverride?: string | null;
 }
 
-export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, hypotheticalOutcome, teamAbbreviation = 'NYY', teamColors }: MLBGameBoxProps) {
+export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, hypotheticalOutcome, teamAbbreviation = 'NYY', teamColors, label, opponentLogos, extra, ticketLinkOverride }: MLBGameBoxProps) {
   const router = useRouter();
   const isLive = game.gameState === 'In Progress' || game.gameState === 'Warming Up';
   const isPostponed = game.gameState === 'Postponed';
@@ -38,9 +44,11 @@ export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, 
   const homeTeamAbbrev = game.isHome ? teamAbbreviation : game.opponent;
   const awayTeamAbbrev = game.isHome ? game.opponent : teamAbbreviation;
   const homeTeamConfig = Object.values(MLB_TEAMS).find(t => t.abbreviation === homeTeamAbbrev);
-  const ticketLink = isPending && homeTeamConfig
-    ? generateGameTicketLink(homeTeamConfig.slug, homeTeamConfig.city, homeTeamConfig.stubhubId, homeTeamAbbrev, awayTeamAbbrev, game.isoDate ?? game.date, 'mlb')
-    : null;
+  const ticketLink = ticketLinkOverride !== undefined
+    ? (isPending ? ticketLinkOverride : null)
+    : isPending && homeTeamConfig
+      ? generateGameTicketLink(homeTeamConfig.slug, homeTeamConfig.city, homeTeamConfig.stubhubId, homeTeamAbbrev, awayTeamAbbrev, game.isoDate ?? game.date, 'mlb')
+      : null;
 
   const isWin = game.outcome === 'W';
   const isLoss = game.outcome === 'L';
@@ -93,6 +101,7 @@ export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, 
         gameNumber={gameNumber}
         teamAbbreviation={teamAbbreviation}
         teamColors={teamColors}
+        label={label}
       />
     );
     if (gameLink) {
@@ -126,7 +135,7 @@ export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, 
     >
       {/* Game number and location */}
       <div className="flex justify-between items-center mb-2">
-        <span className="text-xs font-bold text-gray-500">#{gameNumber}</span>
+        <span className="text-xs font-bold text-gray-500">{label ?? `#${gameNumber}`}</span>
         <span className="text-xs font-bold" style={{ color: teamColors.primary }}>
           {game.isHome ? 'HOME' : 'AWAY'}
         </span>
@@ -156,12 +165,15 @@ export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, 
               />
             </button>
           ) : (
-            <div className="rounded-lg p-3 md:p-3.5 shadow-sm border bg-white border-gray-200">
-              <img
-                src={game.opponentLogo}
-                alt={game.opponent}
-                className="w-10 h-10 md:w-9 md:h-9 object-contain"
-              />
+            <div className="flex gap-1 rounded-lg p-3 md:p-3.5 shadow-sm border bg-white border-gray-200">
+              {(opponentLogos && opponentLogos.length > 1 ? opponentLogos : [game.opponentLogo]).map((src) => (
+                <img
+                  key={src}
+                  src={src}
+                  alt={game.opponent}
+                  className={`${opponentLogos && opponentLogos.length > 1 ? 'w-7 h-7 md:w-7 md:h-7' : 'w-10 h-10 md:w-9 md:h-9'} object-contain`}
+                />
+              ))}
             </div>
           )}
           <div className="text-sm font-bold text-gray-800">{game.opponent}</div>
@@ -221,6 +233,7 @@ export default function MLBGameBox({ game, gameNumber, whatIfMode, onGameClick, 
                 {game.startTime}
               </div>
             )}
+            {extra}
             {isClickable ? (
               <div className="flex justify-center mt-2">
                 <div className="inline-flex rounded-lg overflow-hidden border-2 border-blue-300 shadow-md">

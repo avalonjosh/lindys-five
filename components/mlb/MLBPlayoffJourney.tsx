@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import AffiliateLink from '@/components/affiliate/AffiliateLink';
+import MLBGameBox from './MLBGameBox';
+import type { MLBGameResult } from '@/lib/types/mlb';
 import MerchCTA from '@/components/affiliate/MerchCTA';
 import WhereToWatch from '@/components/watch/WhereToWatch';
 import { mlbWatchInfo } from '@/lib/watch/mlbWatch';
@@ -116,53 +117,29 @@ function RoadCard({ ps, teamName, colors }: { ps: MLBPostseason; teamName: strin
   );
 }
 
-function GameBox({ g, oppName, teamSlug, colors }: { g: PostseasonGame; oppName: string; teamSlug: string; colors: TeamColors }) {
-  const won = g.state === 'final' && (g.teamScore ?? 0) > (g.oppScore ?? 0);
-  const border = g.state === 'final' ? (won ? '#10b981' : '#ef4444') : g.state === 'live' ? '#f59e0b' : '#e5e7eb';
-  return (
-    <div className="flex flex-col rounded-xl border-2 bg-white p-3 text-center" style={{ borderColor: border }}>
-      <div className="mb-1 flex items-center justify-between text-xs font-semibold text-gray-500">
-        <span>
-          Game {g.gameNumber}
-          {g.ifNecessary && g.state === 'upcoming' && <span className="text-gray-400">*</span>}
-        </span>
-        <span style={{ color: colors.primary }}>{g.isHome ? 'HOME' : 'AWAY'}</span>
-      </div>
-      <Link href={`/mlb/scores/${g.gamePk}`} className="text-sm font-bold text-gray-900 hover:underline">
-        {g.isHome ? 'vs' : '@'} {oppName}
-      </Link>
-      {g.state === 'upcoming' ? (
-        <>
-          <div className="mt-1 text-sm text-gray-700">{g.dateShort}</div>
-          <div className="text-xs font-semibold" style={{ color: colors.primary }}>{g.timeShort}</div>
-        </>
-      ) : (
-        <div className="mt-1">
-          <span className={`text-lg font-bold ${g.state === 'live' ? 'text-amber-600' : won ? 'text-emerald-600' : 'text-red-600'}`}>
-            {g.state === 'live' ? '' : won ? 'W ' : 'L '}{g.teamScore}-{g.oppScore}
-          </span>
-          <div className="text-xs text-gray-500">{g.state === 'live' ? g.liveInning ?? 'Live' : g.dateShort}</div>
-        </div>
-      )}
-      {g.state !== 'final' && g.tv && <div className="mt-1 text-[11px] font-semibold text-gray-500">{g.tv}</div>}
-      {g.state === 'upcoming' && g.ticketLink && (
-        <AffiliateLink
-          href={g.ticketLink}
-          track="tickets"
-          trackLabel={`mlb-journey-${teamSlug}`}
-          className="mt-2 inline-block rounded-md px-3 py-1 text-xs font-bold text-white"
-          style={{ background: colors.primary }}
-        >
-          Get Tickets
-        </AffiliateLink>
-      )}
-    </div>
-  );
+/** Playoff game in the regular-season card's shape, so both look the same. */
+function toGameResult(g: PostseasonGame, s: PostseasonSeries): MLBGameResult {
+  const final = g.state === 'final';
+  return {
+    date: g.dateShort,
+    startTime: g.timeShort,
+    opponent: s.oppAbbrev,
+    opponentLogo: s.oppLogos[0] ?? '',
+    isHome: g.isHome,
+    teamScore: g.teamScore ?? 0,
+    opponentScore: g.oppScore ?? 0,
+    outcome: final ? ((g.teamScore ?? 0) > (g.oppScore ?? 0) ? 'W' : 'L') : 'PENDING',
+    gameState: g.state === 'live' ? 'In Progress' : final ? 'Final' : 'Scheduled',
+    gameId: g.gamePk,
+    inning: g.inning,
+    inningHalf: g.inningHalf,
+  };
 }
 
-function SeriesCard({ s, teamName, teamLogo, teamSlug, teamCity, colors }: {
+function SeriesCard({ s, teamName, teamAbbrev, teamLogo, teamSlug, teamCity, colors }: {
   s: PostseasonSeries;
   teamName: string;
+  teamAbbrev: string;
   teamLogo: string;
   teamSlug: string;
   teamCity: string;
@@ -201,6 +178,16 @@ function SeriesCard({ s, teamName, teamLogo, teamSlug, teamCity, colors }: {
         {s.oppLogo ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img src={s.oppLogo} alt={s.oppName} className="h-16 w-16 flex-shrink-0 sm:h-20 sm:w-20" />
+        ) : s.oppLogos.length > 1 ? (
+          <div className="flex flex-shrink-0 flex-col items-center gap-1" title={s.oppName}>
+            <div className="flex gap-1">
+              {s.oppLogos.map((src) => (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img key={src} src={src} alt="" className="h-9 w-9 opacity-80 sm:h-11 sm:w-11" />
+              ))}
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400">{s.oppAbbrev}</span>
+          </div>
         ) : (
           <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full border-2 border-dashed border-gray-300 text-center text-[10px] font-bold leading-tight text-gray-400 sm:h-20 sm:w-20">
             {s.oppName}
@@ -240,10 +227,24 @@ function SeriesCard({ s, teamName, teamLogo, teamSlug, teamCity, colors }: {
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         {s.games.map((g) => (
-          <GameBox key={g.gamePk} g={g} oppName={s.oppName} teamSlug={teamSlug} colors={colors} />
+          <MLBGameBox
+            key={g.gamePk}
+            game={toGameResult(g, s)}
+            gameNumber={g.gameNumber}
+            label={`Game ${g.gameNumber}`}
+            teamAbbreviation={teamAbbrev}
+            teamColors={colors}
+            opponentLogos={s.oppLogos}
+            ticketLinkOverride={g.ticketLink ?? null}
+            extra={g.state === 'upcoming' && (g.tv || g.ifNecessary) ? (
+              <div className="mb-2 space-y-0.5 text-[11px] font-semibold text-gray-500">
+                {g.tv && <div>{g.tv}</div>}
+                {g.ifNecessary && <div className="text-gray-400">If necessary</div>}
+              </div>
+            ) : undefined}
+          />
         ))}
       </div>
-      {s.games.some((g) => g.ifNecessary && g.state === 'upcoming') && <p className="mt-2 text-[11px] text-gray-400">* If necessary</p>}
 
       {next && nextWatch && (
         <WhereToWatch
@@ -265,9 +266,10 @@ function SeriesCard({ s, teamName, teamLogo, teamSlug, teamCity, colors }: {
   );
 }
 
-export default function MLBPlayoffJourney({ postseason, teamName, teamCity, teamLogo, teamSlug, colors }: {
+export default function MLBPlayoffJourney({ postseason, teamName, teamAbbrev, teamCity, teamLogo, teamSlug, colors }: {
   postseason: MLBPostseason;
   teamName: string;
+  teamAbbrev: string;
   teamCity: string;
   teamLogo: string;
   teamSlug: string;
@@ -278,7 +280,7 @@ export default function MLBPlayoffJourney({ postseason, teamName, teamCity, team
     <div className="mb-4 space-y-4">
       <RoadCard ps={postseason} teamName={teamName} colors={colors} />
       {newestFirst.map((s) => (
-        <SeriesCard key={s.name} s={s} teamName={teamName} teamLogo={teamLogo} teamSlug={teamSlug} teamCity={teamCity} colors={colors} />
+        <SeriesCard key={s.name} s={s} teamName={teamName} teamAbbrev={teamAbbrev} teamLogo={teamLogo} teamSlug={teamSlug} teamCity={teamCity} colors={colors} />
       ))}
       <p className="text-center text-xs">
         <Link href="/mlb/watch" className="font-semibold text-sabres-blue hover:underline">Full MLB playoffs TV schedule →</Link>
