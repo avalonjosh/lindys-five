@@ -21,6 +21,15 @@ import SavePicksModal from '@/components/whatif/SavePicksModal';
 import { fetchLatestWhatIfSave } from '@/lib/whatif/client';
 import NewsletterSignup from '@/components/newsletter/NewsletterSignup';
 import type { WhatIfSave, WhatIfSubmission } from '@/lib/whatif/types';
+import { Tv } from 'lucide-react';
+
+/** Late September through mid November: link the postseason TV guide. */
+function isPostseasonWindow(): boolean {
+  const now = new Date();
+  const m = now.getMonth();
+  const d = now.getDate();
+  return (m === 8 && d >= 20) || m === 9 || (m === 10 && d <= 15);
+}
 
 // Teams whose logo blends into their header background color
 const mlbBgTeamIds = ['orioles', 'reds', 'cardinals', 'angels', 'phillies', 'nationals', 'rays', 'tigers', 'royals', 'twins', 'dodgers', 'giants', 'rockies', 'padres'];
@@ -450,7 +459,7 @@ export default function MLBTeamTracker({ team, initialGames, serverSummary, faq 
             <p className="text-xs md:text-base opacity-90 px-2 leading-tight text-white">
               5-Game Set Analysis &bull; Target: 3+ wins per set
             </p>
-            <div className="mt-2">
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
               <MerchCTA
                 teamCity={team.city}
                 teamName={team.name}
@@ -459,6 +468,15 @@ export default function MLBTeamTracker({ team, initialGames, serverSummary, faq 
                 primaryColor={team.colors.secondary}
                 teamSlug={team.slug}
               />
+              {isPostseasonWindow() && (
+                <Link
+                  href="/mlb/watch"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-white/60 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:scale-105 hover:bg-white/10"
+                >
+                  <Tv size={12} />
+                  Playoffs on TV
+                </Link>
+              )}
             </div>
           </div>
         </div>

@@ -174,6 +174,8 @@ export default async function MLBLandingPage() {
           <div className="flex flex-wrap justify-center gap-4 text-sm">
             <Link href="/mlb/scores" className="text-gray-400 hover:text-white transition-colors">MLB Scores Today</Link>
             <span className="text-gray-600">|</span>
+            <Link href="/mlb/watch" className="text-gray-400 hover:text-white transition-colors">Playoffs TV Schedule</Link>
+            <span className="text-gray-600">|</span>
             <Link href="/blog" className="text-gray-400 hover:text-white transition-colors">Blog</Link>
             <span className="text-gray-600">|</span>
             <Link href="/nhl" className="text-gray-400 hover:text-white transition-colors">NHL Tracker</Link>

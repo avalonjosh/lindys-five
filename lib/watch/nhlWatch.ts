@@ -21,7 +21,8 @@ export type WatchServiceId =
   | 'paramount'
   | 'peacock'
   | 'netflix'
-  | 'sundayticket';
+  | 'sundayticket'
+  | 'foxone';
 
 interface WatchServiceDef {
   name: string;
@@ -45,6 +46,8 @@ export const WATCH_SERVICES: Record<WatchServiceId, WatchServiceDef> = {
   peacock: { name: 'Peacock', url: 'https://www.peacocktv.com/', affiliateUrl: process.env.NEXT_PUBLIC_WATCH_PEACOCK_URL },
   netflix: { name: 'Netflix', url: 'https://www.netflix.com/' },
   sundayticket: { name: 'NFL Sunday Ticket', url: 'https://tv.youtube.com/learn/nflsundayticket/' },
+  // foxone.com redirects to fox.com, FOX's streaming home.
+  foxone: { name: 'FOX One', url: 'https://www.fox.com/', affiliateUrl: process.env.NEXT_PUBLIC_WATCH_FOXONE_URL },
 };
 
 export function watchServiceUrl(id: WatchServiceId): string {

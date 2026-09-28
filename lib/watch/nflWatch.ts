@@ -8,7 +8,7 @@ import { LIVE_TV, type NHLWatchInfo, type WatchServiceId } from './nhlWatch';
 
 const NETWORKS: Record<string, { name: string; services: WatchServiceId[] }> = {
   CBS: { name: 'CBS', services: ['paramount', 'directv', 'fubo', 'youtubetv'] },
-  FOX: { name: 'FOX', services: ['directv', 'fubo', 'sling', 'youtubetv'] },
+  FOX: { name: 'FOX', services: ['foxone', 'directv', 'fubo', 'sling', 'youtubetv'] },
   NBC: { name: 'NBC', services: ['peacock', 'directv', 'fubo', 'sling', 'youtubetv'] },
   ESPN: { name: 'ESPN', services: ['espn', ...LIVE_TV] },
   ABC: { name: 'ABC', services: ['espn', 'directv', 'fubo', 'youtubetv'] },

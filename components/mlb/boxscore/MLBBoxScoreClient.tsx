@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import type { MLBBoxScoreData } from '@/lib/types/mlb';
 import { fetchMLBBoxScore } from '@/lib/services/mlbApi';
+import WhereToWatch from '@/components/watch/WhereToWatch';
+import { mlbWatchInfo } from '@/lib/watch/mlbWatch';
 import MLBGameHeader from './MLBGameHeader';
 import MLBScoringPlays from './MLBScoringPlays';
 import MLBBattingStats from './MLBBattingStats';
@@ -69,12 +71,24 @@ export default function MLBBoxScoreClient({ gameId }: Props) {
   const isComplete = data.status === 'Final' || data.status === 'Completed Early';
   const isLive = data.status === 'In Progress';
   const isUpcoming = !isComplete && !isLive;
+  const watch = data.broadcasts?.length ? mlbWatchInfo(data.broadcasts) : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <MLBGameHeader data={data} />
 
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
+
+        {/* Where to watch: upcoming and live games */}
+        {!isComplete && watch && (
+          <WhereToWatch
+            info={watch.info}
+            homeName={data.homeTeam.teamName}
+            awayName={data.awayTeam.teamName}
+            trackLabel={`mlb-boxscore-${data.gameId}`}
+            note={watch.spanish.length ? `En español: ${watch.spanish.join(', ')}` : undefined}
+          />
+        )}
 
         {/* Upcoming game preview */}
         {isUpcoming && (

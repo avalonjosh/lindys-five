@@ -1,3 +1,4 @@
+import type { MLBBroadcast } from '../watch/mlbWatch';
 export interface MLBGameResult {
   date: string;
   /** YYYY-MM-DD Eastern, for saved What-If picks (`date` is display-formatted). */
@@ -70,6 +71,8 @@ export interface MLBBoxScoreData {
     home: MLBPitcherLine[];
   };
   scoringPlays: MLBScoringPlay[];
+  /** TV listings (upcoming/live games only), from the schedule endpoint. */
+  broadcasts?: MLBBroadcast[];
 }
 
 export interface MLBBatterLine {

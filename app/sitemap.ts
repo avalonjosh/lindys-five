@@ -71,6 +71,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.95,
     },
     {
+      url: `${BASE_URL}/mlb/watch`,
+      changeFrequency: 'daily',
+      priority: 0.9,
+    },
+    {
       url: `${BASE_URL}/mlb/scores`,
       changeFrequency: 'daily',
       priority: 0.7,

@@ -368,6 +368,15 @@ export async function fetchMLBBoxScore(gameId: number): Promise<MLBBoxScoreData>
 
   if (result.status === 'Final' || result.status === 'Completed Early') {
     setCache(cacheKey, result);
+  } else {
+    // The live feed has no TV listings; the schedule endpoint does.
+    try {
+      const schedRes = await fetchWithRetry(`https://statsapi.mlb.com/api/v1/schedule?gamePk=${gameId}&hydrate=broadcasts(all)`, 1);
+      const sched = await schedRes.json();
+      result.broadcasts = sched.dates?.[0]?.games?.[0]?.broadcasts || [];
+    } catch {
+      /* card just doesn't render */
+    }
   }
 
   return result;

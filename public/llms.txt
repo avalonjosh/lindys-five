@@ -53,6 +53,7 @@ Each NHL team page shows current record, division and conference rank, projected
 ## MLB — Major League Baseball
 
 - [MLB Playoff Odds](https://www.lindysfive.com/mlb/playoff-odds): Full standings table for all 30 teams with playoff probability, projected wins, division and wild card position, and World Series contender ranking. Updated every 5 minutes.
+- [How to Watch the MLB Playoffs](https://www.lindysfive.com/mlb/watch): Postseason TV schedule for every Wild Card, Division Series, LCS and World Series game, with each game's network and streaming options.
 - [MLB Hub](https://www.lindysfive.com/mlb): Landing page with all 30 MLB team trackers.
 - [MLB Scores Today](https://www.lindysfive.com/mlb/scores): Live MLB scores and box scores for the current day's games.
 

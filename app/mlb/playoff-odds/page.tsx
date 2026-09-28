@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import SiteFooter from '@/components/SiteFooter';
 import { mlbSeasonYear } from '@/lib/utils/mlbSeason';
 import Link from 'next/link';
+import { Tv } from 'lucide-react';
 import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import MLBPlayoffOddsClient, { type MLBTeamRow } from '@/components/mlb/MLBPlayoffOddsClient';
 import InlineEmailCapture from '@/components/newsletter/InlineEmailCapture';
@@ -277,6 +278,14 @@ export default async function MLBPlayoffOddsPage() {
         </nav>
 
         <main className="max-w-7xl mx-auto px-4 pb-16">
+          <Link
+            href="/mlb/watch"
+            className="mb-6 flex items-center justify-between gap-3 rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900 shadow-sm transition-colors hover:border-gray-400"
+          >
+            <span className="flex items-center gap-2"><Tv className="h-4 w-4 shrink-0 text-gray-500" />How to watch the MLB playoffs: every game&apos;s TV channel and streaming</span>
+            <span aria-hidden className="text-gray-400">→</span>
+          </Link>
+
           {/* Top contenders summary — server-rendered for crawlers */}
           {seasonStarted && topContenders.length > 0 && (
             <section className="mb-8">
@@ -423,6 +432,7 @@ export default async function MLBPlayoffOddsPage() {
           <nav className="mb-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 font-medium">
             <Link href="/nhl-playoff-odds" className="text-blue-700 hover:underline">NHL Playoff Odds</Link>
             <Link href="/playoffs" className="text-blue-700 hover:underline">Playoff Bracket</Link>
+            <Link href="/mlb/watch" className="text-blue-700 hover:underline">MLB Playoffs on TV</Link>
             <Link href="/162-0" className="text-blue-700 hover:underline">Play 162-0</Link>
             <Link href="/" className="text-blue-700 hover:underline">Home</Link>
           </nav>
