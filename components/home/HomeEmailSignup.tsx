@@ -1,14 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { NHL_TEAMS, MLB_TEAMS } from '@/lib/teamConfig';
+import { NHL_TEAMS, MLB_TEAMS, NFL_TEAMS } from '@/lib/teamConfig';
+import { useNewsletterStatus } from '@/lib/useNewsletterStatus';
 import { readFavorites, onFavoritesChange } from '@/lib/favorites';
 import InlineEmailCapture from '@/components/newsletter/InlineEmailCapture';
 import NewsletterSignup from '@/components/newsletter/NewsletterSignup';
 
-/** Team recap signup when a favorite is set, general list otherwise; hidden once subscribed on this browser. */
+/** Team recap signup when a favorite is set, general list otherwise. Signed-in
+ *  accounts are handled by NewsletterSignup (one tap, or hidden); signed-out
+ *  visitors stop seeing it once this browser has subscribed. */
 export default function HomeEmailSignup() {
   const [state, setState] = useState<{ subscribed: boolean; favorite: string | null } | null>(null);
+  const account = useNewsletterStatus();
 
   useEffect(() => {
     const read = (list: string[]) => {
@@ -18,16 +22,19 @@ export default function HomeEmailSignup() {
       } catch {
         /* storage unavailable */
       }
-      setState({ subscribed, favorite: list.find((s) => s in NHL_TEAMS || s in MLB_TEAMS) ?? null });
+      setState({ subscribed, favorite: list.find((s) => s in NHL_TEAMS || s in MLB_TEAMS || s in NFL_TEAMS) ?? null });
     };
     read(readFavorites());
     return onFavoritesChange(read);
   }, []);
 
-  if (!state || state.subscribed) return null;
+  if (!state || account.loading) return null;
+  if (!account.signedIn && state.subscribed) return null;
 
-  const team = state.favorite ? NHL_TEAMS[state.favorite] ?? MLB_TEAMS[state.favorite] : null;
+  const team = state.favorite ? NHL_TEAMS[state.favorite] ?? MLB_TEAMS[state.favorite] ?? NFL_TEAMS[state.favorite] : null;
   if (!team) {
+    // Signed in without a favorite team: nothing team-specific to offer.
+    if (account.signedIn) return null;
     return (
       <InlineEmailCapture
         source="home"

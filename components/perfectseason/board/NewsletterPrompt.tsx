@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Check, Mail, X } from 'lucide-react';
 import { NHL_TEAMS, MLB_TEAMS } from '@/lib/teamConfig';
 import { readFavorites, mergeFavorite } from '@/lib/favorites';
+import { useNewsletterStatus, accountSubscribe } from '@/lib/useNewsletterStatus';
 
 const DISMISS_KEY = 'l5ps.newsletter-dismissed';
 
@@ -25,6 +26,7 @@ export default function NewsletterPrompt({ sport }: { sport: 'nhl' | 'mlb' }) {
   const [show, setShow] = useState(false);
   const [team, setTeam] = useState('');
   const [email, setEmail] = useState('');
+  const account = useNewsletterStatus();
   const [status, setStatus] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
 
@@ -55,6 +57,21 @@ export default function NewsletterPrompt({ sport }: { sport: 'nhl' | 'mlb' }) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (status === 'submitting') return;
+    // Signed in: subscribe the account's own email, no typing.
+    if (account.signedIn) {
+      setStatus('submitting');
+      setError(null);
+      const ok = await accountSubscribe(team || undefined, 'ps-result');
+      if (!ok) {
+        setError('Try again');
+        setStatus('error');
+        return;
+      }
+      setStatus('done');
+      remember();
+      if (team) mergeFavorite(team);
+      return;
+    }
     setStatus('submitting');
     setError(null);
     try {
@@ -85,7 +102,9 @@ export default function NewsletterPrompt({ sport }: { sport: 'nhl' | 'mlb' }) {
       </div>
     );
   }
-  if (!show) return null;
+  if (!show || account.loading) return null;
+  // Signed in and already set (or unsubscribed on purpose): nothing to ask.
+  if (account.signedIn && (account.unsubscribed || (account.subscribed && (!team || account.teams.includes(team))))) return null;
   const teamName = options.find((o) => o.slug === team)?.name;
 
   return (
@@ -112,14 +131,18 @@ export default function NewsletterPrompt({ sport }: { sport: 'nhl' | 'mlb' }) {
         ))}
       </select>
       <form onSubmit={submit} className="mt-2 flex gap-2">
-        <input
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@email.com"
-          className="min-w-0 flex-1 rounded-lg border-2 border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none transition-colors focus:border-sabres-blue focus:bg-white"
-        />
+        {account.signedIn ? (
+          <p className="min-w-0 flex-1 self-center truncate text-xs text-gray-500">Sends to {account.email}</p>
+        ) : (
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@email.com"
+            className="min-w-0 flex-1 rounded-lg border-2 border-gray-200 bg-gray-50 px-3 py-2 text-sm outline-none transition-colors focus:border-sabres-blue focus:bg-white"
+          />
+        )}
         <button
           type="submit"
           disabled={status === 'submitting'}

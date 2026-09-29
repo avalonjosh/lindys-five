@@ -24,6 +24,9 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     signedIn: true,
     subscribed,
+    // Unsubscribed on purpose: signup surfaces stay hidden (no nagging).
+    unsubscribed: !!sub?.unsubscribedAt,
+    teams: subscribed ? sub!.teams ?? [] : [],
     email: user.email,
     username: user.username,
     favoriteTeam: user.favoriteTeam ?? null,

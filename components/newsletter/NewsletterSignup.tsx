@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Mail, Check, Loader2 } from 'lucide-react';
+import { useNewsletterStatus, accountSubscribe } from '@/lib/useNewsletterStatus';
 
 interface NewsletterSignupProps {
   teams?: string[];
@@ -24,6 +25,8 @@ export default function NewsletterSignup({
   hideIfSubscribed = false,
 }: NewsletterSignupProps) {
   const [hidden, setHidden] = useState(false);
+  const account = useNewsletterStatus();
+  const [oneTap, setOneTap] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [email, setEmail] = useState('');
   const [teams, setTeams] = useState<string[]>(initialTeams || []);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -87,6 +90,57 @@ export default function NewsletterSignup({
     }
   };
 
+  // Signed in: we already have their email, so no form. Hide if they already
+  // get this team's recaps or unsubscribed on purpose; otherwise one tap.
+  if (account.loading) return null;
+  if (account.signedIn) {
+    const team = initialTeams?.[0];
+    const label = teamDisplayName || 'game';
+    if (oneTap === 'done') {
+      return <SuccessMessage message={`Done! ${teamDisplayName ? `${teamDisplayName} recaps` : 'Recaps'} are headed to ${account.email ?? 'your inbox'}.`} variant={variant} primaryColor={primaryColor} />;
+    }
+    if (account.unsubscribed) return null;
+    if (account.subscribed && (!team || account.teams.includes(team))) return null;
+    const tap = async () => {
+      setOneTap('loading');
+      setOneTap((await accountSubscribe(team, source)) ? 'done' : 'error');
+    };
+    const dark = variant !== 'inline';
+    return (
+      <div
+        className={`rounded-2xl p-5 shadow-lg border-2 ${variant === 'inline' ? 'mt-4 bg-white border-gray-200' : ''}`}
+        style={dark ? { background: `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(primaryColor, -30)} 100%)`, borderColor: accentColor } : undefined}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <Mail className={`w-4 h-4 ${dark ? 'text-white/80' : ''}`} style={dark ? undefined : { color: primaryColor }} />
+              <h3 className={`text-lg font-bold ${dark ? 'text-white' : ''}`} style={{ fontFamily: 'Bebas Neue, sans-serif', ...(dark ? {} : { color: primaryColor }) }}>
+                Get {label} Recaps in Your Inbox
+              </h3>
+            </div>
+            <p className={`mt-0.5 text-xs ${dark ? 'text-white/70' : 'text-gray-500'}`}>
+              {account.subscribed ? `Add ${label} recaps to your Lindy's Five emails.` : `One tap. We'll send them to ${account.email}.`}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={tap}
+            disabled={oneTap === 'loading'}
+            className="shrink-0 rounded-lg px-4 py-2 text-sm font-semibold transition-all hover:scale-105 disabled:opacity-50"
+            style={dark
+              ? { background: Math.abs(luminance(accentColor) - luminance(primaryColor)) < 0.25 ? '#ffffff' : accentColor, color: primaryColor }
+              : { background: primaryColor, color: '#ffffff' }}
+          >
+            {oneTap === 'loading' ? <Loader2 className="w-4 h-4 animate-spin" /> : `Add ${label} Recaps`}
+          </button>
+        </div>
+        {oneTap === 'error' && <p className={`mt-2 text-xs ${dark ? 'text-red-300' : 'text-red-500'}`}>Couldn&apos;t subscribe right now. Please try again.</p>}
+      </div>
+    );
+  }
+
+  // Signed out: hide once this browser has subscribed.
   if (hidden) return null;
 
   if (status === 'success') {
