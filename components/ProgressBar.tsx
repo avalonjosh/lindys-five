@@ -8,6 +8,7 @@ import { getProbabilityColor, probabilityForFinalPoints, computePositionAwarePro
 import { getCutLines, getModelProjectedPoints, isInPlayoffPosition } from '@/lib/utils/standingsCalc';
 import { PlayoffOddsPill, CollapsibleOddsPanel } from '@/components/PlayoffOddsToggle';
 import { trackClick } from '@/lib/analytics';
+import { getCurrentNHLSeason, previousNHLSeason } from '@/lib/utils/season';
 
 interface CutLineState {
   effectiveCutLine: number;
@@ -808,22 +809,10 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [probability]);
 
-  // Calculate the last season label dynamically
-  // Current season is 2025-2026, so we get the start year (2025) and format as "24-25"
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth(); // 0-11
-  const currentYear = currentDate.getFullYear();
-
-  // NHL season typically starts in October (month 9)
-  // If we're before October, we're still in the previous season
-  const seasonStartYear = currentMonth >= 9 ? currentYear : currentYear - 1;
-
-  // Last season would be one year before
-  const lastSeasonStartYear = seasonStartYear - 1;
-  const lastSeasonEndYear = seasonStartYear;
-
-  // Format as "YY-YY" (e.g., "24-25")
-  const lastSeasonLabel = `${String(lastSeasonStartYear).slice(-2)}-${String(lastSeasonEndYear).slice(-2)}`;
+  // Last season as "25-26", from the NHL season calendar (seasons roll over in
+  // September, not October, so a month check mislabels opening week).
+  const lastSeason = previousNHLSeason(getCurrentNHLSeason());
+  const lastSeasonLabel = `${lastSeason.slice(2, 4)}-${lastSeason.slice(6, 8)}`;
 
   // Share functionality (window is undefined during SSR — this component renders server-side on team pages)
   const teamUrl = typeof window !== 'undefined'
@@ -869,7 +858,8 @@ ${teamUrl}
       } : undefined}
     >
       {/* Year-over-Year Toggle Text Button — hidden entirely in playoff mode (dropped to avoid chevron overlap and simplify the collapsed card) */}
-      {onYearOverYearToggle && !inPlayoffs && (
+      {/* Hidden until the first game: "same point last year" needs games played. */}
+      {onYearOverYearToggle && !inPlayoffs && stats.gamesPlayed > 0 && (
         <button
           onClick={onYearOverYearToggle}
           disabled={yearOverYearLoading}
@@ -1030,7 +1020,7 @@ ${teamUrl}
         )}
 
         {/* Playoff mode: vs Last Year toggle pinned to the current-year section's bottom-right so it stays put when the Last Year section expands below */}
-        {inPlayoffs && onYearOverYearToggle && !sectionCollapsed && (
+        {inPlayoffs && onYearOverYearToggle && !sectionCollapsed && stats.gamesPlayed > 0 && (
           <button
             onClick={onYearOverYearToggle}
             disabled={yearOverYearLoading}
