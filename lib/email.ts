@@ -330,7 +330,7 @@ async function sendBoxscoreRecapForTeam(
     if (teamWon) pointsBefore -= 2;
     else if (otGame) pointsBefore -= 1;
     const gpBefore = standing.gamesPlayed - 1;
-    if (gpBefore <= 0) return { before: 50, after };
+    if (gpBefore < 0) return { before: 50, after };
     const projectedBefore = getModelProjectedPoints(pointsBefore, gpBefore, standing.teamAbbrev.default);
     const divCutLine = getDivCutLine(standing, standings);
     const wcCutLine = getWcCutLine(standing, standings);
