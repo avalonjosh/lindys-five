@@ -414,28 +414,42 @@ function SeasonSection({
             ? isGoatMode ? 'bg-zinc-800/50' : 'bg-slate-200'
             : isGoatMode ? 'bg-zinc-800' : 'bg-gray-200'
         }`}>
-          {/* Current points bar */}
-          <div
-            className={`h-8 rounded-l-full transition-all duration-500 relative shadow-md${currentProgress >= 100 ? ' rounded-r-full' : ''}`}
-            style={{ width: `${Math.min(currentProgress, 100)}%`, backgroundColor: barColor }}
-          >
-            {/* Show points label when there's enough room */}
-            {currentProgress > 0 && (
-              <span
-                className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 text-xs md:text-sm font-bold"
-                style={{ color: barTextColor }}
-              >
-                {totalPoints}
-              </span>
-            )}
+          {/* Current points bar, clipped to the track so a sliver of fill still follows the rounded end */}
+          <div className="absolute inset-0 rounded-full overflow-hidden">
+            <div
+              className="h-8 transition-all duration-500 relative shadow-md"
+              style={{ width: `${Math.min(currentProgress, 100)}%`, backgroundColor: barColor }}
+            >
+              {/* Points label inside the fill once it is wide enough to hold it */}
+              {currentProgress >= 10 && (
+                <span
+                  className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 text-xs md:text-sm font-bold"
+                  style={{ color: barTextColor }}
+                >
+                  {totalPoints}
+                </span>
+              )}
+            </div>
           </div>
+
+          {/* Early season: the fill is too narrow for the label, so it sits just past it */}
+          {currentProgress > 0 && currentProgress < 10 && (
+            <span
+              className={`absolute top-1/2 -translate-y-1/2 text-xs md:text-sm font-bold ${
+                isGoatMode ? 'text-zinc-300' : isLastYear ? 'text-slate-600' : 'text-gray-700'
+              }`}
+              style={{ left: `max(calc(${Math.max(currentProgress, isLastYear ? 0 : expectedProgress)}% + 8px), 24px)` }}
+            >
+              {totalPoints}
+            </span>
+          )}
 
           {/* Expected pace marker - only show for current year */}
           {!isLastYear && gamesPlayed > 0 && (
             <div
               className="absolute top-0 h-8 flex flex-col items-center"
               style={{
-                left: `calc(${Math.min(expectedProgress, 100)}% - 4px)` // Shift left so white line is flush with bar edge and triangle overlaps
+                left: `max(calc(${Math.min(expectedProgress, 100)}% - 4px), 10px)` // Shift left so white line is flush with bar edge and triangle overlaps; kept clear of the rounded end
               }}
             >
               <div className={`w-0 h-0 border-l-[4px] border-r-[4px] border-t-[5px] border-l-transparent border-r-transparent -mb-px ${indicatorColor}`}></div>
