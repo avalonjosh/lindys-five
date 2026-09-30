@@ -223,8 +223,10 @@ All crons are configured in `vercel.json` and authorized via `CRON_SECRET` Beare
 ### Outreach
 | Key Pattern | Type | Expiry | Purpose |
 |-------------|------|--------|---------|
-| `outreach:contact:{id}` | String (JSON) | None | Media/influencer contact record |
+| `outreach:contact:{id}` | String (JSON) | None | Media/influencer contact record, including the outreach sequence (`channel`, `contactedAt`, `followupSentAt`, `nextActionAt`, `outcome`; status adds `bounced`). Shape and rules in `lib/outreach.ts` |
 | `outreach:contacts` | Set | None | All contact IDs |
+
+Outreach emails are sent by hand from Josh's personal email, never through Resend. The admin tab only tracks the sequence (first email, one follow-up after 7 days) and shows a "Follow-ups due" list. Record activity from the command line with `npx tsx scripts/outreach.ts` (`find`, `sent`, `followup`, `replied`, `bounced`, `due`, `status`). The contact list holds personal email addresses: it lives only in KV and in a gitignored local file, never in the repo or `/public`.
 
 ## SEO Implementation
 

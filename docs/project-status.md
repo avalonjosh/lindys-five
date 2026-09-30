@@ -67,6 +67,12 @@ Baseline (all emails ever, to 2026-09-28): 30 active subscribers (15 Sabres, 8 N
 - **Phase 4 (shipped, off until enabled):** `email-gift-guide` (Nov 24 15:00 UTC yearly, once per team per year; gear card, category buttons, next home game tickets) and `email-clinch` (daily 12:30 UTC, NHL, first clinch per team per season; playoff gear + playoff tickets). Toggles `gift-guide-enabled` / `clinch-enabled` in Admin > Newsletter; both support `?preview=1&team=` and `?test=`.
 - Measure: Admin > Newsletter affiliate clicks, Admin > Affiliates placements `email-*`.
 
+### Media outreach (started 2026-09-30)
+Josh sends every email by hand from a personal account and tells Claude what went out and what came back; Claude records it with `npx tsx scripts/outreach.ts` (standing approval for these KV writes only). Admin > Outreach shows the sequence per contact and a "Follow-ups due" list. Copy is short and personal (templates in `OutreachDashboard.tsx`): first name, lowercase subject, one link to the team page, no ask, signed Josh. Never claim Monte Carlo odds, AI daily recaps, "no ads" or the WGR mention.
+- List state: 167 NHL contacts in KV, none contacted, 65 with email (none verified), 14 teams with no email at all, no MLB/NFL contacts. Spot check found 2 of 3 stale (Fear The Fin address has no mail server; Die By The Blade is now under Expected Buffalo, `expectedbuf@gmail.com`). Sabres list is missing Lance Lysowski (Buffalo News), Buffalo Hockey Beat, Sabre Noise, SabreSpace.
+- To do: contact research pass (re-verify the 65, fill the 14 empty teams, extend Buffalo), then first batch of 10 to 15, Buffalo first. Optional: fill each team's current odds into the email.
+- The contact file was public at `/data/outreach-contacts.json` and in the public GitHub repo until 2026-09-30. It is removed from the site and the repo going forward, but it remains in git history (rewriting history was not done).
+
 ### Home page redesign
 Pass 1 + polish shipped (3683e04, d6afd42, 770de48). Mockup canvas: https://claude.ai/artifact/LaBeaTyxRko4H3SERSqASK (re-read for Josh's comments before building).
 

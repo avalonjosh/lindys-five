@@ -1,23 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { verifyAdmin } from '@/lib/adminAuth';
-
-export interface OutreachContact {
-  id: string;
-  name: string;
-  outlet: string;
-  type: 'blog' | 'podcast' | 'beat_writer' | 'radio' | 'tv' | 'other';
-  team: string;
-  email: string;
-  twitter: string;
-  website: string;
-  notes: string;
-  status: 'not_contacted' | 'contacted' | 'responded' | 'converted' | 'declined';
-  contactedAt?: string;
-  respondedAt?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import type { OutreachContact } from '@/lib/outreach';
 
 // GET - fetch all contacts (batched read, no per-contact round trips)
 export async function GET(request: NextRequest) {
@@ -65,8 +49,12 @@ export async function POST(request: NextRequest) {
       website: body.website || '',
       notes: body.notes || '',
       status: body.status || 'not_contacted',
+      channel: body.channel || undefined,
       contactedAt: body.contactedAt || undefined,
+      followupSentAt: body.followupSentAt || undefined,
       respondedAt: body.respondedAt || undefined,
+      nextActionAt: body.nextActionAt || undefined,
+      outcome: body.outcome || undefined,
       createdAt: body.createdAt || now,
       updatedAt: now,
     };

@@ -39,3 +39,7 @@ tsconfig.tsbuildinfo
 
 # Perfect Season raw datasets (re-downloadable, not committed)
 raw-data/
+
+# Outreach contact list (personal email addresses; lives in KV, never in the repo or /public)
+/data/outreach-contacts.*
+/public/data/outreach-contacts.*

@@ -11,27 +11,11 @@ import {
   Input, Textarea, Select, SearchInput, Field, Modal, EmptyState,
 } from './ui';
 import { NHL_TEAMS, MLB_TEAMS, findTeam, getTeamUrl } from '@/lib/teamConfig';
-
-interface OutreachContact {
-  id: string;
-  name: string;
-  outlet: string;
-  type: 'blog' | 'podcast' | 'beat_writer' | 'radio' | 'tv' | 'other';
-  team: string;
-  email: string;
-  twitter: string;
-  website: string;
-  notes: string;
-  status: 'not_contacted' | 'contacted' | 'responded' | 'converted' | 'declined';
-  contactedAt?: string;
-  respondedAt?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import { applyOutreachEvent, isFollowupDue, sequenceLabel, type OutreachContact, type OutreachStatus } from '@/lib/outreach';
 
 type FilterTeam = 'all' | string;
 type FilterType = 'all' | 'blog' | 'podcast' | 'beat_writer' | 'radio' | 'tv' | 'other';
-type FilterStatus = 'all' | 'not_contacted' | 'contacted' | 'responded' | 'converted' | 'declined';
+type FilterStatus = 'all' | OutreachStatus;
 
 const TYPE_LABELS: Record<string, string> = {
   blog: 'Blog',
@@ -48,6 +32,7 @@ const STATUS_LABELS: Record<string, string> = {
   responded: 'Responded',
   converted: 'Converted',
   declined: 'Declined',
+  bounced: 'Bounced',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -56,74 +41,35 @@ const STATUS_COLORS: Record<string, string> = {
   responded: 'bg-blue-50 text-blue-700',
   converted: 'bg-green-50 text-green-700',
   declined: 'bg-red-50 text-red-600',
+  bounced: 'bg-orange-50 text-orange-700',
 };
 
-// Templates are sport-aware: {{league}} and {{sport_fan}} resolve from the
-// contact's team (NHL or MLB), and {{team_url}} uses the sport-correct route.
+// Short, personal notes sent by hand from Josh's own email. {{team_url}} uses
+// the sport-correct route. No feature lists, no asks, no claims about the model.
 const TEMPLATES = {
   cold: {
-    name: 'Cold Outreach',
-    subject: "Free tool for {{team_name}} coverage — Lindy's Five",
+    name: 'First Email',
+    subject: 'made a {{team_short}} playoff tracker',
     body: `Hi {{contact_name}},
 
-I'm a developer and {{sport_fan}} who built Lindy's Five — a free, real-time dashboard for every {{league}} team. I wanted to share it because I think it could be useful for your {{team_name}} coverage at {{outlet_name}}.
+I built a site that tracks the {{team_possessive}} progress toward making the playoffs. It started as just a Sabres thing, a lot of fans ended up really liking it, so I expanded it to every team. Figured I'd send it your way to check out:
 
-Here's the {{team_name}} page: {{team_url}}
+{{team_url}}
 
-It pulls live data from the official {{league}} API and shows:
-- Live scores and game results
-- Full standings with playoff odds (Monte Carlo simulations)
-- Team stats, streaks, and schedule
-- AI-generated daily recaps
-
-Buffalo sports radio (WGR 550) has featured the site on air and their listeners loved it, so I'm reaching out to media folks in other markets who might find it useful — whether for personal reference, content ideas, or sharing with your audience.
-
-It's completely free, no ads, and works great on mobile. The site now covers every NHL and MLB team. Would love to hear what you think.
-
-Best,
-Josh Rabenold
-Lindy's Five — {{team_url}}`,
+Josh`,
   },
   followup: {
     name: 'Follow-Up',
-    subject: "Re: Free tool for {{team_name}} coverage — Lindy's Five",
+    subject: 'Re: made a {{team_short}} playoff tracker',
     body: `Hi {{contact_name}},
 
-Just wanted to bump this in case it got buried — I built a free real-time dashboard for every {{league}} team and thought it might be useful for your {{team_name}} coverage.
+[One line on their team this week: a streak, or a jump in the odds.] Made me think of the {{team_short}} tracker I sent over last week:
 
-Here's the direct link: {{team_url}}
+{{team_url}}
 
-A few things that might be interesting for your work:
-- Playoff odds update daily with Monte Carlo simulations
-- Schedule view shows upcoming opponents and recent results at a glance
-- Works great on phone during games or pressers
+No worries if it's not your thing.
 
-No pressure at all — just thought it could be a handy tool. Happy to answer any questions.
-
-Best,
-Josh Rabenold`,
-  },
-  podcast: {
-    name: 'Radio/Podcast Pitch',
-    subject: '{{team_name}} data tool — available for on-air use or guest spot',
-    body: `Hi {{contact_name}},
-
-I'm a developer who built Lindy's Five, a free real-time dashboard for every {{league}} team. I've been listening to {{outlet_name}} and thought this could be a useful resource for your show.
-
-Here's the {{team_name}} page: {{team_url}}
-
-The site has real-time standings, playoff odds (Monte Carlo simulations), and AI-generated daily recaps — all pulled from official {{league}} data. Buffalo's WGR 550 has featured it on air and it got a great response from listeners.
-
-A few ways this could work for your show:
-- On-air resource: Quick reference for standings, stats, and playoff scenarios during broadcasts
-- Listener engagement: Share the link — fans love checking playoff odds daily
-- Guest segment: Happy to come on and talk about the data behind playoff odds, team trends, or how the tool works
-
-The site is free, no login required, and works on any device. Would love to chat if you're interested.
-
-Best,
-Josh Rabenold
-Lindy's Five — {{team_url}}`,
+Josh`,
   },
 };
 
@@ -132,6 +78,14 @@ const SITE_URL = 'https://www.lindysfive.com';
 function getTeamName(slug: string): string {
   const team = findTeam(slug);
   return team ? `${team.city} ${team.name}` : slug;
+}
+
+function getTeamShort(slug: string): string {
+  return findTeam(slug)?.name ?? slug;
+}
+
+function possessive(name: string): string {
+  return name.endsWith('s') ? `${name}'` : `${name}'s`;
 }
 
 function getLeague(slug: string): string {
@@ -144,14 +98,11 @@ function getFullTeamUrl(slug: string): string {
 }
 
 function fillTemplate(template: string, contact: OutreachContact): string {
-  const league = getLeague(contact.team);
   return template
     .replace(/\{\{contact_name\}\}/g, contact.name.split(' ')[0] || contact.name)
-    .replace(/\{\{team_name\}\}/g, getTeamName(contact.team))
-    .replace(/\{\{team_url\}\}/g, getFullTeamUrl(contact.team))
-    .replace(/\{\{outlet_name\}\}/g, contact.outlet)
-    .replace(/\{\{league\}\}/g, league)
-    .replace(/\{\{sport_fan\}\}/g, league === 'MLB' ? 'baseball fan' : 'hockey fan');
+    .replace(/\{\{team_short\}\}/g, getTeamShort(contact.team))
+    .replace(/\{\{team_possessive\}\}/g, possessive(getTeamShort(contact.team)))
+    .replace(/\{\{team_url\}\}/g, getFullTeamUrl(contact.team));
 }
 
 // Grouped team options for selectors (NHL then MLB, alphabetical by city)
@@ -237,9 +188,14 @@ export default function OutreachDashboard() {
     const contacted = contacts.filter(c => c.status === 'contacted').length;
     const responded = contacts.filter(c => c.status === 'responded').length;
     const converted = contacts.filter(c => c.status === 'converted').length;
-    const teamsSet = new Set(contacts.map(c => c.team));
-    return { total, withEmail, contacted, responded, converted, teams: teamsSet.size };
+    const due = contacts.filter(c => isFollowupDue(c)).length;
+    return { total, withEmail, contacted, responded, converted, due };
   }, [contacts]);
+
+  const dueContacts = useMemo(
+    () => contacts.filter(c => isFollowupDue(c)).sort((a, b) => (a.nextActionAt || '').localeCompare(b.nextActionAt || '')),
+    [contacts]
+  );
 
   async function handleSaveContact(contact: Partial<OutreachContact>) {
     setSaving(true);
@@ -283,22 +239,21 @@ export default function OutreachDashboard() {
   }
 
   async function handleStatusChange(contact: OutreachContact, newStatus: OutreachContact['status']) {
-    const updates: Partial<OutreachContact> = { ...contact, status: newStatus };
-    if (newStatus === 'contacted' && !contact.contactedAt) {
-      updates.contactedAt = new Date().toISOString();
-    }
-    if (newStatus === 'responded' && !contact.respondedAt) {
-      updates.respondedAt = new Date().toISOString();
-    }
-    await handleSaveContact(updates);
+    // Same sequence rules the chat-driven updates use (lib/outreach.ts).
+    const updated =
+      newStatus === 'contacted' ? applyOutreachEvent(contact, { kind: 'sent' })
+      : newStatus === 'responded' ? applyOutreachEvent(contact, { kind: 'replied' })
+      : newStatus === 'converted' || newStatus === 'declined' || newStatus === 'bounced' ? applyOutreachEvent(contact, { kind: newStatus })
+      : { ...contact, status: newStatus };
+    await handleSaveContact(updated);
   }
 
-  async function handleImportFromFile() {
+  // Contacts are imported from a JSON file on your computer. The list is never
+  // served from the site (it holds personal email addresses).
+  async function handleImportFromFile(file: File) {
     setImporting(true);
     try {
-      const dataRes = await fetch('/data/outreach-contacts.json');
-      if (!dataRes.ok) throw new Error('Could not load contacts file');
-      const jsonContacts = await dataRes.json();
+      const jsonContacts = JSON.parse(await file.text());
 
       const importRes = await fetch('/api/outreach/import', {
         method: 'POST',
@@ -319,10 +274,10 @@ export default function OutreachDashboard() {
   }
 
   function handleExportCSV() {
-    const header = 'Name,Outlet,Type,Team,Email,Twitter,Website,Status,Notes';
+    const header = 'Name,Outlet,Type,Team,Email,Twitter,Website,Status,Sequence,Outcome,Notes';
     const rows = filteredContacts.map(c => {
       const esc = (s: string) => `"${(s || '').replace(/"/g, '""')}"`;
-      return [esc(c.name), esc(c.outlet), esc(c.type), esc(getTeamName(c.team)), esc(c.email), esc(c.twitter), esc(c.website), esc(c.status), esc(c.notes)].join(',');
+      return [esc(c.name), esc(c.outlet), esc(c.type), esc(getTeamName(c.team)), esc(c.email), esc(c.twitter), esc(c.website), esc(c.status), esc(sequenceLabel(c)), esc(c.outcome || ''), esc(c.notes)].join(',');
     });
     const csv = [header, ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -349,7 +304,7 @@ export default function OutreachDashboard() {
       <main className="mx-auto max-w-7xl px-4 py-8">
         <PageHeader
           title="Outreach"
-          description="Media contacts and pitch templates — NHL and MLB markets."
+          description="Media contacts and where each one is in the outreach sequence. Emails are sent by hand."
           actions={
             <>
               <Button
@@ -369,7 +324,7 @@ export default function OutreachDashboard() {
           <StatCard icon={<Send className="h-4 w-4" />} label="Contacted" value={stats.contacted} />
           <StatCard icon={<MessageSquare className="h-4 w-4" />} label="Responded" value={stats.responded} />
           <StatCard icon={<MailCheck className="h-4 w-4" />} label="Converted" value={stats.converted} />
-          <StatCard icon={<Radio className="h-4 w-4" />} label="Teams" value={stats.teams} />
+          <StatCard icon={<Radio className="h-4 w-4" />} label="Follow-ups Due" value={stats.due} />
         </div>
 
         {/* Filters + secondary actions */}
@@ -406,14 +361,43 @@ export default function OutreachDashboard() {
           )}
           <span className="ml-auto flex items-center gap-2 text-sm text-gray-400">
             {filteredContacts.length} of {contacts.length}
-            <Button variant="ghost" size="sm" onClick={handleImportFromFile} disabled={importing}>
-              <Upload className="h-4 w-4" /> {importing ? 'Importing…' : 'Import'}
-            </Button>
+            <label className={`inline-flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1 text-sm text-gray-600 transition-colors hover:bg-gray-100 ${importing ? 'pointer-events-none opacity-50' : ''}`}>
+              <Upload className="h-4 w-4" /> {importing ? 'Importing…' : 'Import JSON'}
+              <input
+                type="file"
+                accept="application/json,.json"
+                className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) handleImportFromFile(f); }}
+              />
+            </label>
             <Button variant="ghost" size="sm" onClick={handleExportCSV}>
               <Download className="h-4 w-4" /> CSV
             </Button>
           </span>
         </div>
+
+        {dueContacts.length > 0 && (
+          <Card className="mb-4">
+            <h2 className="mb-2 text-sm font-semibold text-gray-900">Follow-ups due ({dueContacts.length})</h2>
+            <ul className="divide-y divide-gray-100">
+              {dueContacts.map(c => (
+                <li key={c.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
+                  <span className="font-medium text-gray-900">{c.name}</span>
+                  <span className="text-xs text-gray-500">{c.outlet} · {getTeamName(c.team)}</span>
+                  <span className="text-xs text-gray-400">{sequenceLabel(c)}</span>
+                  <span className="ml-auto flex items-center gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => setShowTemplatePreview({ contact: c, template: 'followup' })}>
+                      <Mail className="h-4 w-4" /> Follow-up copy
+                    </Button>
+                    <Button variant="secondary" size="sm" disabled={saving} onClick={() => handleSaveContact(applyOutreachEvent(c, { kind: 'followup' }))}>
+                      <Check className="h-4 w-4" /> Mark sent
+                    </Button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
 
         {error && (
           <div className="mb-4">
@@ -436,7 +420,7 @@ export default function OutreachDashboard() {
               <p className="mb-1 font-semibold text-gray-600">No contacts found</p>
               <p>
                 {contacts.length === 0
-                  ? 'Click "Import" to load contacts from the data file, or add them manually.'
+                  ? 'Click "Import JSON" to load contacts from a file on your computer, or add them manually.'
                   : 'Try adjusting your filters.'}
               </p>
             </EmptyState>
@@ -523,6 +507,7 @@ function ContactRow({
             <span className="text-xs text-gray-400">{getTeamName(contact.team)}</span>
             <Badge variant="neutral">{TYPE_LABELS[contact.type] || contact.type}</Badge>
             <Badge variant={getLeague(contact.team) === 'MLB' ? 'info' : 'accent'}>{getLeague(contact.team)}</Badge>
+            {sequenceLabel(contact) && <span className="text-xs text-gray-500">{sequenceLabel(contact)}</span>}
           </div>
         </div>
 
@@ -546,7 +531,7 @@ function ContactRow({
         <div className="flex shrink-0 items-center gap-1" onClick={e => e.stopPropagation()}>
           {contact.email && (
             <button
-              onClick={() => onCopyEmail(contact.type === 'podcast' || contact.type === 'radio' ? 'podcast' : 'cold')}
+              onClick={() => onCopyEmail(contact.contactedAt ? 'followup' : 'cold')}
               className="p-1.5 text-gray-400 transition-colors hover:text-gray-700"
               title="Copy email template"
             >
@@ -608,16 +593,16 @@ function ContactRow({
                 <span className="text-gray-700">{contact.notes}</span>
               </div>
             )}
-            {contact.contactedAt && (
-              <div>
-                <span className="text-gray-400">Contacted: </span>
-                <span className="text-gray-700">{new Date(contact.contactedAt).toLocaleDateString()}</span>
+            {sequenceLabel(contact) && (
+              <div className="sm:col-span-2">
+                <span className="text-gray-400">Sequence: </span>
+                <span className="text-gray-700">{sequenceLabel(contact)}</span>
               </div>
             )}
-            {contact.respondedAt && (
-              <div>
-                <span className="text-gray-400">Responded: </span>
-                <span className="text-gray-700">{new Date(contact.respondedAt).toLocaleDateString()}</span>
+            {contact.outcome && (
+              <div className="sm:col-span-2">
+                <span className="text-gray-400">Outcome: </span>
+                <span className="text-gray-700">{contact.outcome}</span>
               </div>
             )}
           </div>
@@ -639,6 +624,14 @@ function ContactRow({
       )}
     </Card>
   );
+}
+
+// <input type="date"> helpers: stored timestamps are ISO, shown as the Eastern date.
+function toDateInput(iso?: string): string {
+  return iso ? new Date(iso).toLocaleDateString('en-CA', { timeZone: 'America/New_York' }) : '';
+}
+function fromDateInput(ymd: string): string | undefined {
+  return ymd ? new Date(`${ymd}T16:00:00Z`).toISOString() : undefined;
 }
 
 function ContactFormModal({
@@ -741,6 +734,35 @@ function ContactFormModal({
             className="resize-none"
           />
         </Field>
+        {contact && (
+          <>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="First sent">
+                <Input type="date" value={toDateInput(form.contactedAt)} onChange={e => setForm({ ...form, contactedAt: fromDateInput(e.target.value) })} />
+              </Field>
+              <Field label="Follow-up sent">
+                <Input type="date" value={toDateInput(form.followupSentAt)} onChange={e => setForm({ ...form, followupSentAt: fromDateInput(e.target.value) })} />
+              </Field>
+              <Field label="Next follow-up">
+                <Input type="date" value={form.nextActionAt || ''} onChange={e => setForm({ ...form, nextActionAt: e.target.value || undefined })} />
+              </Field>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Channel">
+                <Select value={form.channel || ''} onChange={e => setForm({ ...form, channel: (e.target.value || undefined) as OutreachContact['channel'] })}>
+                  <option value="">Not set</option>
+                  <option value="email">Email</option>
+                  <option value="x">X</option>
+                </Select>
+              </Field>
+              <div className="col-span-2">
+                <Field label="Outcome">
+                  <Input value={form.outcome || ''} onChange={e => setForm({ ...form, outcome: e.target.value })} placeholder="What came of it" />
+                </Field>
+              </div>
+            </div>
+          </>
+        )}
         {contact && (
           <Field label="Status">
             <Select
