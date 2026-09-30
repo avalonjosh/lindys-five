@@ -61,6 +61,7 @@ export default function WhereToWatch({
   const hasUs = info.national.length > 0 || info.home.length > 0 || info.away.length > 0;
   if (!hasUs && info.canada.length === 0) return null;
   const anyAffiliate = services.some((o) => isWatchAffiliate(o.id));
+  const primeAffiliate = services.some((o) => o.id === 'prime' && isWatchAffiliate(o.id));
   const canadaServices = info.canada.flatMap((n) => n.services).filter((s, i, a) => a.indexOf(s) === i);
 
   return (
@@ -115,7 +116,10 @@ export default function WhereToWatch({
       )}
 
       {anyAffiliate && (
-        <p className="mt-2 text-[11px] text-gray-400">Lindy&apos;s Five may earn a commission when you sign up through these links.</p>
+        <p className="mt-2 text-[11px] text-gray-400">
+          {primeAffiliate && 'As an Amazon Associate, Lindy\u2019s Five earns from qualifying purchases. '}
+          Lindy&apos;s Five may earn a commission when you sign up through these links.
+        </p>
       )}
     </div>
   );
