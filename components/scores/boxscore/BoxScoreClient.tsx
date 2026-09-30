@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { fetchBoxScoreData, fetchStandingsForDate, fetchRightRail, fetchPlayoffPreGameContext, fetchPlayoffSeriesHub, type PlayoffPreGameContext, type SeriesHubData } from '@/lib/services/boxscoreApi';
 import type {
   BoxscoreResponse,
@@ -75,10 +75,12 @@ function computeSeriesWins(
 }
 
 interface BoxScoreClientProps {
+  // Server-rendered game summary (crawlable copy of the result), shown under the box score
+  serverSummary?: ReactNode;
   gameId: string;
 }
 
-export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
+export default function BoxScoreClient({ gameId, serverSummary }: BoxScoreClientProps) {
   const [boxscore, setBoxscore] = useState<BoxscoreResponse | null>(null);
   const [landing, setLanding] = useState<LandingResponse | null>(null);
   const [standings, setStandings] = useState<StandingsTeam[]>([]);
@@ -257,7 +259,7 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 overflow-x-hidden">
       {/* Loading State */}
       {loading && (
-        <div className="flex justify-center items-center py-12">
+        <div className="flex justify-center items-start py-12 min-h-screen">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-transparent border-blue-500" />
         </div>
       )}
@@ -500,6 +502,8 @@ export default function BoxScoreClient({ gameId }: BoxScoreClientProps) {
           </main>
         </>
       )}
+
+      {serverSummary}
 
       <footer className="mt-auto py-6 text-center text-sm text-gray-500">
         <p>Lindy&apos;s Five &bull; {new Date().getFullYear()}</p>

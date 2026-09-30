@@ -314,6 +314,7 @@ Curated AI-crawler index: site summary, methodology, data sources, and deep link
 ### SEO-Specific Patterns
 - **ISR revalidation:** odds + team pages every 5 min, `/playoffs` every 60s, gear/tickets every 24h, blog hubs and individual posts 60s. Blog filtered lists (`?type=`) paginate at 24 via `?page=` (`components/blog/Pagination.tsx`)
 - **Screen-reader SEO text:** NHL and MLB team pages (and the hub pages, and the Perfect Season pages) have an `sr-only` block with a server-rendered, answer-shaped summary of live stats for crawlers/AI engines
+- **Box score server summary:** the box scores are client-rendered, so both box score pages pass a server-rendered `serverSummary` card into the client (`GameSummaryServer` for NHL: result, scoring by period, three stars; `MLBGameSummaryServer`: result, line score, pitching decisions; both link to the two team pages). Added after GSC flagged ~270 box scores as Soft 404 (about 200 chars of server HTML). Keep it rendering in the loading and error states too
 - **Single H1:** one canonical H1 per page; hub pages keep the visible H1 and use `<p>` for the sr-only keyword line
 - **Blog posts:** use `metaDescription` from DB, fallback to `excerpt`. `game-recap` and `set-recap` posts are `noindex, follow` and excluded from the sitemap (auto-generated, duplicate the box score pages, earned ~0 clicks); news/weekly/custom stay indexed
 - **Admin pages:** `robots: { index: false, follow: false }`; Perfect Season `/share` pages `robots: { index: false, follow: true }` (UGC)

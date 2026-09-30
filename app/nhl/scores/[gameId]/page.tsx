@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import type { LandingResponse } from '@/lib/types/boxscore';
 import BoxScoreClient from '@/components/scores/boxscore/BoxScoreClient';
 import BreadcrumbNav from '@/components/seo/BreadcrumbNav';
+import GameSummaryServer from '@/components/scores/boxscore/GameSummaryServer';
 
 interface PageProps {
   params: Promise<{ gameId: string }>;
@@ -130,7 +131,7 @@ export default async function BoxScorePage({ params }: PageProps) {
         />
       </div>
       <h1 className="sr-only">{matchup}: Box Score & Stats</h1>
-      <BoxScoreClient gameId={gameId} />
+      <BoxScoreClient gameId={gameId} serverSummary={summary ? <GameSummaryServer game={summary} /> : undefined} />
     </>
   );
 }

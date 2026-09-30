@@ -1,27 +1,20 @@
 import type { Metadata } from 'next';
 import MLBBoxScoreClient from '@/components/mlb/boxscore/MLBBoxScoreClient';
 import BreadcrumbNav from '@/components/seo/BreadcrumbNav';
+import MLBGameSummaryServer, { type MLBSummaryGame } from '@/components/mlb/boxscore/MLBGameSummaryServer';
 
 interface Props {
   params: Promise<{ gameId: string }>;
 }
 
-interface MLBScheduleGame {
-  gameDate?: string;
-  status?: { abstractGameState?: string };
-  venue?: { name?: string };
-  teams?: {
-    away?: { score?: number; team?: { name?: string } };
-    home?: { score?: number; team?: { name?: string } };
-  };
-}
+type MLBScheduleGame = MLBSummaryGame;
 
 // Lightweight server-side fetch so the SportsEvent schema (teams, date, venue,
 // result) is in the initial HTML for crawlers/AI engines.
 async function fetchGameSummary(gameId: string): Promise<MLBScheduleGame | null> {
   try {
     const res = await fetch(
-      `https://statsapi.mlb.com/api/v1/schedule?gamePk=${gameId}&hydrate=team,linescore,venue`,
+      `https://statsapi.mlb.com/api/v1/schedule?gamePk=${gameId}&hydrate=team,linescore,venue,decisions`,
       { next: { revalidate: 300 } }
     );
     if (!res.ok) return null;
@@ -128,7 +121,7 @@ export default async function MLBBoxScorePage({ params }: Props) {
         />
       </div>
       <h1 className="sr-only">{matchup}: Box Score & Stats</h1>
-      <MLBBoxScoreClient gameId={gameId} />
+      <MLBBoxScoreClient gameId={gameId} serverSummary={summary ? <MLBGameSummaryServer game={summary} /> : undefined} />
     </>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import type { MLBBoxScoreData } from '@/lib/types/mlb';
 import { fetchMLBBoxScore } from '@/lib/services/mlbApi';
 import WhereToWatch from '@/components/watch/WhereToWatch';
@@ -17,9 +17,11 @@ import MLBSeasonSeries from './MLBSeasonSeries';
 
 interface Props {
   gameId: string;
+  // Server-rendered game summary (crawlable copy of the result), shown under the box score
+  serverSummary?: ReactNode;
 }
 
-export default function MLBBoxScoreClient({ gameId }: Props) {
+export default function MLBBoxScoreClient({ gameId, serverSummary }: Props) {
   const [data, setData] = useState<MLBBoxScoreData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -51,19 +53,25 @@ export default function MLBBoxScoreClient({ gameId }: Props) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-transparent border-blue-500" />
+      <div className="bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-t-transparent border-blue-500" />
+        </div>
+        {serverSummary}
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">Failed to load box score.</p>
-          <button onClick={loadData} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Retry</button>
+      <div className="bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="min-h-[50vh] flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-gray-600 mb-4">Failed to load box score.</p>
+            <button onClick={loadData} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Retry</button>
+          </div>
         </div>
+        {serverSummary}
       </div>
     );
   }
@@ -142,11 +150,13 @@ export default function MLBBoxScoreClient({ gameId }: Props) {
             <MLBPitchingStats pitchers={data.pitchers.home} teamName={data.homeTeam.teamName} teamAbbrev={data.homeTeam.abbreviation} teamLogo={data.homeTeam.logo} />
           </>
         )}
-
-        <footer className="text-center text-xs text-gray-400 py-8">
-          Data provided by MLB Stats API &bull; &copy; {new Date().getFullYear()} JRR Apps
-        </footer>
       </main>
+
+      {serverSummary}
+
+      <footer className="text-center text-xs text-gray-400 pt-2 pb-8">
+        Data provided by MLB Stats API &bull; &copy; {new Date().getFullYear()} JRR Apps
+      </footer>
     </div>
   );
 }

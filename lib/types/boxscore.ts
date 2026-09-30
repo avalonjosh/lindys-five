@@ -192,6 +192,7 @@ export interface LandingResponse {
     id: number;
     abbrev: string;
     score: number;
+    sog?: number;
     logo: string;
     commonName: { default: string };
     placeName: { default: string };
@@ -200,6 +201,7 @@ export interface LandingResponse {
     id: number;
     abbrev: string;
     score: number;
+    sog?: number;
     logo: string;
     commonName: { default: string };
     placeName: { default: string };
