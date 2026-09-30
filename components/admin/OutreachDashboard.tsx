@@ -33,6 +33,7 @@ const STATUS_LABELS: Record<string, string> = {
   converted: 'Converted',
   declined: 'Declined',
   bounced: 'Bounced',
+  inactive: 'Inactive',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -42,6 +43,7 @@ const STATUS_COLORS: Record<string, string> = {
   converted: 'bg-green-50 text-green-700',
   declined: 'bg-red-50 text-red-600',
   bounced: 'bg-orange-50 text-orange-700',
+  inactive: 'bg-gray-100 text-gray-400',
 };
 
 // Short, personal notes sent by hand from Josh's own email. {{team_url}} uses
@@ -169,7 +171,9 @@ export default function OutreachDashboard() {
     let result = [...contacts];
     if (filterTeam !== 'all') result = result.filter(c => c.team === filterTeam);
     if (filterType !== 'all') result = result.filter(c => c.type === filterType);
+    // Inactive contacts stay on record but only show when asked for.
     if (filterStatus !== 'all') result = result.filter(c => c.status === filterStatus);
+    else result = result.filter(c => c.status !== 'inactive');
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       result = result.filter(c =>
@@ -183,8 +187,9 @@ export default function OutreachDashboard() {
   }, [contacts, filterTeam, filterType, filterStatus, searchQuery]);
 
   const stats = useMemo(() => {
-    const total = contacts.length;
-    const withEmail = contacts.filter(c => c.email).length;
+    const active = contacts.filter(c => c.status !== 'inactive');
+    const total = active.length;
+    const withEmail = active.filter(c => c.email).length;
     const contacted = contacts.filter(c => c.status === 'contacted').length;
     const responded = contacts.filter(c => c.status === 'responded').length;
     const converted = contacts.filter(c => c.status === 'converted').length;
@@ -346,7 +351,7 @@ export default function OutreachDashboard() {
             ))}
           </Select>
           <Select value={filterStatus} onChange={e => setFilterStatus(e.target.value as FilterStatus)} className="!w-auto">
-            <option value="all">All Statuses</option>
+            <option value="all">All Active</option>
             {Object.entries(STATUS_LABELS).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
             ))}
@@ -360,7 +365,7 @@ export default function OutreachDashboard() {
             </button>
           )}
           <span className="ml-auto flex items-center gap-2 text-sm text-gray-400">
-            {filteredContacts.length} of {contacts.length}
+            {filteredContacts.length} of {contacts.filter(c => c.status !== 'inactive').length}
             <label className={`inline-flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1 text-sm text-gray-600 transition-colors hover:bg-gray-100 ${importing ? 'pointer-events-none opacity-50' : ''}`}>
               <Upload className="h-4 w-4" /> {importing ? 'Importing…' : 'Import JSON'}
               <input

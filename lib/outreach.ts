@@ -7,7 +7,9 @@ export type OutreachStatus =
   | 'responded'
   | 'converted'
   | 'declined'
-  | 'bounced';
+  | 'bounced'
+  /** Outlet shut down or the person no longer covers the team. Kept on record, hidden by default. */
+  | 'inactive';
 
 export type OutreachChannel = 'email' | 'x';
 
