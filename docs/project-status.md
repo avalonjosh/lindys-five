@@ -1,6 +1,6 @@
 # Project Status, Reminders & Open Work
 
-Last updated: 2026-09-28. This is the single source of truth for what is in flight, what is due, and where to resume. Keep it current: update it (commit + push) whenever an item ships, a date passes, or a new follow-up appears. Detailed roadmaps live in `docs/whatif-picks-roadmap.md` and `docs/nhl-offseason-plan.md`.
+Last updated: 2026-09-30. This is the single source of truth for what is in flight, what is due, and where to resume. Keep it current: update it (commit + push) whenever an item ships, a date passes, or a new follow-up appears. Detailed roadmaps live in `docs/whatif-picks-roadmap.md` and `docs/nhl-offseason-plan.md`.
 
 ## Working conventions (for Claude)
 
@@ -17,7 +17,7 @@ Cloud routines on Josh's claude.ai account email him at 9am ET for the items mar
 |------|------|
 | Done 2026-09-28 | SEO re-measure (GSC 8/27-9/25): 467 clicks / 59k impr / pos 20.9 vs baseline pace ~138 / 39k per 30d (90d: 414 / 118k / 20.8). Prior 30d 245 clicks. Gains mostly /82-0 (173) and /pick-the-* pages. `/nhl-playoff-odds` impr 59 -> 4.6k but pos 36.7. 9 of 10 watched MLB pages plus /nhl/lightning and /nhl/predators still have zero impressions. Next re-measure ~2026-10-25 (baseline: this row) |
 | Josh, open | Request Indexing in GSC for `/nhl-playoff-odds`, `/nhl`, `/how-playoff-odds-work`, NHL `/nhl/{rangers,kings,kraken,lightning,predators,avalanche}`, MLB `/mlb/{nationals,giants,dodgers,whitesox,mariners,rockies,twins,diamondbacks,orioles,rays}` |
-| 2026-09-29 | League opener (FLA at CAR, 5pm ET). All 32 team pages, the odds page and home cards flip to live at midnight ET (league-wide switch, not per team). Check a team that hasn't played (e.g. /nhl/sabres): odds match preseason, Projected reads "—" |
+| Done 2026-09-30 | League opener check: all 32 team pages and the odds page flipped to live; Sabres at 0 GP show 59% and Projected "—". Fixed opening-week display bugs found in the check (odds flash before cut lines load, NaN PTS% and 0 pace at 0 GP, swapped set record order, early-season summary copy) |
 | 2026-10-01 | Sabres open at CBJ. Sabres' first game: check odds move continuously from the preseason number (Sabres preseason 59%, ~65% after a win, ~49% after a regulation loss) |
 | 2026-10-02 noon UTC | Verify no game recap email went out for a preseason game |
 | 2026-10-05 (email) | StubHub re-harvest: MLB postseason events (how-to below). Wild Card (12 games) done 2026-09-28. Division Series listings show opponent "TBD" until Wild Cards finish (~Oct 2), so harvest DS then, and LCS/WS as each is set; until then those buttons use the team ticket page |

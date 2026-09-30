@@ -176,6 +176,8 @@ export default async function TeamPage({ params }: TeamPageProps) {
 
       if (teamStanding) {
         const started = seasonStats.gamesPlayed > 0;
+        const early = seasonStats.gamesPlayed < 10;
+        const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
         const divTeams = allTeams.filter((t) => t.divisionName === teamStanding.divisionName);
         // Same projected cut lines the odds page uses, so the crawler summary
         // and the visible odds agree.
@@ -195,8 +197,10 @@ export default async function TeamPage({ params }: TeamPageProps) {
           `The ${seasonLabel} NHL season is under way and the ${fullName} have not played yet. They are in the ${teamStanding.divisionName} Division of the ${teamStanding.conferenceName} Conference.`,
           `Before their first game, the model gives them a ${pct}% chance to make the playoffs, based on their preseason projection against a ${seasonStats.playoffTarget}-point playoff target. The number updates after every game.`,
         ].join(' ') : [
-          `The ${fullName} are ${rec} with ${teamStanding.points} points through ${teamStanding.gamesPlayed} games of the ${seasonLabel} season, ${ordinal(teamStanding.divisionSequence)} in the ${teamStanding.divisionName} Division and ${ordinal(teamStanding.conferenceSequence)} in the ${teamStanding.conferenceName} Conference${teamStanding.wildcardSequence > 0 ? ` (${ordinal(teamStanding.wildcardSequence)} wild card spot)` : ''}.`,
-          `At their current pace they project to ${Math.round(seasonStats.projectedPoints)} points, ${seasonStats.pointsAboveBelow >= 0 ? `${seasonStats.pointsAboveBelow} above` : `${Math.abs(seasonStats.pointsAboveBelow)} below`} the ${seasonStats.playoffTarget}-point playoff target, which gives them a ${pct}% chance to make the playoffs. ${statusMessage}.`,
+          `The ${fullName} are ${rec} with ${plural(teamStanding.points, 'point')} through ${plural(teamStanding.gamesPlayed, 'game')} of the ${seasonLabel} season, ${ordinal(teamStanding.divisionSequence)} in the ${teamStanding.divisionName} Division and ${ordinal(teamStanding.conferenceSequence)} in the ${teamStanding.conferenceName} Conference${teamStanding.wildcardSequence > 0 ? ` (${ordinal(teamStanding.wildcardSequence)} wild card spot)` : ''}.`,
+          early
+            ? `The model gives them a ${pct}% chance to make the playoffs. This early in the season that number leans mostly on their preseason projection and moves after every game.`
+            : `At their current pace they project to ${Math.round(seasonStats.projectedPoints)} points, ${seasonStats.pointsAboveBelow >= 0 ? `${seasonStats.pointsAboveBelow} above` : `${Math.abs(seasonStats.pointsAboveBelow)} below`} the ${seasonStats.playoffTarget}-point playoff target, which gives them a ${pct}% chance to make the playoffs. ${statusMessage}.`,
           clinchText,
           `They're on a ${teamStanding.streakCode}${teamStanding.streakCount} streak, ${teamStanding.l10Wins}-${teamStanding.l10Losses}-${teamStanding.l10OtLosses} over their last 10, with a ${teamStanding.goalDifferential >= 0 ? '+' : ''}${teamStanding.goalDifferential} goal differential (${teamStanding.goalFor} for, ${teamStanding.goalAgainst} against), ${teamStanding.homeWins}-${teamStanding.homeLosses}-${teamStanding.homeOtLosses} at home and ${teamStanding.roadWins}-${teamStanding.roadLosses}-${teamStanding.roadOtLosses} on the road.`,
         ].filter(Boolean).join(' ');
@@ -206,7 +210,7 @@ export default async function TeamPage({ params }: TeamPageProps) {
         const lastGame = played[played.length - 1];
         const nextGame = initialGames.find((g) => g.outcome === 'PENDING');
         lastNext = [
-          currentChunk ? `Current 5-game set (Set ${currentChunk.chunkNumber}): ${currentChunk.wins}-${currentChunk.otLosses}-${currentChunk.losses}, ${currentChunk.points} of ${currentChunk.maxPoints} points.` : '',
+          currentChunk ? `Current 5-game set (Set ${currentChunk.chunkNumber}): ${currentChunk.wins}-${currentChunk.losses}-${currentChunk.otLosses}, ${currentChunk.points} of ${currentChunk.maxPoints} points.` : '',
           lastGame ? `Last game: ${lastGame.outcome} ${lastGame.sabresScore}-${lastGame.opponentScore} ${lastGame.isHome ? 'vs' : 'at'} ${lastGame.opponent} (${lastGame.date}).` : '',
           nextGame ? `Next game: ${nextGame.isHome ? 'vs' : 'at'} ${nextGame.opponent}, ${nextGame.date}${nextGame.startTime ? ` at ${nextGame.startTime}` : ''}.` : '',
         ].filter(Boolean).join(' ');
@@ -218,8 +222,8 @@ export default async function TeamPage({ params }: TeamPageProps) {
           odds: `The ${possessive(fullName)} playoff odds are ${pct}% before their first game. Once they start playing, the odds blend their points pace with that preseason projection and update after every game.`,
           cup: `Stanley Cup odds start with making the playoffs, which the ${fullName} currently have a ${pct}% chance to do. Once the bracket is set, this page shows their series-by-series Cup odds and playoff journey.`,
         } : {
-          will: `As of today the ${fullName} have a ${pct}% chance to make the ${endYear} playoffs. They are ${rec} (${teamStanding.points} points), ${ordinal(teamStanding.divisionSequence)} in the ${teamStanding.divisionName}, projecting to ${Math.round(seasonStats.projectedPoints)} points against a ${seasonStats.playoffTarget}-point playoff target.${clinchText ? ` ${clinchText}` : ''}`,
-          odds: `The ${possessive(fullName)} playoff odds are ${pct}%, based on their ${Math.round(seasonStats.projectedPoints)}-point pace through ${teamStanding.gamesPlayed} games, their ${ordinal(teamStanding.divisionSequence)}-place division position, and the current wild card cut line. The number updates after every game.`,
+          will: `As of today the ${fullName} have a ${pct}% chance to make the ${endYear} playoffs. They are ${rec} (${plural(teamStanding.points, 'point')}), ${ordinal(teamStanding.divisionSequence)} in the ${teamStanding.divisionName}${early ? '.' : `, projecting to ${Math.round(seasonStats.projectedPoints)} points against a ${seasonStats.playoffTarget}-point playoff target.`}${clinchText ? ` ${clinchText}` : ''}`,
+          odds: `The ${possessive(fullName)} playoff odds are ${pct}%, based on ${early ? `their preseason projection blended with their results through ${plural(teamStanding.gamesPlayed, 'game')}` : `their ${Math.round(seasonStats.projectedPoints)}-point pace through ${teamStanding.gamesPlayed} games`}, their ${ordinal(teamStanding.divisionSequence)}-place division position, and the current wild card cut line. The number updates after every game.`,
           cup: `Stanley Cup odds start with making the playoffs, which the ${fullName} currently have a ${pct}% chance to do. Once the bracket is set, this page shows their series-by-series Cup odds and playoff journey.`,
         };
       }

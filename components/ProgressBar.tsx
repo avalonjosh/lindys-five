@@ -196,7 +196,7 @@ function SeasonSection({
           <div className="hidden md:flex absolute inset-0 justify-center items-center pointer-events-none">
             <PlayoffOddsPill
               label="Playoff Probability"
-              value={!oddsReady ? '—' : cutLineLoading && stats.gamesPlayed >= 10 ? '--%' : `${probability}%`}
+              value={!oddsReady ? '—' : !preseasonSim && !cutLineData && !cutLineError ? '--%' : `${probability}%`}
               expanded={!!playoffExpanded}
               onToggle={onPlayoffToggle}
               color={probabilityColor || ''}
@@ -464,7 +464,7 @@ function SeasonSection({
         <div className="flex md:hidden justify-center mt-3">
           <PlayoffOddsPill
             label="Playoff Probability"
-            value={!oddsReady ? '—' : cutLineLoading && stats.gamesPlayed >= 10 ? '--%' : `${probability}%`}
+            value={!oddsReady ? '—' : !preseasonSim && !cutLineData && !cutLineError ? '--%' : `${probability}%`}
             expanded={!!playoffExpanded}
             onToggle={onPlayoffToggle}
             color={probabilityColor || ''}

@@ -467,7 +467,7 @@ export default async function NHLPlayoffOddsPage() {
                 <td>{t.wins}-{t.losses}-{t.otLosses}</td>
                 <td>{t.points}</td>
                 <td>{t.gamesPlayed}</td>
-                <td>{seasonComplete ? playoffResultLabel(t) : t.pace}</td>
+                <td>{seasonComplete ? playoffResultLabel(t) : t.gamesPlayed > 0 ? t.pace : 'No games played yet'}</td>
                 {!seasonComplete && <td>{t.odds}%</td>}
                 <td>{t.conferenceName}</td>
                 <td>{t.divisionName} (#{t.divisionSequence})</td>

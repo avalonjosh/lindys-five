@@ -89,12 +89,12 @@ function TeamRow({ team, rank, compact = false }: { team: TeamData; rank: number
       </td>
       <td className="py-2.5 px-2 text-center text-gray-900 font-bold">{team.points}</td>
       <td className={`py-2.5 px-2 text-center text-gray-500 ${compact ? 'hidden 2xl:table-cell' : 'hidden xl:table-cell'}`}>
-        {(team.pointPctg * 100).toFixed(1)}
+        {team.gamesPlayed > 0 ? (team.pointPctg * 100).toFixed(1) : '—'}
       </td>
       <td className={`py-2.5 px-2 text-center font-semibold ${
-        team.pace >= 100 ? 'text-emerald-600' : team.pace >= 90 ? 'text-yellow-600' : 'text-red-500'
+        team.gamesPlayed === 0 ? 'text-gray-400' : team.pace >= 100 ? 'text-emerald-600' : team.pace >= 90 ? 'text-yellow-600' : 'text-red-500'
       }`}>
-        {team.pace}
+        {team.gamesPlayed > 0 ? team.pace : '—'}
       </td>
       <td className={`py-2.5 px-2 text-center font-bold ${
         team.odds >= 75 ? 'text-emerald-600' : team.odds >= 40 ? 'text-yellow-600' : 'text-red-500'
