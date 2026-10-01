@@ -16,6 +16,7 @@ import { NHL_TEAMS, MLB_TEAMS, NFL_TEAMS, findTeam, getTeamUrl } from '@/lib/tea
 import { formatSeasonLabel } from '@/lib/utils/season';
 import PicksChart from './PicksChart';
 import SettingsTab from './SettingsTab';
+import PuzzlesTab from './PuzzlesTab';
 import ProfileBanner, { type BannerTile } from './overview/ProfileBanner';
 import MyTeamsPanel from './overview/MyTeamsPanel';
 import PuzzlesPanel from './overview/PuzzlesPanel';
@@ -23,13 +24,11 @@ import CardsPanel from './overview/CardsPanel';
 import PicksPanel, { type PickRow } from './overview/PicksPanel';
 import GettingStartedBar, { type ChecklistItem } from './overview/GettingStartedBar';
 import type { TeamSnapshot } from '@/lib/services/homeTeamSnapshot';
-import JerseyCard from '@/components/perfectseason/JerseyCard';
 import ShareCardSheet from '@/components/perfectseason/ShareCardSheet';
 import type { StreakCard } from '@/lib/perfectseason/cards';
-import { CARD_MILESTONES, TIER_LABEL } from '@/lib/perfectseason/cards';
 import { normalizePickDate, type WhatIfSave, type WhatIfPick } from '@/lib/whatif/types';
 import type { GameResult } from '@/lib/types';
-import type { ProfileResponse, ProfileBoard } from '@/app/api/account/profile/route';
+import type { ProfileResponse } from '@/app/api/account/profile/route';
 import { supportEnabled } from '@/lib/support';
 
 type ActualOutcome = 'W' | 'OTL' | 'L';
@@ -226,36 +225,6 @@ function SaveDiffPanel({ latest, prev, color, className }: { latest: WhatIfSave;
       )}
     </div>
   );
-}
-
-function gradeClasses(grade: string): string {
-  switch (grade.charAt(0).toUpperCase()) {
-    case 'A': case 'S': return 'bg-green-100 text-green-700';
-    case 'B': return 'bg-emerald-50 text-emerald-700';
-    case 'C': return 'bg-yellow-100 text-yellow-700';
-    case 'D': return 'bg-orange-100 text-orange-700';
-    default: return 'bg-red-100 text-red-600';
-  }
-}
-
-function rankBadge(rank: number): string {
-  if (rank === 1) return 'bg-amber-100 text-amber-700';
-  if (rank === 2) return 'bg-slate-200 text-slate-600';
-  if (rank === 3) return 'bg-orange-100 text-orange-800';
-  return 'text-gray-900';
-}
-
-const BOARD_KIND_LABELS: Record<ProfileBoard['kind'], string> = {
-  alltime: 'All-Time Daily Best',
-  free: 'Free Play',
-  tank: 'Tank Mode',
-  franchise: 'Franchise',
-};
-
-function boardLabel(b: ProfileBoard): string {
-  const kind = BOARD_KIND_LABELS[b.kind] ?? b.kind;
-  const franchise = b.franchiseId ? ` · ${b.franchiseId}` : '';
-  return `${b.sport.toUpperCase()} ${kind}${franchise}`;
 }
 
 type AccountTab = 'overview' | 'picks' | 'perfectseason' | 'settings';
@@ -759,101 +728,7 @@ export default function AccountPage() {
       )}
 
       {tab === 'perfectseason' && (
-        <div className={LEGACY_TAB}>
-      {/* Streak cards: earned for Daily streaks, one game at a time */}
-      <section className="mb-4 rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
-        <div className="mb-1 flex items-baseline justify-between gap-2">
-          <h2 className="text-lg font-bold md:text-2xl" style={{ color: heroColor }}>Streak Cards</h2>
-          {profile && <span className="text-xs font-semibold text-gray-500">{profile.cards.length} earned</span>}
-        </div>
-        <p className="mb-3 text-xs text-gray-500">
-          Play a game&apos;s Daily on consecutive days to earn its cards: bronze at 7 days, silver at 30, gold at 82 (82-0) or 162 (162-0). Miss a day and the streak starts over. Tap a card to flip it.
-        </p>
-        {profile == null ? (
-          <p className="text-sm text-gray-400">Loading…</p>
-        ) : (
-          <div className="flex flex-wrap justify-center gap-3 sm:justify-start">
-            {profile.cards.map(card => (
-              <div key={card.id} className="flex flex-col items-center gap-1.5">
-                <JerseyCard card={card} width={150} owner={user.username} />
-                <button type="button" onClick={() => setSharingCard(card)} className="text-xs font-bold hover:underline" style={{ color: heroColor }}>
-                  Share
-                </button>
-              </div>
-            ))}
-            {(['nhl', 'mlb'] as const).flatMap(sport =>
-              CARD_MILESTONES[sport]
-                .filter(m => !profile.cards.some(c => c.sport === sport && c.milestone === m.days))
-                .map(m => (
-                  <div
-                    key={`${sport}-${m.days}`}
-                    className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 text-center text-gray-400"
-                    style={{ width: 150, height: 210 }}
-                  >
-                    <span className="text-2xl font-bold" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>{m.days}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-wide">{sport === 'nhl' ? '82-0' : '162-0'} · {TIER_LABEL[m.tier]}</span>
-                    <span className="mt-1 text-[10px]">Not earned yet</span>
-                  </div>
-                ))
-            )}
-          </div>
-        )}
-      </section>
-
-      {/* Perfect Season — leaderboard bests from 82-0 / 162-0 */}
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="text-lg font-bold md:text-2xl" style={{ color: heroColor }}>Perfect Season</h2>
-        <div className="flex gap-2 text-xs font-bold">
-          <Link href="/82-0" className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-gray-700 transition-colors hover:bg-gray-200">82-0</Link>
-          <Link href="/162-0" className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-gray-700 transition-colors hover:bg-gray-200">162-0</Link>
-        </div>
-      </div>
-      <section className="mb-4 overflow-hidden rounded-2xl border-2 border-gray-200 bg-white shadow-xl">
-        {profile == null ? (
-          <div className="p-4 text-sm text-gray-400">Loading…</div>
-        ) : profile.perfectSeason.boards.length === 0 && profile.perfectSeason.daily.count === 0 ? (
-          <div className="p-4 text-sm text-gray-500">
-            No games played yet. Try the daily puzzle at{' '}
-            <Link href="/82-0" className="font-bold hover:underline" style={{ color: heroColor }}>82-0</Link> (NHL) or{' '}
-            <Link href="/162-0" className="font-bold hover:underline" style={{ color: heroColor }}>162-0</Link> (MLB).
-          </div>
-        ) : (
-          <div>
-            {profile.perfectSeason.daily.count > 0 && (
-              <div className="border-b border-gray-100 px-4 py-3 text-sm text-gray-700">
-                <span className="font-bold">{profile.perfectSeason.daily.count}</span> daily puzzle{profile.perfectSeason.daily.count === 1 ? '' : 's'} played
-                {profile.perfectSeason.daily.bestRating != null && (
-                  <> · best rating <span className="font-bold">{profile.perfectSeason.daily.bestRating.toFixed(1)}</span></>
-                )}
-              </div>
-            )}
-            <ul className="divide-y divide-gray-100">
-              {profile.perfectSeason.boards.map(b => (
-                <li key={b.board} className="flex items-center gap-3 px-4 py-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-bold text-gray-900">
-                      {boardLabel(b)}
-                      {b.variant === 'blind' && (
-                        <span className="ml-1.5 rounded-full bg-gray-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-gray-500">Blind</span>
-                      )}
-                    </div>
-                    <div className="text-xs text-gray-500">{b.wins}-{b.losses} · rating {b.rating.toFixed(1)}</div>
-                  </div>
-                  <span className={`flex-shrink-0 rounded-lg px-2 py-1 text-sm font-bold ${gradeClasses(b.grade)}`}>{b.grade}</span>
-                  {b.rank != null && (
-                    b.rank <= 3 ? (
-                      <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-sm font-bold ${rankBadge(b.rank)}`}>#{b.rank}</span>
-                    ) : (
-                      <span className="w-14 flex-shrink-0 text-right text-sm font-bold text-gray-900">#{b.rank}</span>
-                    )
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </section>
-        </div>
+        <PuzzlesTab profile={profile} username={user.username} onShare={setSharingCard} />
       )}
 
       {tab === 'picks' && (
