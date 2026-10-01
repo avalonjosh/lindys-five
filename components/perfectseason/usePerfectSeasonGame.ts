@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GameData, ModeDescriptor, ModeType, RoundTree, Sport, Spin, SportConfig } from '@/lib/perfectseason/types';
 import { generateDay, generateFranchiseDay, poolPlayers } from '@/lib/perfectseason/schedule';
 import { mulberry32, easternDateString } from '@/lib/perfectseason/seed';
@@ -11,6 +11,8 @@ import type { ScoreSubmission } from '@/lib/perfectseason/leaderboard';
 import { franchiseName, statCells } from './ui';
 
 const ROLL_TOTAL_MS = 1750;
+// Later rounds spin on their own; a shorter beat after the franchise lands (1250ms).
+const AUTO_ROLL_TOTAL_MS = 1450;
 
 export type ScheduleJson = { days: Record<string, { dayNumber: number; rounds: RoundTree[] }> };
 export type Phase = 'board' | 'rolling' | 'pick';
@@ -172,7 +174,8 @@ export function usePerfectSeasonGame({ sport, data, config, schedule }: GameProp
     if (phase !== 'rolling') return;
     const reduceMotion =
       typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const t = setTimeout(() => setPhase('pick'), reduceMotion ? 0 : ROLL_TOTAL_MS);
+    const total = state && state.round > 0 ? AUTO_ROLL_TOTAL_MS : ROLL_TOTAL_MS;
+    const t = setTimeout(() => setPhase('pick'), reduceMotion ? 0 : total);
     return () => clearTimeout(t);
   }, [phase, spinKey]);
 
@@ -184,12 +187,21 @@ export function usePerfectSeasonGame({ sport, data, config, schedule }: GameProp
 
   const dispatch = useCallback((a: Action) => setState((s) => (s ? reduce(s, a) : s)), []);
 
+  // After a pick, the next round spins by itself (only the first spin is a tap).
+  const autoSpinNext = useRef(false);
   const commitAssign = useCallback((id: string, slotId: string) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
     setPhase('board');
+    autoSpinNext.current = true;
     setState((s) => (s ? reduce(reduce(s, { type: 'SELECT_PLAYER', id }), { type: 'ASSIGN_SLOT', slotId }) : s));
     setUndo(true);
   }, []);
+
+  useEffect(() => {
+    if (!autoSpinNext.current || !state) return;
+    autoSpinNext.current = false;
+    if (!state.done && phase === 'board') setPhase('rolling');
+  }, [state, phase]);
 
   const onSkip = useCallback(
     (a: Action) => {
@@ -207,6 +219,7 @@ export function usePerfectSeasonGame({ sport, data, config, schedule }: GameProp
   }, [data, config, freeType, franchiseId]);
 
   const undoPick = useCallback(() => {
+    autoSpinNext.current = false;
     dispatch({ type: 'UNDO' });
     setUndo(false);
     setPhase('pick');

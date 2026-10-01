@@ -281,14 +281,15 @@ export default function BoardView(props: BoardViewProps) {
     setSelectedId(null);
   };
 
-  // Every hockey player has exactly one position, so a tap places them straight
-  // away (the first open D slot for a defenseman); Undo covers a mis-tap.
-  // Baseball keeps the position step for multi-position players.
+  // A tap places the player whenever there's only one spot they can go (every
+  // hockey player; a baseball player with one open position), the first open
+  // D slot for a defenseman. A real choice of positions opens the picker.
+  // Undo covers a mis-tap.
   const oneTap = sport === 'nhl';
   const selectPlayer = (p: (typeof players)[number]) => {
-    if (oneTap) {
-      const slot = legalSlots(state, p)[0];
-      if (slot) commitAssign(p.id, slot.id);
+    const legal = legalSlots(state, p);
+    if (legal.length > 0 && new Set(legal.map((s) => s.label)).size === 1) {
+      commitAssign(p.id, legal[0].id);
       return;
     }
     setSelectedId(p.id);
@@ -388,7 +389,7 @@ export default function BoardView(props: BoardViewProps) {
           ) : (
             <div className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-md">
               <p className="text-xs text-gray-500">
-                {players.length} available · {selectedPlayer ? 'choose a spot' : isTank ? `pick a bad one${oneTap ? ', tap to place' : ''}` : oneTap ? 'tap to place' : 'pick one'} · {filled}/{total} filled
+                {players.length} available · {selectedPlayer ? 'choose a spot' : isTank ? 'pick a bad one, tap to place' : 'tap to place'} · {filled}/{total} filled
               </p>
               <div className="mt-3">
                 <BoardPlayerList

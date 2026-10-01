@@ -17,10 +17,10 @@ export function HelpButton({ onClick, pulse = false }: { onClick: () => void; pu
 }
 
 const STEPS = (goal: string, surface: string, slotCount: number, oneTap: boolean): string[] => [
-  'Press SPIN to reveal a decade and a franchise for the round.',
+  'Press SPIN to reveal a decade and a franchise. After each pick the next round spins on its own.',
   oneTap
     ? `Tap a player from that pool and they go straight to their position on the ${surface}.`
-    : `Pick a player from that pool, then place them at a position on the ${surface}.`,
+    : `Tap a player from that pool to place them on the ${surface}. If more than one of their positions is open, choose which.`,
   'Skip the team or the decade once each if you want a different pool.',
   `After ${slotCount} picks, your season plays out. Chase ${goal}.`,
 ];
