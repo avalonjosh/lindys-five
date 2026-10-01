@@ -25,7 +25,7 @@ export default function SupportPage() {
           </h1>
           <div className="flex flex-col gap-3 text-sm leading-relaxed text-gray-700 sm:text-base">
             <p>
-              Lindy&apos;s Five is built and run by one person. No big company behind it, no paywall, and no betting ads.
+              Lindy&apos;s Five is built and run by one person. No big company behind it, no paywall, and <strong className="font-bold text-gray-900">no betting ads</strong>.
             </p>
             <p>
               The playoff odds, scores, recaps, emails and the 82-0 and 162-0 games all cost something to run: live data, hosting,
