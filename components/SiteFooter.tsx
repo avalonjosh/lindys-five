@@ -40,6 +40,7 @@ export default function SiteFooter() {
           <Link href="/blog" className="transition-colors hover:text-white">Blog</Link>
           <Link href="/account" className="transition-colors hover:text-white">My Account</Link>
           <Link href="/feed.xml" className="transition-colors hover:text-white">RSS</Link>
+          <Link href="/privacy" className="transition-colors hover:text-white">Privacy</Link>
         </nav>
 
         <div className="grid gap-8 md:grid-cols-2">
