@@ -9,6 +9,7 @@ import {
   userKey,
   userEmailKey,
   userNameKey,
+  userGoogleKey,
   userBoardsKey,
   lbZKey,
   lbEntryKey,
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
   const userId = await getUserId(request);
   if (!userId) return NextResponse.json({ error: 'Sign in to delete your account' }, { status: 401 });
 
-  let body: { password?: string; unsubscribe?: boolean };
+  let body: { password?: string; confirm?: string; unsubscribe?: boolean };
   try {
     body = await request.json();
   } catch {
@@ -38,7 +39,10 @@ export async function POST(request: NextRequest) {
 
   const user = await kv.get<User>(userKey(userId));
   if (!user) return NextResponse.json({ error: 'Account not found' }, { status: 401 });
-  if (!(await bcrypt.compare(body.password ?? '', user.passwordHash))) {
+  // Google-only accounts have no password: they type DELETE instead.
+  if (!user.passwordHash) {
+    if (body.confirm !== 'DELETE') return NextResponse.json({ error: 'Type DELETE to confirm' }, { status: 403 });
+  } else if (!(await bcrypt.compare(body.password ?? '', user.passwordHash))) {
     return NextResponse.json({ error: 'Password is incorrect' }, { status: 403 });
   }
 
@@ -83,6 +87,7 @@ export async function POST(request: NextRequest) {
     kv.del(userKey(userId)),
     kv.del(userEmailKey(user.email)),
     kv.del(userNameKey(user.username)),
+    ...(user.googleId ? [kv.del(userGoogleKey(user.googleId))] : []),
   ]);
 
   const res = NextResponse.json({ success: true });

@@ -336,6 +336,7 @@ export default function AccountPage() {
   };
   const [tab, setTab] = useState<AccountTab>('overview');
   const [passwordNotice, setPasswordNotice] = useState(false);
+  const [signinError, setSigninError] = useState<string | null>(null);
   const [sharingCard, setSharingCard] = useState<StreakCard | null>(null);
   const [checklistDismissed, setChecklistDismissed] = useState(false);
   useEffect(() => {
@@ -358,6 +359,16 @@ export default function AccountPage() {
     const params = new URLSearchParams(window.location.search);
     const t = params.get('tab');
     if (t === 'picks' || t === 'perfectseason' || t === 'settings' || t === 'overview') setTab(t);
+    // Back from Sign in with Google without signing in.
+    const signin = params.get('signin');
+    if (signin === 'cancelled' || signin === 'expired' || signin === 'google') {
+      setSigninError(
+        signin === 'cancelled' ? 'Google sign-in was cancelled.'
+        : signin === 'expired' ? 'That sign-in took too long or was opened in another browser. Please try again.'
+        : "We couldn't sign you in with Google. Please try again, or use your email and password."
+      );
+      window.history.replaceState(null, '', window.location.pathname);
+    }
     // Arriving from a completed password reset.
     if (params.get('updated') === 'password') {
       setPasswordNotice(true);
@@ -589,6 +600,9 @@ export default function AccountPage() {
         </header>
 
         <main className="mx-auto max-w-md px-4 py-10">
+          {signinError && (
+            <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{signinError}</p>
+          )}
           <h2 className="mb-4 text-center text-2xl font-bold uppercase tracking-wide text-sabres-navy" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
             A free Lindy&apos;s Five account
           </h2>
@@ -802,6 +816,8 @@ export default function AccountPage() {
       )}
       {tab === 'settings' && (
         <SettingsTab
+          hasPassword={profile?.hasPassword ?? true}
+          onPasswordSet={() => setProfile(prev => (prev ? { ...prev, hasPassword: true } : prev))}
           username={user.username}
           onUsernameChanged={(username) => setUser({ ...user, username })}
           email={profile?.email ?? null}

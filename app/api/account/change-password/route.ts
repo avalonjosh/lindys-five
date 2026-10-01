@@ -29,7 +29,8 @@ export async function POST(request: NextRequest) {
 
   const user = await kv.get<User>(userKey(userId));
   if (!user) return NextResponse.json({ error: 'Account not found' }, { status: 401 });
-  if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
+  // A Google-only account sets its first password with the session alone.
+  if (user.passwordHash && !(await bcrypt.compare(currentPassword, user.passwordHash))) {
     return NextResponse.json({ error: 'Current password is incorrect' }, { status: 403 });
   }
 

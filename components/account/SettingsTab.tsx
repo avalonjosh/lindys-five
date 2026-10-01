@@ -5,6 +5,9 @@ import { changeEmail, changePassword, deleteAccount } from '@/lib/perfectseason/
 import EmailPreferences from '@/components/newsletter/EmailPreferences';
 
 interface SettingsTabProps {
+  /** False for a Google account that never set a password. */
+  hasPassword: boolean;
+  onPasswordSet: () => void;
   username: string;
   onUsernameChanged: (username: string) => void;
   email: string | null; // null while the profile is loading
@@ -28,7 +31,7 @@ function StatusLine({ status }: { status: FormStatus }) {
   return null;
 }
 
-export default function SettingsTab({ username, onUsernameChanged, email, emailVerified, pendingEmail, onEmailChangeRequested, accent, onDeleted }: SettingsTabProps) {
+export default function SettingsTab({ hasPassword, onPasswordSet, username, onUsernameChanged, email, emailVerified, pendingEmail, onEmailChangeRequested, accent, onDeleted }: SettingsTabProps) {
   // Username
   const [nameOpen, setNameOpen] = useState(false);
   const [newName, setNewName] = useState('');
@@ -93,7 +96,8 @@ export default function SettingsTab({ username, onUsernameChanged, email, emailV
     setPasswordStatus({ state: 'saving' });
     const result = await changePassword(currentPassword, newPassword);
     if (result.ok) {
-      setPasswordStatus({ state: 'done', message: 'Password updated.' });
+      setPasswordStatus({ state: 'done', message: hasPassword ? 'Password updated.' : 'Password set. You can now also sign in with your email.' });
+      onPasswordSet();
       setPasswordOpen(false);
       setCurrentPassword('');
       setNewPassword('');
@@ -105,7 +109,9 @@ export default function SettingsTab({ username, onUsernameChanged, email, emailV
   const submitDelete = async () => {
     if (deleteStatus.state === 'saving') return;
     setDeleteStatus({ state: 'saving' });
-    const result = await deleteAccount(deletePassword, deleteUnsubscribe);
+    const result = hasPassword
+      ? await deleteAccount(deletePassword, deleteUnsubscribe)
+      : await deleteAccount('', deleteUnsubscribe, deletePassword.trim());
     if (result.ok) {
       try {
         localStorage.removeItem('newsletter-subscribed');
@@ -173,6 +179,7 @@ export default function SettingsTab({ username, onUsernameChanged, email, emailV
             <p className="truncate text-sm text-gray-500">{email ?? 'Loading…'}</p>
             {pendingEmail && <p className="truncate text-xs text-gray-400">Changing to {pendingEmail} (waiting for confirmation)</p>}
           </div>
+          {hasPassword && (
           <button
             type="button"
             onClick={() => { setEmailOpen(!emailOpen); setEmailStatus({ state: 'idle' }); }}
@@ -180,7 +187,9 @@ export default function SettingsTab({ username, onUsernameChanged, email, emailV
           >
             {emailOpen ? 'Cancel' : 'Change'}
           </button>
+          )}
         </div>
+        {!hasPassword && <p className="mt-1 text-xs text-gray-500">From your Google account. Set a password below to use a different email.</p>}
         {emailOpen && (
           <div className="mt-3 flex flex-col gap-2 border-t border-gray-100 pt-3">
             <input
@@ -216,14 +225,14 @@ export default function SettingsTab({ username, onUsernameChanged, email, emailV
         <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold" style={{ color: accent }}>Password</h3>
-            <p className="text-sm text-gray-500">••••••••</p>
+            <p className="text-sm text-gray-500">{hasPassword ? '••••••••' : 'None yet: you sign in with Google'}</p>
           </div>
           <button
             type="button"
             onClick={() => { setPasswordOpen(!passwordOpen); setPasswordStatus({ state: 'idle' }); }}
             className="flex-shrink-0 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200"
           >
-            {passwordOpen ? 'Cancel' : 'Change'}
+            {passwordOpen ? 'Cancel' : hasPassword ? 'Change' : 'Set password'}
           </button>
         </div>
         {passwordOpen && (
@@ -231,6 +240,7 @@ export default function SettingsTab({ username, onUsernameChanged, email, emailV
             <input
               type="password"
               placeholder="Current password"
+              hidden={!hasPassword}
               value={currentPassword}
               onChange={e => setCurrentPassword(e.target.value)}
               className={inputClasses}
@@ -245,7 +255,7 @@ export default function SettingsTab({ username, onUsernameChanged, email, emailV
             <button
               type="button"
               onClick={submitPassword}
-              disabled={passwordStatus.state === 'saving' || !currentPassword || newPassword.length < 8}
+              disabled={passwordStatus.state === 'saving' || (hasPassword && !currentPassword) || newPassword.length < 8}
               className="self-start rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wide text-white transition-opacity hover:opacity-90 disabled:opacity-50"
               style={{ backgroundColor: accent }}
             >
@@ -284,8 +294,9 @@ export default function SettingsTab({ username, onUsernameChanged, email, emailV
               your profile. <span className="font-bold">This cannot be undone.</span>
             </p>
             <input
-              type="password"
-              placeholder="Your password"
+              type={hasPassword ? 'password' : 'text'}
+              placeholder={hasPassword ? 'Your password' : 'Type DELETE to confirm'}
+              aria-label={hasPassword ? 'Your password' : 'Type DELETE to confirm'}
               value={deletePassword}
               onChange={e => setDeletePassword(e.target.value)}
               className={inputClasses}

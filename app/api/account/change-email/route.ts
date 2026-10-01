@@ -32,6 +32,9 @@ export async function POST(request: NextRequest) {
 
   const user = await kv.get<User>(userKey(userId));
   if (!user) return NextResponse.json({ error: 'Account not found' }, { status: 401 });
+  if (!user.passwordHash) {
+    return NextResponse.json({ error: 'You sign in with Google, so your email follows your Google account. Set a password first to use a different email.' }, { status: 400 });
+  }
   if (!(await bcrypt.compare(password, user.passwordHash))) {
     return NextResponse.json({ error: 'Password is incorrect' }, { status: 403 });
   }

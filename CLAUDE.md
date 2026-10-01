@@ -99,6 +99,8 @@ All endpoints use base URL `https://api-web.nhle.com/v1` (proxied through `/api/
 
 **Environment variables needed:** `ADMIN_PASSWORD_HASH`, `ADMIN_SESSION_SECRET`, `RESEND_API_KEY`, `NEXT_PUBLIC_SITE_URL`, `CRON_SECRET`.
 
+**Sign in with Google (user accounts):** our own OAuth code + PKCE flow, no auth library (`lib/perfectseason/server/google.ts`, `/api/auth/google` -> Google -> `/api/auth/callback/google`, then our usual `l5_user` session). Needs `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` (the "Lindys Five Web" OAuth client) and `NEXT_PUBLIC_GOOGLE_SIGNIN=1` (shows the button), plus each site's `/api/auth/callback/google` as an authorized redirect URI on that client. A Google sign-in links to an existing account with the same Google-verified email, else creates one with an auto-picked username (changeable in Settings); Google-only accounts have `passwordHash: ''` (can set a password, can't change email, delete by typing DELETE). Index: `ps:user:google:{sub}` -> user id.
+
 ## Cron Jobs
 
 All crons are configured in `vercel.json` and authorized via `CRON_SECRET` Bearer token. Admin can manually trigger any cron via `POST /api/cron/trigger`.

@@ -118,8 +118,9 @@ export const resendAccountVerification = () =>
 export const confirmEmailLink = (token: string) =>
   postData<{ kind: 'verify' | 'change'; email: string }>('/api/account/email-confirm', { token });
 
-export const deleteAccount = (password: string, unsubscribe: boolean) =>
-  postSimple('/api/account/delete', { password, unsubscribe });
+/** Password accounts confirm with their password; Google-only accounts type DELETE. */
+export const deleteAccount = (password: string, unsubscribe: boolean, confirm?: string) =>
+  postSimple('/api/account/delete', { password, unsubscribe, confirm });
 
 // Several components on one page ask "who am I?" at mount (nav, tracker, board).
 // Share the in-flight request so they cost one round trip, not one each.

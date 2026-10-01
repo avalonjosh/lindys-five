@@ -21,12 +21,13 @@ export interface User {
   usernameLower: string;
   passwordHash: string;
   createdAt: string;
-  authProvider: 'password';
+  /** How the account was created. A Google account may have no password (`passwordHash` ''). */
+  authProvider: 'password' | 'google';
   /** Main team slug (NHL, MLB or NFL): colors the profile, default for recaps. Always `teams[0]` once My Teams is in use. */
   favoriteTeam?: string;
   /** "My Teams": every team the user follows, in their order. Mirrors the hamburger stars across devices. */
   teams?: string[];
-  // Reserved for a later Google OAuth follow-up:
+  /** Google account id (`sub`) once Sign in with Google is linked. */
   googleId?: string;
   /** Last password change (reset or settings). Sessions issued before it are rejected. */
   passwordChangedAt?: string;
@@ -68,6 +69,7 @@ export function publicUser(user: User): PublicUser {
 
 export const userKey = (id: string) => `ps:user:${id}`;
 export const userEmailKey = (email: string) => `ps:user:email:${email.toLowerCase()}`;
+export const userGoogleKey = (googleId: string) => `ps:user:google:${googleId}`;
 export const userNameKey = (username: string) => `ps:user:uname:${username.toLowerCase()}`;
 export const userBoardsKey = (id: string) => `ps:user:boards:${id}`;
 

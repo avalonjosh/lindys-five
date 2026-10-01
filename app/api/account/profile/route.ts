@@ -36,6 +36,10 @@ export interface ProfileBoard {
 export interface ProfileResponse {
   email: string;
   emailVerified: boolean;
+  /** False for a Google account that never set a password. */
+  hasPassword: boolean;
+  /** Sign in with Google is linked. */
+  google: boolean;
   /** New address waiting on its confirm link, if an email change is in progress. */
   pendingEmail?: string;
   createdAt: string;
@@ -155,6 +159,8 @@ export async function GET(request: NextRequest) {
   const profile: ProfileResponse = {
     email: user.email,
     emailVerified: !!user.emailVerifiedAt,
+    hasPassword: !!user.passwordHash,
+    google: !!user.googleId,
     pendingEmail: user.pendingEmail,
     createdAt: user.createdAt,
     favoriteTeam: user.favoriteTeam,
