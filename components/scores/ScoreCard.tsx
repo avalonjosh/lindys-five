@@ -78,8 +78,8 @@ const getWinner = (game: NHLGame): 'home' | 'away' | null => {
   return null;
 };
 
+// Works from 0 games played too: the model's starting point is the team's preseason odds.
 function computeStakes(standing: StandingsTeam, standings: StandingsTeam[]): { winDelta: number; lossDelta: number } | null {
-  if (standing.gamesPlayed < 1) return null;
 
   const divCutLine = getDivCutLine(standing, standings);
   const wcCutLine = getWcCutLine(standing, standings);
