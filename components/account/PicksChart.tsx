@@ -70,7 +70,7 @@ export default function PicksChart({ title, data, color, unit = '' }: PicksChart
 
   return (
     <div className="min-w-0">
-      <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-gray-500">{title}</div>
+      <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-slate-300">{title}</div>
       <div className="relative" ref={containerRef}>
         <svg
           viewBox={`0 0 ${W} ${H}`}
@@ -80,7 +80,7 @@ export default function PicksChart({ title, data, color, unit = '' }: PicksChart
           aria-label={`${title}: ${data.map(d => `${shortDate(d.date)} ${fmt(d.value)}`).join(', ')}`}
         >
           {/* Recessive baseline grid */}
-          <line x1={PAD_X} x2={W - PAD_X} y1={H - PAD_BOTTOM} y2={H - PAD_BOTTOM} stroke="#e5e7eb" strokeWidth="1" />
+          <line x1={PAD_X} x2={W - PAD_X} y1={H - PAD_BOTTOM} y2={H - PAD_BOTTOM} stroke="#334155" strokeWidth="1" />
           {/* Team-color area fill anchoring the line to the baseline */}
           {areaPath && (
             <>
@@ -97,14 +97,14 @@ export default function PicksChart({ title, data, color, unit = '' }: PicksChart
           {data.map((d, i) => (
             <g key={d.date}>
               {/* 2px surface ring so overlapping markers stay separable */}
-              <circle cx={x(i)} cy={y(d.value)} r={hover === i ? 5.5 : 4} fill={color} stroke="#ffffff" strokeWidth="2" />
+              <circle cx={x(i)} cy={y(d.value)} r={hover === i ? 5.5 : 4} fill={color} stroke="#0f172a" strokeWidth="2" />
               {/* Selective direct labels: first and last point only */}
               {(i === 0 || i === data.length - 1) && data.length > 1 && (
                 <text
                   x={x(i)}
                   y={y(d.value) - 8}
                   textAnchor={i === 0 ? 'start' : 'end'}
-                  className="fill-gray-700"
+                  className="fill-slate-100"
                   fontSize="10"
                   fontWeight="700"
                 >
@@ -112,7 +112,7 @@ export default function PicksChart({ title, data, color, unit = '' }: PicksChart
                 </text>
               )}
               {data.length === 1 && (
-                <text x={x(i)} y={y(d.value) - 8} textAnchor="middle" className="fill-gray-700" fontSize="10" fontWeight="700">
+                <text x={x(i)} y={y(d.value) - 8} textAnchor="middle" className="fill-slate-100" fontSize="10" fontWeight="700">
                   {fmt(d.value)}
                 </text>
               )}
@@ -122,7 +122,7 @@ export default function PicksChart({ title, data, color, unit = '' }: PicksChart
                   x={x(i)}
                   y={H - 8}
                   textAnchor={data.length === 1 ? 'middle' : i === 0 ? 'start' : 'end'}
-                  className="fill-gray-400"
+                  className="fill-slate-400"
                   fontSize="9"
                 >
                   {shortDate(d.date)}
@@ -142,7 +142,7 @@ export default function PicksChart({ title, data, color, unit = '' }: PicksChart
         </svg>
         {hover !== null && (
           <div
-            className="pointer-events-none absolute -translate-x-1/2 rounded-md bg-gray-900 px-2 py-1 text-[11px] font-semibold text-white shadow-lg whitespace-nowrap"
+            className="pointer-events-none absolute -translate-x-1/2 rounded-md bg-slate-950 px-2 py-1 text-[11px] font-semibold text-white shadow-lg whitespace-nowrap"
             style={{
               left: `${(x(hover) / W) * 100}%`,
               top: 0,

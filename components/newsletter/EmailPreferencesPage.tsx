@@ -11,7 +11,7 @@ export default function EmailPreferencesPage() {
     setId(new URLSearchParams(window.location.search).get('id'));
   }, []);
 
-  if (id === undefined) return <p className="text-sm text-gray-400">Loading…</p>;
-  if (!id) return <p className="text-sm text-gray-600">Open this page from the &quot;Unsubscribe&quot; link at the bottom of any Lindy&apos;s Five email, or sign in and use Settings on your account page.</p>;
+  if (id === undefined) return <p className="text-sm text-slate-400">Loading…</p>;
+  if (!id) return <p className="text-sm text-slate-300">Open this page from the &quot;Unsubscribe&quot; link at the bottom of any Lindy&apos;s Five email, or sign in and use Settings on your account page.</p>;
   return <EmailPreferences id={id} />;
 }

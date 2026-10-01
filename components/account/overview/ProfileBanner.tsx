@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { LogOut, Settings } from 'lucide-react';
 import type { MLBTeamConfig, NFLTeamConfig, TeamConfig } from '@/lib/teamConfig';
 import { cardColors, logoFor } from '@/components/home/YourTeamCard';
 
@@ -19,15 +18,11 @@ export default function ProfileBanner({
   createdAt,
   team,
   tiles,
-  onSettings,
-  onSignOut,
 }: {
   username: string;
   createdAt?: string;
   team?: TeamConfig | MLBTeamConfig | NFLTeamConfig;
   tiles: BannerTile[];
-  onSettings: () => void;
-  onSignOut: () => void;
 }) {
   const { bg, accent } = team ? cardColors(team.colors) : { bg: '#003087', accent: '#FFB81C' };
   const since = createdAt ? new Date(createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : null;
@@ -42,21 +37,9 @@ export default function ProfileBanner({
           <img src={logoFor(team)} alt="" aria-hidden className="pointer-events-none absolute -right-12 -top-10 h-64 w-64 object-contain opacity-10 sm:h-80 sm:w-80" />
         )}
         <div className="relative flex flex-col gap-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="truncate text-[11px] font-bold uppercase tracking-wider sm:text-xs" style={{ color: accent }}>{eyebrow}</div>
-              <h1 className="truncate text-5xl leading-none text-white sm:text-6xl" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>{username}</h1>
-            </div>
-            <div className="flex shrink-0 items-center gap-1 text-sm text-slate-100">
-              <button type="button" onClick={onSettings} aria-label="Settings" className="flex min-h-10 items-center gap-1.5 rounded-lg px-2 transition-colors hover:bg-white/10">
-                <Settings className="h-4 w-4" aria-hidden />
-                <span className="hidden sm:inline">Settings</span>
-              </button>
-              <button type="button" onClick={onSignOut} aria-label="Sign out" className="flex min-h-10 items-center gap-1.5 rounded-lg px-2 transition-colors hover:bg-white/10">
-                <LogOut className="h-4 w-4" aria-hidden />
-                <span className="hidden sm:inline">Sign out</span>
-              </button>
-            </div>
+          <div className="min-w-0">
+            <div className="truncate text-[11px] font-bold uppercase tracking-wider sm:text-xs" style={{ color: accent }}>{eyebrow}</div>
+            <h1 className="truncate text-5xl leading-none text-white sm:text-6xl" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>{username}</h1>
           </div>
           {tiles.length > 0 && (
             <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5">

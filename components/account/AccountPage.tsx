@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { ChevronDown, ChevronUp, Check, X, Minus, Trash2, Pencil } from 'lucide-react';
 import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
 import AuthModal from '@/components/perfectseason/board/AuthModal';
-import { logout, resendAccountVerification, saveAccountTeams } from '@/lib/perfectseason/account';
+import { resendAccountVerification, saveAccountTeams } from '@/lib/perfectseason/account';
 import { readFavorites, writeFavorites, onFavoritesChange } from '@/lib/favorites';
 import { fetchWhatIfSaves, deleteWhatIfSave, updateWhatIfSaveLabel } from '@/lib/whatif/client';
 import { fetchSabresSchedule } from '@/lib/services/nhlApi';
@@ -30,6 +30,8 @@ import { normalizePickDate, type WhatIfSave, type WhatIfPick } from '@/lib/whati
 import type { GameResult } from '@/lib/types';
 import type { ProfileResponse } from '@/app/api/account/profile/route';
 import { supportEnabled } from '@/lib/support';
+import { cardColors, logoFor } from '@/components/home/YourTeamCard';
+import { SectionTitle } from './overview/ui';
 
 type ActualOutcome = 'W' | 'OTL' | 'L';
 
@@ -117,9 +119,9 @@ const MLB_ABBREV_TO_ID: Record<string, number> = Object.fromEntries(
 
 function opponentLogo(sport: string, abbrev: string): string | null {
   if (sport === 'nfl') return `https://a.espncdn.com/i/teamlogos/nfl/500/${abbrev.toLowerCase()}.png`;
-  if (sport === 'nhl') return `https://assets.nhle.com/logos/nhl/svg/${abbrev.toUpperCase()}_light.svg`;
+  if (sport === 'nhl') return `https://assets.nhle.com/logos/nhl/svg/${abbrev.toUpperCase()}_dark.svg`;
   const id = MLB_ABBREV_TO_ID[abbrev.toUpperCase()];
-  return id ? `https://www.mlbstatic.com/team-logos/${id}.svg` : null;
+  return id ? `https://www.mlbstatic.com/team-logos/team-cap-on-dark/${id}.svg` : null;
 }
 
 // Full opponent names by sport + abbreviation, for the desktop matchup column.
@@ -133,9 +135,9 @@ function opponentFullName(sport: string, abbrev: string): string | null {
   return NAME_BY_ABBREV[sport]?.get(abbrev.toUpperCase()) ?? null;
 }
 
-/** Badge color for a picked outcome (mirrors the Pick pages' buttons). */
-const pickBadgeColor = (outcome: string, primary: string) =>
-  outcome === 'W' ? primary : outcome === 'OTL' ? '#d97706' : '#6b7280';
+/** Badge colors for a picked outcome: a win wears the team's readable accent, OTL amber, a loss gray. */
+const pickBadgeStyle = (outcome: string, tc: { bg: string; accent: string }) =>
+  outcome === 'W' ? { background: tc.accent, color: tc.bg } : { background: outcome === 'OTL' ? '#d97706' : '#64748b', color: '#FFFFFF' };
 
 interface PickHistoryStep {
   outcome: WhatIfPick['outcome'];
@@ -183,39 +185,39 @@ function SaveDiffPanel({ latest, prev, color, className }: { latest: WhatIfSave;
 
   const gameLabel = (p: WhatIfPick) =>
     `${p.week ? `Wk ${p.week}` : pickDateLabel(p.date)} · ${p.isHome ? 'vs' : '@'} ${p.opponentAbbrev}`;
-  const outcomeColor = (o: string) => (o === 'W' ? 'text-green-600' : o === 'OTL' ? 'text-yellow-600' : 'text-red-500');
+  const outcomeColor = (o: string) => (o === 'W' ? 'text-emerald-400' : o === 'OTL' ? 'text-amber-400' : 'text-red-400');
 
   return (
-    // Darker slab than the white picks table below, so the two can't be mixed up.
-    <div className={`rounded-lg bg-gray-100 p-3 ${className ?? ''}`}>
+    // A darker slab than the picks table below, so the two can't be mixed up.
+    <div className={`rounded-lg bg-slate-950/60 p-3 ${className ?? ''}`}>
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
         <h4 className="text-sm font-bold" style={{ color }}>What Changed</h4>
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
           {pickDateLabel(prev.savedDate)} → {pickDateLabel(latest.savedDate)}
         </span>
       </div>
       {changed.length === 0 && added === 0 && dropped === 0 ? (
-        <p className="text-xs text-gray-500">No pick changes between your last two saves.</p>
+        <p className="text-xs text-slate-400">No pick changes between your last two saves.</p>
       ) : (
         <>
           {changed.length > 0 && (
             <ul className="grid max-h-44 gap-1.5 overflow-y-auto sm:grid-cols-2 xl:grid-cols-3">
               {changed.map(({ pick, from }) => (
-                <li key={pick.gameId} className="flex items-center gap-2 rounded-md bg-white px-2.5 py-2 text-xs">
+                <li key={pick.gameId} className="flex items-center gap-2 rounded-md bg-slate-800 px-2.5 py-2 text-xs">
                   {opponentLogo(latest.sport, pick.opponentAbbrev) && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={opponentLogo(latest.sport, pick.opponentAbbrev)!} alt="" className="h-6 w-6 flex-shrink-0 object-contain" />
                   )}
-                  <span className="min-w-0 flex-1 truncate font-semibold text-gray-700">{gameLabel(pick)}</span>
-                  <span className="flex-shrink-0 font-bold text-gray-400 line-through">{from}</span>
-                  <span className="flex-shrink-0 text-gray-400">→</span>
+                  <span className="min-w-0 flex-1 truncate font-semibold text-slate-200">{gameLabel(pick)}</span>
+                  <span className="flex-shrink-0 font-bold text-slate-500 line-through">{from}</span>
+                  <span className="flex-shrink-0 text-slate-500">→</span>
                   <span className={`flex-shrink-0 font-bold ${outcomeColor(pick.outcome)}`}>{pick.outcome}</span>
                 </li>
               ))}
             </ul>
           )}
           {(added > 0 || dropped > 0) && (
-            <p className={`text-xs text-gray-500 ${changed.length > 0 ? 'mt-1.5' : ''}`}>
+            <p className={`text-xs text-slate-400 ${changed.length > 0 ? 'mt-1.5' : ''}`}>
               {added > 0 && `${added} new pick${added === 1 ? '' : 's'}`}
               {added > 0 && dropped > 0 && ' · '}
               {dropped > 0 && `${dropped} pick${dropped === 1 ? '' : 's'} dropped`}
@@ -568,8 +570,6 @@ export default function AccountPage() {
 
   const mainTeam = myTeams[0] ?? user.favoriteTeam;
   const favTeam = mainTeam ? findTeam(mainTeam) : undefined;
-  // The Picks and Puzzles tabs still use the team's primary as their accent.
-  const heroColor = favTeam?.colors.primary ?? '#003087';
   const bestRank = profile?.perfectSeason.boards.reduce<number | null>(
     (best, b) => (b.rank != null && (best == null || b.rank < best) ? b.rank : best),
     null
@@ -612,9 +612,6 @@ export default function AccountPage() {
       };
     });
 
-  // Picks, Puzzles and Settings keep their light styling until they get the new look.
-  const LEGACY_TAB = 'rounded-2xl bg-slate-50 p-3 text-gray-900 sm:p-5';
-
   return (
     <div className="flex flex-1 flex-col">
       <ProfileBanner
@@ -622,11 +619,6 @@ export default function AccountPage() {
         createdAt={profile?.createdAt}
         team={favTeam}
         tiles={bannerTiles}
-        onSettings={() => setTab('settings')}
-        onSignOut={async () => {
-          await logout();
-          setUser(null);
-        }}
       />
 
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-5 sm:gap-8 sm:px-6 sm:py-8">
@@ -685,20 +677,17 @@ export default function AccountPage() {
       )}
 
       {tab === 'settings' && (
-        <div className={LEGACY_TAB}>
         <SettingsTab
           hasPassword={profile?.hasPassword ?? true}
           onPasswordSet={() => setProfile(prev => (prev ? { ...prev, hasPassword: true } : prev))}
           username={user.username}
           onUsernameChanged={(username) => setUser({ ...user, username })}
           email={profile?.email ?? null}
-          accent={heroColor}
           emailVerified={profile?.emailVerified ?? true}
           pendingEmail={profile?.pendingEmail}
           onEmailChangeRequested={(pendingEmail) => setProfile(prev => (prev ? { ...prev, pendingEmail } : prev))}
           onDeleted={() => setUser(null)}
         />
-        </div>
       )}
 
       {tab === 'overview' && (
@@ -732,24 +721,22 @@ export default function AccountPage() {
       )}
 
       {tab === 'picks' && (
-        <div className={LEGACY_TAB}>
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="text-lg font-bold md:text-2xl" style={{ color: heroColor }}>My Picks</h2>
-      </div>
+        <div className="flex flex-col gap-2.5">
+      <SectionTitle>My Picks</SectionTitle>
       {saves == null ? (
-        <div className="py-12 text-center text-gray-400">Loading your picks…</div>
+        <div className="py-12 text-center text-slate-400">Loading your picks…</div>
       ) : groups.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-gray-200 p-8 text-center">
-          <p className="mb-2 font-semibold text-gray-700">No saved picks yet</p>
-          <p className="mb-4 text-sm text-gray-500">
+        <div className="rounded-2xl border-2 border-dashed border-slate-600 p-8 text-center">
+          <p className="mb-2 font-bold text-white">No saved picks yet</p>
+          <p className="mb-4 text-sm text-slate-300">
             Turn on What If mode on any team page, simulate some games, and hit Save Picks.
           </p>
-          <Link href="/nhl" className="text-sm font-bold hover:underline" style={{ color: heroColor }}>
+          <Link href="/nhl" className="text-sm font-bold text-amber-400 hover:underline">
             Browse NHL teams →
           </Link>
-          <p className="mt-4 text-xs text-gray-400">
+          <p className="mt-4 text-xs text-slate-400">
             Have a Pick the Bills history from before?{' '}
-            <Link href="/pick-the-bills?backdate=1" className="font-semibold underline hover:text-gray-600">
+            <Link href="/pick-the-bills?backdate=1" className="font-semibold underline hover:text-white">
               Log past picks
             </Link>
             .
@@ -763,6 +750,7 @@ export default function AccountPage() {
               : group.sport === 'nfl' ? NFL_TEAMS[group.teamId]
               : NHL_TEAMS[group.teamId];
             if (!team) return null;
+            const tc = cardColors(team.colors);
             const actuals = actualsByTeam.get(group.key);
             const groupGrade = actuals
               ? group.saves.reduce(
@@ -774,24 +762,24 @@ export default function AccountPage() {
                 )
               : null;
             return (
-              <section key={group.key} className="overflow-hidden rounded-2xl border-2 border-gray-200 bg-white shadow-lg">
+              <section key={group.key} className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-800/60">
                 {/* Team header */}
-                <div className="flex items-center gap-3 border-b border-gray-100 p-4" style={{ backgroundColor: `${team.colors.primary}0d` }}>
-                  <Image src={team.logo} alt="" width={40} height={40} className="h-10 w-10" unoptimized />
+                <div className="flex items-center gap-3 p-4" style={{ background: tc.bg }}>
+                  <Image src={logoFor(team)} alt="" width={40} height={40} className="h-10 w-10" unoptimized />
                   <div className="min-w-0 flex-1">
-                    <Link href={getTeamUrl(group.teamId)} className="font-bold text-gray-900 hover:underline">
+                    <Link href={getTeamUrl(group.teamId)} className="font-bold text-white hover:underline">
                       {team.city} {team.name}
                     </Link>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-slate-200">
                       {group.sport === 'nhl' ? formatSeasonLabel(group.season) : group.season} · {group.saves.length} save{group.saves.length === 1 ? '' : 's'}
                     </div>
                   </div>
                   {groupGrade && groupGrade.graded > 0 && (
                     <div className="flex-shrink-0 text-right">
-                      <div className="text-lg font-bold leading-tight" style={{ color: team.colors.primary }}>
+                      <div className="text-2xl leading-none" style={{ color: tc.accent, fontFamily: 'Bebas Neue, sans-serif' }}>
                         {Math.round((groupGrade.exact / groupGrade.graded) * 100)}%
                       </div>
-                      <div className="text-[10px] uppercase tracking-wide text-gray-400">
+                      <div className="text-[10px] uppercase tracking-wide text-slate-200">
                         {groupGrade.exact}/{groupGrade.graded} exact
                       </div>
                     </div>
@@ -799,8 +787,8 @@ export default function AccountPage() {
                   <Link
                     // NHL/MLB trackers open with What If mode already on; NFL pick pages are always pick mode.
                     href={group.sport === 'nfl' ? getTeamUrl(group.teamId) : `${getTeamUrl(group.teamId)}?whatif=1`}
-                    className="flex-shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90"
-                    style={{ backgroundColor: team.colors.primary }}
+                    className="flex-shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-extrabold transition-opacity hover:opacity-90"
+                    style={{ background: tc.accent, color: tc.bg }}
                   >
                     Pick the {team.name}
                   </Link>
@@ -809,22 +797,22 @@ export default function AccountPage() {
                 {/* Trend charts — one measure per chart (no dual axis) */}
                 {group.saves.length >= 2 ? (
                   // Full-bleed analytics band, washed in the team color
-                  <div className="border-b border-gray-100 px-4 py-4" style={{ backgroundColor: `${team.colors.primary}08` }}>
+                  <div className="border-b border-slate-700 px-4 py-4">
                     <PicksChart
                       title={group.sport === 'nhl' ? 'Projected Points Over Time' : 'Projected Wins Over Time'}
                       data={group.saves.map(s => ({ date: s.savedDate, value: s.summary.projectedPoints }))}
-                      color={team.colors.primary}
+                      color={tc.accent}
                     />
                   </div>
                 ) : (
-                  <div className="border-b border-gray-100 px-4 py-2.5 text-xs text-gray-500">
+                  <div className="border-b border-slate-700 px-4 py-2.5 text-xs text-slate-400">
                     Save picks again on a future date to start your trend charts.
                   </div>
                 )}
 
                 {/* Saves, newest first — white cards floating in the tinted zone */}
-                <div className="bg-gray-50 px-4 pb-4 pt-3">
-                  <div className="pb-2 text-[11px] font-bold uppercase tracking-wide text-gray-500">
+                <div className="px-4 pb-4 pt-3">
+                  <div className="pb-2 text-[11px] font-bold uppercase tracking-wide text-slate-300">
                     Save History
                   </div>
                 <ul className="flex flex-col gap-3">
@@ -836,34 +824,34 @@ export default function AccountPage() {
                     const prevSave = saveIdx > 0 ? group.saves[saveIdx - 1] : null;
                     const changeCount = prevSave ? countChanges(save, prevSave) : 0;
                     return (
-                      <li key={save.savedDate} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                      <li key={save.savedDate} className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900/60">
                         <button
                           type="button"
                           onClick={() => setExpanded(open ? null : rowKey)}
-                          className="flex w-full items-center gap-2 p-3 text-left transition-colors hover:bg-gray-50 sm:gap-3 sm:p-4"
+                          className="flex w-full items-center gap-2 p-3 text-left transition-colors hover:bg-white/5 sm:gap-3 sm:p-4"
                         >
                           <div className="min-w-0 flex-1">
                             {/* Title wraps as a unit: unbreakable date, label truncating
                                 on its own line when squeezed, badge flowing along. */}
-                            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm font-bold text-gray-900">
+                            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm font-bold text-white">
                               {save.label ? (
                                 <>
                                   <span className="min-w-0 max-w-full truncate">“{save.label}”</span>
-                                  <span className="whitespace-nowrap font-semibold text-gray-500">· {longDate(save.savedDate)}</span>
+                                  <span className="whitespace-nowrap font-semibold text-slate-400">· {longDate(save.savedDate)}</span>
                                 </>
                               ) : (
                                 <span className="whitespace-nowrap">{longDate(save.savedDate)}</span>
                               )}
                               {save.backdated && (
                                 <span
-                                  className="flex-shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600"
+                                  className="flex-shrink-0 rounded-full bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300"
                                   title="These picks were logged after the fact. Games already played at entry time don't count toward accuracy."
                                 >
                                   Entered later
                                 </span>
                               )}
                             </div>
-                            <div className="text-xs text-gray-500">
+                            <div className="text-xs text-slate-400">
                               {save.summary.gamesPicked} games picked ({save.summary.record}) · Proj {save.summary.projectedPoints} {save.sport === 'nhl' ? 'pts' : 'wins'}{save.sport !== 'nfl' && ` · ${save.summary.playoffOdds.toFixed(1)}% odds`}
                             </div>
                           </div>
@@ -873,60 +861,60 @@ export default function AccountPage() {
                               // Team-tinted so it reads as info, distinct from the gray status pill
                               <span
                                 className="whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-                                style={{ backgroundColor: `${team.colors.primary}14`, color: team.colors.primary }}
+                                style={{ backgroundColor: `${tc.accent}26`, color: tc.accent }}
                               >
                                 {changeCount} change{changeCount === 1 ? '' : 's'}
                               </span>
                             )}
                             {grade && grade.graded > 0 && (
                               <div className="text-right">
-                                <div className="text-sm font-bold text-gray-900">{grade.exact}/{grade.graded}</div>
-                                <div className="text-[10px] uppercase tracking-wide text-gray-400">exact</div>
+                                <div className="text-sm font-bold text-white">{grade.exact}/{grade.graded}</div>
+                                <div className="text-[10px] uppercase tracking-wide text-slate-400">exact</div>
                               </div>
                             )}
                             {grade && grade.graded === 0 && (
-                              <span className="whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                              <span className="whitespace-nowrap rounded-full bg-slate-700 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-300">
                                 Pending
                               </span>
                             )}
                           </div>
-                          {open ? <ChevronUp className="h-4 w-4 flex-shrink-0 text-gray-400" /> : <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-400" />}
+                          {open ? <ChevronUp className="h-4 w-4 flex-shrink-0 text-slate-400" /> : <ChevronDown className="h-4 w-4 flex-shrink-0 text-slate-400" />}
                         </button>
 
                         {open && (
-                          <div className="border-t border-gray-100 px-4 pb-4">
+                          <div className="border-t border-slate-700 px-4 pb-4">
                             {prevSave && changeCount > 0 && (
-                              <SaveDiffPanel latest={save} prev={prevSave} color={team.colors.primary} className="mt-3" />
+                              <SaveDiffPanel latest={save} prev={prevSave} color={tc.accent} className="mt-3" />
                             )}
                             {grade && grade.graded > 0 && (
                               // MLB/NFL have no OTL, so "exact" and "win vs loss" are
                               // the same measure — show two tiles instead of three.
                               <div className={`mb-3 grid gap-2 pt-3 text-center ${save.sport !== 'nhl' ? 'grid-cols-2' : 'grid-cols-3'}`}>
-                                <div className="rounded-lg bg-gray-50 p-2">
-                                  <div className="text-sm font-bold text-gray-900">{grade.exact}/{grade.graded}</div>
-                                  <div className="text-[10px] uppercase tracking-wide text-gray-400">{save.sport !== 'nhl' ? 'Correct (W/L)' : 'Exact (W/OTL/L)'}</div>
+                                <div className="rounded-lg bg-slate-800 p-2">
+                                  <div className="text-sm font-bold text-white">{grade.exact}/{grade.graded}</div>
+                                  <div className="text-[10px] uppercase tracking-wide text-slate-400">{save.sport !== 'nhl' ? 'Correct (W/L)' : 'Exact (W/OTL/L)'}</div>
                                 </div>
                                 {save.sport === 'nhl' && (
-                                  <div className="rounded-lg bg-gray-50 p-2">
-                                    <div className="text-sm font-bold text-gray-900">{grade.simpleRight}/{grade.graded}</div>
-                                    <div className="text-[10px] uppercase tracking-wide text-gray-400">Win vs Loss</div>
+                                  <div className="rounded-lg bg-slate-800 p-2">
+                                    <div className="text-sm font-bold text-white">{grade.simpleRight}/{grade.graded}</div>
+                                    <div className="text-[10px] uppercase tracking-wide text-slate-400">Win vs Loss</div>
                                   </div>
                                 )}
-                                <div className="rounded-lg bg-gray-50 p-2">
-                                  <div className="text-sm font-bold text-gray-900">{grade.earnedPoints}/{grade.predictedPoints}</div>
-                                  <div className="text-[10px] uppercase tracking-wide text-gray-400">{save.sport !== 'nhl' ? 'Wins Earned vs Picked' : 'Pts Earned vs Picked'}</div>
+                                <div className="rounded-lg bg-slate-800 p-2">
+                                  <div className="text-sm font-bold text-white">{grade.earnedPoints}/{grade.predictedPoints}</div>
+                                  <div className="text-[10px] uppercase tracking-wide text-slate-400">{save.sport !== 'nhl' ? 'Wins Earned vs Picked' : 'Pts Earned vs Picked'}</div>
                                 </div>
                               </div>
                             )}
-                            <h4 className="pt-3 text-sm font-bold" style={{ color: team.colors.primary }}>
+                            <h4 className="pt-3 text-sm font-bold" style={{ color: tc.accent }}>
                               All Picks ({save.picks.length})
                             </h4>
                             {/* Box-score-style table: chronological down, labeled
                                 Picked column (team-color badge) vs status-colored Result. */}
-                            <div className="mt-1.5 overflow-hidden rounded-lg border border-gray-100 bg-white">
+                            <div className="mt-1.5 overflow-hidden rounded-lg border border-slate-700">
                               <table className="w-full text-xs">
                                 <thead>
-                                  <tr className="border-b border-gray-100 text-left text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                                  <tr className="border-b border-slate-700 text-left text-[10px] font-bold uppercase tracking-wide text-slate-400">
                                     <th className="w-12 px-2 py-2 font-bold sm:w-16 sm:px-3">{save.sport === 'nfl' ? 'Wk' : 'Date'}</th>
                                     <th className="px-2 py-2 font-bold sm:px-3">Matchup</th>
                                     <th className="hidden w-px whitespace-nowrap px-3 py-2 font-bold sm:table-cell">Pick History</th>
@@ -942,10 +930,10 @@ export default function AccountPage() {
                                       ? `/${save.sport}/scores/${pick.gameId}`
                                       : null;
                                     return (
-                                    <tr key={pick.gameId} className="even:bg-gray-50">
-                                      <td className="px-2 py-2 text-gray-400 sm:px-3">{pick.week ? `Wk ${pick.week}` : pickDateLabel(pick.date)}</td>
+                                    <tr key={pick.gameId} className="even:bg-white/5">
+                                      <td className="px-2 py-2 text-slate-400 sm:px-3">{pick.week ? `Wk ${pick.week}` : pickDateLabel(pick.date)}</td>
                                       <td className="px-2 py-2 sm:px-3">
-                                        <span className="flex min-w-0 items-center gap-2 font-semibold text-gray-700">
+                                        <span className="flex min-w-0 items-center gap-2 font-semibold text-slate-100">
                                           {opponentLogo(save.sport, pick.opponentAbbrev) && (
                                             // eslint-disable-next-line @next/next/no-img-element
                                             <img src={opponentLogo(save.sport, pick.opponentAbbrev)!} alt="" className="h-6 w-6 flex-shrink-0 object-contain" />
@@ -965,24 +953,24 @@ export default function AccountPage() {
                                           <span className="flex items-center gap-1.5">
                                             {trail.slice(0, -1).map((step, i) => (
                                               <span key={`${step.savedDate}-${i}`} className="flex items-center gap-1.5">
-                                                {i > 0 && <span className="text-gray-300">→</span>}
+                                                {i > 0 && <span className="text-slate-600">→</span>}
                                                 <span
-                                                  className="inline-flex h-5 min-w-6 items-center justify-center rounded border border-gray-300 bg-white px-1 text-[10px] font-bold text-gray-400"
+                                                  className="inline-flex h-5 min-w-6 items-center justify-center rounded border border-slate-600 px-1 text-[10px] font-bold text-slate-400"
                                                   title={`Picked ${step.outcome} on ${pickDateLabel(step.savedDate)}${step.label ? ` · “${step.label}”` : ''}`}
                                                 >
                                                   {step.outcome}
                                                 </span>
-                                                <span className="text-[10px] text-gray-400">{pickDateLabel(step.savedDate)}</span>
+                                                <span className="text-[10px] text-slate-500">{pickDateLabel(step.savedDate)}</span>
                                               </span>
                                             ))}
-                                            <span className="text-gray-300">→</span>
+                                            <span className="text-slate-600">→</span>
                                           </span>
                                         )}
                                       </td>
                                       <td className="px-1 py-2 text-center sm:px-3">
                                         <span
-                                          className="inline-flex h-6 min-w-7 items-center justify-center rounded-md px-1 text-xs font-bold text-white"
-                                          style={{ backgroundColor: pickBadgeColor(pick.outcome, team.colors.primary) }}
+                                          className="inline-flex h-6 min-w-7 items-center justify-center rounded-md px-1 text-xs font-bold"
+                                          style={pickBadgeStyle(pick.outcome, tc)}
                                         >
                                           {pick.outcome}
                                         </span>
@@ -992,21 +980,21 @@ export default function AccountPage() {
                                           const scoreEl = score ? <span className="hidden font-semibold sm:inline">{score}</span> : null;
                                           const inner = excluded && actual != null ? (
                                             <span
-                                              className="flex items-center justify-end gap-1 text-gray-400"
+                                              className="flex items-center justify-end gap-1 text-slate-500"
                                               title="Already played when these picks were entered — not graded"
                                             >
                                               <Minus className="h-3.5 w-3.5" /> {actual} {scoreEl}
                                             </span>
                                           ) : actual == null ? (
-                                            <span className="flex items-center justify-end gap-1 text-gray-400">
+                                            <span className="flex items-center justify-end gap-1 text-slate-500">
                                               <Minus className="h-3.5 w-3.5" /> TBD
                                             </span>
                                           ) : exact ? (
-                                            <span className="flex items-center justify-end gap-1 font-bold text-green-600">
+                                            <span className="flex items-center justify-end gap-1 font-bold text-emerald-400">
                                               <Check className="h-3.5 w-3.5" /> {actual} {scoreEl}
                                             </span>
                                           ) : (
-                                            <span className="flex items-center justify-end gap-1 font-bold text-red-500">
+                                            <span className="flex items-center justify-end gap-1 font-bold text-red-400">
                                               <X className="h-3.5 w-3.5" /> {actual} {scoreEl}
                                             </span>
                                           );
@@ -1036,21 +1024,20 @@ export default function AccountPage() {
                                     onChange={e => setRenameValue(e.target.value)}
                                     onKeyDown={e => e.key === 'Enter' && handleRenameSave(save)}
                                     placeholder="Name these picks"
-                                    className="min-w-0 flex-1 rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-800 outline-none focus:border-sabres-blue"
+                                    className="min-w-0 flex-1 rounded-md border border-slate-600 bg-slate-900 px-2 py-1 text-xs text-white outline-none focus:border-amber-400"
                                   />
                                   <button
                                     type="button"
                                     onClick={() => handleRenameSave(save)}
                                     disabled={savingRename}
-                                    className="rounded-md px-2.5 py-1 font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-                                    style={{ backgroundColor: team.colors.primary }}
+                                    className="rounded-md bg-amber-400 px-2.5 py-1 font-extrabold text-slate-900 transition-opacity hover:opacity-90 disabled:opacity-50"
                                   >
                                     {savingRename ? 'Saving…' : 'Save'}
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => setRenamingSave(null)}
-                                    className="font-semibold text-gray-400 hover:text-gray-600"
+                                    className="font-semibold text-slate-400 hover:text-white"
                                   >
                                     Cancel
                                   </button>
@@ -1062,26 +1049,26 @@ export default function AccountPage() {
                                     setRenamingSave(rowKey);
                                     setRenameValue(save.label ?? '');
                                   }}
-                                  className="flex items-center gap-1 text-xs font-semibold text-gray-400 transition-colors hover:text-gray-600"
+                                  className="flex items-center gap-1 text-xs font-semibold text-slate-400 transition-colors hover:text-white"
                                 >
                                   <Pencil className="h-3.5 w-3.5" /> {save.label ? 'Rename' : 'Name these picks'}
                                 </button>
                               )}
                               {confirmDelete === rowKey ? (
                                 <span className="flex items-center gap-2 text-xs">
-                                  <span className="text-gray-500">Delete this save?</span>
+                                  <span className="text-slate-300">Delete this save?</span>
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteSave(save)}
                                     disabled={deletingSave}
-                                    className="rounded-md bg-red-600 px-2.5 py-1 font-bold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                                    className="rounded-md bg-red-600 px-2.5 py-1 font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-50"
                                   >
                                     {deletingSave ? 'Deleting…' : 'Delete'}
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => setConfirmDelete(null)}
-                                    className="font-semibold text-gray-400 hover:text-gray-600"
+                                    className="font-semibold text-slate-400 hover:text-white"
                                   >
                                     Cancel
                                   </button>
@@ -1090,7 +1077,7 @@ export default function AccountPage() {
                                 <button
                                   type="button"
                                   onClick={() => setConfirmDelete(rowKey)}
-                                  className="flex items-center gap-1 text-xs font-semibold text-gray-400 transition-colors hover:text-red-600"
+                                  className="flex items-center gap-1 text-xs font-semibold text-slate-400 transition-colors hover:text-red-400"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" /> Delete this save
                                 </button>
@@ -1106,7 +1093,7 @@ export default function AccountPage() {
                 {group.sport === 'nfl' && NFL_TEAMS[group.teamId] && (
                   <Link
                     href={`/pick-the-${NFL_TEAMS[group.teamId].pickSlug}?backdate=1`}
-                    className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-gray-300 px-4 py-3 text-xs font-semibold text-gray-400 transition-colors hover:border-gray-400 hover:text-gray-600"
+                    className="mt-3 flex items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-slate-600 px-4 py-3 text-xs font-semibold text-slate-400 transition-colors hover:border-slate-400 hover:text-white"
                   >
                     ＋ Add past picks — log picks you made before today
                   </Link>
@@ -1122,8 +1109,7 @@ export default function AccountPage() {
                         return next;
                       })
                     }
-                    className="mt-3 w-full rounded-lg border border-gray-200 bg-white py-2 text-xs font-bold transition-colors hover:bg-gray-100"
-                    style={{ color: team.colors.primary }}
+                    className="mt-3 w-full rounded-lg border border-slate-700 py-2 text-xs font-bold text-amber-400 transition-colors hover:bg-white/5"
                   >
                     {showAllSaves.has(group.key)
                       ? 'Show fewer saves'

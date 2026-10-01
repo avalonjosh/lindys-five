@@ -11,13 +11,13 @@ export const metadata: Metadata = {
 
 export default function EmailPreferencesRoute() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <main className="mx-auto max-w-[520px] px-4 py-10 sm:py-16">
-        <Link href="/" className="mb-6 block text-center text-3xl font-bold tracking-wider text-sabres-navy" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+    <div className="min-h-screen bg-slate-900 text-white">
+      <main className="mx-auto max-w-[560px] px-4 py-10 sm:py-16">
+        <Link href="/" className="mb-6 block text-center text-4xl leading-none" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
           Lindy&apos;s Five
         </Link>
-        <div className="rounded-2xl bg-white p-5 shadow-xl">
-          <h1 className="mb-3 text-2xl font-bold uppercase tracking-wide text-sabres-navy" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+        <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-5">
+          <h1 className="mb-3 text-3xl leading-none" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
             Email Preferences
           </h1>
           <EmailPreferencesPage />

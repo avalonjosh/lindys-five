@@ -15,23 +15,24 @@ interface SettingsTabProps {
   /** New address waiting on its confirm link. */
   pendingEmail?: string;
   onEmailChangeRequested: (pendingEmail: string) => void;
-  /** Favorite-team primary color for buttons (falls back to Sabres navy). */
-  accent: string;
   onDeleted: () => void;
 }
 
 type FormStatus = { state: 'idle' | 'saving' | 'done' | 'error'; message?: string };
 
 const inputClasses =
-  'w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-800 outline-none focus:border-sabres-blue';
+  'w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500 focus:border-amber-400';
+const cardClasses = 'rounded-2xl border border-slate-700 bg-slate-800/60 p-4';
+const secondaryButton = 'flex-shrink-0 rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-bold text-slate-100 transition-colors hover:bg-slate-600';
+const primaryButton = 'self-start rounded-lg bg-amber-400 px-4 py-2 text-xs font-extrabold uppercase tracking-wide text-slate-900 transition-opacity hover:opacity-90 disabled:opacity-50';
 
 function StatusLine({ status }: { status: FormStatus }) {
-  if (status.state === 'done') return <p className="text-xs font-semibold text-green-600">{status.message}</p>;
-  if (status.state === 'error') return <p className="text-xs font-semibold text-red-500">{status.message}</p>;
+  if (status.state === 'done') return <p className="mt-2 text-xs font-semibold text-emerald-300">{status.message}</p>;
+  if (status.state === 'error') return <p className="mt-2 text-xs font-semibold text-red-300">{status.message}</p>;
   return null;
 }
 
-export default function SettingsTab({ hasPassword, onPasswordSet, username, onUsernameChanged, email, emailVerified, pendingEmail, onEmailChangeRequested, accent, onDeleted }: SettingsTabProps) {
+export default function SettingsTab({ hasPassword, onPasswordSet, username, onUsernameChanged, email, emailVerified, pendingEmail, onEmailChangeRequested, onDeleted }: SettingsTabProps) {
   // Username
   const [nameOpen, setNameOpen] = useState(false);
   const [newName, setNewName] = useState('');
@@ -125,22 +126,22 @@ export default function SettingsTab({ hasPassword, onPasswordSet, username, onUs
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {/* Username */}
-      <section className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
+      <section className={cardClasses}>
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-sm font-bold" style={{ color: accent }}>Username</h3>
-            <p className="truncate text-sm text-gray-500">{username}</p>
+            <h3 className="text-sm font-bold text-white">Username</h3>
+            <p className="truncate text-sm text-slate-300">{username}</p>
           </div>
           <button
             type="button"
             onClick={() => { setNameOpen(!nameOpen); setNameStatus({ state: 'idle' }); }}
-            className="flex-shrink-0 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200"
+            className={secondaryButton}
           >
             {nameOpen ? 'Cancel' : 'Change'}
           </button>
         </div>
         {nameOpen && (
-          <div className="mt-3 flex flex-col gap-2 border-t border-gray-100 pt-3">
+          <div className="mt-3 flex flex-col gap-2 border-t border-slate-700 pt-3">
             <label htmlFor="new-username" className="sr-only">New username</label>
             <input
               id="new-username"
@@ -151,13 +152,12 @@ export default function SettingsTab({ hasPassword, onPasswordSet, username, onUs
               onChange={e => setNewName(e.target.value)}
               className={inputClasses}
             />
-            <p className="text-xs text-gray-500">3 to 20 letters, numbers or underscores. Shown on leaderboards and your cards. You can change it once every 30 days.</p>
+            <p className="text-xs text-slate-300">3 to 20 letters, numbers or underscores. Shown on leaderboards and your cards. You can change it once every 30 days.</p>
             <button
               type="button"
               onClick={submitName}
               disabled={nameStatus.state === 'saving' || newName.trim().length < 3}
-              className="self-start rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wide text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{ backgroundColor: accent }}
+              className={primaryButton}
             >
               {nameStatus.state === 'saving' ? 'Saving…' : 'Save Username'}
             </button>
@@ -167,31 +167,31 @@ export default function SettingsTab({ hasPassword, onPasswordSet, username, onUs
       </section>
 
       {/* Email */}
-      <section className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
+      <section className={cardClasses}>
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-sm font-bold" style={{ color: accent }}>
+            <h3 className="text-sm font-bold text-white">
               Email
               {email && !emailVerified && (
-                <span className="ml-1.5 rounded-full bg-amber-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-amber-600">Not confirmed</span>
+                <span className="ml-1.5 rounded-full bg-amber-400/20 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-amber-300">Not confirmed</span>
               )}
             </h3>
-            <p className="truncate text-sm text-gray-500">{email ?? 'Loading…'}</p>
-            {pendingEmail && <p className="truncate text-xs text-gray-400">Changing to {pendingEmail} (waiting for confirmation)</p>}
+            <p className="truncate text-sm text-slate-300">{email ?? 'Loading…'}</p>
+            {pendingEmail && <p className="truncate text-xs text-slate-400">Changing to {pendingEmail} (waiting for confirmation)</p>}
           </div>
           {hasPassword && (
           <button
             type="button"
             onClick={() => { setEmailOpen(!emailOpen); setEmailStatus({ state: 'idle' }); }}
-            className="flex-shrink-0 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200"
+            className={secondaryButton}
           >
             {emailOpen ? 'Cancel' : 'Change'}
           </button>
           )}
         </div>
-        {!hasPassword && <p className="mt-1 text-xs text-gray-500">From your Google account. Set a password below to use a different email.</p>}
+        {!hasPassword && <p className="mt-1 text-xs text-slate-300">From your Google account. Set a password below to use a different email.</p>}
         {emailOpen && (
-          <div className="mt-3 flex flex-col gap-2 border-t border-gray-100 pt-3">
+          <div className="mt-3 flex flex-col gap-2 border-t border-slate-700 pt-3">
             <input
               type="email"
               placeholder="New email"
@@ -210,8 +210,7 @@ export default function SettingsTab({ hasPassword, onPasswordSet, username, onUs
               type="button"
               onClick={submitEmail}
               disabled={emailStatus.state === 'saving' || !newEmail || !emailPassword}
-              className="self-start rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wide text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{ backgroundColor: accent }}
+              className={primaryButton}
             >
               {emailStatus.state === 'saving' ? 'Saving…' : 'Save Email'}
             </button>
@@ -221,22 +220,22 @@ export default function SettingsTab({ hasPassword, onPasswordSet, username, onUs
       </section>
 
       {/* Password */}
-      <section className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
+      <section className={cardClasses}>
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-bold" style={{ color: accent }}>Password</h3>
-            <p className="text-sm text-gray-500">{hasPassword ? '••••••••' : 'None yet: you sign in with Google'}</p>
+            <h3 className="text-sm font-bold text-white">Password</h3>
+            <p className="text-sm text-slate-300">{hasPassword ? '••••••••' : 'None yet: you sign in with Google'}</p>
           </div>
           <button
             type="button"
             onClick={() => { setPasswordOpen(!passwordOpen); setPasswordStatus({ state: 'idle' }); }}
-            className="flex-shrink-0 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200"
+            className={secondaryButton}
           >
             {passwordOpen ? 'Cancel' : hasPassword ? 'Change' : 'Set password'}
           </button>
         </div>
         {passwordOpen && (
-          <div className="mt-3 flex flex-col gap-2 border-t border-gray-100 pt-3">
+          <div className="mt-3 flex flex-col gap-2 border-t border-slate-700 pt-3">
             <input
               type="password"
               placeholder="Current password"
@@ -256,8 +255,7 @@ export default function SettingsTab({ hasPassword, onPasswordSet, username, onUs
               type="button"
               onClick={submitPassword}
               disabled={passwordStatus.state === 'saving' || (hasPassword && !currentPassword) || newPassword.length < 8}
-              className="self-start rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wide text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{ backgroundColor: accent }}
+              className={primaryButton}
             >
               {passwordStatus.state === 'saving' ? 'Saving…' : 'Save Password'}
             </button>
@@ -267,29 +265,29 @@ export default function SettingsTab({ hasPassword, onPasswordSet, username, onUs
       </section>
 
       {/* Emails: teams, kinds of email, or none */}
-      <section className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:col-span-2 md:p-4">
-        <h3 className="mb-2 text-sm font-bold" style={{ color: accent }}>Emails</h3>
-        <EmailPreferences accent={accent} />
+      <section className={`${cardClasses} md:col-span-2`}>
+        <h3 className="mb-2 text-sm font-bold text-white">Emails</h3>
+        <EmailPreferences />
       </section>
 
       {/* Danger zone */}
-      <section className="rounded-2xl border-2 border-red-200 bg-white p-3 shadow-xl md:p-4">
+      <section className="rounded-2xl border border-red-500/40 bg-red-500/5 p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-bold text-red-600">Delete Account</h3>
-            <p className="text-sm text-gray-500">Permanently removes your account and all your data.</p>
+            <h3 className="text-sm font-bold text-red-300">Delete Account</h3>
+            <p className="text-sm text-slate-300">Permanently removes your account and all your data.</p>
           </div>
           <button
             type="button"
             onClick={() => { setDeleteOpen(!deleteOpen); setDeleteStatus({ state: 'idle' }); }}
-            className="flex-shrink-0 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-50"
+            className="flex-shrink-0 rounded-lg border border-red-500/50 px-3 py-1.5 text-xs font-bold text-red-300 transition-colors hover:bg-red-500/10"
           >
             {deleteOpen ? 'Cancel' : 'Delete…'}
           </button>
         </div>
         {deleteOpen && (
-          <div className="mt-3 flex flex-col gap-2 border-t border-red-100 pt-3">
-            <p className="text-xs text-gray-600">
+          <div className="mt-3 flex flex-col gap-2 border-t border-red-500/30 pt-3">
+            <p className="text-xs text-slate-300">
               This deletes your saved What-If picks, removes you from every Perfect Season leaderboard, and erases
               your profile. <span className="font-bold">This cannot be undone.</span>
             </p>
@@ -301,12 +299,13 @@ export default function SettingsTab({ hasPassword, onPasswordSet, username, onUs
               onChange={e => setDeletePassword(e.target.value)}
               className={inputClasses}
             />
-            <label className="flex items-center gap-2 text-xs text-gray-600">
+            <label className="flex items-center gap-2 text-xs text-slate-300">
               <input
                 type="checkbox"
                 checked={deleteUnsubscribe}
                 onChange={e => setDeleteUnsubscribe(e.target.checked)}
-                className="h-3.5 w-3.5 rounded border-gray-300"
+                className="h-3.5 w-3.5 rounded border-slate-500"
+                style={{ accentColor: '#FBBF24' }}
               />
               Also unsubscribe me from email recaps
             </label>
