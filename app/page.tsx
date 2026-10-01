@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import AccountChip from '@/components/AccountChip';
 import Link from 'next/link';
 import SiteFooter from '@/components/SiteFooter';
+import SiteHeader from '@/components/SiteHeader';
 import TodaysPuzzles from '@/components/home/TodaysPuzzles';
 import YourTeamCard from '@/components/home/YourTeamCard';
 import TonightGames from '@/components/home/TonightGames';
@@ -34,16 +34,6 @@ export const metadata: Metadata = {
     canonical: 'https://www.lindysfive.com/',
   },
 };
-
-const NAV_LINKS: { href: string; label: string; mobile?: boolean }[] = [
-  { href: '/nhl', label: 'NHL', mobile: true },
-  { href: '/mlb', label: 'MLB', mobile: true },
-  { href: '/nhl/scores', label: 'Scores', mobile: true },
-  { href: '/nhl-playoff-odds', label: 'Playoff Odds' },
-  { href: '/82-0', label: '82-0' },
-  { href: '/162-0', label: '162-0' },
-  { href: '/blog', label: 'Blog' },
-];
 
 const SPORT_TILES = [
   { href: '/nhl', label: 'NHL', note: '32 teams · playoff odds', className: 'bg-[#003087]' },
@@ -85,23 +75,7 @@ export default function LandingPage() {
       />
 
       <div className="flex min-h-screen flex-col bg-slate-900 text-white">
-        <header className="border-b border-slate-800">
-          <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:h-16 sm:px-6">
-            <Link href="/" className="whitespace-nowrap text-3xl leading-none sm:text-4xl" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-              Lindy&apos;s Five
-            </Link>
-            <div className="flex items-center gap-4 sm:gap-6">
-              <nav aria-label="Main" className="flex items-center gap-4 text-sm font-semibold text-slate-200 sm:gap-6 sm:text-[15px]">
-                {NAV_LINKS.map((l) => (
-                  <Link key={l.href} href={l.href} className={`hover:text-amber-400 ${l.mobile ? '' : 'hidden lg:inline'}`}>
-                    {l.label}
-                  </Link>
-                ))}
-              </nav>
-              <AccountChip />
-            </div>
-          </div>
-        </header>
+        <SiteHeader />
 
         <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-5 sm:gap-8 sm:px-6 sm:py-8">
           <div className="flex flex-col gap-1.5">

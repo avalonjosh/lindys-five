@@ -18,7 +18,7 @@ function firstTrackedFavorite(list: string[]): string | null {
 }
 
 /** Config logos are the light-background versions; use the on-dark variants so dark marks (TBL, TOR) stay visible. */
-function logoFor(t: TeamConfig | MLBTeamConfig | NFLTeamConfig): string {
+export function logoFor(t: TeamConfig | MLBTeamConfig | NFLTeamConfig): string {
   if ('mlbId' in t) return `https://www.mlbstatic.com/team-logos/team-cap-on-dark/${t.mlbId}.svg`;
   if ('pickSlug' in t) return t.logo;
   return t.logo.replace(/_light\.svg$/, '_dark.svg');

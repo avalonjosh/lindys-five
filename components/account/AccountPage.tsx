@@ -5,7 +5,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ChevronDown, ChevronUp, Check, X, Minus, Trash2, Pencil } from 'lucide-react';
 import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
-import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import AuthModal from '@/components/perfectseason/board/AuthModal';
 import { logout, resendAccountVerification, saveAccountTeams } from '@/lib/perfectseason/account';
 import { readFavorites, writeFavorites, onFavoritesChange } from '@/lib/favorites';
@@ -17,7 +16,13 @@ import { NHL_TEAMS, MLB_TEAMS, NFL_TEAMS, findTeam, getTeamUrl } from '@/lib/tea
 import { formatSeasonLabel } from '@/lib/utils/season';
 import PicksChart from './PicksChart';
 import SettingsTab from './SettingsTab';
-import FavoriteTeamCard from './FavoriteTeamCard';
+import ProfileBanner, { type BannerTile } from './overview/ProfileBanner';
+import MyTeamsPanel from './overview/MyTeamsPanel';
+import PuzzlesPanel from './overview/PuzzlesPanel';
+import CardsPanel from './overview/CardsPanel';
+import PicksPanel, { type PickRow } from './overview/PicksPanel';
+import GettingStartedBar, { type ChecklistItem } from './overview/GettingStartedBar';
+import type { TeamSnapshot } from '@/lib/services/homeTeamSnapshot';
 import JerseyCard from '@/components/perfectseason/JerseyCard';
 import ShareCardSheet from '@/components/perfectseason/ShareCardSheet';
 import type { StreakCard } from '@/lib/perfectseason/cards';
@@ -253,17 +258,6 @@ function boardLabel(b: ProfileBoard): string {
   return `${b.sport.toUpperCase()} ${kind}${franchise}`;
 }
 
-const teamOptions = (teams: Record<string, { city: string; name: string }>) =>
-  Object.entries(teams)
-    .map(([slug, t]) => ({ slug, label: `${t.city} ${t.name}` }))
-    .sort((a, b) => a.label.localeCompare(b.label));
-
-const TEAM_GROUPS = [
-  { label: 'NHL', options: teamOptions(NHL_TEAMS) },
-  { label: 'MLB', options: teamOptions(MLB_TEAMS) },
-  { label: 'NFL', options: teamOptions(NFL_TEAMS) },
-];
-
 type AccountTab = 'overview' | 'picks' | 'perfectseason' | 'settings';
 
 // Save cards shown per group before the "Show all" expander (weekly savers
@@ -273,7 +267,7 @@ const SAVE_DISPLAY_LIMIT = 5;
 const TABS: { id: AccountTab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'picks', label: 'My Picks' },
-  { id: 'perfectseason', label: 'Perfect Season' },
+  { id: 'perfectseason', label: 'Puzzles' },
   { id: 'settings', label: 'Settings' },
 ];
 
@@ -286,7 +280,6 @@ export default function AccountPage() {
   const [actualsByTeam, setActualsByTeam] = useState<Map<string, Map<number, ActualGame>>>(new Map());
   const [expanded, setExpanded] = useState<string | null>(null); // `${group.key}:${savedDate}`
   const [savingTeams, setSavingTeams] = useState(false);
-  const [addTeam, setAddTeam] = useState('');
   // Recap emails per team: which of My Teams currently get them.
   const [recaps, setRecaps] = useState<{ teams: string[]; pending: boolean } | null>(null);
   const [recapBusy, setRecapBusy] = useState<string | null>(null);
@@ -388,6 +381,20 @@ export default function AccountPage() {
   }, []);
   const myTeams = user ? favorites.filter(t => findTeam(t)) : [];
 
+  // Record, odds and next game for each followed team (the home page's team snapshot).
+  const [snapshots, setSnapshots] = useState<Record<string, TeamSnapshot>>({});
+  const teamsKey = myTeams.join(',');
+  useEffect(() => {
+    for (const slug of teamsKey ? teamsKey.split(',') : []) {
+      if (snapshots[slug]) continue;
+      fetch(`/api/home/team/${slug}`)
+        .then(res => (res.ok ? res.json() : null))
+        .then((snap: TeamSnapshot | null) => { if (snap) setSnapshots(prev => ({ ...prev, [slug]: snap })); })
+        .catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamsKey]);
+
   /** Save the teams list (and optionally the main team); keeps the menu stars in step. */
   const saveTeams = async (teams: string[], main?: string) => {
     if (!user || savingTeams) return;
@@ -478,37 +485,6 @@ export default function AccountPage() {
     return { graded, exact };
   }, [groups, actualsByTeam]);
 
-  // Most recent save across every team, for the Overview summary card.
-  const latestSave = useMemo(
-    () => (saves && saves.length ? saves.reduce((a, b) => (b.savedAt > a.savedAt ? b : a)) : null),
-    [saves]
-  );
-
-  // Merged event feed for the Overview activity strip: What-If saves + daily plays.
-  const activity = useMemo(() => {
-    const items: { key: string; date: string; label: string; kind: 'save' | 'daily'; href: string }[] = [];
-    for (const save of saves ?? []) {
-      const team = findTeam(save.teamId);
-      items.push({
-        key: `save:${save.sport}:${save.teamId}:${save.savedDate}`,
-        date: save.savedDate,
-        label: `Saved ${team ? `${team.city} ${team.name}` : save.teamId} picks`,
-        kind: 'save',
-        href: getTeamUrl(save.teamId),
-      });
-    }
-    for (const play of profile?.perfectSeason.recentDaily ?? []) {
-      items.push({
-        key: `daily:${play.sport}:${play.date}`,
-        date: play.date,
-        label: `Played the ${play.sport === 'mlb' ? '162-0' : '82-0'} daily puzzle`,
-        kind: 'daily',
-        href: play.sport === 'mlb' ? '/162-0' : '/82-0',
-      });
-    }
-    return items.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-  }, [saves, profile]);
-
   // One schedule fetch per team group, to grade picks against real results.
   useEffect(() => {
     for (const group of groups) {
@@ -559,87 +535,54 @@ export default function AccountPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center text-gray-400">Loading…</div>
+      <div className="flex min-h-[50vh] items-center justify-center text-slate-400">Loading…</div>
     );
   }
 
   if (!user) {
     return (
-      <div>
-        {/* Signed-out banner — same tracker header, default navy/gold, so the
-            hamburger and brand keep the page navigable after sign-out */}
-        <header className="border-b-4 shadow-xl" style={{ background: '#003087', borderBottomColor: '#FFB81C' }}>
-          <div className="mx-auto max-w-7xl px-4 py-3 md:py-4">
-            <div className="relative flex flex-col items-center text-center">
-              <div className="absolute left-0 top-0">
-                <MLBTeamNav
-                  currentTeamId=""
-                  teamColors={{ primary: '#003087', secondary: '#FFB81C', accent: '#FFB81C' }}
-                  defaultTab="nhl"
-                />
-              </div>
-              <Link
-                href="/"
-                title="Back to Home"
-                className="rounded-lg transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2"
-              >
-                <p
-                  className="mb-2 text-4xl font-bold tracking-wider text-white md:text-6xl"
-                  style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-                >
-                  Lindy&apos;s Five
-                </p>
-              </Link>
-              <h1 className="mb-1 px-2 text-lg font-semibold leading-tight md:text-2xl" style={{ color: '#FFB81C' }}>
-                My Account
-              </h1>
-              <p className="px-2 text-xs leading-tight text-white opacity-90 md:text-base">
-                Save picks, track accuracy, join the leaderboards
-              </p>
-            </div>
-          </div>
-        </header>
-
-        <main className="mx-auto max-w-md px-4 py-10">
+      <main className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-12">
+        <div className="flex flex-col gap-3 lg:col-span-6">
           {signinError && (
-            <p role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{signinError}</p>
+            <p role="alert" className="rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">{signinError}</p>
           )}
-          <h2 className="mb-4 text-center text-2xl font-bold uppercase tracking-wide text-sabres-navy" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-            A free Lindy&apos;s Five account
-          </h2>
-          <ul className="mb-6 flex flex-col gap-3">
-            {[
-              ['My Teams', 'Star the teams you follow and see their odds and next game in one place, on every device.'],
-              ['Recap emails', 'Game recaps for the teams you pick, plus a weekly roundup. Switch any of it off anytime.'],
-              ['Picks that get graded', 'Save What-If picks on any team page and see how accurate they turned out.'],
-              ['Leaderboards and streak cards', 'Save your 82-0 and 162-0 scores, and earn cards for playing the Daily days in a row.'],
-            ].map(([title, body]) => (
-              <li key={title} className="flex gap-3 rounded-xl bg-white p-3 shadow-sm">
-                <Check className="mt-0.5 h-5 w-5 flex-shrink-0 text-sabres-blue" aria-hidden />
-                <span>
-                  <span className="block text-sm font-bold text-gray-900">{title}</span>
-                  <span className="block text-sm text-gray-600">{body}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-          <div className="flex flex-col gap-2">
+          <h1 className="text-5xl leading-none sm:text-6xl" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+            Your Lindy&apos;s Five account
+          </h1>
+          <p className="max-w-lg text-slate-300">
+            Free. Follow your teams, get recaps, and keep your puzzle streaks and picks on every device.
+          </p>
+          <div className="mt-2 flex max-w-sm flex-col gap-2.5">
             <button
               type="button"
               onClick={() => { setAuthMode('signup'); setAuthOpen(true); }}
-              className="w-full rounded-xl bg-sabres-blue py-3 text-sm font-bold uppercase tracking-wide text-white shadow-md transition-colors hover:bg-sabres-light"
+              className="min-h-12 rounded-xl bg-amber-400 text-[15px] font-extrabold text-slate-900 transition-opacity hover:opacity-90"
             >
               Create a free account
             </button>
             <button
               type="button"
               onClick={() => { setAuthMode('signin'); setAuthOpen(true); }}
-              className="w-full rounded-xl border-2 border-gray-300 bg-white py-3 text-sm font-bold uppercase tracking-wide text-gray-700 transition-colors hover:border-gray-400"
+              className="min-h-12 rounded-xl border border-slate-600 text-[15px] font-bold text-white transition-colors hover:bg-white/5"
             >
               Sign in
             </button>
           </div>
-        </main>
+        </div>
+        <ul className="grid gap-2.5 sm:grid-cols-2 lg:col-span-6 lg:self-start">
+          {[
+            ['My Teams', 'Star the teams you follow and see their odds and next game in one place, on every device.'],
+            ['Recap emails', 'Game recaps for the teams you pick, plus a weekly roundup. Switch any of it off anytime.'],
+            ['Picks that get graded', 'Save What-If picks on any team page and see how accurate they turned out.'],
+            ['Leaderboards and streak cards', 'Save your 82-0 and 162-0 scores, and earn cards for playing the Daily days in a row.'],
+          ].map(([title, body]) => (
+            <li key={title} className="rounded-2xl border border-slate-700 bg-slate-800/60 p-4">
+              <Check className="mb-2 h-5 w-5 text-amber-400" aria-hidden />
+              <span className="block font-extrabold text-white">{title}</span>
+              <span className="mt-1 block text-sm text-slate-300">{body}</span>
+            </li>
+          ))}
+        </ul>
         {authOpen && (
           <AuthModal
             initialMode={authMode}
@@ -650,152 +593,108 @@ export default function AccountPage() {
             }}
           />
         )}
-      </div>
+      </main>
     );
   }
 
   const mainTeam = myTeams[0] ?? user.favoriteTeam;
   const favTeam = mainTeam ? findTeam(mainTeam) : undefined;
+  // The Picks and Puzzles tabs still use the team's primary as their accent.
   const heroColor = favTeam?.colors.primary ?? '#003087';
-  // Tracker header trims: secondary drives the bottom border, and the username
-  // line uses the same name-color logic as the tracker team-name line.
-  const heroSecondary = favTeam?.colors.secondary ?? '#FFB81C';
-  const nameColor = favTeam
-    ? favTeam.colors.accent !== favTeam.colors.primary
-      ? favTeam.colors.accent
-      : favTeam.colors.secondary !== '#FFFFFF'
-        ? favTeam.colors.secondary
-        : '#FFFFFF'
-    : '#FFB81C';
   const bestRank = profile?.perfectSeason.boards.reduce<number | null>(
     (best, b) => (b.rank != null && (best == null || b.rank < best) ? b.rank : best),
     null
   ) ?? null;
 
-  const statTiles: { label: string; value: string; sub?: string }[] = [];
-  if (saves && saves.length > 0) statTiles.push({ label: 'Saved Picks', value: String(saves.length) });
-  if (overall.graded > 0) statTiles.push({ label: 'Pick Accuracy', value: `${Math.round((overall.exact / overall.graded) * 100)}%`, sub: `${overall.exact}/${overall.graded} graded` });
-  if (profile && profile.perfectSeason.daily.count > 0) statTiles.push({ label: 'Daily Puzzles', value: String(profile.perfectSeason.daily.count) });
-  if (bestRank != null) statTiles.push({ label: 'Best Rank', value: `#${bestRank}` });
-  if (profile && profile.cards.length > 0) statTiles.push({ label: 'Streak Cards', value: String(profile.cards.length) });
+  // Banner numbers: only the ones that have something to show.
+  const mainOdds = mainTeam ? snapshots[mainTeam]?.odds ?? null : null;
+  const bannerTiles: BannerTile[] = [];
+  if (favTeam && mainOdds != null) bannerTiles.push({ value: `${mainOdds}%`, label: `${favTeam.name} odds`, highlight: true });
+  if ((profile?.perfectSeason.daily.streak.current ?? 0) > 0) bannerTiles.push({ value: String(profile!.perfectSeason.daily.streak.current), label: 'Day streak' });
+  if (overall.graded > 0) bannerTiles.push({ value: `${Math.round((overall.exact / overall.graded) * 100)}%`, label: 'Pick accuracy' });
+  if (bestRank != null) bannerTiles.push({ value: `#${bestRank}`, label: 'Best rank' });
+  if (profile && profile.cards.length > 0) bannerTiles.push({ value: String(profile.cards.length), label: profile.cards.length === 1 ? 'Streak card' : 'Streak cards' });
+  if (profile && profile.perfectSeason.daily.count > 0) bannerTiles.push({ value: String(profile.perfectSeason.daily.count), label: 'Dailies played' });
 
   const playedAnyDaily = !!profile && (profile.perfectSeason.daily.count > 0 || profile.perfectSeason.daily.playedToday.nhl || profile.perfectSeason.daily.playedToday.mlb);
-  const checklist: { key: string; label: string; done: boolean; action: string; href?: string; onClick?: () => void }[] = [
+  const checklist: ChecklistItem[] = [
     { key: 'confirm', label: 'Confirm your email', done: !profile || profile.emailVerified, action: 'Confirm', onClick: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
     { key: 'teams', label: 'Add the teams you follow', done: myTeams.length > 0, action: 'Add teams', onClick: goToMyTeams },
     { key: 'recaps', label: 'Turn on game recap emails for a team', done: !!recaps && recaps.teams.length > 0, action: myTeams.length > 0 ? 'Turn on' : 'Add a team first', onClick: goToMyTeams },
     { key: 'daily', label: "Play a Daily puzzle (82-0 or 162-0)", done: playedAnyDaily, action: 'Play', href: '/82-0' },
     { key: 'picks', label: "Save your first What-If picks on a team page", done: !!saves && saves.length > 0, action: 'Try it', href: myTeams[0] ? (findTeam(myTeams[0]) && 'espnId' in findTeam(myTeams[0])! ? getTeamUrl(myTeams[0]) : `${getTeamUrl(myTeams[0])}?whatif=1`) : '/nhl' },
   ];
-  const hasSeasonSummary = !!profile && (profile.perfectSeason.boards.length > 0 || profile.perfectSeason.daily.count > 0);
-  const hasPicksSummary = !!latestSave;
   const showChecklist = !!profile && saves != null && recaps != null && !checklistDismissed && checklist.some(c => !c.done);
 
+  // The three newest saves for the Overview, with how they're grading so far.
+  const pickRows: PickRow[] | null = saves == null ? null : [...saves]
+    .sort((a, b) => b.savedAt - a.savedAt)
+    .slice(0, 3)
+    .map(save => {
+      const team = findTeam(save.teamId);
+      const actuals = actualsByTeam.get(`${save.sport}:${save.teamId}:${save.season}`);
+      const grade = actuals ? gradeSave(save, actuals) : null;
+      return {
+        key: `${save.sport}:${save.teamId}:${save.season}:${save.savedDate}`,
+        teamId: save.teamId,
+        title: `${team ? team.name : save.teamId}${save.label ? ` · ${save.label}` : ''}`,
+        sub: `Saved ${longDate(save.savedDate)} · ${save.summary.gamesPicked} picked (${save.summary.record})`,
+        result: grade && grade.graded > 0 ? `${grade.exact}/${grade.graded} right` : null,
+      };
+    });
+
+  // Picks, Puzzles and Settings keep their light styling until they get the new look.
+  const LEGACY_TAB = 'rounded-2xl bg-slate-50 p-3 text-gray-900 sm:p-5';
 
   return (
-    <div>
-      {/* Header — the team tracker header, wearing the user's identity */}
-      <header className="border-b-4 shadow-xl" style={{ background: heroColor, borderBottomColor: heroSecondary }}>
-        <div className="mx-auto max-w-7xl px-4 py-3 md:py-4">
-          <div className="relative flex flex-col items-center text-center">
-            {/* Team navigation — same corner slot as the tracker headers */}
-            <div className="absolute left-0 top-0">
-              <MLBTeamNav
-                currentTeamId={mainTeam ?? ''}
-                teamColors={{ primary: heroColor, secondary: heroSecondary, accent: heroSecondary }}
-                defaultTab={favTeam && 'mlbId' in favTeam ? 'mlb' : 'nhl'}
-              />
-            </div>
+    <div className="flex flex-1 flex-col">
+      <ProfileBanner
+        username={user.username}
+        createdAt={profile?.createdAt}
+        team={favTeam}
+        tiles={bannerTiles}
+        onSettings={() => setTab('settings')}
+        onSignOut={async () => {
+          await logout();
+          setUser(null);
+        }}
+      />
 
-            {/* Sign Out — corner control, like the tracker's toggle slot */}
-            <div className="absolute right-0 top-0">
-              <button
-                type="button"
-                onClick={async () => {
-                  await logout();
-                  setUser(null);
-                }}
-                className="rounded-lg border border-white/30 px-2.5 py-1 text-xs font-semibold text-white/90 transition-colors hover:bg-white/10 md:px-3 md:py-1.5"
-              >
-                Sign Out
-              </button>
-            </div>
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-5 sm:gap-8 sm:px-6 sm:py-8">
+      {/* Section tabs, styled like the home page's league switch */}
+      <div className="flex gap-1 overflow-x-auto rounded-xl bg-slate-800/80 p-1" role="tablist" aria-label="Account sections">
+        {TABS.map(t => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            onClick={() => setTab(t.id)}
+            className={`min-h-10 flex-1 whitespace-nowrap rounded-lg px-3 text-sm font-bold transition-colors sm:flex-none sm:px-5 ${
+              tab === t.id ? 'bg-[#003087] text-white' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-            {/* Favorite team logo in the tracker's logo slot — links to its tracker */}
-            {favTeam && (
-              <Link
-                href={getTeamUrl(mainTeam!)}
-                title={`Go to the ${favTeam.city} ${favTeam.name} tracker`}
-                className="rounded-lg transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={favTeam.logo} alt={`${favTeam.city} ${favTeam.name} logo`} className="mb-2 h-16 w-16 object-contain md:mb-3 md:h-24 md:w-24" />
-              </Link>
-            )}
-            <p
-              className="mb-2 text-4xl font-bold tracking-wider text-white md:text-6xl"
-              style={{ fontFamily: 'Bebas Neue, sans-serif' }}
-            >
-              Lindy&apos;s Five
-            </p>
-            <h1 className="mb-1 px-2 text-lg font-semibold leading-tight md:text-2xl" style={{ color: nameColor }}>
-              {user.username}
-            </h1>
-            <p className="px-2 text-xs leading-tight text-white opacity-90 md:text-base">
-              {profile
-                ? `Member since ${new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
-                : 'Your profile'}
-            </p>
-            <div className="mt-2">
-              <button
-                type="button"
-                onClick={goToMyTeams}
-                title="Manage My Teams"
-                className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-white/25"
-              >
-                {favTeam ? `${favTeam.city} ${favTeam.name}${myTeams.length > 1 ? ` +${myTeams.length - 1}` : ''}` : 'Add your teams'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Section tabs — sticky white sub-nav under the banner, team-color underline */}
-      <nav className="sticky top-0 z-40 border-b border-gray-200 bg-white shadow-sm">
-        <div className="mx-auto flex max-w-2xl px-4">
-          {TABS.map(t => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              className={`flex-1 border-b-2 px-1 py-3 text-[11px] font-bold uppercase tracking-wide transition-colors sm:text-sm ${
-                tab === t.id ? '' : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-              style={tab === t.id ? { color: heroColor, borderColor: heroColor } : undefined}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </nav>
-
-      <main className="mx-auto max-w-7xl px-4 py-6">
       {passwordNotice && (
-        <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
           <span>Password updated. You&apos;re signed in here and signed out on your other devices.</span>
-          <button type="button" onClick={() => setPasswordNotice(false)} aria-label="Dismiss" className="flex-shrink-0 text-green-600 hover:text-green-800">
+          <button type="button" onClick={() => setPasswordNotice(false)} aria-label="Dismiss" className="flex-shrink-0 text-emerald-300 hover:text-white">
             <X className="h-4 w-4" />
           </button>
         </div>
       )}
       {profile && !profile.emailVerified && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
           <span className="min-w-0">
             {verifyResend.state === 'sent'
               ? `Sent. Check ${profile.email} (and your spam folder) for the link.`
               : verifyResend.state === 'error'
                 ? verifyResend.message
-                : <>Confirm your email (<span className="font-semibold">{profile.email}</span>) so you can reset your password if you forget it, and so any recaps you asked for can start.</>}
+                : <>Confirm your email (<span className="font-semibold text-white">{profile.email}</span>) so you can reset your password if you forget it, and so any recaps you asked for can start.</>}
           </span>
           {verifyResend.state !== 'sent' && (
             <button
@@ -808,14 +707,16 @@ export default function AccountPage() {
                 else if (result.data.alreadyVerified) setProfile(prev => (prev ? { ...prev, emailVerified: true } : prev));
                 else setVerifyResend({ state: 'sent' });
               }}
-              className="flex-shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-amber-800 shadow-sm transition-colors hover:bg-amber-100 disabled:opacity-50"
+              className="flex-shrink-0 rounded-lg bg-amber-400 px-3 py-1.5 text-xs font-extrabold text-slate-900 transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {verifyResend.state === 'sending' ? 'Sending…' : 'Send confirmation link'}
             </button>
           )}
         </div>
       )}
+
       {tab === 'settings' && (
+        <div className={LEGACY_TAB}>
         <SettingsTab
           hasPassword={profile?.hasPassword ?? true}
           onPasswordSet={() => setProfile(prev => (prev ? { ...prev, hasPassword: true } : prev))}
@@ -828,329 +729,37 @@ export default function AccountPage() {
           onEmailChangeRequested={(pendingEmail) => setProfile(prev => (prev ? { ...prev, pendingEmail } : prev))}
           onDeleted={() => setUser(null)}
         />
+        </div>
       )}
 
       {tab === 'overview' && (
         <>
-      {/* Getting started: shown until every step is done (or dismissed) */}
-      {showChecklist && (
-        <section className="mb-4 rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <h2 className="text-xl font-bold md:text-2xl" style={{ color: heroColor }}>Getting Started</h2>
-            <button type="button" onClick={dismissChecklist} className="text-xs font-semibold text-gray-400 hover:text-gray-600">
-              Hide
-            </button>
-          </div>
-          <p className="mb-2 text-xs text-gray-500">{checklist.filter(c => c.done).length} of {checklist.length} done</p>
-          <ul className="flex flex-col gap-1">
-            {checklist.map(item => (
-              <li key={item.key} className="flex min-h-[44px] items-center gap-3">
-                <span
-                  className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 ${item.done ? 'border-transparent text-white' : 'border-gray-300'}`}
-                  style={item.done ? { backgroundColor: heroColor } : undefined}
-                  aria-hidden
-                >
-                  {item.done && <Check className="h-3.5 w-3.5" />}
-                </span>
-                <span className={`min-w-0 flex-1 text-sm ${item.done ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
-                  {item.label}
-                  <span className="sr-only">{item.done ? ' (done)' : ' (not done yet)'}</span>
-                </span>
-                {!item.done && (
-                  item.href ? (
-                    <Link href={item.href} className="flex-shrink-0 text-xs font-bold hover:underline" style={{ color: heroColor }}>
-                      {item.action}
-                    </Link>
-                  ) : (
-                    <button type="button" onClick={item.onClick} className="flex-shrink-0 text-xs font-bold hover:underline" style={{ color: heroColor }}>
-                      {item.action}
-                    </button>
-                  )
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {/* My Teams — every team followed (the menu stars), one marked main, a recap switch each */}
-      <section id="my-teams" className="mb-4 scroll-mt-16 rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-xl font-bold md:text-2xl" style={{ color: heroColor }}>My Teams</h2>
-          <div className="flex min-w-0 items-center gap-2">
-            <label htmlFor="add-team" className="sr-only">Add a team</label>
-            <select
-              id="add-team"
-              value={addTeam}
-              onChange={e => setAddTeam(e.target.value)}
-              className="min-w-0 rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-800 outline-none focus:border-sabres-blue"
-            >
-              <option value="">Add a team…</option>
-              {TEAM_GROUPS.map(g => (
-                <optgroup key={g.label} label={g.label}>
-                  {g.options.filter(t => !myTeams.includes(t.slug)).map(t => <option key={t.slug} value={t.slug}>{t.label}</option>)}
-                </optgroup>
-              ))}
-            </select>
-            <button
-              type="button"
-              disabled={!addTeam || savingTeams}
-              onClick={async () => {
-                const slug = addTeam;
-                setAddTeam('');
-                await saveTeams([...myTeams, slug], myTeams.length === 0 ? slug : undefined);
-              }}
-              className="flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
-              style={{ backgroundColor: heroColor }}
-            >
-              Add
-            </button>
-          </div>
-        </div>
-        {myTeams.length === 0 ? (
-          <p className="text-sm text-gray-500">
-            Add the teams you follow. They&apos;re starred in the menu on every device you sign in on, and you can turn on game recap emails for each one.
-          </p>
-        ) : (
-          <>
-            {recaps?.pending && recaps.teams.length > 0 && (
-              <p className="mb-3 text-xs text-amber-700">Recap emails start once you confirm your email.</p>
-            )}
-            {/* Two per row on desktop; a lone last card (one team, or an odd count) spans the full row */}
-            <div className="grid gap-3 md:grid-cols-2 md:[&>*:last-child:nth-child(odd)]:col-span-2">
-              {myTeams.map(slug => {
-                const team = findTeam(slug);
-                const isMain = slug === myTeams[0];
-                const recapOn = !!recaps?.teams.includes(slug);
-                return (
-                  <FavoriteTeamCard
-                    key={slug}
-                    teamSlug={slug}
-                    actions={
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          {isMain ? (
-                            <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ backgroundColor: `${heroColor}14`, color: heroColor }}>Main team</span>
-                          ) : (
-                            <button
-                              type="button"
-                              disabled={savingTeams}
-                              onClick={() => saveTeams(myTeams, slug)}
-                              className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200 disabled:opacity-50"
-                            >
-                              Make main
-                            </button>
-                          )}
-                          <label className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-gray-700">
-                            <input
-                              type="checkbox"
-                              checked={recapOn}
-                              disabled={recaps == null || recapBusy === slug}
-                              onChange={e => toggleRecap(slug, e.target.checked)}
-                              className="h-4 w-4 rounded border-gray-300"
-                              style={{ accentColor: heroColor }}
-                            />
-                            Game recap emails
-                          </label>
-                        </div>
-                        <button
-                          type="button"
-                          disabled={savingTeams}
-                          onClick={async () => {
-                            // Unfollowing a team also stops its recap emails.
-                            if (recapOn) await toggleRecap(slug, false);
-                            await saveTeams(myTeams.filter(t => t !== slug));
-                          }}
-                          aria-label={`Remove ${team ? `${team.city} ${team.name}` : slug} from My Teams`}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    }
-                  />
-                );
-              })}
+          {showChecklist && <GettingStartedBar items={checklist} onHide={dismissChecklist} />}
+          <div className="grid gap-6 lg:grid-cols-12">
+            <div className="min-w-0 lg:col-span-7">
+              <MyTeamsPanel
+                teams={myTeams}
+                snapshots={snapshots}
+                recaps={recaps}
+                recapBusy={recapBusy}
+                onToggleRecap={toggleRecap}
+                saving={savingTeams}
+                onSaveTeams={saveTeams}
+              />
             </div>
-          </>
-        )}
-      </section>
-
-      {/* Stats box: only the stats that have something to show (none = no box) */}
-      {statTiles.length > 0 && (
-      <div className="mb-4 rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
-      <h2 className="mb-2 text-xl font-bold md:mb-3 md:text-2xl" style={{ color: heroColor }}>My Stats</h2>
-      <div className={`grid grid-cols-2 gap-2 sm:gap-3 ${statTiles.length >= 4 ? 'sm:grid-cols-4' : statTiles.length === 3 ? 'sm:grid-cols-3' : ''}`}>
-        {statTiles.map(t => (
-          <div key={t.label} className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2 md:p-3">
-            <div className="mb-1 text-xs font-semibold uppercase tracking-wide" style={{ color: heroColor }}>{t.label}</div>
-            <div className="text-2xl font-bold text-gray-900 md:text-3xl">{t.value}</div>
-            {t.sub && <div className="mt-1 text-xs text-gray-600">{t.sub}</div>}
+            <div className="min-w-0 lg:col-span-5">
+              <PuzzlesPanel profile={profile} />
+            </div>
           </div>
-        ))}
-      </div>
-      </div>
-      )}
-
-      <div className="mb-4 grid gap-4">
-        {/* Today's puzzles — the daily hook */}
-        <section className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <h3 className="text-lg font-bold md:text-xl" style={{ color: heroColor }}>Today&apos;s Daily Puzzles</h3>
-            {(profile?.perfectSeason.daily.streak.current ?? 0) >= 2 && (
-              <span className="flex-shrink-0 rounded-full bg-orange-50 px-2 py-0.5 text-xs font-bold text-orange-600">
-                🔥 {profile!.perfectSeason.daily.streak.current}-day streak
-              </span>
-            )}
+          <div className="grid gap-6 lg:grid-cols-2">
+            <CardsPanel profile={profile} username={user.username} onViewAll={() => setTab('perfectseason')} onShare={setSharingCard} />
+            <PicksPanel rows={pickRows} onViewAll={() => setTab('picks')} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            {([
-              { label: '82-0', sport: 'NHL', href: '/82-0', played: profile?.perfectSeason.daily.playedToday.nhl ?? false },
-              { label: '162-0', sport: 'MLB', href: '/162-0', played: profile?.perfectSeason.daily.playedToday.mlb ?? false },
-            ] as const).map(p => (
-              <div key={p.label} className="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2.5">
-                <div>
-                  <div className="text-sm font-bold text-gray-900">{p.label}</div>
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{p.sport}</div>
-                </div>
-                {p.played ? (
-                  <span className="flex items-center gap-1 text-xs font-bold text-green-600">
-                    <Check className="h-3.5 w-3.5" /> Played
-                  </span>
-                ) : (
-                  <Link href={p.href} className="rounded-lg px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90" style={{ backgroundColor: heroColor }}>
-                    Play
-                  </Link>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
-
-      {/* Summary cards — less than the tabs show, so "View all" has a reason to exist.
-          Each shows only once there's something in it (the checklist covers getting started). */}
-      {(hasSeasonSummary || hasPicksSummary) && (
-      <div className={`mb-4 grid gap-4 ${hasSeasonSummary && hasPicksSummary ? 'sm:grid-cols-2' : ''}`}>
-        {/* Perfect Season summary */}
-        {hasSeasonSummary && (
-        <section className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <h3 className="text-lg font-bold md:text-xl" style={{ color: heroColor }}>Perfect Season</h3>
-            <button type="button" onClick={() => setTab('perfectseason')} className="text-xs font-bold hover:underline" style={{ color: heroColor }}>
-              View all →
-            </button>
-          </div>
-          {profile == null ? (
-            <p className="text-sm text-gray-400">Loading…</p>
-          ) : profile.perfectSeason.boards.length === 0 && profile.perfectSeason.daily.count === 0 ? (
-            <p className="text-sm text-gray-500">
-              No games played yet. Try today&apos;s puzzle at{' '}
-              <Link href="/82-0" className="font-bold hover:underline" style={{ color: heroColor }}>82-0</Link>.
-            </p>
-          ) : (
-            <>
-              <ul className="divide-y divide-gray-100">
-                {profile.perfectSeason.boards.slice(0, 3).map(b => (
-                  <li key={b.board} className="flex items-center gap-2 py-2">
-                    <span className="min-w-0 flex-1 truncate text-xs font-semibold text-gray-700">{boardLabel(b)}</span>
-                    <span className={`flex-shrink-0 rounded-md px-1.5 py-0.5 text-xs font-bold ${gradeClasses(b.grade)}`}>{b.grade}</span>
-                    {b.rank != null && (
-                      <span className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-xs font-bold ${rankBadge(b.rank)}`}>#{b.rank}</span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              {profile.perfectSeason.daily.count > 0 && (
-                <p className="mt-1 text-xs text-gray-500">
-                  {profile.perfectSeason.daily.count} daily puzzle{profile.perfectSeason.daily.count === 1 ? '' : 's'} played
-                  {profile.perfectSeason.daily.bestRating != null && (
-                    <> · best {profile.perfectSeason.daily.bestRating.toFixed(1)}</>
-                  )}
-                </p>
-              )}
-            </>
-          )}
-        </section>
-
-        )}
-
-        {/* My Picks summary */}
-        {hasPicksSummary && (
-        <section className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <h3 className="text-lg font-bold md:text-xl" style={{ color: heroColor }}>My Picks</h3>
-            <button type="button" onClick={() => setTab('picks')} className="text-xs font-bold hover:underline" style={{ color: heroColor }}>
-              View all →
-            </button>
-          </div>
-          {saves == null ? (
-            <p className="text-sm text-gray-400">Loading…</p>
-          ) : latestSave == null ? (
-            <p className="text-sm text-gray-500">
-              No saved picks yet. Turn on What If mode on any{' '}
-              <Link href="/nhl" className="font-bold hover:underline" style={{ color: heroColor }}>team page</Link> and hit Save Picks.
-            </p>
-          ) : (
-            <>
-              {(() => {
-                const team = findTeam(latestSave.teamId);
-                return (
-                  <div className="flex items-center gap-2.5">
-                    {team && <Image src={team.logo} alt="" width={32} height={32} className="h-8 w-8 flex-shrink-0" unoptimized />}
-                    <div className="min-w-0">
-                      <div className="truncate text-xs font-bold text-gray-900">
-                        {team ? `${team.city} ${team.name}` : latestSave.teamId} · {longDate(latestSave.savedDate)}
-                        {latestSave.label && <span className="font-semibold text-gray-500"> · “{latestSave.label}”</span>}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {latestSave.summary.gamesPicked} picked ({latestSave.summary.record}){latestSave.sport !== 'nfl' && ` · ${latestSave.summary.playoffOdds.toFixed(1)}% odds`}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-              <p className="mt-2 text-xs text-gray-500">
-                {overall.graded > 0 ? (
-                  <>Exact accuracy <span className="font-bold text-gray-700">{Math.round((overall.exact / overall.graded) * 100)}%</span> · {overall.exact}/{overall.graded} graded</>
-                ) : (
-                  'Grading starts once games are played.'
-                )}
-              </p>
-            </>
-          )}
-        </section>
-        )}
-      </div>
-      )}
-
-      {/* Recent activity — merged saves + daily plays, newest first */}
-      {activity.length > 0 && (
-        <section className="mb-4 rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
-          <h3 className="mb-1 text-lg font-bold md:text-xl" style={{ color: heroColor }}>Recent Activity</h3>
-          <ul className="divide-y divide-gray-100">
-            {activity.map(item => (
-              <li key={item.key}>
-                <Link href={item.href} className="flex items-center gap-3 py-2 text-sm transition-colors hover:bg-gray-50">
-                  <span className="w-14 flex-shrink-0 text-xs text-gray-400">{pickDateLabel(item.date)}</span>
-                  <span className="min-w-0 flex-1 truncate text-gray-700">{item.label}</span>
-                  <span
-                    className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${item.kind === 'save' ? '' : 'bg-gray-100 text-gray-500'}`}
-                    style={item.kind === 'save' ? { backgroundColor: `${heroColor}14`, color: heroColor } : undefined}
-                  >
-                    {item.kind === 'save' ? 'Picks' : 'Daily'}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
         </>
       )}
 
       {tab === 'perfectseason' && (
-        <>
+        <div className={LEGACY_TAB}>
       {/* Streak cards: earned for Daily streaks, one game at a time */}
       <section className="mb-4 rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
         <div className="mb-1 flex items-baseline justify-between gap-2">
@@ -1190,7 +799,6 @@ export default function AccountPage() {
           </div>
         )}
       </section>
-      {sharingCard && <ShareCardSheet card={sharingCard} onClose={() => setSharingCard(null)} />}
 
       {/* Perfect Season — leaderboard bests from 82-0 / 162-0 */}
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -1245,11 +853,11 @@ export default function AccountPage() {
           </div>
         )}
       </section>
-        </>
+        </div>
       )}
 
       {tab === 'picks' && (
-        <>
+        <div className={LEGACY_TAB}>
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold md:text-2xl" style={{ color: heroColor }}>My Picks</h2>
       </div>
@@ -1653,15 +1261,16 @@ export default function AccountPage() {
           })}
         </div>
       )}
-        </>
+        </div>
       )}
       {supportEnabled && (
-        <p className="mt-8 text-center text-xs text-gray-500">
+        <p className="text-center text-xs text-slate-400">
           Lindy&apos;s Five is independent and ad-free.{' '}
-          <Link href="/support" className="font-semibold text-sabres-blue hover:underline">Support the site</Link>
+          <Link href="/support" className="font-semibold text-amber-400 hover:underline">Support the site</Link>
         </p>
       )}
       </main>
+      {sharingCard && <ShareCardSheet card={sharingCard} onClose={() => setSharingCard(null)} />}
     </div>
   );
 }

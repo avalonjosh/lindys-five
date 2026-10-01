@@ -28,6 +28,8 @@ function connectFavorites(user: PublicUser | null) {
 /** Tracks the opt-in leaderboard account (or null). Re-checkable via refresh().
  * Whenever the account loads, the local favorites (hamburger stars) and the
  * account's My Teams are reconciled so the two never drift apart. */
+const USER_EVENT = 'l5-user-change';
+
 export function useCurrentUser() {
   const [user, setUserState] = useState<PublicUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,6 +37,8 @@ export function useCurrentUser() {
   const setUser = useCallback((next: PublicUser | null) => {
     connectFavorites(next);
     setUserState(next);
+    // Other components on the page (the header's account chip) follow sign-in/out.
+    window.dispatchEvent(new CustomEvent<PublicUser | null>(USER_EVENT, { detail: next }));
   }, []);
 
   const refresh = useCallback(async () => {
@@ -46,6 +50,9 @@ export function useCurrentUser() {
 
   useEffect(() => {
     refresh();
+    const onChange = (e: Event) => setUserState((e as CustomEvent<PublicUser | null>).detail);
+    window.addEventListener(USER_EVENT, onChange);
+    return () => window.removeEventListener(USER_EVENT, onChange);
   }, [refresh]);
 
   return { user, loading, refresh, setUser };

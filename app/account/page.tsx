@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import AccountPage from '@/components/account/AccountPage';
+import SiteHeader from '@/components/SiteHeader';
+import SiteFooter from '@/components/SiteFooter';
 
 export const metadata: Metadata = {
   title: 'My Account',
@@ -9,8 +11,10 @@ export const metadata: Metadata = {
 
 export default function Account() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="flex min-h-screen flex-col bg-slate-900 text-white">
+      <SiteHeader />
       <AccountPage />
+      <SiteFooter />
     </div>
   );
 }

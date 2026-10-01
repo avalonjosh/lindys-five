@@ -1,0 +1,74 @@
+'use client';
+
+import { LogOut, Settings } from 'lucide-react';
+import type { MLBTeamConfig, NFLTeamConfig, TeamConfig } from '@/lib/teamConfig';
+import { cardColors, logoFor } from '@/components/home/YourTeamCard';
+
+export interface BannerTile {
+  value: string;
+  label: string;
+  highlight?: boolean;
+}
+
+/** Top of the profile: the main team's colors, the username, and a row of headline numbers. */
+export default function ProfileBanner({
+  username,
+  createdAt,
+  team,
+  tiles,
+  onSettings,
+  onSignOut,
+}: {
+  username: string;
+  createdAt?: string;
+  team?: TeamConfig | MLBTeamConfig | NFLTeamConfig;
+  tiles: BannerTile[];
+  onSettings: () => void;
+  onSignOut: () => void;
+}) {
+  const { bg, accent } = team ? cardColors(team.colors) : { bg: '#003087', accent: '#FFB81C' };
+  const since = createdAt ? new Date(createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : null;
+  const eyebrow = team
+    ? `${team.city} ${team.name} fan${since ? ` · since ${since}` : ''}`
+    : since ? `Member since ${since}` : 'My account';
+
+  return (
+    <div className="border-b-2" style={{ background: bg, borderColor: accent }}>
+      <div className="relative mx-auto max-w-6xl overflow-hidden px-4 py-6 sm:px-6 sm:py-8">
+        {team && (
+          <img src={logoFor(team)} alt="" aria-hidden className="pointer-events-none absolute -right-12 -top-10 h-64 w-64 object-contain opacity-10 sm:h-80 sm:w-80" />
+        )}
+        <div className="relative flex flex-col gap-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="truncate text-[11px] font-bold uppercase tracking-wider sm:text-xs" style={{ color: accent }}>{eyebrow}</div>
+              <h1 className="truncate text-5xl leading-none text-white sm:text-6xl" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>{username}</h1>
+            </div>
+            <div className="flex shrink-0 items-center gap-1 text-sm text-slate-100">
+              <button type="button" onClick={onSettings} aria-label="Settings" className="flex min-h-10 items-center gap-1.5 rounded-lg px-2 transition-colors hover:bg-white/10">
+                <Settings className="h-4 w-4" aria-hidden />
+                <span className="hidden sm:inline">Settings</span>
+              </button>
+              <button type="button" onClick={onSignOut} aria-label="Sign out" className="flex min-h-10 items-center gap-1.5 rounded-lg px-2 transition-colors hover:bg-white/10">
+                <LogOut className="h-4 w-4" aria-hidden />
+                <span className="hidden sm:inline">Sign out</span>
+              </button>
+            </div>
+          </div>
+          {tiles.length > 0 && (
+            <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5">
+              {tiles.slice(0, 5).map((t, i) => (
+                <div key={t.label} className={`min-w-0 rounded-xl bg-black/25 p-3 ${i > 2 ? 'hidden sm:block' : ''}`}>
+                  <div className="truncate text-4xl leading-none sm:text-5xl" style={{ fontFamily: 'Bebas Neue, sans-serif', color: t.highlight ? accent : '#FFFFFF' }}>
+                    {t.value}
+                  </div>
+                  <div className="mt-1 truncate text-xs text-slate-100">{t.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
