@@ -94,7 +94,7 @@ export default function NhlDailyResult({ record, config, variant, streak, played
           {fmt(left)}
         </p>
         <p className="mt-0.5 text-xs text-gray-500">
-          Played {played} · Best {streak.best} day streak
+          {streak.current >= 2 ? `🔥 ${streak.current}-day streak` : streak.current === 1 ? 'Day 1 of a new streak' : 'Play tomorrow to start a streak'} · Best {streak.best} · Played {played}
         </p>
       </div>
 

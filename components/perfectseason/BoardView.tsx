@@ -281,6 +281,22 @@ export default function BoardView(props: BoardViewProps) {
     setSelectedId(null);
   };
 
+  // Every hockey player has exactly one position, so a tap places them straight
+  // away (the first open D slot for a defenseman); Undo covers a mis-tap.
+  // Baseball keeps the position step for multi-position players.
+  const oneTap = sport === 'nhl';
+  const selectPlayer = (p: (typeof players)[number]) => {
+    if (oneTap) {
+      const slot = legalSlots(state, p)[0];
+      if (slot) commitAssign(p.id, slot.id);
+      return;
+    }
+    setSelectedId(p.id);
+  };
+
+  const lastPick = state.picks[state.picks.length - 1];
+  const lastSlotLabel = lastPick ? config.slots.find((s) => s.id === lastPick.slotId)?.label : undefined;
+
   const controlsBar = picking ? (
     <div className="flex items-center justify-between gap-2">
       <div className="flex shrink-0 items-center gap-1.5">
@@ -372,7 +388,7 @@ export default function BoardView(props: BoardViewProps) {
           ) : (
             <div className="rounded-2xl border-2 border-gray-200 bg-white p-4 shadow-md">
               <p className="text-xs text-gray-500">
-                {players.length} available · {selectedPlayer ? 'choose a spot' : isTank ? 'pick a bad one' : 'pick one'} · {filled}/{total} filled
+                {players.length} available · {selectedPlayer ? 'choose a spot' : isTank ? `pick a bad one${oneTap ? ', tap to place' : ''}` : oneTap ? 'tap to place' : 'pick one'} · {filled}/{total} filled
               </p>
               <div className="mt-3">
                 <BoardPlayerList
@@ -382,7 +398,7 @@ export default function BoardView(props: BoardViewProps) {
                   selectedId={selectedId}
                   openSlots={openSlots(state)}
                   getLegalSlots={(p) => legalSlots(state, p)}
-                  onSelect={(p) => setSelectedId(p.id)}
+                  onSelect={selectPlayer}
                 />
               </div>
             </div>
@@ -438,13 +454,15 @@ export default function BoardView(props: BoardViewProps) {
         </div>
       )}
 
-      <HowToPlaySheet open={helpOpen} onClose={() => setHelpOpen(false)} goal={`${config.games}-0`} surface={surface} slotCount={config.slots.length} />
+      <HowToPlaySheet open={helpOpen} onClose={() => setHelpOpen(false)} goal={`${config.games}-0`} surface={surface} slotCount={config.slots.length} oneTap={oneTap} />
 
       {undo && (
         <div className="fixed inset-x-0 bottom-20 z-20 flex justify-center px-4 md:bottom-4">
           <div className="flex w-full max-w-[480px] items-center justify-between rounded-xl bg-sabres-navy px-4 py-3 text-white shadow-xl">
-            <span className="text-sm font-semibold">Pick added</span>
-            <button type="button" onClick={undoPick} className="text-sm font-bold uppercase tracking-wide text-sabres-gold">
+            <span className="min-w-0 truncate text-sm font-semibold">
+              {lastPick ? `${lastPick.playerName} → ${lastSlotLabel ?? lastPick.slotId}` : 'Pick added'}
+            </span>
+            <button type="button" onClick={undoPick} className="ml-3 shrink-0 text-sm font-bold uppercase tracking-wide text-sabres-gold">
               Undo
             </button>
           </div>

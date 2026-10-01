@@ -16,9 +16,11 @@ export function HelpButton({ onClick, pulse = false }: { onClick: () => void; pu
   );
 }
 
-const STEPS = (goal: string, surface: string, slotCount: number): string[] => [
+const STEPS = (goal: string, surface: string, slotCount: number, oneTap: boolean): string[] => [
   'Press SPIN to reveal a decade and a franchise for the round.',
-  `Pick a player from that pool, then place them at a position on the ${surface}.`,
+  oneTap
+    ? `Tap a player from that pool and they go straight to their position on the ${surface}.`
+    : `Pick a player from that pool, then place them at a position on the ${surface}.`,
   'Skip the team or the decade once each if you want a different pool.',
   `After ${slotCount} picks, your season plays out. Chase ${goal}.`,
 ];
@@ -30,12 +32,15 @@ export default function HowToPlaySheet({
   goal,
   surface = 'ice',
   slotCount = 6,
+  oneTap = false,
 }: {
   open: boolean;
   onClose: () => void;
   goal: string;
   surface?: string;
   slotCount?: number;
+  /** Players place themselves on tap (hockey: one position each). */
+  oneTap?: boolean;
 }) {
   if (!open) return null;
   return (
@@ -57,7 +62,7 @@ export default function HowToPlaySheet({
           </button>
         </div>
         <ol className="flex flex-col gap-3">
-          {STEPS(goal, surface, slotCount).map((line, i) => (
+          {STEPS(goal, surface, slotCount, oneTap).map((line, i) => (
             <li key={i} className="flex gap-3 text-sm text-gray-700">
               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sabres-blue text-xs font-bold text-white">
                 {i + 1}
