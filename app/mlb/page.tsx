@@ -4,6 +4,7 @@ import { mlbSeasonYear } from '@/lib/utils/mlbSeason';
 // Revalidate daily — with no revalidate and no fetches this page was fully
 // static, freezing the season year (title, FAQ, JSON-LD) at deploy time.
 export const revalidate = 86400;
+import AccountChip from '@/components/AccountChip';
 import Link from 'next/link';
 import FavoriteTeamsGrid from '@/components/landing/FavoriteTeamsGrid';
 import SiteFooter from '@/components/SiteFooter';
@@ -145,7 +146,10 @@ export default async function MLBLandingPage() {
           <li><a href="/mlb/nationals">Washington Nationals Playoff Odds</a></li>
         </ul>
       </div>
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
+    <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
+      <div className="absolute right-4 top-4 z-10">
+        <AccountChip />
+      </div>
       <div className="flex flex-1 items-center justify-center p-4">
         <div className="max-w-4xl w-full">
         {/* Header */}

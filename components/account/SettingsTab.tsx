@@ -5,6 +5,8 @@ import { changeEmail, changePassword, deleteAccount } from '@/lib/perfectseason/
 import EmailPreferences from '@/components/newsletter/EmailPreferences';
 
 interface SettingsTabProps {
+  username: string;
+  onUsernameChanged: (username: string) => void;
   email: string | null; // null while the profile is loading
   emailVerified: boolean;
   /** New address waiting on its confirm link. */
@@ -26,7 +28,33 @@ function StatusLine({ status }: { status: FormStatus }) {
   return null;
 }
 
-export default function SettingsTab({ email, emailVerified, pendingEmail, onEmailChangeRequested, accent, onDeleted }: SettingsTabProps) {
+export default function SettingsTab({ username, onUsernameChanged, email, emailVerified, pendingEmail, onEmailChangeRequested, accent, onDeleted }: SettingsTabProps) {
+  // Username
+  const [nameOpen, setNameOpen] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [nameStatus, setNameStatus] = useState<FormStatus>({ state: 'idle' });
+
+  const submitName = async () => {
+    if (nameStatus.state === 'saving') return;
+    setNameStatus({ state: 'saving' });
+    try {
+      const res = await fetch('/api/account/username', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ username: newName }),
+      });
+      const data = await res.json();
+      if (!res.ok) return setNameStatus({ state: 'error', message: data.error || 'Something went wrong' });
+      onUsernameChanged(data.user.username);
+      setNameStatus({ state: 'done', message: 'Username updated, including on your leaderboard entries.' });
+      setNameOpen(false);
+      setNewName('');
+    } catch {
+      setNameStatus({ state: 'error', message: 'Network error' });
+    }
+  };
+
   // Email
   const [emailOpen, setEmailOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
@@ -90,6 +118,48 @@ export default function SettingsTab({ email, emailVerified, pendingEmail, onEmai
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
+      {/* Username */}
+      <section className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold" style={{ color: accent }}>Username</h3>
+            <p className="truncate text-sm text-gray-500">{username}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => { setNameOpen(!nameOpen); setNameStatus({ state: 'idle' }); }}
+            className="flex-shrink-0 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200"
+          >
+            {nameOpen ? 'Cancel' : 'Change'}
+          </button>
+        </div>
+        {nameOpen && (
+          <div className="mt-3 flex flex-col gap-2 border-t border-gray-100 pt-3">
+            <label htmlFor="new-username" className="sr-only">New username</label>
+            <input
+              id="new-username"
+              placeholder="New username"
+              value={newName}
+              maxLength={20}
+              autoComplete="username"
+              onChange={e => setNewName(e.target.value)}
+              className={inputClasses}
+            />
+            <p className="text-xs text-gray-500">3 to 20 letters, numbers or underscores. Shown on leaderboards and your cards. You can change it once every 30 days.</p>
+            <button
+              type="button"
+              onClick={submitName}
+              disabled={nameStatus.state === 'saving' || newName.trim().length < 3}
+              className="self-start rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wide text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{ backgroundColor: accent }}
+            >
+              {nameStatus.state === 'saving' ? 'Saving…' : 'Save Username'}
+            </button>
+          </div>
+        )}
+        <StatusLine status={nameStatus} />
+      </section>
+
       {/* Email */}
       <section className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
         <div className="flex items-center justify-between gap-3">

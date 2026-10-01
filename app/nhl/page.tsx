@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import AccountChip from '@/components/AccountChip';
 import Link from 'next/link';
 import FavoriteTeamsGrid from '@/components/landing/FavoriteTeamsGrid';
 import GameTicker from '@/components/landing/GameTicker';
@@ -174,7 +175,10 @@ export default async function NHLLandingPage() {
         </ul>
       </div>
       <GameTicker />
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative flex flex-col">
+        <div className="absolute right-4 top-4 z-10">
+          <AccountChip />
+        </div>
         <div className="flex flex-1 items-center justify-center p-4">
           <div className="max-w-4xl w-full">
           {/* Header */}

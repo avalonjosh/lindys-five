@@ -34,6 +34,17 @@ export interface User {
   emailVerifiedAt?: string;
   /** New address awaiting confirmation; the account switches only when its link is clicked. */
   pendingEmail?: string;
+  /** Last username change (one every 30 days). */
+  usernameChangedAt?: string;
+}
+
+const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
+// A tiny denylist; usernames are public on the leaderboard.
+const USERNAME_DENY = /(admin|moderator|f[u\*]ck|sh[i\*]t|n[i1]gg|c[u\*]nt|rape)/i;
+
+/** An error message for an unusable username, or null if it's fine. */
+export function usernameProblem(username: string): string | null {
+  return USERNAME_RE.test(username) && !USERNAME_DENY.test(username) ? null : 'Username must be 3–20 letters, numbers, or underscores';
 }
 
 /** The safe, public shape returned to the client. */

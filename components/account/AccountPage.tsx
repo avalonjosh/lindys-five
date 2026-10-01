@@ -279,6 +279,7 @@ const TABS: { id: AccountTab; label: string }[] = [
 export default function AccountPage() {
   const { user, loading, setUser } = useCurrentUser();
   const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [saves, setSaves] = useState<WhatIfSave[] | null>(null);
   const [actualsByTeam, setActualsByTeam] = useState<Map<string, Map<number, ActualGame>>>(new Map());
@@ -587,20 +588,46 @@ export default function AccountPage() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-md px-4 py-12 text-center">
-          <p className="mb-6 text-sm text-gray-500">
-            Sign in to see your saved picks, how they&apos;ve changed over time, and how accurate they turned out.
-          </p>
-          <button
-            type="button"
-            onClick={() => setAuthOpen(true)}
-            className="rounded-xl bg-sabres-blue px-8 py-3 text-sm font-bold uppercase tracking-wide text-white shadow-md transition-colors hover:bg-sabres-light"
-          >
-            Sign In / Sign Up
-          </button>
+        <main className="mx-auto max-w-md px-4 py-10">
+          <h2 className="mb-4 text-center text-2xl font-bold uppercase tracking-wide text-sabres-navy" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+            A free Lindy&apos;s Five account
+          </h2>
+          <ul className="mb-6 flex flex-col gap-3">
+            {[
+              ['My Teams', 'Star the teams you follow and see their odds and next game in one place, on every device.'],
+              ['Recap emails', 'Game recaps for the teams you pick, plus a weekly roundup. Switch any of it off anytime.'],
+              ['Picks that get graded', 'Save What-If picks on any team page and see how accurate they turned out.'],
+              ['Leaderboards and streak cards', 'Save your 82-0 and 162-0 scores, and earn cards for playing the Daily days in a row.'],
+            ].map(([title, body]) => (
+              <li key={title} className="flex gap-3 rounded-xl bg-white p-3 shadow-sm">
+                <Check className="mt-0.5 h-5 w-5 flex-shrink-0 text-sabres-blue" aria-hidden />
+                <span>
+                  <span className="block text-sm font-bold text-gray-900">{title}</span>
+                  <span className="block text-sm text-gray-600">{body}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => { setAuthMode('signup'); setAuthOpen(true); }}
+              className="w-full rounded-xl bg-sabres-blue py-3 text-sm font-bold uppercase tracking-wide text-white shadow-md transition-colors hover:bg-sabres-light"
+            >
+              Create a free account
+            </button>
+            <button
+              type="button"
+              onClick={() => { setAuthMode('signin'); setAuthOpen(true); }}
+              className="w-full rounded-xl border-2 border-gray-300 bg-white py-3 text-sm font-bold uppercase tracking-wide text-gray-700 transition-colors hover:border-gray-400"
+            >
+              Sign in
+            </button>
+          </div>
         </main>
         {authOpen && (
           <AuthModal
+            initialMode={authMode}
             onClose={() => setAuthOpen(false)}
             onSuccess={(u) => {
               setUser(u);
@@ -775,6 +802,8 @@ export default function AccountPage() {
       )}
       {tab === 'settings' && (
         <SettingsTab
+          username={user.username}
+          onUsernameChanged={(username) => setUser({ ...user, username })}
           email={profile?.email ?? null}
           accent={heroColor}
           emailVerified={profile?.emailVerified ?? true}

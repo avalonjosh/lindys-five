@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import AccountChip from '@/components/AccountChip';
 import Link from 'next/link';
 import SiteFooter from '@/components/SiteFooter';
 import TodaysPuzzles from '@/components/home/TodaysPuzzles';
@@ -86,16 +87,19 @@ export default function LandingPage() {
       <div className="flex min-h-screen flex-col bg-slate-900 text-white">
         <header className="border-b border-slate-800">
           <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:h-16 sm:px-6">
-            <Link href="/" className="text-3xl leading-none sm:text-4xl" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+            <Link href="/" className="whitespace-nowrap text-3xl leading-none sm:text-4xl" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
               Lindy&apos;s Five
             </Link>
-            <nav aria-label="Main" className="flex items-center gap-4 text-sm font-semibold text-slate-200 sm:gap-6 sm:text-[15px]">
-              {NAV_LINKS.map((l) => (
-                <Link key={l.href} href={l.href} className={`hover:text-amber-400 ${l.mobile ? '' : 'hidden lg:inline'}`}>
-                  {l.label}
-                </Link>
-              ))}
-            </nav>
+            <div className="flex items-center gap-4 sm:gap-6">
+              <nav aria-label="Main" className="flex items-center gap-4 text-sm font-semibold text-slate-200 sm:gap-6 sm:text-[15px]">
+                {NAV_LINKS.map((l) => (
+                  <Link key={l.href} href={l.href} className={`hover:text-amber-400 ${l.mobile ? '' : 'hidden lg:inline'}`}>
+                    {l.label}
+                  </Link>
+                ))}
+              </nav>
+              <AccountChip />
+            </div>
           </div>
         </header>
 

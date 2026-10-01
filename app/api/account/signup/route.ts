@@ -4,12 +4,9 @@ import { kv } from '@vercel/kv';
 import { signUserToken, userCookieOptions, USER_COOKIE } from '@/lib/perfectseason/server/session';
 import { rateLimit, clientIp } from '@/lib/perfectseason/server/ratelimit';
 import { accountOptIn, sendAccountVerification } from '@/lib/perfectseason/server/accountEmail';
-import { userKey, userEmailKey, userNameKey, publicUser, type User } from '@/lib/perfectseason/leaderboard';
+import { userKey, userEmailKey, userNameKey, publicUser, usernameProblem, type User } from '@/lib/perfectseason/leaderboard';
 import { findTeam } from '@/lib/teamConfig';
 
-const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
-// A tiny denylist; usernames are public on the leaderboard.
-const DENY = /(admin|moderator|f[u\*]ck|sh[i\*]t|n[i1]gg|c[u\*]nt|rape)/i;
 
 export async function POST(request: NextRequest) {
   let body: { email?: string; username?: string; password?: string; subscribe?: boolean; favoriteTeam?: string };
@@ -24,9 +21,8 @@ export async function POST(request: NextRequest) {
   const password = body.password ?? '';
 
   if (!email.includes('@') || email.length > 200) return NextResponse.json({ error: 'Enter a valid email' }, { status: 400 });
-  if (!USERNAME_RE.test(username) || DENY.test(username)) {
-    return NextResponse.json({ error: 'Username must be 3–20 letters, numbers, or underscores' }, { status: 400 });
-  }
+  const nameProblem = usernameProblem(username);
+  if (nameProblem) return NextResponse.json({ error: nameProblem }, { status: 400 });
   if (password.length < 8 || password.length > 100) return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
 
   if (!(await rateLimit(`ps:rl:signup:${clientIp(request)}`, 5, 86400))) {
