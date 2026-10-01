@@ -1,12 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { RefreshCw, ShoppingBag, Ticket, MousePointerClick, DollarSign } from 'lucide-react';
+import { RefreshCw, ShoppingBag, Ticket, MousePointerClick, DollarSign, Coffee } from 'lucide-react';
 import { Card, PageHeader, SectionHeading, Segmented, Badge, Button, Spinner, StatCard, WarningBanner, Table, Th, Td } from './ui';
 import type { NetworkSummary, NetworkBreakdownRow, NetworkSale } from '@/lib/services/affiliateNetworks';
 import type { FirstPartyClicks } from '@/lib/services/affiliateFirstParty';
 import type { AffiliatesPayload } from '@/app/api/admin/affiliates/route';
 import { getDateKey } from '@/lib/analytics';
+import type { KofiSummary } from '@/lib/kofi';
 
 type Range = 'today' | '7d' | '30d' | '90d' | '365d';
 const RANGE_LABEL: Record<Range, string> = { today: 'today', '7d': 'last 7 days', '30d': 'last 30 days', '90d': 'last 90 days', '365d': 'last 12 months' };
@@ -58,15 +59,27 @@ export default function AffiliatesDashboard() {
   const human = data?.firstParty.total ?? 0;
   const byVendor = data?.firstParty.byVendor ?? { stubhub: 0, fanatics: 0, amazon: 0 };
   const partialCoverage = !!data && data.firstParty.coveredDays < ({ today: 1, '7d': 7, '30d': 30, '90d': 90, '365d': 365 } as Record<Range, number>)[range];
-  const recent: NetworkSale[] = (data?.networks || []).flatMap((n) => n.recentSales).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30);
+  const tips = data?.kofi;
+  const earned = totals.commission + (tips?.total ?? 0);
+  // Affiliate sales and Ko-fi tips in one list, newest first.
+  const recent: EarningRow[] = [
+    ...(data?.networks || []).flatMap((n) => n.recentSales).map((s: NetworkSale): EarningRow => ({
+      date: s.date, source: s.network === 'fanatics' ? 'Fanatics' : 'StubHub', ref: s.ref, detail: s.detail ?? '', order: s.amount, earned: s.commission, status: s.status,
+    })),
+    ...(tips?.recent ?? []).map((t): EarningRow => ({
+      date: t.timestamp, source: 'Ko-fi', ref: t.isSubscription ? `Monthly${t.tierName ? ` · ${t.tierName}` : ''}` : t.type,
+      detail: `${t.fromName}${t.message ? `: “${t.message}”` : ''}${t.isPublic ? '' : ' (private)'}`, order: null, earned: t.amount, status: 'received',
+      currency: t.currency.toUpperCase() === 'USD' ? undefined : t.currency.toUpperCase(),
+    })),
+  ].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 40);
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">
       <PageHeader
-        title="Affiliates"
+        title="Earnings"
         description={
           <>
-            Fanatics (Impact) + StubHub (Partnerize) + on-site clicks, {RANGE_LABEL[range]}
+            Fanatics (Impact) + StubHub (Partnerize) + Ko-fi tips + on-site clicks, {RANGE_LABEL[range]}
             {data && <span className="text-gray-400"> · network data as of {new Date(data.cachedAt).toLocaleTimeString()}{range === 'today' ? ' (refreshes every 5 min)' : ''}</span>}
           </>
         }
@@ -106,16 +119,17 @@ export default function AffiliatesDashboard() {
 
           {/* Totals: humans first, network clicks demoted to a diagnostic */}
           <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-            <StatCard label="Commission earned" value={money(totals.commission)} sub={totals.pending > 0 ? `${money(totals.pending)} still pending` : 'all approved'} icon={<DollarSign className="h-6 w-6" />} />
+            <StatCard label="Total earned" value={money(earned)} sub={`${money(totals.commission)} commission${totals.pending > 0 ? ` (${money(totals.pending)} pending)` : ''} · ${money(tips?.total ?? 0)} tips`} icon={<DollarSign className="h-6 w-6" />} />
             <StatCard label="Sales" value={totals.conversions} sub={`${money(totals.sales)} order value`} icon={<ShoppingBag className="h-6 w-6" />} />
             <StatCard label="On-site clicks (humans)" value={human} sub={`${pct(totals.conversions, human)} conversion · ${epc(totals.commission, human)} per click`} icon={<Ticket className="h-6 w-6" />} />
             <StatCard label="Network clicks" value={totals.clicks} sub={`includes crawlers · ${ratio(totals.clicks, human)}`} icon={<MousePointerClick className="h-6 w-6" />} />
           </div>
 
           {/* Per network */}
-          <div className="mb-6 grid gap-4 lg:grid-cols-2">
+          <div className="mb-6 grid gap-4 lg:grid-cols-3">
             {fanatics && <NetworkCard s={fanatics} rate="8% of sale · 30-day window" humanClicks={byVendor.fanatics} />}
             {stubhub && <NetworkCard s={stubhub} rate="4% of ticket price + fees · 30-day cookie" humanClicks={byVendor.stubhub} />}
+            {tips && <KofiCard k={tips} />}
           </div>
 
           {/* Daily chart */}
@@ -148,25 +162,25 @@ export default function AffiliatesDashboard() {
 
           {/* Recent sales */}
           <Card>
-            <SectionHeading>Recent sales</SectionHeading>
+            <SectionHeading>Recent sales and tips</SectionHeading>
             {recent.length === 0 ? (
-              <p className="py-4 text-sm text-gray-400">No sales in this window</p>
+              <p className="py-4 text-sm text-gray-400">No sales or tips in this window</p>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <thead>
-                    <tr><Th>Date</Th><Th>Network</Th><Th>Ref</Th><Th>Detail</Th><Th align="right">Order</Th><Th align="right">Commission</Th><Th>Status</Th></tr>
+                    <tr><Th>Date</Th><Th>Source</Th><Th>Ref</Th><Th>Detail</Th><Th align="right">Order</Th><Th align="right">Earned</Th><Th>Status</Th></tr>
                   </thead>
                   <tbody>
                     {recent.map((s, i) => (
                       <tr key={i}>
                         <Td className="whitespace-nowrap">{new Date(s.date).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: '2-digit' })}</Td>
-                        <Td>{s.network === 'fanatics' ? 'Fanatics' : 'StubHub'}</Td>
+                        <Td>{s.source}</Td>
                         <Td className="font-mono text-xs">{s.ref}</Td>
                         <Td className="max-w-xs"><span className="block truncate" title={s.detail}>{s.detail || '—'}</span></Td>
-                        <Td align="right">{money(s.amount)}</Td>
-                        <Td align="right" className="font-semibold">{money(s.commission)}</Td>
-                        <Td><Badge variant={s.status === 'approved' ? 'success' : s.status === 'pending' ? 'warning' : 'neutral'}>{s.status}</Badge></Td>
+                        <Td align="right">{s.order == null ? '—' : money(s.order)}</Td>
+                        <Td align="right" className="font-semibold">{s.currency ? `${s.earned.toFixed(2)} ${s.currency}` : money(s.earned)}</Td>
+                        <Td><Badge variant={s.status === 'approved' || s.status === 'received' ? 'success' : s.status === 'pending' ? 'warning' : 'neutral'}>{s.status}</Badge></Td>
                       </tr>
                     ))}
                   </tbody>
@@ -180,10 +194,52 @@ export default function AffiliatesDashboard() {
             so they are the closest read on real fans. Network clicks count every redirect through the affiliate link, including
             search-engine crawlers, and are shown only as a health check (if they drop to zero while on-site clicks continue, a link is broken).
             Sales can land up to 30 days after the click, so rates are directional. Amazon Associates has no reporting API; check Associates Central for Amazon earnings.
+            Ko-fi tips arrive from Ko-fi&apos;s webhook as they happen; amounts are before Ko-fi and payment fees, and only USD tips are added to the totals.
           </p>
         </div>
       )}
     </main>
+  );
+}
+
+interface EarningRow {
+  date: string;
+  source: string;
+  ref: string;
+  detail: string;
+  order: number | null;
+  earned: number;
+  status: string;
+  /** Set for a non-USD Ko-fi tip. */
+  currency?: string;
+}
+
+function KofiCard({ k }: { k: KofiSummary }) {
+  const oneOff = k.count - k.monthlyCount;
+  return (
+    <Card>
+      <div className="mb-3 flex items-start justify-between">
+        <div>
+          <h3 className="flex items-center gap-1.5 text-base font-bold text-gray-900"><Coffee className="h-4 w-4" /> Ko-fi tips</h3>
+          <p className="text-xs text-gray-500">ko-fi.com/lindysfive · one-time and monthly</p>
+        </div>
+        <Badge variant={k.configured ? 'success' : 'neutral'}>{k.configured ? 'connected' : 'not configured'}</Badge>
+      </div>
+      <div className="grid grid-cols-3 gap-3 text-center">
+        <Stat label="Tips" value={k.count.toLocaleString()} sub={`${oneOff} one-time`} />
+        <Stat label="Monthly" value={k.monthlyCount.toLocaleString()} sub="membership payments" />
+        <Stat label="Received" value={money(k.total)} sub={k.otherCurrency > 0 ? `+${k.otherCurrency} non-USD` : 'before fees'} />
+      </div>
+      <div className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-500">
+        {k.recent[0]
+          ? <>Latest: <span className="font-semibold text-gray-700">{k.recent[0].fromName}</span>, {money(k.recent[0].amount)} on {new Date(k.recent[0].timestamp).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' })}</>
+          : k.configured
+            ? k.lastTestAt
+              ? `No tips in this window yet. Ko-fi's test arrived ${new Date(k.lastTestAt).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })} ET, so the webhook works.`
+              : 'No tips in this window yet.'
+            : 'Add the Ko-fi webhook to start recording tips.'}
+      </div>
+    </Card>
   );
 }
 

@@ -3,6 +3,7 @@ import { kv } from '@vercel/kv';
 import { verifyAdmin } from '@/lib/adminAuth';
 import { fetchImpactSummary, fetchPartnerizeSummary, type NetworkSummary } from '@/lib/services/affiliateNetworks';
 import { fetchFirstPartyClicks, emptyFirstPartyClicks, type FirstPartyClicks } from '@/lib/services/affiliateFirstParty';
+import { getKofiSummary, type KofiSummary } from '@/lib/kofi';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -31,6 +32,8 @@ export interface AffiliatesPayload {
   cachedAt: string;
   networks: NetworkSummary[];
   firstParty: FirstPartyClicks;
+  /** Ko-fi tips in the range. Read fresh on every request (not cached with the networks). */
+  kofi: KofiSummary;
 }
 
 export async function GET(request: NextRequest) {
@@ -43,15 +46,16 @@ export async function GET(request: NextRequest) {
   const refresh = params.get('refresh') === '1';
   const cacheKey = `affiliates:summary:v2:${range}`;
 
-  if (!refresh) {
-    try {
-      const cached = await kv.get<AffiliatesPayload>(cacheKey);
-      if (cached) return NextResponse.json(cached);
-    } catch { /* cache miss is fine */ }
-  }
-
   const to = new Date();
   const from = easternMidnightDaysAgo(RANGE_DAYS[range] - 1);
+  const kofi = await getKofiSummary(from).catch((): KofiSummary => ({ configured: !!process.env.KOFI_VERIFICATION_TOKEN, total: 0, count: 0, monthlyCount: 0, otherCurrency: 0, recent: [], lastTestAt: null }));
+
+  if (!refresh) {
+    try {
+      const cached = await kv.get<Omit<AffiliatesPayload, 'kofi'>>(cacheKey);
+      if (cached) return NextResponse.json({ ...cached, kofi });
+    } catch { /* cache miss is fine */ }
+  }
 
   const [fanatics, stubhub, firstParty] = await Promise.all([
     fetchImpactSummary(from, to),
@@ -59,7 +63,7 @@ export async function GET(request: NextRequest) {
     fetchFirstPartyClicks(RANGE_DAYS[range]).catch(() => emptyFirstPartyClicks()),
   ]);
 
-  const payload: AffiliatesPayload = {
+  const payload: Omit<AffiliatesPayload, 'kofi'> = {
     range,
     from: from.toISOString(),
     to: to.toISOString(),
@@ -72,5 +76,5 @@ export async function GET(request: NextRequest) {
     await kv.set(cacheKey, payload, { ex: range === 'today' ? TODAY_CACHE_TTL_SECONDS : CACHE_TTL_SECONDS });
   } catch { /* non-fatal */ }
 
-  return NextResponse.json(payload);
+  return NextResponse.json({ ...payload, kofi } satisfies AffiliatesPayload);
 }

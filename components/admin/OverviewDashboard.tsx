@@ -354,17 +354,18 @@ function AffiliatesSnapshot({ data }: { data: AffiliatesPayload | null }) {
   );
   const latest = (data?.networks || []).flatMap((n) => n.recentSales).sort((a, b) => b.date.localeCompare(a.date))[0];
   const onSite = data?.firstParty.total ?? 0;
+  const tips = data?.kofi;
 
   return (
     <Card className="mb-6" padding={false}>
       <div className="flex items-center justify-between p-4 pb-0 sm:p-5 sm:pb-0">
         <SectionHeading className="mb-0 w-full border-0 pb-0">
           <span className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4" /> Affiliates
+            <DollarSign className="h-4 w-4" /> Earnings
             <span className="text-sm font-normal text-gray-400">(last 30 days)</span>
           </span>
         </SectionHeading>
-        <Link href="/admin/affiliates" className="flex shrink-0 items-center gap-1 text-sm text-sabres-blue hover:underline">
+        <Link href="/admin/earnings" className="flex shrink-0 items-center gap-1 text-sm text-sabres-blue hover:underline">
           Details <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </div>
@@ -373,7 +374,7 @@ function AffiliatesSnapshot({ data }: { data: AffiliatesPayload | null }) {
       ) : (
         <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-5">
           <div className="grid grid-cols-3 gap-3 lg:col-span-3">
-            <MiniStat label="Commission" value={money(totals.commission)} sub={totals.pending > 0 ? `${money(totals.pending)} pending` : 'all approved'} strong />
+            <MiniStat label="Earned" value={money(totals.commission + (tips?.total ?? 0))} sub={`${money(totals.commission)} commission · ${money(tips?.total ?? 0)} tips`} strong />
             <MiniStat label="Sales" value={String(totals.sales)} sub={onSite > 0 ? `${((totals.sales / onSite) * 100).toFixed(1)}% of on-site clicks` : 'no on-site clicks yet'} />
             <MiniStat label="On-site clicks" value={onSite.toLocaleString()} sub={`${totals.clicks.toLocaleString()} network incl. crawlers`} />
           </div>
@@ -389,6 +390,17 @@ function AffiliatesSnapshot({ data }: { data: AffiliatesPayload | null }) {
                 </span>
               </div>
             ))}
+            {tips && (
+              <div className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm">
+                <span className="flex items-center gap-2">
+                  <span className="inline-block h-2 w-2 rounded-full" style={{ background: tips.configured ? '#16a34a' : '#9ca3af' }} title={tips.configured ? 'connected' : 'not configured'} />
+                  <span className="font-medium text-gray-800">Ko-fi</span>
+                </span>
+                <span className="tabular-nums text-gray-500">
+                  {tips.count} tip{tips.count === 1 ? '' : 's'} · <span className="font-semibold text-gray-800">{money(tips.total)}</span>
+                </span>
+              </div>
+            )}
             <p className="truncate text-xs text-gray-400" title={latest ? `${latest.ref} · ${latest.detail || ''}` : undefined}>
               {latest
                 ? `Latest sale: ${money(latest.commission)} on ${latest.network === 'fanatics' ? 'Fanatics' : 'StubHub'} · ${timeAgo(latest.date)}`

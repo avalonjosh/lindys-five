@@ -178,7 +178,7 @@ export function renderAffiliateWeeklyEmail(data: AffiliateWeeklyData): { subject
     </div>
 
     <table cellpadding="0" cellspacing="0" style="margin:24px auto 0;"><tr><td style="background:#003087;border-radius:8px;">
-      <a href="${SITE_URL}/admin/affiliates" style="display:inline-block;padding:11px 22px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;">Open the Affiliates dashboard</a>
+      <a href="${SITE_URL}/admin/earnings" style="display:inline-block;padding:11px 22px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;">Open the Earnings dashboard</a>
     </td></tr></table>
     <p style="margin:18px 0 0;font-size:11px;line-height:1.5;color:#94a3b8;text-align:center;">
       Fanatics pays 8% via Impact (30-day window); StubHub pays 4% via Partnerize (30-day cookie). Network clicks include search-engine crawlers following affiliate links; on-site clicks are the better read on real fans. Amazon has no reporting API and is not included.

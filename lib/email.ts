@@ -82,6 +82,11 @@ function renderVerificationEmail(verifyUrl: string): string {
 </html>`;
 }
 
+/** One quiet line under the brand in newsletter footers; empty until Ko-fi is set up. */
+const SUPPORT_LINE = process.env.NEXT_PUBLIC_KOFI_URL
+  ? `<p style="margin:4px 0 0;color:#94a3b8;font-size:12px;">Independent and ad-free. <a href="${SITE_URL}/support" style="color:#64748b;text-decoration:underline;">Support Lindy&#39;s Five</a></p>`
+  : '';
+
 // ─── Account emails (transactional: no unsubscribe, not newsletter sends) ──
 
 export async function sendPasswordResetEmail(email: string, resetLink: string) {
@@ -839,7 +844,7 @@ function renderBoxscoreEmail(data: GameRecapData, blogPost?: BlogPost): string {
         <tr><td style="background:#f8fafc;padding:16px 20px;border-top:1px solid #e2e8f0;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td><p style="margin:0;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; NHL Playoff Odds &amp; Standings</p></td>
+              <td><p style="margin:0;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; NHL Playoff Odds &amp; Standings</p>${SUPPORT_LINE}</td>
               <td align="right"><a href="${unsubscribeUrl}" style="color:#94a3b8;font-size:12px;text-decoration:none;">Unsubscribe</a></td>
             </tr>
           </table>
@@ -1284,7 +1289,7 @@ function renderPlayoffBoxscoreEmail(data: PlayoffGameRecapData, blogPost?: BlogP
         <tr><td style="background:#f8fafc;padding:16px 20px;border-top:1px solid #e2e8f0;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td><p style="margin:0;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; NHL Playoff Odds &amp; Bracket</p></td>
+              <td><p style="margin:0;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; NHL Playoff Odds &amp; Bracket</p>${SUPPORT_LINE}</td>
               <td align="right"><a href="${unsubscribeUrl}" style="color:#94a3b8;font-size:12px;text-decoration:none;">Unsubscribe</a></td>
             </tr>
           </table>
@@ -1457,7 +1462,7 @@ function renderAnnouncementEmail(
         <tr><td style="background:#f8fafc;padding:16px 20px;border-top:1px solid #e2e8f0;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td><p style="margin:0;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; NHL Playoff Odds &amp; Tracker</p></td>
+              <td><p style="margin:0;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; NHL Playoff Odds &amp; Tracker</p>${SUPPORT_LINE}</td>
               <td align="right"><a href="${unsubscribeUrl}" style="color:#94a3b8;font-size:12px;text-decoration:none;">Unsubscribe</a></td>
             </tr>
           </table>
@@ -1806,7 +1811,7 @@ function renderSetRecapEmail(data: SetRecapEmailData): string {
         <tr><td style="background:#f8fafc;padding:16px 20px;border-top:1px solid #e2e8f0;">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td><p style="margin:0;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; NHL Playoff Odds &amp; Standings</p></td>
+              <td><p style="margin:0;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; NHL Playoff Odds &amp; Standings</p>${SUPPORT_LINE}</td>
               <td align="right"><a href="${unsubscribeUrl}" style="color:#94a3b8;font-size:12px;text-decoration:none;">Unsubscribe</a></td>
             </tr>
           </table>
@@ -1975,7 +1980,7 @@ function renderSimpleBlogRecap(post: BlogPost, postUrl: string): string {
           </table>
         </td></tr>
         <tr><td style="background:#f8fafc;padding:16px 20px;border-top:1px solid #e2e8f0;">
-          <p style="margin:0 0 8px;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; NHL Playoff Odds &amp; Standings</p>
+          <p style="margin:0 0 8px;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; NHL Playoff Odds &amp; Standings</p>${SUPPORT_LINE}
           <a href="${unsubscribeUrl}" style="color:#94a3b8;font-size:12px;">Unsubscribe</a>
         </td></tr>
       </table>
@@ -2236,7 +2241,7 @@ function brandEmailShell(opts: { headerBg: string; label: string; body: string; 
       <tr><td style="padding:24px 20px;background:#ffffff;">${opts.body}</td></tr>
       <tr><td style="background:#f8fafc;padding:16px 20px;border-top:1px solid #e2e8f0;">
         <table width="100%" cellpadding="0" cellspacing="0"><tr>
-          <td><p style="margin:0;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; ${footerNote}</p></td>
+          <td><p style="margin:0;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; ${footerNote}</p>${SUPPORT_LINE}</td>
           <td align="right"><a href="${opts.unsubscribeUrl}" style="color:#94a3b8;font-size:12px;text-decoration:none;">Unsubscribe</a></td>
         </tr></table>
       </td></tr>

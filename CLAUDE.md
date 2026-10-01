@@ -95,7 +95,7 @@ All endpoints use base URL `https://api-web.nhle.com/v1` (proxied through `/api/
 ## Admin & Newsletter System
 **Admin auth:** Password verified against `ADMIN_PASSWORD_HASH` env var via bcrypt. JWT token (24h expiry) stored in HTTP-only secure cookie. Routes protected by `AdminAuthWrapper` component.
 
-**Admin sections:** Analytics, Posts (blog CRUD + cron triggers), Outreach (contacts), Newsletter (subscriber management + email sending).
+**Admin sections (tab order):** Overview, Analytics, Earnings (`/admin/earnings`, formerly Affiliates: Fanatics + StubHub + Ko-fi tips; `/admin/affiliates` redirects), Subscribers (newsletter), Outreach, What-If, Posts (blog CRUD + cron triggers).
 
 **Environment variables needed:** `ADMIN_PASSWORD_HASH`, `ADMIN_SESSION_SECRET`, `RESEND_API_KEY`, `NEXT_PUBLIC_SITE_URL`, `CRON_SECRET`.
 
@@ -151,7 +151,9 @@ All crons are configured in `vercel.json` and authorized via `CRON_SECRET` Beare
 Subscribers can switch kinds of email off (`NewsletterSubscriber.prefs`: `gameRecaps`, `setRecaps`, `digest`, `specials`; missing = on, checked with `wantsEmail()`). Every send path passes its kind (`getVerifiedSubscribersForTeam(team, kind)`; the weekly digest filters `digest`). The "Unsubscribe" link in emails (`GET /api/newsletter/unsubscribe?id=`) now opens `/email-preferences?id=`, where the person can drop one team, one kind of email, or everything (`/api/newsletter/preferences`, by subscriber id or by the signed-in account; Settings > Emails uses the same component). The RFC 8058 one-click `POST` still unsubscribes from everything.
 
 ### Support (Ko-fi tips)
-`/support` explains the site is independent and links to Ko-fi (one-time or monthly tips, paid out by Ko-fi). Small "Support" links sit in the SiteFooter, at the bottom of the account page and on the 82-0/162-0 daily result. All of it is gated on `NEXT_PUBLIC_KOFI_URL` (`lib/support.ts`): unset = links hidden, `/support` 404s and stays out of the sitemap.
+`/support` explains the site is independent and links to Ko-fi (one-time or monthly tips, paid out by Ko-fi). Small "Support" links sit in the SiteFooter, at the bottom of the account page and on the 82-0/162-0 daily result. All of it is gated on `NEXT_PUBLIC_KOFI_URL` (`lib/support.ts`): unset = links hidden, `/support` 404s and stays out of the sitemap. Newsletter email footers carry one quiet "Support Lindy's Five" line (`SUPPORT_LINE` in `lib/email.ts`, same gate; never on account/verification emails).
+
+Tips are recorded by Ko-fi's webhook, `POST /api/webhook/kofi` (form field `data`, JSON; rejected unless its `verification_token` equals `KOFI_VERIFICATION_TOKEN`). Ko-fi's "send test" payload (an `@example.com` email) only sets `kofi:last-test`. Each tip: `kofi:tip:{message_id}` (name, amount, currency, message, monthly or not; no email) + sorted set `kofi:tips` (score = time). Shown on the admin Earnings tab and the Overview earnings card (`getKofiSummary()` in `lib/kofi.ts`, read fresh, not cached with the network data).
 
 ### Webhook Tracking
 **Endpoint:** `POST /api/webhook/resend` — receives Resend delivery events

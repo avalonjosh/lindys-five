@@ -1,5 +1,6 @@
-import AffiliatesDashboard from '@/components/admin/AffiliatesDashboard';
+import { redirect } from 'next/navigation';
 
+// The Affiliates tab is now Earnings (affiliates plus Ko-fi tips).
 export default function AdminAffiliatesPage() {
-  return <AffiliatesDashboard />;
+  redirect('/admin/earnings');
 }

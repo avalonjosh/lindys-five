@@ -44,6 +44,7 @@ export default function PrivacyPage() {
             <p><span className="font-semibold">If you create an account:</span> your email address, a username, and a password (stored only as a one-way hash). If you sign in with Google, we receive your name, email address and Google account id from Google, nothing else.</p>
             <p><span className="font-semibold">What you do with your account:</span> the teams you follow, What-If picks you save, your 82-0 and 162-0 scores and daily streaks, and any streak cards you earn. Your username appears on leaderboards and on cards you share.</p>
             <p><span className="font-semibold">If you sign up for emails:</span> your email address, the teams and kinds of email you chose, and whether each email was delivered, opened or clicked (reported by our email provider).</p>
+            <p><span className="font-semibold">If you leave a tip:</span> tips go through Ko-fi, which tells us your display name, the amount and any message you add. Ko-fi handles the payment, so we never see your card or PayPal details.</p>
             <p><span className="font-semibold">On this device:</span> your favorite teams, game progress and a few display preferences are kept in your browser&apos;s local storage.</p>
             <p><span className="font-semibold">Usage data:</span> we use Google Analytics to see which pages are visited and how people find the site. It uses cookies and collects things like pages viewed, device type and approximate location.</p>
           </Section>
@@ -53,7 +54,7 @@ export default function PrivacyPage() {
           </Section>
 
           <Section title="Who we share it with">
-            <p>Only the services that run the site: Vercel (hosting and data storage), Resend (sending email), Google (Analytics, and Sign in with Google if you use it). They process data on our behalf.</p>
+            <p>Only the services that run the site: Vercel (hosting and data storage), Resend (sending email), Google (Analytics, and Sign in with Google if you use it), Ko-fi (tips). They process data on our behalf.</p>
             <p>Some links go to partners such as StubHub, Fanatics and Amazon, and we may earn a commission if you buy something. Those sites have their own privacy policies and may use their own cookies once you click through.</p>
           </Section>
 
