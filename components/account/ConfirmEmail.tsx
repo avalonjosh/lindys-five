@@ -32,29 +32,29 @@ export default function ConfirmEmail() {
 
   return (
     <main className="mx-auto max-w-[400px] px-4 py-10 sm:py-16">
-      <Link href="/" className="mb-6 block text-center text-3xl font-bold tracking-wider text-sabres-navy" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+      <Link href="/" className="mb-6 block text-center text-4xl leading-none text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
         Lindy&apos;s Five
       </Link>
-      <div className="rounded-2xl bg-white p-5 shadow-xl">
+      <div className="rounded-2xl border border-slate-700 bg-slate-800/60 p-5">
         {state.status === 'working' ? (
-          <p className="text-sm text-gray-400">Confirming…</p>
+          <p className="text-sm text-slate-400">Confirming…</p>
         ) : state.status === 'done' ? (
           <>
-            <h1 className="mb-1 text-2xl font-bold uppercase tracking-wide text-sabres-navy" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+            <h1 className="mb-2 text-3xl leading-none text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
               {state.kind === 'change' ? 'Email Updated' : 'Email Confirmed'}
             </h1>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-slate-300">
               {state.kind === 'change'
-                ? <>Your account now uses <span className="font-semibold">{state.email}</span>. Recaps you get will go there too.</>
-                : <><span className="font-semibold">{state.email}</span> is confirmed. Any recaps you asked for will start with the next game.</>}
+                ? <>Your account now uses <span className="font-semibold text-white">{state.email}</span>. Recaps you get will go there too.</>
+                : <><span className="font-semibold text-white">{state.email}</span> is confirmed. Any recaps you asked for will start with the next game.</>}
             </p>
           </>
         ) : (
           <>
-            <h1 className="mb-1 text-2xl font-bold uppercase tracking-wide text-sabres-navy" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+            <h1 className="mb-2 text-3xl leading-none text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
               {state.expired ? 'Link Expired' : "Couldn't Confirm"}
             </h1>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-slate-300">
               {state.expired
                 ? `${state.message} Sign in and use "Send confirmation link" on your account page (or start the email change again in Settings) to get a fresh one.`
                 : state.message}
@@ -64,7 +64,7 @@ export default function ConfirmEmail() {
         {state.status !== 'working' && (
           <Link
             href="/account"
-            className="mt-4 block w-full rounded-xl bg-sabres-blue py-3 text-center text-sm font-bold uppercase tracking-wide text-white shadow-md transition-colors hover:bg-sabres-light"
+            className="mt-4 block w-full rounded-xl bg-amber-400 py-3 text-center text-sm font-extrabold uppercase tracking-wide text-slate-900 transition-opacity hover:opacity-90"
           >
             Go to My Account
           </Link>
