@@ -54,9 +54,7 @@ export interface ProfileResponse {
       count: number;
       bestRating: number | null;
       playedToday: { nhl: boolean; mlb: boolean };
-      /** Consecutive-day play streak (any sport), derived from board keys. */
-      streak: { current: number; best: number };
-      /** The same streak per game, which is what earns that game's streak cards. */
+      /** Each game's Daily streak (Classic or Blind, consecutive days), which is what earns its streak cards. */
       bySport: { nhl: { current: number; best: number }; mlb: { current: number; best: number } };
     };
     /** Recent daily plays (unique sport+date), newest first, for the activity feed. */
@@ -107,7 +105,6 @@ export async function GET(request: NextRequest) {
   const today = easternDateString();
   const playedToday = { nhl: false, mlb: false };
   const dailyComposites: number[] = [];
-  const dailyDates = new Set<string>();
   const sportDates = { nhl: new Set<string>(), mlb: new Set<string>() };
   const dailyPlays = new Map<string, { date: string; sport: string }>(); // `${sport}:${date}` dedup
   const persistentBoards: string[] = [];
@@ -118,7 +115,6 @@ export async function GET(request: NextRequest) {
       const [, sport, , date] = board.split(':');
       if (date === today && (sport === 'nhl' || sport === 'mlb')) playedToday[sport] = true;
       if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-        dailyDates.add(date);
         if (sport === 'nhl' || sport === 'mlb') sportDates[sport].add(date);
         dailyPlays.set(`${sport}:${date}`, { date, sport });
       }
@@ -180,7 +176,6 @@ export async function GET(request: NextRequest) {
           ? Math.round(Math.max(...dailyComposites) / 100) / 10
           : null,
         playedToday,
-        streak: computeStreak(dailyDates, today),
         bySport: { nhl: computeStreak(sportDates.nhl, today), mlb: computeStreak(sportDates.mlb, today) },
       },
       recentDaily,

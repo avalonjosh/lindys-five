@@ -20,10 +20,7 @@ const PUZZLES: { sport: Sport; title: string; league: string; href: string; blur
 
 function readStatus(sport: Sport, today: string): PuzzleStatus {
   const rec = getDaily(sport, today, 'classic') ?? getDaily(sport, today, 'blind');
-  const s = getStreak(sport, 'classic');
-  const yesterday = easternDateString(new Date(Date.now() - 86400000));
-  const alive = s.lastPlayed === today || s.lastPlayed === yesterday;
-  return { record: rec ? `${rec.wins}-${rec.losses}` : null, streak: alive ? s.current : 0 };
+  return { record: rec ? `${rec.wins}-${rec.losses}` : null, streak: getStreak(sport).current };
 }
 
 /** Minutes until the next midnight Eastern, when the daily rolls over. */

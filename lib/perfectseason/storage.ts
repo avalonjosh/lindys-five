@@ -71,7 +71,6 @@ function write(key: string, value: unknown): void {
 }
 
 const dailyKey = (sport: string, date: string, variant: string) => `l5ps.${sport}.daily.${date}.${variant}`;
-const streakKey = (sport: string, variant: string) => `l5ps.${sport}.streak.${variant}`;
 const statsKey = (sport: string, variant: string) => `l5ps.${sport}.stats.${variant}`;
 
 function shiftDay(date: string, n: number): string {
@@ -84,26 +83,50 @@ export function getDaily(sport: string, date: string, variant: string): DailyRec
   return read<DailyRecord | null>(dailyKey(sport, date, variant), null);
 }
 
-export function getStreak(sport: string, variant: string): Streak {
-  return read<Streak>(streakKey(sport, variant), { current: 0, best: 0, lastPlayed: null });
+/**
+ * A game's Daily streak: consecutive days you finished that game's Daily,
+ * Classic or Blind. Still alive today if you played yesterday. The same rule
+ * the account uses for its streak and streak cards (lib/perfectseason/server/cards.ts).
+ */
+export function getStreak(sport: string): Streak {
+  const none: Streak = { current: 0, best: 0, lastPlayed: null };
+  if (typeof window === 'undefined') return none;
+  const prefix = `l5ps.${sport}.daily.`;
+  const dates = new Set<string>();
+  try {
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      const date = key?.startsWith(prefix) ? key.slice(prefix.length).split('.')[0] : null;
+      if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) dates.add(date);
+    }
+  } catch {
+    return none;
+  }
+  if (dates.size === 0) return none;
+
+  const lastPlayed = [...dates].sort().pop()!;
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  let current = 0;
+  for (let day = dates.has(today) ? today : shiftDay(today, -1); dates.has(day); day = shiftDay(day, -1)) current++;
+  let best = 0;
+  for (const date of dates) {
+    if (dates.has(shiftDay(date, -1))) continue; // not the start of a run
+    let run = 0;
+    for (let day = date; dates.has(day); day = shiftDay(day, 1)) run++;
+    best = Math.max(best, run);
+  }
+  return { current, best, lastPlayed };
 }
 
 export function getStats(sport: string, variant: string): Stats {
   return read<Stats>(statsKey(sport, variant), { played: 0, totalWins: 0, best: 0, perfectSets: 0 });
 }
 
-/**
- * Record a completed Daily once. Locks the day, extends or resets the streak
- * (a gap of more than one day breaks it), and rolls up the stats.
- */
+/** Record a completed Daily once: locks the day (which is what the streak counts) and rolls up the stats. */
 export function recordDaily(sport: string, date: string, variant: string, rec: DailyRecord): void {
   write(VERSION_KEY, VERSION);
   if (getDaily(sport, date, variant)?.done) return; // already locked
   write(dailyKey(sport, date, variant), rec);
-
-  const s = getStreak(sport, variant);
-  const current = s.lastPlayed === shiftDay(date, -1) ? s.current + 1 : 1;
-  write(streakKey(sport, variant), { current, best: Math.max(s.best, current), lastPlayed: date });
 
   const st = getStats(sport, variant);
   write(statsKey(sport, variant), {

@@ -198,7 +198,7 @@ export default function BoardView(props: BoardViewProps) {
             record={record}
             config={config}
             variant={variant}
-            streak={getStreak(sport, variant)}
+            streak={getStreak(sport)}
             played={getStats(sport, variant).played}
             onPlayFree={() => chooseFreeType('standard')}
             user={user}

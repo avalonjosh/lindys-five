@@ -579,7 +579,10 @@ export default function AccountPage() {
   const mainOdds = mainTeam ? snapshots[mainTeam]?.odds ?? null : null;
   const bannerTiles: BannerTile[] = [];
   if (favTeam && mainOdds != null) bannerTiles.push({ value: `${mainOdds}%`, label: `${favTeam.name} odds`, highlight: true, href: getTeamUrl(mainTeam!) });
-  if ((profile?.perfectSeason.daily.streak.current ?? 0) > 0) bannerTiles.push({ value: String(profile!.perfectSeason.daily.streak.current), label: 'Day streak' });
+  // Streaks are per game (what earns that game's cards): show the longer one.
+  const streaks = profile?.perfectSeason.daily.bySport;
+  const streakGame = streaks && streaks.mlb.current > streaks.nhl.current ? 'mlb' : 'nhl';
+  if (streaks && streaks[streakGame].current > 0) bannerTiles.push({ value: String(streaks[streakGame].current), label: `${streakGame === 'mlb' ? '162-0' : '82-0'} streak` });
   if (overall.graded > 0) bannerTiles.push({ value: `${Math.round((overall.exact / overall.graded) * 100)}%`, label: 'Pick accuracy' });
   if (bestRank != null) bannerTiles.push({ value: `#${bestRank}`, label: 'Best rank' });
   if (profile && profile.cards.length > 0) bannerTiles.push({ value: String(profile.cards.length), label: profile.cards.length === 1 ? 'Streak card' : 'Streak cards' });
