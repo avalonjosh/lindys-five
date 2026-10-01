@@ -32,11 +32,13 @@ function gameDateLabel(date: string): string {
   return new Date(`${us[3]}-${us[1]}-${us[2]}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+/** Calendar days from today (Eastern) to the game date: 0 on game day. */
 function daysUntil(date: string): number | null {
   const us = date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  const target = new Date(`${us ? `${us[3]}-${us[1]}-${us[2]}` : date}T12:00:00`);
-  if (isNaN(target.getTime())) return null;
-  return Math.max(0, Math.ceil((target.getTime() - Date.now()) / 86400000));
+  const target = Date.parse(`${us ? `${us[3]}-${us[1]}-${us[2]}` : date}T00:00:00Z`);
+  if (isNaN(target)) return null;
+  const today = Date.parse(`${new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })}T00:00:00Z`);
+  return Math.max(0, Math.round((target - today) / 86400000));
 }
 
 const nextGameLabel = (g: NextGame) => `${g.isHome ? 'vs' : '@'} ${g.opponent} · ${gameDateLabel(g.date)}`;
@@ -203,8 +205,10 @@ export default function FavoriteTeamCard({ teamSlug }: { teamSlug: string }) {
           {snap.opener ? (
             <>
               <span className="font-bold text-gray-900">{nextGameLabel(snap.opener)}</span>
-              {snap.daysUntil != null && snap.daysUntil > 0 && (
-                <span className="font-semibold" style={{ color: team.colors.primary }}> · in {snap.daysUntil} days</span>
+              {snap.daysUntil != null && (
+                <span className="font-semibold" style={{ color: team.colors.primary }}>
+                  {' · '}{snap.daysUntil === 0 ? 'today' : snap.daysUntil === 1 ? 'tomorrow' : `in ${snap.daysUntil} days`}
+                </span>
               )}
             </>
           ) : (
