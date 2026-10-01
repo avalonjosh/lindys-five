@@ -6,6 +6,7 @@ import { rateLimit, clientIp } from '@/lib/perfectseason/server/ratelimit';
 import { consumeResetToken } from '@/lib/perfectseason/server/passwordReset';
 import { userKey, type User } from '@/lib/perfectseason/leaderboard';
 import { sendPasswordChangedEmail } from '@/lib/email';
+import { markAccountEmailVerified } from '@/lib/perfectseason/server/accountEmail';
 
 export async function POST(request: NextRequest) {
   let body: { token?: string; password?: string };
@@ -31,15 +32,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'This reset link has expired or was already used.', expired: true }, { status: 400 });
   }
 
-  const now = new Date().toISOString();
   const updated: User = {
     ...user,
     passwordHash: await bcrypt.hash(password, 10),
-    passwordChangedAt: now,
-    // Opening the emailed link proves they read this inbox.
-    emailVerifiedAt: user.emailVerifiedAt ?? now,
+    passwordChangedAt: new Date().toISOString(),
   };
   await kv.set(userKey(user.id), updated);
+  // Opening the emailed link proves they read this inbox.
+  await markAccountEmailVerified(updated);
 
   try {
     await sendPasswordChangedEmail(user.email);

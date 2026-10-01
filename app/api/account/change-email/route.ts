@@ -3,8 +3,11 @@ import bcrypt from 'bcryptjs';
 import { kv } from '@vercel/kv';
 import { getUserId } from '@/lib/perfectseason/server/session';
 import { rateLimit } from '@/lib/perfectseason/server/ratelimit';
-import { findSubscriberByEmail } from '@/lib/newsletter';
 import { userKey, userEmailKey, type User } from '@/lib/perfectseason/leaderboard';
+import { createEmailToken, confirmEmailUrl } from '@/lib/perfectseason/server/emailTokens';
+import { sendEmailChangeConfirmEmail, sendEmailChangeRequestedNotice } from '@/lib/email';
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.lindysfive.com';
 
 export async function POST(request: NextRequest) {
   const userId = await getUserId(request);
@@ -40,30 +43,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'An account with that email already exists' }, { status: 409 });
   }
 
-  const oldEmail = user.email;
-  const updated: User = { ...user, email: newEmail };
-  // New index before dropping the old one, so a crash mid-way never strands the account.
-  await kv.set(userEmailKey(newEmail), userId);
-  await kv.set(userKey(userId), updated);
-  await kv.del(userEmailKey(oldEmail));
-
-  // Newsletter follows the account: move an active subscription to the new
-  // address, but drop the verified flag — the new address never opted in, so
-  // carrying verification over would let anyone subscribe a victim's email by
-  // pointing their own account at it. Recap sends only go to verified subs.
+  // Nothing switches yet: the new address has to prove itself first, and the
+  // old address hears about the request so a hijacked session can't quietly
+  // take the account. The swap happens in /api/account/email-confirm.
+  const link = confirmEmailUrl(SITE_URL, await createEmailToken({ userId, email: newEmail, kind: 'change' }));
+  if (process.env.NODE_ENV !== 'production') console.log(`[confirm new email] ${newEmail}: ${link.replace(SITE_URL, request.nextUrl.origin)}`);
   try {
-    const sub = await findSubscriberByEmail(oldEmail);
-    if (sub && !sub.unsubscribedAt) {
-      await kv.set(`email:subscriber:${sub.id}`, {
-        ...sub,
-        email: newEmail,
-        verified: false,
-        verifiedAt: undefined,
-      });
-    }
+    await sendEmailChangeConfirmEmail(newEmail, user.username, link);
   } catch (err) {
-    console.error('Newsletter email follow failed:', err);
+    console.error('Email change confirmation failed:', err);
+    return NextResponse.json({ error: "We couldn't send the confirmation email right now. Try again in a few minutes." }, { status: 500 });
+  }
+  await kv.set(userKey(userId), { ...user, pendingEmail: newEmail });
+  try {
+    await sendEmailChangeRequestedNotice(user.email, newEmail);
+  } catch (err) {
+    console.error('Email change notice to old address failed:', err);
   }
 
-  return NextResponse.json({ email: newEmail });
+  return NextResponse.json({ pending: true, pendingEmail: newEmail });
 }

@@ -28,6 +28,7 @@ export default function NewsletterPrompt({ sport }: { sport: 'nhl' | 'mlb' }) {
   const [email, setEmail] = useState('');
   const account = useNewsletterStatus();
   const [status, setStatus] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle');
+  const [heldForConfirm, setHeldForConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Reveal only if not previously dismissed/subscribed (avoids a flash for those who were).
@@ -67,6 +68,7 @@ export default function NewsletterPrompt({ sport }: { sport: 'nhl' | 'mlb' }) {
         setStatus('error');
         return;
       }
+      setHeldForConfirm(ok === 'pending');
       setStatus('done');
       remember();
       if (team) mergeFavorite(team);
@@ -98,7 +100,7 @@ export default function NewsletterPrompt({ sport }: { sport: 'nhl' | 'mlb' }) {
   if (status === 'done') {
     return (
       <div className="flex items-center justify-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-        <Check className="h-4 w-4" /> You&apos;re on the list. Check your inbox!
+        <Check className="h-4 w-4" /> {heldForConfirm ? 'Almost there. Confirm your email with the link we sent, and recaps start.' : <>You&apos;re on the list. Check your inbox!</>}
       </div>
     );
   }

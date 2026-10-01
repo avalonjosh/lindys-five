@@ -74,11 +74,37 @@ async function postSimple(path: string, body: unknown): Promise<SimpleResult> {
 export const changePassword = (currentPassword: string, newPassword: string) =>
   postSimple('/api/account/change-password', { currentPassword, newPassword });
 
-export const changeEmail = (password: string, newEmail: string) =>
-  postSimple('/api/account/change-email', { password, newEmail });
+/** POST that returns the response body on success (for routes whose reply matters). */
+async function postData<T>(path: string, body: unknown): Promise<{ ok: true; data: T } | { ok: false; error: string; expired?: boolean }> {
+  try {
+    const res = await fetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      credentials: 'include',
+    });
+    const data = await res.json();
+    if (!res.ok) return { ok: false, error: data.error || 'Something went wrong', expired: !!data.expired };
+    return { ok: true, data };
+  } catch {
+    return { ok: false, error: 'Network error' };
+  }
+}
 
+/** Starts an email change: the new address gets a confirm link; nothing switches until it's clicked. */
+export const changeEmail = (password: string, newEmail: string) =>
+  postData<{ pending: true; pendingEmail: string }>('/api/account/change-email', { password, newEmail });
+
+/** `pending` = held until the account email is confirmed. */
 export const setNewsletterSubscribed = (subscribed: boolean) =>
-  postSimple('/api/account/newsletter', { subscribed });
+  postData<{ subscribed: boolean; pending: boolean }>('/api/account/newsletter', { subscribed });
+
+export const resendAccountVerification = () =>
+  postData<{ sent?: boolean; alreadyVerified?: boolean; email?: string }>('/api/account/email-verify/resend', {});
+
+/** Use a confirm-email link (verify the address, or finish an email change). */
+export const confirmEmailLink = (token: string) =>
+  postData<{ kind: 'verify' | 'change'; email: string }>('/api/account/email-confirm', { token });
 
 export const deleteAccount = (password: string, unsubscribe: boolean) =>
   postSimple('/api/account/delete', { password, unsubscribe });

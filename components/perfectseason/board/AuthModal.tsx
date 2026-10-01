@@ -195,6 +195,10 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
             </label>
           )}
 
+          {mode === 'signup' && (
+            <p className="text-xs text-gray-400">We&apos;ll email you a quick link to confirm your address.</p>
+          )}
+
           {error && <p className="text-sm font-semibold text-sabres-red">{error}</p>}
 
           <button

@@ -97,6 +97,48 @@ export async function sendPasswordResetEmail(email: string, resetLink: string) {
   });
 }
 
+export async function sendAccountVerifyEmail(email: string, username: string, link: string) {
+  await getResend().emails.send({
+    from: FROM_EMAIL,
+    to: email,
+    subject: "Confirm your Lindy's Five email",
+    html: renderAccountEmail(
+      'Confirm your email',
+      `Click below to confirm this is the email for your Lindy's Five account, <strong>${username}</strong>. Confirming lets you reset your password if you ever forget it, and starts any game recaps you've asked for.`,
+      { label: 'Confirm Email', url: link },
+      "This link expires in 7 days. If you didn't create a Lindy's Five account, you can ignore this email and nothing will be sent to you."
+    ),
+  });
+}
+
+export async function sendEmailChangeConfirmEmail(newEmail: string, username: string, link: string) {
+  await getResend().emails.send({
+    from: FROM_EMAIL,
+    to: newEmail,
+    subject: "Confirm your new Lindy's Five email",
+    html: renderAccountEmail(
+      'Confirm your new email',
+      `The Lindy's Five account <strong>${username}</strong> asked to switch its email to this address. Click below to confirm; the account switches over once you do.`,
+      { label: 'Confirm New Email', url: link },
+      "This link expires in 24 hours. If you didn't ask for this, ignore this email and nothing will change."
+    ),
+  });
+}
+
+export async function sendEmailChangeRequestedNotice(oldEmail: string, newEmail: string) {
+  await getResend().emails.send({
+    from: FROM_EMAIL,
+    to: oldEmail,
+    subject: "Your Lindy's Five email is being changed",
+    html: renderAccountEmail(
+      'Email change requested',
+      `Someone signed in to your Lindy's Five account asked to change its email to <strong>${newEmail.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)}</strong>. Nothing changes until that address is confirmed.`,
+      null,
+      `If this wasn't you, change your password right away (Settings at ${SITE_URL}/account, or "Forgot password?" on the sign-in screen). That also signs out every other device.`
+    ),
+  });
+}
+
 export async function sendPasswordChangedEmail(email: string) {
   await getResend().emails.send({
     from: FROM_EMAIL,

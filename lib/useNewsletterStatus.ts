@@ -60,8 +60,9 @@ export function useNewsletterStatus(): NewsletterStatus {
   return status;
 }
 
-/** Subscribe the signed-in account's own email (optionally to a team). */
-export async function accountSubscribe(team?: string, source?: string): Promise<boolean> {
+/** Subscribe the signed-in account's own email (optionally to a team).
+ * 'pending' = recorded, but starts only once the account email is confirmed. */
+export async function accountSubscribe(team?: string, source?: string): Promise<'active' | 'pending' | false> {
   try {
     const res = await fetch('/api/newsletter/account-subscribe', {
       method: 'POST',
@@ -70,13 +71,14 @@ export async function accountSubscribe(team?: string, source?: string): Promise<
       body: JSON.stringify({ team, source }),
     });
     if (!res.ok) return false;
+    const data = await res.json().catch(() => ({}));
     markSubscribed(team);
     try {
       localStorage.setItem('newsletter-subscribed', '1');
     } catch {
       /* ignore */
     }
-    return true;
+    return data.pending ? 'pending' : 'active';
   } catch {
     return false;
   }

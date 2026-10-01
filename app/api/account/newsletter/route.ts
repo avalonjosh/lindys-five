@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { getUserId } from '@/lib/perfectseason/server/session';
 import { rateLimit } from '@/lib/perfectseason/server/ratelimit';
-import { ensureSubscriber, unsubscribeByEmail } from '@/lib/newsletter';
+import { unsubscribeByEmail } from '@/lib/newsletter';
+import { accountOptIn } from '@/lib/perfectseason/server/accountEmail';
 import { userKey, type User } from '@/lib/perfectseason/leaderboard';
 
 /**
  * Newsletter opt-in/out for the signed-in account (the settings toggle).
- * Subscribe is single opt-in — the address is verified by the account itself —
- * and signs up for the favorite team's recaps when one is set.
+ * Subscribe signs up for the favorite team's recaps when one is set: live at
+ * once if the account email is confirmed, otherwise held until it is.
  */
 export async function POST(request: NextRequest) {
   const userId = await getUserId(request);
@@ -31,9 +32,10 @@ export async function POST(request: NextRequest) {
   const user = await kv.get<User>(userKey(userId));
   if (!user) return NextResponse.json({ error: 'Account not found' }, { status: 401 });
 
+  let pending = false;
   try {
     if (body.subscribed) {
-      await ensureSubscriber(user.email, user.favoriteTeam ? [user.favoriteTeam] : [], 'account-settings', { single: true });
+      pending = (await accountOptIn(user, user.favoriteTeam ? [user.favoriteTeam] : [], 'account-settings')) === 'pending';
     } else {
       await unsubscribeByEmail(user.email);
     }
@@ -42,5 +44,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Could not update your subscription right now' }, { status: 500 });
   }
 
-  return NextResponse.json({ subscribed: body.subscribed });
+  return NextResponse.json({ subscribed: body.subscribed, pending });
 }

@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { getUserId } from '@/lib/perfectseason/server/session';
 import { userKey, type User } from '@/lib/perfectseason/leaderboard';
-import { ensureSubscriber } from '@/lib/newsletter';
+import { accountOptIn } from '@/lib/perfectseason/server/accountEmail';
 import { findTeam } from '@/lib/teamConfig';
 
 /**
  * One-tap signup for a signed-in account: subscribes the account's own email
  * (never an email from the request) to a team's recaps, or the general list.
- * Single opt-in, same as opting in at account signup.
+ * Live at once for a confirmed account email, held until confirmation otherwise.
  */
 export async function POST(request: NextRequest) {
   const userId = await getUserId(request);
@@ -26,11 +26,12 @@ export async function POST(request: NextRequest) {
     /* empty body = general list */
   }
 
+  let pending = false;
   try {
-    await ensureSubscriber(user.email, team ? [team] : [], source, { single: true });
+    pending = (await accountOptIn(user, team ? [team] : [], source)) === 'pending';
   } catch (err) {
     console.error('account-subscribe failed:', err);
     return NextResponse.json({ error: 'Could not subscribe right now' }, { status: 500 });
   }
-  return NextResponse.json({ success: true, team: team ?? null });
+  return NextResponse.json({ success: true, team: team ?? null, pending });
 }

@@ -7,7 +7,7 @@ import { ChevronDown, ChevronUp, Check, X, Minus, Trash2, Pencil } from 'lucide-
 import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
 import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import AuthModal from '@/components/perfectseason/board/AuthModal';
-import { logout } from '@/lib/perfectseason/account';
+import { logout, resendAccountVerification } from '@/lib/perfectseason/account';
 import { swapFavorite } from '@/lib/favorites';
 import { fetchWhatIfSaves, deleteWhatIfSave, updateWhatIfSaveLabel } from '@/lib/whatif/client';
 import { fetchSabresSchedule } from '@/lib/services/nhlApi';
@@ -325,6 +325,7 @@ export default function AccountPage() {
   };
   const [tab, setTab] = useState<AccountTab>('overview');
   const [passwordNotice, setPasswordNotice] = useState(false);
+  const [verifyResend, setVerifyResend] = useState<{ state: 'idle' | 'sending' | 'sent' | 'error'; message?: string }>({ state: 'idle' });
 
   // Deep link: /account?tab=picks (etc.) opens on that tab — used by the
   // "View My Picks" buttons around the site. Effect (not initializer) to keep
@@ -700,11 +701,40 @@ export default function AccountPage() {
           </button>
         </div>
       )}
+      {profile && !profile.emailVerified && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <span className="min-w-0">
+            {verifyResend.state === 'sent'
+              ? `Sent. Check ${profile.email} (and your spam folder) for the link.`
+              : verifyResend.state === 'error'
+                ? verifyResend.message
+                : <>Confirm your email (<span className="font-semibold">{profile.email}</span>) so you can reset your password if you forget it, and so any recaps you asked for can start.</>}
+          </span>
+          {verifyResend.state !== 'sent' && (
+            <button
+              type="button"
+              disabled={verifyResend.state === 'sending'}
+              onClick={async () => {
+                setVerifyResend({ state: 'sending' });
+                const result = await resendAccountVerification();
+                if (!result.ok) setVerifyResend({ state: 'error', message: result.error });
+                else if (result.data.alreadyVerified) setProfile(prev => (prev ? { ...prev, emailVerified: true } : prev));
+                else setVerifyResend({ state: 'sent' });
+              }}
+              className="flex-shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-amber-800 shadow-sm transition-colors hover:bg-amber-100 disabled:opacity-50"
+            >
+              {verifyResend.state === 'sending' ? 'Sending…' : 'Send confirmation link'}
+            </button>
+          )}
+        </div>
+      )}
       {tab === 'settings' && (
         <SettingsTab
           email={profile?.email ?? null}
           accent={heroColor}
-          onEmailChanged={(email) => setProfile(prev => (prev ? { ...prev, email } : prev))}
+          emailVerified={profile?.emailVerified ?? true}
+          pendingEmail={profile?.pendingEmail}
+          onEmailChangeRequested={(pendingEmail) => setProfile(prev => (prev ? { ...prev, pendingEmail } : prev))}
           onDeleted={() => setUser(null)}
         />
       )}

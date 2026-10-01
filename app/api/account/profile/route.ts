@@ -33,6 +33,9 @@ export interface ProfileBoard {
 
 export interface ProfileResponse {
   email: string;
+  emailVerified: boolean;
+  /** New address waiting on its confirm link, if an email change is in progress. */
+  pendingEmail?: string;
   createdAt: string;
   favoriteTeam?: string;
   perfectSeason: {
@@ -146,6 +149,8 @@ export async function GET(request: NextRequest) {
 
   const profile: ProfileResponse = {
     email: user.email,
+    emailVerified: !!user.emailVerifiedAt,
+    pendingEmail: user.pendingEmail,
     createdAt: user.createdAt,
     favoriteTeam: user.favoriteTeam,
     perfectSeason: {

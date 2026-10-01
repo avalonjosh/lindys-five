@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { kv } from '@vercel/kv';
 import { signUserToken, userCookieOptions, USER_COOKIE } from '@/lib/perfectseason/server/session';
 import { rateLimit, clientIp } from '@/lib/perfectseason/server/ratelimit';
-import { ensureSubscriber } from '@/lib/newsletter';
+import { accountOptIn, sendAccountVerification } from '@/lib/perfectseason/server/accountEmail';
 import { userKey, userEmailKey, userNameKey, type User } from '@/lib/perfectseason/leaderboard';
 import { findTeam } from '@/lib/teamConfig';
 
@@ -58,14 +58,20 @@ export async function POST(request: NextRequest) {
     kv.set(userNameKey(username), id),
   ]);
 
-  // Optional, consented newsletter opt-in (double opt-in via verification email).
+  // Every new account gets one "confirm your email" link. A consented
+  // newsletter opt-in is recorded now but only starts once that's clicked.
   // Best-effort: never fail account creation on a newsletter/email hiccup.
   if (body.subscribe) {
     try {
-      await ensureSubscriber(email, favoriteTeam ? [favoriteTeam] : [], 'perfectseason', { single: true });
+      await accountOptIn(user, favoriteTeam ? [favoriteTeam] : [], 'perfectseason');
     } catch (err) {
       console.error('Newsletter opt-in failed during signup:', err);
     }
+  }
+  try {
+    await sendAccountVerification(user, request.nextUrl.origin);
+  } catch (err) {
+    console.error('Account confirmation email failed during signup:', err);
   }
 
   const token = await signUserToken(id);

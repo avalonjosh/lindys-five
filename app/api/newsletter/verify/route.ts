@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import type { NewsletterSubscriber, EmailVerificationToken } from '@/lib/types';
 import { sendWelcomeEmail } from '@/lib/email';
+import { markAccountVerifiedForEmail } from '@/lib/perfectseason/server/accountEmail';
 
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get('token');
@@ -37,6 +38,13 @@ export async function GET(request: NextRequest) {
 
     // Clean up token
     await kv.del(`email:verification:${token}`);
+
+    // Clicking this proves the inbox, so an account on the same address counts as confirmed.
+    try {
+      await markAccountVerifiedForEmail(subscriber.email);
+    } catch (err) {
+      console.error('Account confirm from newsletter verify failed:', err);
+    }
 
     // First confirmation only; a best-effort send never blocks verifying.
     if (!subscriber.verified) {

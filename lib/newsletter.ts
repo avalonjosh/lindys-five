@@ -36,6 +36,8 @@ async function sendVerificationToken(subscriberId: string, email: string): Promi
  * opts.single = single opt-in: mark verified immediately and skip the
  * confirmation email (use when the email was just actively given via a checkbox
  * or a subscribe button). Otherwise double opt-in (send a verification link).
+ * opts.held = record the opt-in unverified and send nothing: an account whose
+ * email isn't confirmed yet. Confirming the account email activates it.
  */
 /** The subscriber record for an email, or null. Scans the full list (there is
  * no email→id index) but hydrates it in one batched mget. */
@@ -95,10 +97,11 @@ export async function ensureSubscriber(
   email: string,
   teams: string[],
   source: string,
-  opts: { single?: boolean } = {},
+  opts: { single?: boolean; held?: boolean } = {},
 ): Promise<void> {
   const lower = email.toLowerCase();
-  const single = opts.single === true;
+  const single = opts.single === true && !opts.held;
+  const held = opts.held === true;
   const now = new Date().toISOString();
 
   const existing = await findSubscriberByEmail(lower);
@@ -119,7 +122,7 @@ export async function ensureSubscriber(
     await kv.set(`email:subscriber:${existing.id}`, updated);
     for (const team of teams) await kv.sadd(`email:subscribers:team:${team}`, existing.id);
     if (single) await sendWelcome(existing.id, lower);
-    else await sendVerificationToken(existing.id, lower);
+    else if (!held) await sendVerificationToken(existing.id, lower);
     return;
   }
 
@@ -137,5 +140,14 @@ export async function ensureSubscriber(
   await kv.sadd('email:subscribers', id);
   for (const team of teams) await kv.sadd(`email:subscribers:team:${team}`, id);
   if (single) await sendWelcome(id, lower);
-  else await sendVerificationToken(id, lower);
+  else if (!held) await sendVerificationToken(id, lower);
+}
+
+/** Turn on a held (or otherwise unconfirmed) opt-in once the address is proven.
+ * Sends the welcome email the first time. No-op if there's nothing pending. */
+export async function activateSubscriberByEmail(email: string): Promise<void> {
+  const sub = await findSubscriberByEmail(email);
+  if (!sub || sub.verified || sub.unsubscribedAt) return;
+  await kv.set(`email:subscriber:${sub.id}`, { ...sub, verified: true, verifiedAt: new Date().toISOString() });
+  await sendWelcome(sub.id, sub.email);
 }

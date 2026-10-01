@@ -28,8 +28,10 @@ export interface User {
   googleId?: string;
   /** Last password change (reset or settings). Sessions issued before it are rejected. */
   passwordChangedAt?: string;
-  /** Set once the user has proven they read this inbox (e.g. by completing a password reset). */
+  /** Set once the user has proven they read this inbox (confirm link, password reset, newsletter confirm). */
   emailVerifiedAt?: string;
+  /** New address awaiting confirmation; the account switches only when its link is clicked. */
+  pendingEmail?: string;
 }
 
 /** The safe, public shape returned to the client. */

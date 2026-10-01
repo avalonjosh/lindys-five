@@ -5,9 +5,12 @@ import { changeEmail, changePassword, setNewsletterSubscribed, deleteAccount } f
 
 interface SettingsTabProps {
   email: string | null; // null while the profile is loading
+  emailVerified: boolean;
+  /** New address waiting on its confirm link. */
+  pendingEmail?: string;
+  onEmailChangeRequested: (pendingEmail: string) => void;
   /** Favorite-team primary color for buttons (falls back to Sabres navy). */
   accent: string;
-  onEmailChanged: (email: string) => void;
   onDeleted: () => void;
 }
 
@@ -22,7 +25,7 @@ function StatusLine({ status }: { status: FormStatus }) {
   return null;
 }
 
-export default function SettingsTab({ email, accent, onEmailChanged, onDeleted }: SettingsTabProps) {
+export default function SettingsTab({ email, emailVerified, pendingEmail, onEmailChangeRequested, accent, onDeleted }: SettingsTabProps) {
   // Email
   const [emailOpen, setEmailOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
@@ -57,8 +60,8 @@ export default function SettingsTab({ email, accent, onEmailChanged, onDeleted }
     setEmailStatus({ state: 'saving' });
     const result = await changeEmail(emailPassword, newEmail);
     if (result.ok) {
-      onEmailChanged(newEmail.trim().toLowerCase());
-      setEmailStatus({ state: 'done', message: 'Email updated.' });
+      onEmailChangeRequested(result.data.pendingEmail);
+      setEmailStatus({ state: 'done', message: `Check ${result.data.pendingEmail} for a link to finish the change. Your email stays the same until you click it.` });
       setEmailOpen(false);
       setNewEmail('');
       setEmailPassword('');
@@ -88,7 +91,10 @@ export default function SettingsTab({ email, accent, onEmailChanged, onDeleted }
     const result = await setNewsletterSubscribed(next);
     if (result.ok) {
       setSubscribed(next);
-      setNlStatus({ state: 'done', message: next ? 'Subscribed! Recaps land after every game.' : 'Unsubscribed.' });
+      setNlStatus({
+        state: 'done',
+        message: !next ? 'Unsubscribed.' : result.data.pending ? 'Saved. Recaps start once you confirm your email.' : 'Subscribed! Recaps land after every game.',
+      });
       try {
         if (next) localStorage.setItem('newsletter-subscribed', '1');
         else localStorage.removeItem('newsletter-subscribed');
@@ -118,8 +124,14 @@ export default function SettingsTab({ email, accent, onEmailChanged, onDeleted }
       <section className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-sm font-bold" style={{ color: accent }}>Email</h3>
+            <h3 className="text-sm font-bold" style={{ color: accent }}>
+              Email
+              {email && !emailVerified && (
+                <span className="ml-1.5 rounded-full bg-amber-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-amber-600">Not confirmed</span>
+              )}
+            </h3>
             <p className="truncate text-sm text-gray-500">{email ?? 'Loading…'}</p>
+            {pendingEmail && <p className="truncate text-xs text-gray-400">Changing to {pendingEmail} (waiting for confirmation)</p>}
           </div>
           <button
             type="button"

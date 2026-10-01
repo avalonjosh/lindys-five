@@ -26,7 +26,7 @@ export default function NewsletterSignup({
 }: NewsletterSignupProps) {
   const [hidden, setHidden] = useState(false);
   const account = useNewsletterStatus();
-  const [oneTap, setOneTap] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [oneTap, setOneTap] = useState<'idle' | 'loading' | 'done' | 'pending' | 'error'>('idle');
   const [email, setEmail] = useState('');
   const [teams, setTeams] = useState<string[]>(initialTeams || []);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -99,11 +99,15 @@ export default function NewsletterSignup({
     if (oneTap === 'done') {
       return <SuccessMessage message={`Done! ${teamDisplayName ? `${teamDisplayName} recaps` : 'Recaps'} are headed to ${account.email ?? 'your inbox'}.`} variant={variant} primaryColor={primaryColor} />;
     }
+    if (oneTap === 'pending') {
+      return <SuccessMessage message={`Almost there. Confirm your email with the link we sent to ${account.email ?? 'your inbox'}, and ${teamDisplayName ? `${teamDisplayName} recaps` : 'recaps'} start.`} variant={variant} primaryColor={primaryColor} />;
+    }
     if (account.unsubscribed) return null;
     if (account.subscribed && (!team || account.teams.includes(team))) return null;
     const tap = async () => {
       setOneTap('loading');
-      setOneTap((await accountSubscribe(team, source)) ? 'done' : 'error');
+      const result = await accountSubscribe(team, source);
+      setOneTap(result === 'active' ? 'done' : result === 'pending' ? 'pending' : 'error');
     };
     const dark = variant !== 'inline';
     return (

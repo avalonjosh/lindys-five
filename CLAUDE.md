@@ -185,6 +185,11 @@ All crons are configured in `vercel.json` and authorized via `CRON_SECRET` Beare
 | `ps:pwreset:{sha256 of token}` | String | 1h | Reset link token hash -> user id. Single use (`getdel`); the raw token only ever lives in the emailed link's `#` fragment |
 | `ps:pwreset:user:{userId}` | String | 1h | The account's live token hash, so a new request cancels the previous link |
 
+| `ps:emailtoken:{sha256 of token}` | String (JSON) | 7d verify / 24h change | Confirm-email link -> `{ userId, email, kind: 'verify' | 'change' }`. Single use, token in the link's `#` fragment (`/account/confirm-email`) |
+| `ps:emailtoken:user:{userId}:{kind}` | String | same | The account's live link of that kind (a new one cancels the old) |
+
+Email confirmation (`lib/perfectseason/server/accountEmail.ts`): every new account gets a confirm link; the profile shows a "Confirm your email" banner with a resend button until `User.emailVerifiedAt` is set (by the confirm link, a password reset, or confirming a newsletter signup on the same address). Account-based newsletter opt-ins (`accountOptIn`: signup checkbox, Settings toggle, one-tap boxes) are live immediately only for a confirmed email; otherwise they're saved unverified with no email sent (`ensureSubscriber(..., { held: true })`) and switch on when the email is confirmed. Changing the account email sets `User.pendingEmail`, emails a confirm link to the new address and a notice to the old one, and only switches when the link is clicked.
+
 `User.passwordChangedAt` makes `getUserId()` reject sessions issued before the last reset or password change (signs out other devices); the device that made the change gets a fresh cookie. Completing a reset sets `User.emailVerifiedAt`. `/account/reset` is excluded from GA4 and sends no Referer.
 
 ### Newsletter
