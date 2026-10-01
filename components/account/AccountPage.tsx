@@ -916,7 +916,8 @@ export default function AccountPage() {
             {recaps?.pending && recaps.teams.length > 0 && (
               <p className="mb-3 text-xs text-amber-700">Recap emails start once you confirm your email.</p>
             )}
-            <div className="grid gap-3 md:grid-cols-2">
+            {/* Two per row on desktop; a lone last card (one team, or an odd count) spans the full row */}
+            <div className="grid gap-3 md:grid-cols-2 md:[&>*:last-child:nth-child(odd)]:col-span-2">
               {myTeams.map(slug => {
                 const team = findTeam(slug);
                 const isMain = slug === myTeams[0];
