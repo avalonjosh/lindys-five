@@ -40,7 +40,7 @@ export default function SupportPage() {
             rel="noopener noreferrer"
             className="mt-6 flex w-full items-center justify-center rounded-xl bg-sabres-blue py-3.5 text-sm font-bold uppercase tracking-wide text-white shadow-md transition-colors hover:bg-sabres-light sm:text-base"
           >
-            Leave a tip on Ko-fi
+            Leave a tip
           </a>
           <p className="mt-2 text-center text-xs text-gray-500">One-time or monthly, any amount. Payment is handled by Ko-fi.</p>
 
