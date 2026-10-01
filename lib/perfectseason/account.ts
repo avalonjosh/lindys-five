@@ -48,6 +48,21 @@ export async function requestPasswordReset(emailOrUsername: string): Promise<{ o
 export const confirmPasswordReset = (token: string, password: string) =>
   postAuth('/api/account/password-reset/confirm', { token, password });
 
+/** Replace the account's My Teams list (and optionally pick the main team). */
+export async function saveAccountTeams(teams: string[], favoriteTeam?: string): Promise<{ teams: string[]; favoriteTeam: string | null } | null> {
+  try {
+    const res = await fetch('/api/account/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(favoriteTeam === undefined ? { teams } : { teams, favoriteTeam }),
+      credentials: 'include',
+    });
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function logout(): Promise<void> {
   await fetch('/api/account/logout', { method: 'POST', credentials: 'include' });
 }

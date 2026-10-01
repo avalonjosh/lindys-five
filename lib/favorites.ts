@@ -2,12 +2,43 @@
  * Client-side favorite teams (the hamburger stars / home grid). One shared
  * localStorage list, plus a window event so every mounted reader updates when
  * any writer changes it (nav, account page, auth modal, account sync).
+ *
+ * For a signed-in account the list is a cache of the account's "My Teams"
+ * (synced in useCurrentUser): local changes are pushed to the account, and on
+ * load the account's list wins unless this browser has unsent changes.
  */
+
+import type { PublicUser } from './perfectseason/leaderboard';
 
 export const FAVORITES_KEY = 'favorite-teams';
 export const FAVORITES_EVENT = 'favorites-changed';
-/** Which account favorite has already been merged into this browser's list. */
-const SYNCED_KEY = 'account-favorite-synced';
+/** Set when the list changed with no account connected to receive it. */
+const DIRTY_KEY = 'favorites-dirty';
+const syncedKey = (userId: string) => `account-teams-synced:${userId}`;
+
+let remote: ((list: string[]) => void) | null = null;
+
+/** Where local changes go while signed in (null when signed out). */
+export function setFavoritesRemote(fn: ((list: string[]) => void) | null): void {
+  remote = fn;
+}
+
+function storageGet(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function storageSet(key: string, value: string | null): void {
+  try {
+    if (value == null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+  } catch {
+    /* storage unavailable */
+  }
+}
 
 export function readFavorites(): string[] {
   if (typeof window === 'undefined') return [];
@@ -19,14 +50,13 @@ export function readFavorites(): string[] {
   }
 }
 
-export function writeFavorites(list: string[]): void {
+export function writeFavorites(list: string[], opts: { fromAccount?: boolean } = {}): void {
   if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(FAVORITES_KEY, JSON.stringify(list));
-  } catch {
-    /* storage unavailable */
-  }
+  storageSet(FAVORITES_KEY, JSON.stringify(list));
   window.dispatchEvent(new CustomEvent(FAVORITES_EVENT, { detail: { favorites: list } }));
+  if (opts.fromAccount) return;
+  if (remote) remote(list);
+  else storageSet(DIRTY_KEY, '1');
 }
 
 /** Put `slug` at the front of the list if it isn't there already. */
@@ -44,26 +74,28 @@ export function swapFavorite(previous: string | undefined | null, next: string |
   writeFavorites(next ? [next, ...withoutOld.filter((t) => t !== next)] : withoutOld);
 }
 
+const sameList = (a: string[], b: string[]) => a.length === b.length && a.every((t, i) => t === b[i]);
+
 /**
- * Merge the signed-in account's favorite into local favorites. Runs once per
- * favorite per browser, so a deliberate un-star afterwards sticks until the
- * account favorite changes again.
+ * Reconcile this browser's list with the signed-in account's teams. First time
+ * this account is seen here: the union (nothing starred before signing in is
+ * lost). After that: the account wins, unless this browser changed the list
+ * while no account was listening, in which case the browser's list is sent up.
+ * `push` saves a list to the account.
  */
-export function syncAccountFavorite(slug: string | undefined | null): void {
-  if (typeof window === 'undefined' || !slug) return;
-  let synced: string | null = null;
-  try {
-    synced = localStorage.getItem(SYNCED_KEY);
-  } catch {
-    /* ignore */
-  }
-  if (synced === slug) return;
-  mergeFavorite(slug);
-  try {
-    localStorage.setItem(SYNCED_KEY, slug);
-  } catch {
-    /* ignore */
-  }
+export function syncAccountTeams(user: PublicUser, push: (list: string[]) => void): void {
+  if (typeof window === 'undefined') return;
+  const server = user.teams ?? (user.favoriteTeam ? [user.favoriteTeam] : []);
+  const local = readFavorites();
+  let next: string[];
+  if (!storageGet(syncedKey(user.id))) next = [...server, ...local.filter((t) => !server.includes(t))];
+  else if (storageGet(DIRTY_KEY) === '1') next = local;
+  else next = server;
+
+  if (!sameList(next, local)) writeFavorites(next, { fromAccount: true });
+  storageSet(syncedKey(user.id), '1');
+  storageSet(DIRTY_KEY, null);
+  if (!sameList(next, server)) push(next);
 }
 
 /** Subscribe to favorites changes from this tab (custom event) and other tabs (storage event). */

@@ -22,8 +22,10 @@ export interface User {
   passwordHash: string;
   createdAt: string;
   authProvider: 'password';
-  /** Primary favorite team slug (NHL or MLB), picked at signup or on the profile page. */
+  /** Main team slug (NHL, MLB or NFL): colors the profile, default for recaps. Always `teams[0]` once My Teams is in use. */
   favoriteTeam?: string;
+  /** "My Teams": every team the user follows, in their order. Mirrors the hamburger stars across devices. */
+  teams?: string[];
   // Reserved for a later Google OAuth follow-up:
   googleId?: string;
   /** Last password change (reset or settings). Sessions issued before it are rejected. */
@@ -39,6 +41,18 @@ export interface PublicUser {
   id: string;
   username: string;
   favoriteTeam?: string;
+  teams?: string[];
+}
+
+/** The account's teams, including the main one (older accounts only have `favoriteTeam`). */
+export function userTeams(user: User): string[] {
+  const teams = user.teams ?? [];
+  return user.favoriteTeam && !teams.includes(user.favoriteTeam) ? [user.favoriteTeam, ...teams] : teams;
+}
+
+/** What the client gets back about the signed-in account. */
+export function publicUser(user: User): PublicUser {
+  return { id: user.id, username: user.username, favoriteTeam: user.favoriteTeam, teams: userTeams(user) };
 }
 
 export const userKey = (id: string) => `ps:user:${id}`;

@@ -4,7 +4,7 @@ import { kv } from '@vercel/kv';
 import { signUserToken, userCookieOptions, USER_COOKIE } from '@/lib/perfectseason/server/session';
 import { rateLimit, clientIp } from '@/lib/perfectseason/server/ratelimit';
 import { consumeResetToken } from '@/lib/perfectseason/server/passwordReset';
-import { userKey, type User } from '@/lib/perfectseason/leaderboard';
+import { userKey, publicUser, type User } from '@/lib/perfectseason/leaderboard';
 import { sendPasswordChangedEmail } from '@/lib/email';
 import { markAccountEmailVerified } from '@/lib/perfectseason/server/accountEmail';
 
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Every older session is now rejected; this device gets a fresh one.
-  const res = NextResponse.json({ user: { id: user.id, username: user.username, favoriteTeam: user.favoriteTeam } });
+  const res = NextResponse.json({ user: publicUser(updated) });
   res.cookies.set(USER_COOKIE, await signUserToken(user.id), userCookieOptions);
   return res;
 }

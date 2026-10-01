@@ -67,30 +67,13 @@ async function addSubscriberTeams(sub: NewsletterSubscriber, teams: string[]): P
   for (const team of missing) await kv.sadd(`email:subscribers:team:${team}`, sub.id);
 }
 
-/**
- * Mirror an account favorite-team change onto the newsletter subscription, if
- * this email has an active one: the old favorite is swapped out for the new one
- * (matching the profile page's "switch" semantics). Never creates a subscriber.
- */
-export async function syncSubscriberFavorite(
-  email: string,
-  previous: string | undefined,
-  next: string | undefined,
-): Promise<void> {
-  if (previous === next) return;
+/** Stop one team's recaps for this email; the rest of the subscription (other
+ * teams, the weekly roundup) stays. No-op if not subscribed to that team. */
+export async function removeSubscriberTeam(email: string, team: string): Promise<void> {
   const sub = await findSubscriberByEmail(email);
-  if (!sub || sub.unsubscribedAt) return;
-
-  let teams = sub.teams ?? [];
-  if (previous && teams.includes(previous)) {
-    teams = teams.filter((t) => t !== previous);
-    await kv.srem(`email:subscribers:team:${previous}`, sub.id);
-  }
-  if (next && !teams.includes(next)) {
-    teams = [next, ...teams];
-    await kv.sadd(`email:subscribers:team:${next}`, sub.id);
-  }
-  await kv.set(`email:subscriber:${sub.id}`, { ...sub, teams });
+  if (!sub || sub.unsubscribedAt || !(sub.teams ?? []).includes(team)) return;
+  await kv.set(`email:subscriber:${sub.id}`, { ...sub, teams: sub.teams.filter((t) => t !== team) });
+  await kv.srem(`email:subscribers:team:${team}`, sub.id);
 }
 
 export async function ensureSubscriber(

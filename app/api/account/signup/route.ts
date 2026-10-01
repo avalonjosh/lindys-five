@@ -4,7 +4,7 @@ import { kv } from '@vercel/kv';
 import { signUserToken, userCookieOptions, USER_COOKIE } from '@/lib/perfectseason/server/session';
 import { rateLimit, clientIp } from '@/lib/perfectseason/server/ratelimit';
 import { accountOptIn, sendAccountVerification } from '@/lib/perfectseason/server/accountEmail';
-import { userKey, userEmailKey, userNameKey, type User } from '@/lib/perfectseason/leaderboard';
+import { userKey, userEmailKey, userNameKey, publicUser, type User } from '@/lib/perfectseason/leaderboard';
 import { findTeam } from '@/lib/teamConfig';
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     passwordHash: await bcrypt.hash(password, 10),
     createdAt: new Date().toISOString(),
     authProvider: 'password',
-    ...(favoriteTeam ? { favoriteTeam } : {}),
+    ...(favoriteTeam ? { favoriteTeam, teams: [favoriteTeam] } : {}),
   };
 
   await Promise.all([
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
   }
 
   const token = await signUserToken(id);
-  const res = NextResponse.json({ user: { id, username, favoriteTeam } });
+  const res = NextResponse.json({ user: publicUser(user) });
   res.cookies.set(USER_COOKIE, token, userCookieOptions);
   return res;
 }

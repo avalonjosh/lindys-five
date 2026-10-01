@@ -3,9 +3,9 @@ import { kv } from '@vercel/kv';
 import { getUserId } from '@/lib/perfectseason/server/session';
 import { easternDateString } from '@/lib/perfectseason/seed';
 import { findTeam } from '@/lib/teamConfig';
-import { syncSubscriberFavorite } from '@/lib/newsletter';
 import {
   userKey,
+  userTeams,
   userBoardsKey,
   lbZKey,
   lbEntryKey,
@@ -38,6 +38,7 @@ export interface ProfileResponse {
   pendingEmail?: string;
   createdAt: string;
   favoriteTeam?: string;
+  teams: string[];
   perfectSeason: {
     boards: ProfileBoard[];
     /** Daily plays only keep a composite score in the boards hash; entries expire. */
@@ -153,6 +154,7 @@ export async function GET(request: NextRequest) {
     pendingEmail: user.pendingEmail,
     createdAt: user.createdAt,
     favoriteTeam: user.favoriteTeam,
+    teams: userTeams(user),
     perfectSeason: {
       boards,
       daily: {
@@ -172,37 +174,43 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(profile);
 }
 
-/** Update profile fields. Currently just the favorite team (slug, or null to clear). */
+/**
+ * Update My Teams. `teams` replaces the followed-teams list (unknown slugs
+ * dropped, max 20); `favoriteTeam` makes that team the main one by moving it to
+ * the front. The main team is always the first team (none when the list is
+ * empty). Recap emails are switched per team on the profile, so changing teams
+ * here never touches subscriptions.
+ */
 export async function PATCH(request: NextRequest) {
   const userId = await getUserId(request);
   if (!userId) return NextResponse.json({ error: 'Sign in to update your profile' }, { status: 401 });
 
-  let body: { favoriteTeam?: string | null };
+  let body: { favoriteTeam?: string; teams?: unknown };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
   }
 
-  const clear = body.favoriteTeam === null;
-  const favoriteTeam = typeof body.favoriteTeam === 'string' && findTeam(body.favoriteTeam) ? body.favoriteTeam : undefined;
-  if (!clear && !favoriteTeam) return NextResponse.json({ error: 'Unknown team' }, { status: 400 });
-
   const user = await kv.get<User>(userKey(userId));
   if (!user) return NextResponse.json({ error: 'Account not found' }, { status: 401 });
 
-  const updated: User = { ...user };
-  if (clear) delete updated.favoriteTeam;
-  else updated.favoriteTeam = favoriteTeam;
-  await kv.set(userKey(userId), updated);
-
-  // Keep the newsletter subscription (if any) following the favorite, so recap
-  // emails switch teams with it. Best-effort: never fail the profile update.
-  try {
-    await syncSubscriberFavorite(user.email, user.favoriteTeam, updated.favoriteTeam);
-  } catch (err) {
-    console.error('Subscriber favorite sync failed:', err);
+  let teams = userTeams(user);
+  if (Array.isArray(body.teams)) {
+    teams = Array.from(new Set(body.teams.filter((t): t is string => typeof t === 'string' && !!findTeam(t)))).slice(0, 20);
   }
 
-  return NextResponse.json({ favoriteTeam: updated.favoriteTeam ?? null });
+  if (typeof body.favoriteTeam === 'string') {
+    const main = body.favoriteTeam;
+    if (!findTeam(main)) return NextResponse.json({ error: 'Unknown team' }, { status: 400 });
+    teams = [main, ...teams.filter((t) => t !== main)].slice(0, 20);
+  }
+  const favoriteTeam = teams[0];
+
+  const updated: User = { ...user, teams };
+  if (favoriteTeam) updated.favoriteTeam = favoriteTeam;
+  else delete updated.favoriteTeam;
+  await kv.set(userKey(userId), updated);
+
+  return NextResponse.json({ favoriteTeam: updated.favoriteTeam ?? null, teams });
 }

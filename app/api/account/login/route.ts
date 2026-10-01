@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { kv } from '@vercel/kv';
 import { signUserToken, userCookieOptions, USER_COOKIE } from '@/lib/perfectseason/server/session';
 import { rateLimit, clientIp } from '@/lib/perfectseason/server/ratelimit';
-import { userKey, userEmailKey, userNameKey, type User } from '@/lib/perfectseason/leaderboard';
+import { userKey, userEmailKey, userNameKey, publicUser, type User } from '@/lib/perfectseason/leaderboard';
 
 export async function POST(request: NextRequest) {
   let body: { emailOrUsername?: string; password?: string };
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   if (!user?.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) return invalid;
 
   const token = await signUserToken(user.id);
-  const res = NextResponse.json({ user: { id: user.id, username: user.username, favoriteTeam: user.favoriteTeam } });
+  const res = NextResponse.json({ user: publicUser(user) });
   res.cookies.set(USER_COOKIE, token, userCookieOptions);
   return res;
 }

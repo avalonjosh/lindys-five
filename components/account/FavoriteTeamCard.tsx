@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { findTeam, getTeamUrl } from '@/lib/teamConfig';
@@ -8,6 +8,8 @@ import { fetchSabresSchedule } from '@/lib/services/nhlApi';
 import { fetchMLBSchedule, fetchMLBStandings } from '@/lib/services/mlbApi';
 import { fetchNFLSchedule } from '@/lib/services/nflApi';
 import { getMLBPlayoffProbability } from '@/lib/utils/mlbStandingsCalc';
+import { fetchStandingsForDate } from '@/lib/services/boxscoreApi';
+import { getPlayoffProbability } from '@/lib/utils/standingsCalc';
 import { getCurrentNHLSeason, nextNHLSeason, formatSeasonLabel } from '@/lib/utils/season';
 
 interface NextGame {
@@ -21,8 +23,8 @@ type Snapshot =
   | { kind: 'unavailable' }
   | { kind: 'mlb'; wins: number; losses: number; probability: number | null; next: NextGame | null }
   | { kind: 'nfl'; wins: number; losses: number; next: NextGame | null }
-  | { kind: 'nhl-live'; wins: number; losses: number; otl: number; points: number; next: NextGame | null }
-  | { kind: 'nhl-preseason'; seasonLabel: string; opener: NextGame | null; daysUntil: number | null }
+  | { kind: 'nhl-live'; wins: number; losses: number; otl: number; points: number; probability: number | null; next: NextGame | null }
+  | { kind: 'nhl-preseason'; seasonLabel: string; opener: NextGame | null; daysUntil: number | null; probability?: number | null }
   | { kind: 'nhl-complete'; seasonLabel: string; wins: number; losses: number; otl: number; points: number };
 
 /** "MM/DD/YYYY" (NHL) or "Jul 20" (MLB) → short display label. */
@@ -52,8 +54,9 @@ function Stat({ label, value, color }: { label: string; value: string; color?: s
   );
 }
 
-/** Overview snapshot of the user's favorite team: record, odds, next game. */
-export default function FavoriteTeamCard({ teamSlug }: { teamSlug: string }) {
+/** Snapshot of one of the user's teams: record, odds, next game. `actions` renders
+ * under it (the My Teams controls). */
+export default function FavoriteTeamCard({ teamSlug, actions }: { teamSlug: string; actions?: ReactNode }) {
   const [snap, setSnap] = useState<Snapshot>({ kind: 'loading' });
   const team = findTeam(teamSlug);
 
@@ -74,7 +77,9 @@ export default function FavoriteTeamCard({ teamSlug }: { teamSlug: string }) {
           if (schedule.length === 0) return done({ kind: 'unavailable' });
           const wins = schedule.filter(g => g.outcome === 'W').length;
           const losses = schedule.filter(g => g.outcome === 'L').length;
-          const nextGame = schedule.find(g => g.outcome === 'PENDING');
+          // A postponed game stays PENDING on its old date; only count games still ahead.
+          const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+          const nextGame = schedule.find(g => g.outcome === 'PENDING' && (!g.isoDate || g.isoDate >= today));
           const row = standings.find(t => t.teamAbbrev === team.abbreviation);
           return done({
             kind: 'mlb',
@@ -111,7 +116,13 @@ export default function FavoriteTeamCard({ teamSlug }: { teamSlug: string }) {
         // NHL: date-based season first; if it's fully played, look for the next
         // season's schedule (preseason preview), mirroring the tracker pages.
         const season = getCurrentNHLSeason();
-        const schedule = await fetchSabresSchedule(season, team.abbreviation, team.nhlId);
+        const [schedule, standings] = await Promise.all([
+          fetchSabresSchedule(season, team.abbreviation, team.nhlId),
+          fetchStandingsForDate(new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })).catch(() => []),
+        ]);
+        // Same model as the tracker and odds pages (preseason projection at 0 games).
+        const row = standings.find(t => t.teamAbbrev?.default === team.abbreviation);
+        const probability = row ? Math.round(getPlayoffProbability(row, standings)) : null;
         if (schedule.length === 0) return done({ kind: 'unavailable' });
         const record = (games: typeof schedule) => ({
           wins: games.filter(g => g.outcome === 'W').length,
@@ -143,6 +154,7 @@ export default function FavoriteTeamCard({ teamSlug }: { teamSlug: string }) {
             seasonLabel: formatSeasonLabel(season),
             opener: { date: opener.date, opponent: opener.opponentAbbreviation || opener.opponent, isHome: opener.isHome },
             daysUntil: daysUntil(opener.date),
+            probability,
           });
         }
 
@@ -150,6 +162,7 @@ export default function FavoriteTeamCard({ teamSlug }: { teamSlug: string }) {
         return done({
           kind: 'nhl-live',
           ...record(schedule),
+          probability,
           next: { date: nextGame.date, opponent: nextGame.opponentAbbreviation || nextGame.opponent, isHome: nextGame.isHome },
         });
       } catch {
@@ -161,7 +174,7 @@ export default function FavoriteTeamCard({ teamSlug }: { teamSlug: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamSlug]);
 
-  if (!team || snap.kind === 'unavailable') return null;
+  if (!team) return null;
 
   return (
     <section className="overflow-hidden rounded-2xl border-2 border-gray-200 bg-white shadow-xl">
@@ -182,6 +195,8 @@ export default function FavoriteTeamCard({ teamSlug }: { teamSlug: string }) {
       <div className="p-4">
       {snap.kind === 'loading' ? (
         <p className="text-sm text-gray-400">Loading…</p>
+      ) : snap.kind === 'unavailable' ? (
+        <p className="text-sm text-gray-500">No schedule to show right now.</p>
       ) : snap.kind === 'mlb' ? (
         <div className="grid grid-cols-3 gap-3">
           <Stat label="Record" value={`${snap.wins}-${snap.losses}`} />
@@ -195,8 +210,8 @@ export default function FavoriteTeamCard({ teamSlug }: { teamSlug: string }) {
         </div>
       ) : snap.kind === 'nhl-live' ? (
         <div className="grid grid-cols-3 gap-3">
-          <Stat label="Record" value={`${snap.wins}-${snap.losses}-${snap.otl}`} />
-          <Stat label="Points" value={String(snap.points)} color={team.colors.primary} />
+          <Stat label={`Record · ${snap.points} pts`} value={`${snap.wins}-${snap.losses}-${snap.otl}`} />
+          <Stat label="Playoff Odds" value={snap.probability != null ? `${snap.probability}%` : '—'} color={team.colors.primary} />
           <Stat label="Next Game" value={snap.next ? nextGameLabel(snap.next) : '—'} />
         </div>
       ) : snap.kind === 'nhl-preseason' ? (
@@ -214,6 +229,7 @@ export default function FavoriteTeamCard({ teamSlug }: { teamSlug: string }) {
           ) : (
             'coming soon'
           )}
+          {snap.probability != null && <>. Preseason playoff odds: <span className="font-bold" style={{ color: team.colors.primary }}>{snap.probability}%</span></>}
         </p>
       ) : (
         <div className="grid grid-cols-3 gap-3">
@@ -223,6 +239,7 @@ export default function FavoriteTeamCard({ teamSlug }: { teamSlug: string }) {
         </div>
       )}
       </div>
+      {actions && <div className="border-t border-gray-100 px-4 py-2.5">{actions}</div>}
     </section>
   );
 }

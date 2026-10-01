@@ -7,8 +7,8 @@ import { ChevronDown, ChevronUp, Check, X, Minus, Trash2, Pencil } from 'lucide-
 import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
 import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import AuthModal from '@/components/perfectseason/board/AuthModal';
-import { logout, resendAccountVerification } from '@/lib/perfectseason/account';
-import { swapFavorite } from '@/lib/favorites';
+import { logout, resendAccountVerification, saveAccountTeams } from '@/lib/perfectseason/account';
+import { readFavorites, writeFavorites, onFavoritesChange } from '@/lib/favorites';
 import { fetchWhatIfSaves, deleteWhatIfSave, updateWhatIfSaveLabel } from '@/lib/whatif/client';
 import { fetchSabresSchedule } from '@/lib/services/nhlApi';
 import { fetchMLBSchedule } from '@/lib/services/mlbApi';
@@ -253,8 +253,11 @@ const teamOptions = (teams: Record<string, { city: string; name: string }>) =>
     .map(([slug, t]) => ({ slug, label: `${t.city} ${t.name}` }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
-const NHL_OPTIONS = teamOptions(NHL_TEAMS);
-const MLB_OPTIONS = teamOptions(MLB_TEAMS);
+const TEAM_GROUPS = [
+  { label: 'NHL', options: teamOptions(NHL_TEAMS) },
+  { label: 'MLB', options: teamOptions(MLB_TEAMS) },
+  { label: 'NFL', options: teamOptions(NFL_TEAMS) },
+];
 
 type AccountTab = 'overview' | 'picks' | 'perfectseason' | 'settings';
 
@@ -276,8 +279,11 @@ export default function AccountPage() {
   const [saves, setSaves] = useState<WhatIfSave[] | null>(null);
   const [actualsByTeam, setActualsByTeam] = useState<Map<string, Map<number, ActualGame>>>(new Map());
   const [expanded, setExpanded] = useState<string | null>(null); // `${group.key}:${savedDate}`
-  const [editingFavorite, setEditingFavorite] = useState(false);
-  const [savingFavorite, setSavingFavorite] = useState(false);
+  const [savingTeams, setSavingTeams] = useState(false);
+  const [addTeam, setAddTeam] = useState('');
+  // Recap emails per team: which of My Teams currently get them.
+  const [recaps, setRecaps] = useState<{ teams: string[]; pending: boolean } | null>(null);
+  const [recapBusy, setRecapBusy] = useState<string | null>(null);
   const [showAllSaves, setShowAllSaves] = useState<Set<string>>(new Set()); // group keys with full save list shown
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null); // rowKey awaiting delete confirmation
   const [deletingSave, setDeletingSave] = useState(false);
@@ -341,27 +347,58 @@ export default function AccountPage() {
     }
   }, []);
 
-  const changeFavorite = async (slug: string) => {
-    if (!user || savingFavorite) return;
-    setSavingFavorite(true);
-    const previous = user.favoriteTeam;
+  // --- My Teams ---
+  // Shown from the local favorites list, which useCurrentUser keeps in sync with
+  // the account (so a star toggled in the menu shows up here at once). The first
+  // team is the main one.
+  const [favorites, setFavorites] = useState<string[]>([]);
+  useEffect(() => {
+    setFavorites(readFavorites());
+    return onFavoritesChange(setFavorites);
+  }, []);
+  const myTeams = user ? favorites.filter(t => findTeam(t)) : [];
+
+  /** Save the teams list (and optionally the main team); keeps the menu stars in step. */
+  const saveTeams = async (teams: string[], main?: string) => {
+    if (!user || savingTeams) return;
+    setSavingTeams(true);
     try {
-      const res = await fetch('/api/account/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ favoriteTeam: slug || null }),
-        credentials: 'include',
-      });
-      if (res.ok) {
-        setUser({ ...user, favoriteTeam: slug || undefined });
-        // Keep the hamburger/home-grid favorites in step: this is a switch, so
-        // the old favorite is replaced in the list, not accumulated.
-        swapFavorite(previous, slug || null);
+      const result = await saveAccountTeams(teams, main);
+      if (result) {
+        setProfile(prev => (prev ? { ...prev, teams: result.teams, favoriteTeam: result.favoriteTeam ?? undefined } : prev));
+        setUser({ ...user, teams: result.teams, favoriteTeam: result.favoriteTeam ?? undefined });
+        writeFavorites(result.teams, { fromAccount: true });
       }
     } finally {
-      setSavingFavorite(false);
-      setEditingFavorite(false);
+      setSavingTeams(false);
     }
+  };
+
+  const loadRecaps = () =>
+    fetch('/api/newsletter/status', { credentials: 'include' })
+      .then(res => (res.ok ? res.json() : null))
+      .then(d => setRecaps({ teams: d?.subscribed ? d.teams ?? [] : [], pending: !!d?.pending }))
+      .catch(() => setRecaps({ teams: [], pending: false }));
+
+  const toggleRecap = async (team: string, on: boolean) => {
+    if (recapBusy) return;
+    setRecapBusy(team);
+    try {
+      const res = await fetch('/api/account/newsletter/team', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ team, on }),
+        credentials: 'include',
+      });
+      if (res.ok) await loadRecaps();
+    } finally {
+      setRecapBusy(null);
+    }
+  };
+
+  const goToMyTeams = () => {
+    setTab('overview');
+    setTimeout(() => document.getElementById('my-teams')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   };
 
   useEffect(() => {
@@ -371,6 +408,7 @@ export default function AccountPage() {
       return;
     }
     fetchWhatIfSaves().then(setSaves);
+    loadRecaps();
     fetch('/api/account/profile', { credentials: 'include' })
       .then(res => (res.ok ? res.json() : null))
       .then(setProfile)
@@ -557,7 +595,8 @@ export default function AccountPage() {
     );
   }
 
-  const favTeam = user.favoriteTeam ? findTeam(user.favoriteTeam) : undefined;
+  const mainTeam = myTeams[0] ?? user.favoriteTeam;
+  const favTeam = mainTeam ? findTeam(mainTeam) : undefined;
   const heroColor = favTeam?.colors.primary ?? '#003087';
   // Tracker header trims: secondary drives the bottom border, and the username
   // line uses the same name-color logic as the tracker team-name line.
@@ -583,7 +622,7 @@ export default function AccountPage() {
             {/* Team navigation — same corner slot as the tracker headers */}
             <div className="absolute left-0 top-0">
               <MLBTeamNav
-                currentTeamId={user.favoriteTeam ?? ''}
+                currentTeamId={mainTeam ?? ''}
                 teamColors={{ primary: heroColor, secondary: heroSecondary, accent: heroSecondary }}
                 defaultTab={favTeam && 'mlbId' in favTeam ? 'mlb' : 'nhl'}
               />
@@ -606,7 +645,7 @@ export default function AccountPage() {
             {/* Favorite team logo in the tracker's logo slot — links to its tracker */}
             {favTeam && (
               <Link
-                href={getTeamUrl(user.favoriteTeam!)}
+                href={getTeamUrl(mainTeam!)}
                 title={`Go to the ${favTeam.city} ${favTeam.name} tracker`}
                 className="rounded-lg transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2"
               >
@@ -629,45 +668,14 @@ export default function AccountPage() {
                 : 'Your profile'}
             </p>
             <div className="mt-2">
-                {editingFavorite ? (
-                  <select
-                    autoFocus
-                    disabled={savingFavorite}
-                    value={user.favoriteTeam ?? ''}
-                    onChange={(e) => changeFavorite(e.target.value)}
-                    onBlur={() => setEditingFavorite(false)}
-                    className="rounded-lg border-2 border-white/30 bg-white px-2 py-1.5 text-sm text-gray-800 outline-none"
-                  >
-                    <option value="">No favorite</option>
-                    <optgroup label="NHL">
-                      {NHL_OPTIONS.map((t) => (
-                        <option key={t.slug} value={t.slug}>{t.label}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="MLB">
-                      {MLB_OPTIONS.map((t) => (
-                        <option key={t.slug} value={t.slug}>{t.label}</option>
-                      ))}
-                    </optgroup>
-                  </select>
-                ) : favTeam ? (
-                  <button
-                    type="button"
-                    onClick={() => setEditingFavorite(true)}
-                    title="Change favorite team"
-                    className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-white/25"
-                  >
-                    {favTeam.city} {favTeam.name}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setEditingFavorite(true)}
-                    className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-bold text-white transition-colors hover:bg-white/25"
-                  >
-                    Set your favorite team
-                  </button>
-                )}
+              <button
+                type="button"
+                onClick={goToMyTeams}
+                title="Manage My Teams"
+                className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-white/25"
+              >
+                {favTeam ? `${favTeam.city} ${favTeam.name}${myTeams.length > 1 ? ` +${myTeams.length - 1}` : ''}` : 'Add your teams'}
+              </button>
             </div>
           </div>
         </div>
@@ -734,7 +742,7 @@ export default function AccountPage() {
           accent={heroColor}
           emailVerified={profile?.emailVerified ?? true}
           pendingEmail={profile?.pendingEmail}
-          favoriteTeam={user.favoriteTeam}
+          favoriteTeam={mainTeam}
           onEmailChangeRequested={(pendingEmail) => setProfile(prev => (prev ? { ...prev, pendingEmail } : prev))}
           onDeleted={() => setUser(null)}
         />
@@ -742,6 +750,108 @@ export default function AccountPage() {
 
       {tab === 'overview' && (
         <>
+      {/* My Teams — every team followed (the menu stars), one marked main, a recap switch each */}
+      <section id="my-teams" className="mb-4 scroll-mt-16 rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-xl font-bold md:text-2xl" style={{ color: heroColor }}>My Teams</h2>
+          <div className="flex min-w-0 items-center gap-2">
+            <label htmlFor="add-team" className="sr-only">Add a team</label>
+            <select
+              id="add-team"
+              value={addTeam}
+              onChange={e => setAddTeam(e.target.value)}
+              className="min-w-0 rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-800 outline-none focus:border-sabres-blue"
+            >
+              <option value="">Add a team…</option>
+              {TEAM_GROUPS.map(g => (
+                <optgroup key={g.label} label={g.label}>
+                  {g.options.filter(t => !myTeams.includes(t.slug)).map(t => <option key={t.slug} value={t.slug}>{t.label}</option>)}
+                </optgroup>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled={!addTeam || savingTeams}
+              onClick={async () => {
+                const slug = addTeam;
+                setAddTeam('');
+                await saveTeams([...myTeams, slug], myTeams.length === 0 ? slug : undefined);
+              }}
+              className="flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+              style={{ backgroundColor: heroColor }}
+            >
+              Add
+            </button>
+          </div>
+        </div>
+        {myTeams.length === 0 ? (
+          <p className="text-sm text-gray-500">
+            Add the teams you follow. They&apos;re starred in the menu on every device you sign in on, and you can turn on game recap emails for each one.
+          </p>
+        ) : (
+          <>
+            {recaps?.pending && recaps.teams.length > 0 && (
+              <p className="mb-3 text-xs text-amber-700">Recap emails start once you confirm your email.</p>
+            )}
+            <div className="grid gap-3 md:grid-cols-2">
+              {myTeams.map(slug => {
+                const team = findTeam(slug);
+                const isMain = slug === myTeams[0];
+                const recapOn = !!recaps?.teams.includes(slug);
+                return (
+                  <FavoriteTeamCard
+                    key={slug}
+                    teamSlug={slug}
+                    actions={
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          {isMain ? (
+                            <span className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ backgroundColor: `${heroColor}14`, color: heroColor }}>Main team</span>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={savingTeams}
+                              onClick={() => saveTeams(myTeams, slug)}
+                              className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-200 disabled:opacity-50"
+                            >
+                              Make main
+                            </button>
+                          )}
+                          <label className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-gray-700">
+                            <input
+                              type="checkbox"
+                              checked={recapOn}
+                              disabled={recaps == null || recapBusy === slug}
+                              onChange={e => toggleRecap(slug, e.target.checked)}
+                              className="h-4 w-4 rounded border-gray-300"
+                              style={{ accentColor: heroColor }}
+                            />
+                            Game recap emails
+                          </label>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={savingTeams}
+                          onClick={async () => {
+                            // Unfollowing a team also stops its recap emails.
+                            if (recapOn) await toggleRecap(slug, false);
+                            await saveTeams(myTeams.filter(t => t !== slug));
+                          }}
+                          aria-label={`Remove ${team ? `${team.city} ${team.name}` : slug} from My Teams`}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    }
+                  />
+                );
+              })}
+            </div>
+          </>
+        )}
+      </section>
+
       {/* Stats box — tracker Season Progress structure: titled box, gradient tile grid */}
       <div className="mb-4 rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
       <h2 className="mb-2 text-xl font-bold md:mb-3 md:text-2xl" style={{ color: heroColor }}>My Stats</h2>
@@ -770,12 +880,9 @@ export default function AccountPage() {
       </div>
       </div>
 
-      {/* Team snapshot + daily puzzles — paired so neither strands in an 80rem row */}
-      <div className="mb-4 grid gap-4 md:grid-cols-2">
-        {user.favoriteTeam && <FavoriteTeamCard teamSlug={user.favoriteTeam} />}
-
+      <div className="mb-4 grid gap-4">
         {/* Today's puzzles — the daily hook */}
-        <section className={`rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4 ${user.favoriteTeam ? '' : 'md:col-span-2'}`}>
+        <section className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h3 className="text-lg font-bold md:text-xl" style={{ color: heroColor }}>Today&apos;s Daily Puzzles</h3>
             {(profile?.perfectSeason.daily.streak.current ?? 0) >= 2 && (
