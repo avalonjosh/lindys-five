@@ -26,6 +26,8 @@ export async function GET(request: NextRequest) {
     subscribed,
     // Unsubscribed on purpose: signup surfaces stay hidden (no nagging).
     unsubscribed: !!sub?.unsubscribedAt,
+    // Opted in but not live yet (waiting on an email confirmation).
+    pending: subscribed && !sub!.verified,
     teams: subscribed ? sub!.teams ?? [] : [],
     email: user.email,
     username: user.username,

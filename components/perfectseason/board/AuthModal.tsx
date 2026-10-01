@@ -191,7 +191,12 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
           {mode === 'signup' && (
             <label className="flex cursor-pointer items-start gap-2 text-xs text-gray-600">
               <input type="checkbox" checked={subscribe} onChange={(e) => setSubscribe(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-sabres-blue" />
-              <span>Email me about new games &amp; features from Lindy&apos;s Five. No spam, unsubscribe anytime.</span>
+              <span>
+                {favorite
+                  ? `Email me ${favorite.name} game recaps and the weekly Lindy's Five roundup.`
+                  : "Email me the weekly Lindy's Five roundup. (Pick a favorite team to get game recaps too.)"}
+                {' '}Unsubscribe anytime.
+              </span>
             </label>
           )}
 

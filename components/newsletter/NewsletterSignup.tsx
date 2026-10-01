@@ -62,19 +62,26 @@ export default function NewsletterSignup({
     e.preventDefault();
     if (!email || status === 'loading') return;
 
-    const submitTeams = teams.length > 0 ? teams : ['sabres'];
+    // No team picked = the weekly roundup only (never a team the visitor didn't choose).
+    const submitTeams = teams;
 
     setStatus('loading');
     try {
-      const res = await fetch('/api/newsletter/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, teams: submitTeams, source }),
-      });
+      const res = submitTeams.length > 0
+        ? await fetch('/api/newsletter/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, teams: submitTeams, source }),
+          })
+        : await fetch('/api/newsletter/quick-subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, source }),
+          });
       const data = await res.json();
       if (res.ok) {
         setStatus('success');
-        setMessage(data.message);
+        setMessage(data.message ?? "You're on the list for the weekly roundup.");
         try {
           localStorage.setItem('newsletter-subscribed', '1');
         } catch {
@@ -97,10 +104,10 @@ export default function NewsletterSignup({
     const team = initialTeams?.[0];
     const label = teamDisplayName || 'game';
     if (oneTap === 'done') {
-      return <SuccessMessage message={`Done! ${teamDisplayName ? `${teamDisplayName} recaps` : 'Recaps'} are headed to ${account.email ?? 'your inbox'}.`} variant={variant} primaryColor={primaryColor} />;
+      return <SuccessMessage message={team ? `Done! ${teamDisplayName ? `${teamDisplayName} recaps` : 'Game recaps'} are headed to ${account.email ?? 'your inbox'}.` : `Done! The weekly roundup is headed to ${account.email ?? 'your inbox'}.`} variant={variant} primaryColor={primaryColor} />;
     }
     if (oneTap === 'pending') {
-      return <SuccessMessage message={`Almost there. Confirm your email with the link we sent to ${account.email ?? 'your inbox'}, and ${teamDisplayName ? `${teamDisplayName} recaps` : 'recaps'} start.`} variant={variant} primaryColor={primaryColor} />;
+      return <SuccessMessage message={`Almost there. Confirm your email with the link we sent to ${account.email ?? 'your inbox'}, and ${team ? (teamDisplayName ? `${teamDisplayName} recaps` : 'game recaps') : 'the weekly roundup'} start${team ? '' : 's'}.`} variant={variant} primaryColor={primaryColor} />;
     }
     if (account.unsubscribed) return null;
     if (account.subscribed && (!team || account.teams.includes(team))) return null;

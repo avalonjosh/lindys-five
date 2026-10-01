@@ -734,6 +734,7 @@ export default function AccountPage() {
           accent={heroColor}
           emailVerified={profile?.emailVerified ?? true}
           pendingEmail={profile?.pendingEmail}
+          favoriteTeam={user.favoriteTeam}
           onEmailChangeRequested={(pendingEmail) => setProfile(prev => (prev ? { ...prev, pendingEmail } : prev))}
           onDeleted={() => setUser(null)}
         />

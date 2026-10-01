@@ -96,8 +96,8 @@ export const changeEmail = (password: string, newEmail: string) =>
   postData<{ pending: true; pendingEmail: string }>('/api/account/change-email', { password, newEmail });
 
 /** `pending` = held until the account email is confirmed. */
-export const setNewsletterSubscribed = (subscribed: boolean) =>
-  postData<{ subscribed: boolean; pending: boolean }>('/api/account/newsletter', { subscribed });
+export const setNewsletterSubscribed = (subscribed: boolean, team?: string) =>
+  postData<{ subscribed: boolean; pending: boolean }>('/api/account/newsletter', { subscribed, team });
 
 export const resendAccountVerification = () =>
   postData<{ sent?: boolean; alreadyVerified?: boolean; email?: string }>('/api/account/email-verify/resend', {});

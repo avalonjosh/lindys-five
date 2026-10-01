@@ -5,17 +5,19 @@ import { rateLimit } from '@/lib/perfectseason/server/ratelimit';
 import { unsubscribeByEmail } from '@/lib/newsletter';
 import { accountOptIn } from '@/lib/perfectseason/server/accountEmail';
 import { userKey, type User } from '@/lib/perfectseason/leaderboard';
+import { findTeam } from '@/lib/teamConfig';
 
 /**
  * Newsletter opt-in/out for the signed-in account (the settings toggle).
- * Subscribe signs up for the favorite team's recaps when one is set: live at
+ * Subscribe signs up for the chosen team's recaps (default: the favorite team; with
+ * neither, the weekly roundup only): live at
  * once if the account email is confirmed, otherwise held until it is.
  */
 export async function POST(request: NextRequest) {
   const userId = await getUserId(request);
   if (!userId) return NextResponse.json({ error: 'Sign in to manage emails' }, { status: 401 });
 
-  let body: { subscribed?: boolean };
+  let body: { subscribed?: boolean; team?: string };
   try {
     body = await request.json();
   } catch {
@@ -35,7 +37,8 @@ export async function POST(request: NextRequest) {
   let pending = false;
   try {
     if (body.subscribed) {
-      pending = (await accountOptIn(user, user.favoriteTeam ? [user.favoriteTeam] : [], 'account-settings')) === 'pending';
+      const team = typeof body.team === 'string' && findTeam(body.team) ? body.team : user.favoriteTeam;
+      pending = (await accountOptIn(user, team ? [team] : [], 'account-settings')) === 'pending';
     } else {
       await unsubscribeByEmail(user.email);
     }
