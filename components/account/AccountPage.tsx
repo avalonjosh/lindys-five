@@ -333,6 +333,18 @@ export default function AccountPage() {
   };
   const [tab, setTab] = useState<AccountTab>('overview');
   const [passwordNotice, setPasswordNotice] = useState(false);
+  const [checklistDismissed, setChecklistDismissed] = useState(false);
+  useEffect(() => {
+    try {
+      setChecklistDismissed(localStorage.getItem('account-checklist-hidden') === '1');
+    } catch { /* storage unavailable */ }
+  }, []);
+  const dismissChecklist = () => {
+    setChecklistDismissed(true);
+    try {
+      localStorage.setItem('account-checklist-hidden', '1');
+    } catch { /* storage unavailable */ }
+  };
   const [verifyResend, setVerifyResend] = useState<{ state: 'idle' | 'sending' | 'sent' | 'error'; message?: string }>({ state: 'idle' });
 
   // Deep link: /account?tab=picks (etc.) opens on that tab — used by the
@@ -615,6 +627,26 @@ export default function AccountPage() {
     null
   ) ?? null;
 
+  const statTiles: { label: string; value: string; sub?: string }[] = [];
+  if (saves && saves.length > 0) statTiles.push({ label: 'Saved Picks', value: String(saves.length) });
+  if (overall.graded > 0) statTiles.push({ label: 'Pick Accuracy', value: `${Math.round((overall.exact / overall.graded) * 100)}%`, sub: `${overall.exact}/${overall.graded} graded` });
+  if (profile && profile.perfectSeason.daily.count > 0) statTiles.push({ label: 'Daily Puzzles', value: String(profile.perfectSeason.daily.count) });
+  if (bestRank != null) statTiles.push({ label: 'Best Rank', value: `#${bestRank}` });
+  if (profile && profile.cards.length > 0) statTiles.push({ label: 'Streak Cards', value: String(profile.cards.length) });
+
+  const playedAnyDaily = !!profile && (profile.perfectSeason.daily.count > 0 || profile.perfectSeason.daily.playedToday.nhl || profile.perfectSeason.daily.playedToday.mlb);
+  const checklist: { key: string; label: string; done: boolean; action: string; href?: string; onClick?: () => void }[] = [
+    { key: 'confirm', label: 'Confirm your email', done: !profile || profile.emailVerified, action: 'Confirm', onClick: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
+    { key: 'teams', label: 'Add the teams you follow', done: myTeams.length > 0, action: 'Add teams', onClick: goToMyTeams },
+    { key: 'recaps', label: 'Turn on game recap emails for a team', done: !!recaps && recaps.teams.length > 0, action: myTeams.length > 0 ? 'Turn on' : 'Add a team first', onClick: goToMyTeams },
+    { key: 'daily', label: "Play a Daily puzzle (82-0 or 162-0)", done: playedAnyDaily, action: 'Play', href: '/82-0' },
+    { key: 'picks', label: "Save your first What-If picks on a team page", done: !!saves && saves.length > 0, action: 'Try it', href: myTeams[0] ? (findTeam(myTeams[0]) && 'espnId' in findTeam(myTeams[0])! ? getTeamUrl(myTeams[0]) : `${getTeamUrl(myTeams[0])}?whatif=1`) : '/nhl' },
+  ];
+  const hasSeasonSummary = !!profile && (profile.perfectSeason.boards.length > 0 || profile.perfectSeason.daily.count > 0);
+  const hasPicksSummary = !!latestSave;
+  const showChecklist = !!profile && saves != null && recaps != null && !checklistDismissed && checklist.some(c => !c.done);
+
+
   return (
     <div>
       {/* Header — the team tracker header, wearing the user's identity */}
@@ -751,6 +783,47 @@ export default function AccountPage() {
 
       {tab === 'overview' && (
         <>
+      {/* Getting started: shown until every step is done (or dismissed) */}
+      {showChecklist && (
+        <section className="mb-4 rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h2 className="text-xl font-bold md:text-2xl" style={{ color: heroColor }}>Getting Started</h2>
+            <button type="button" onClick={dismissChecklist} className="text-xs font-semibold text-gray-400 hover:text-gray-600">
+              Hide
+            </button>
+          </div>
+          <p className="mb-2 text-xs text-gray-500">{checklist.filter(c => c.done).length} of {checklist.length} done</p>
+          <ul className="flex flex-col gap-1">
+            {checklist.map(item => (
+              <li key={item.key} className="flex min-h-[44px] items-center gap-3">
+                <span
+                  className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 ${item.done ? 'border-transparent text-white' : 'border-gray-300'}`}
+                  style={item.done ? { backgroundColor: heroColor } : undefined}
+                  aria-hidden
+                >
+                  {item.done && <Check className="h-3.5 w-3.5" />}
+                </span>
+                <span className={`min-w-0 flex-1 text-sm ${item.done ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
+                  {item.label}
+                  <span className="sr-only">{item.done ? ' (done)' : ' (not done yet)'}</span>
+                </span>
+                {!item.done && (
+                  item.href ? (
+                    <Link href={item.href} className="flex-shrink-0 text-xs font-bold hover:underline" style={{ color: heroColor }}>
+                      {item.action}
+                    </Link>
+                  ) : (
+                    <button type="button" onClick={item.onClick} className="flex-shrink-0 text-xs font-bold hover:underline" style={{ color: heroColor }}>
+                      {item.action}
+                    </button>
+                  )
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* My Teams — every team followed (the menu stars), one marked main, a recap switch each */}
       <section id="my-teams" className="mb-4 scroll-mt-16 rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -853,33 +926,21 @@ export default function AccountPage() {
         )}
       </section>
 
-      {/* Stats box — tracker Season Progress structure: titled box, gradient tile grid */}
+      {/* Stats box: only the stats that have something to show (none = no box) */}
+      {statTiles.length > 0 && (
       <div className="mb-4 rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
       <h2 className="mb-2 text-xl font-bold md:mb-3 md:text-2xl" style={{ color: heroColor }}>My Stats</h2>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
-        <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2 md:p-3">
-          <div className="mb-1 text-xs font-semibold uppercase tracking-wide" style={{ color: heroColor }}>Saved Picks</div>
-          <div className="text-2xl font-bold text-gray-900 md:text-3xl">{saves?.length ?? '—'}</div>
-        </div>
-        <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2 md:p-3">
-          <div className="mb-1 text-xs font-semibold uppercase tracking-wide" style={{ color: heroColor }}>Pick Accuracy</div>
-          <div className="text-2xl font-bold text-gray-900 md:text-3xl">
-            {overall.graded > 0 ? `${Math.round((overall.exact / overall.graded) * 100)}%` : 'TBD'}
+      <div className={`grid grid-cols-2 gap-2 sm:gap-3 ${statTiles.length >= 4 ? 'sm:grid-cols-4' : statTiles.length === 3 ? 'sm:grid-cols-3' : ''}`}>
+        {statTiles.map(t => (
+          <div key={t.label} className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2 md:p-3">
+            <div className="mb-1 text-xs font-semibold uppercase tracking-wide" style={{ color: heroColor }}>{t.label}</div>
+            <div className="text-2xl font-bold text-gray-900 md:text-3xl">{t.value}</div>
+            {t.sub && <div className="mt-1 text-xs text-gray-600">{t.sub}</div>}
           </div>
-          {overall.graded > 0 && (
-            <div className="mt-1 text-xs text-gray-600">{overall.exact}/{overall.graded} graded</div>
-          )}
-        </div>
-        <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2 md:p-3">
-          <div className="mb-1 text-xs font-semibold uppercase tracking-wide" style={{ color: heroColor }}>Daily Puzzles</div>
-          <div className="text-2xl font-bold text-gray-900 md:text-3xl">{profile?.perfectSeason.daily.count ?? '—'}</div>
-        </div>
-        <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-2 md:p-3">
-          <div className="mb-1 text-xs font-semibold uppercase tracking-wide" style={{ color: heroColor }}>Best Rank</div>
-          <div className="text-2xl font-bold text-gray-900 md:text-3xl">{bestRank != null ? `#${bestRank}` : '—'}</div>
-        </div>
+        ))}
       </div>
       </div>
+      )}
 
       <div className="mb-4 grid gap-4">
         {/* Today's puzzles — the daily hook */}
@@ -917,9 +978,12 @@ export default function AccountPage() {
         </section>
       </div>
 
-      {/* Summary cards — less than the tabs show, so "View all" has a reason to exist */}
-      <div className="mb-4 grid gap-4 sm:grid-cols-2">
+      {/* Summary cards — less than the tabs show, so "View all" has a reason to exist.
+          Each shows only once there's something in it (the checklist covers getting started). */}
+      {(hasSeasonSummary || hasPicksSummary) && (
+      <div className={`mb-4 grid gap-4 ${hasSeasonSummary && hasPicksSummary ? 'sm:grid-cols-2' : ''}`}>
         {/* Perfect Season summary */}
+        {hasSeasonSummary && (
         <section className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h3 className="text-lg font-bold md:text-xl" style={{ color: heroColor }}>Perfect Season</h3>
@@ -959,7 +1023,10 @@ export default function AccountPage() {
           )}
         </section>
 
+        )}
+
         {/* My Picks summary */}
+        {hasPicksSummary && (
         <section className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h3 className="text-lg font-bold md:text-xl" style={{ color: heroColor }}>My Picks</h3>
@@ -1003,7 +1070,9 @@ export default function AccountPage() {
             </>
           )}
         </section>
+        )}
       </div>
+      )}
 
       {/* Recent activity — merged saves + daily plays, newest first */}
       {activity.length > 0 && (
