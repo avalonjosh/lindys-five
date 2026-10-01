@@ -150,6 +150,9 @@ All crons are configured in `vercel.json` and authorized via `CRON_SECRET` Beare
 ### Email preferences
 Subscribers can switch kinds of email off (`NewsletterSubscriber.prefs`: `gameRecaps`, `setRecaps`, `digest`, `specials`; missing = on, checked with `wantsEmail()`). Every send path passes its kind (`getVerifiedSubscribersForTeam(team, kind)`; the weekly digest filters `digest`). The "Unsubscribe" link in emails (`GET /api/newsletter/unsubscribe?id=`) now opens `/email-preferences?id=`, where the person can drop one team, one kind of email, or everything (`/api/newsletter/preferences`, by subscriber id or by the signed-in account; Settings > Emails uses the same component). The RFC 8058 one-click `POST` still unsubscribes from everything.
 
+### Support (Ko-fi tips)
+`/support` explains the site is independent and links to Ko-fi (one-time or monthly tips, paid out by Ko-fi). Small "Support" links sit in the SiteFooter, at the bottom of the account page and on the 82-0/162-0 daily result. All of it is gated on `NEXT_PUBLIC_KOFI_URL` (`lib/support.ts`): unset = links hidden, `/support` 404s and stays out of the sitemap.
+
 ### Webhook Tracking
 **Endpoint:** `POST /api/webhook/resend` — receives Resend delivery events
 **Events tracked:** `email.delivered`, `email.opened`, `email.clicked`, `email.bounced`, `email.complained`

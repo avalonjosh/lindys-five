@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { NHL_TEAMS, MLB_TEAMS } from '@/lib/teamConfig';
+import { supportEnabled } from '@/lib/support';
 import { NFL_TEAM_LIST } from '@/lib/teamConfig/nflTeams';
 
 interface TeamLite {
@@ -41,6 +42,7 @@ export default function SiteFooter() {
           <Link href="/account" className="transition-colors hover:text-white">My Account</Link>
           <Link href="/feed.xml" className="transition-colors hover:text-white">RSS</Link>
           <Link href="/privacy" className="transition-colors hover:text-white">Privacy</Link>
+          {supportEnabled && <Link href="/support" className="text-amber-300 transition-colors hover:text-white">Support Lindy&apos;s Five</Link>}
         </nav>
 
         <div className="grid gap-8 md:grid-cols-2">

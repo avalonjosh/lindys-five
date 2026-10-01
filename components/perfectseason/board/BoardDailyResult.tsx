@@ -15,6 +15,7 @@ import NewsletterPrompt from './NewsletterPrompt';
 import JerseyCard from '../JerseyCard';
 import ShareCardSheet from '../ShareCardSheet';
 import { TIER_LABEL } from '@/lib/perfectseason/cards';
+import { supportEnabled } from '@/lib/support';
 
 interface NhlDailyResultProps {
   record: DailyRecord;
@@ -167,6 +168,13 @@ export default function NhlDailyResult({ record, config, variant, streak, played
       {shareTeam && <ShareTeamModal team={shareTeam} onClose={() => setShareTeam(null)} />}
 
       <NewsletterPrompt sport={config.sport === 'mlb' ? 'mlb' : 'nhl'} />
+
+      {supportEnabled && (
+        <p className="text-center text-xs text-gray-500">
+          Enjoying the daily?{' '}
+          <Link href="/support" className="font-semibold text-sabres-blue hover:underline">Support Lindy&apos;s Five</Link>
+        </p>
+      )}
 
       <Link
         href={config.sport === 'mlb' ? '/82-0' : '/162-0'}

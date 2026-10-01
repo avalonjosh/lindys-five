@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { kv } from '@vercel/kv';
 import { getPostsByIds } from '@/lib/kv';
 import { NFL_TEAMS } from '@/lib/teamConfig/nflTeams';
+import { supportEnabled } from '@/lib/support';
 
 const NHL_TEAM_ROUTES = [
   'sabres', 'canadiens', 'redwings', 'senators', 'panthers', 'mapleleafs',
@@ -50,6 +51,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly',
       priority: 0.8,
     },
+    ...(supportEnabled
+      ? [{ url: `${BASE_URL}/support`, changeFrequency: 'monthly' as const, priority: 0.3 }]
+      : []),
     {
       url: `${BASE_URL}/nhl/scores`,
       changeFrequency: 'daily',

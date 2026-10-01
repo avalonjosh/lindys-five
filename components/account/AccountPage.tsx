@@ -25,6 +25,7 @@ import { CARD_MILESTONES, TIER_LABEL } from '@/lib/perfectseason/cards';
 import { normalizePickDate, type WhatIfSave, type WhatIfPick } from '@/lib/whatif/types';
 import type { GameResult } from '@/lib/types';
 import type { ProfileResponse, ProfileBoard } from '@/app/api/account/profile/route';
+import { supportEnabled } from '@/lib/support';
 
 type ActualOutcome = 'W' | 'OTL' | 'L';
 
@@ -1652,6 +1653,12 @@ export default function AccountPage() {
         </div>
       )}
         </>
+      )}
+      {supportEnabled && (
+        <p className="mt-8 text-center text-xs text-gray-500">
+          Lindy&apos;s Five is independent and ad-free.{' '}
+          <Link href="/support" className="font-semibold text-sabres-blue hover:underline">Support the site</Link>
+        </p>
       )}
       </main>
     </div>
