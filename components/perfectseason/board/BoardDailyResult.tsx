@@ -13,6 +13,7 @@ import ShareTeamModal from './ShareTeamModal';
 import LeaderboardCta from './LeaderboardCta';
 import NewsletterPrompt from './NewsletterPrompt';
 import JerseyCard from '../JerseyCard';
+import ShareCardSheet from '../ShareCardSheet';
 import { TIER_LABEL } from '@/lib/perfectseason/cards';
 
 interface NhlDailyResultProps {
@@ -54,6 +55,7 @@ export default function NhlDailyResult({ record, config, variant, streak, played
   const [shareTeam, setShareTeam] = useState<SharedTeam | null>(null);
   const [left, setLeft] = useState(secondsUntilEtMidnight());
   const cardInfo = saveStatus.status === 'done' ? saveStatus.result : undefined;
+  const [shareCard, setShareCard] = useState(false);
   // Signed in, the saved streak (any device, the one cards count) beats this browser's own count.
   const current = cardInfo?.streak ?? streak.current;
   const best = Math.max(streak.best, current);
@@ -121,11 +123,19 @@ export default function NhlDailyResult({ record, config, variant, streak, played
           </p>
           <JerseyCard card={cardInfo.card} width={260} owner={user?.username} />
           <p className="text-xs text-gray-500">Tap the card to flip it.</p>
+          <button
+            type="button"
+            onClick={() => setShareCard(true)}
+            className="w-full rounded-xl bg-sabres-blue py-3 text-sm font-bold uppercase tracking-wide text-white shadow-md transition-colors hover:bg-sabres-light"
+          >
+            Share your card
+          </button>
           <Link href="/account?tab=perfectseason" className="text-sm font-bold text-sabres-blue underline-offset-2 hover:underline">
             See your collection
           </Link>
         </div>
       )}
+      {shareCard && cardInfo?.card && <ShareCardSheet card={cardInfo.card} onClose={() => setShareCard(false)} />}
 
       {canSave ? (
         <LeaderboardCta user={user} status={saveStatus} onSave={onSave} slug={slug} kind="daily" />

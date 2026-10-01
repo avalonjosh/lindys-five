@@ -1,23 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { NHL_TEAMS, MLB_TEAMS } from '@/lib/teamConfig';
 import { franchiseLogo } from '@/lib/perfectseason/logos';
 import { nhlConfig } from '@/lib/perfectseason/config.nhl';
 import { mlbConfig } from '@/lib/perfectseason/config.mlb';
 import { statCells } from './ui';
-import { TIER_LABEL, type CardTier, type StreakCard } from '@/lib/perfectseason/cards';
-
-const FRAME: Record<CardTier, string> = { bronze: '#B87333', silver: '#AEB7C2', gold: '#D4AF37' };
-
-/** Team colors for the jersey: the franchise's current colors, else Lindy's Five navy/gold. */
-function jerseyColors(card: StreakCard): { body: string; trim: string } {
-  const teams = card.sport === 'nhl' ? NHL_TEAMS : MLB_TEAMS;
-  const team = Object.values(teams).find((t) => t.abbreviation === card.player.franchiseId);
-  if (!team) return { body: '#003087', trim: '#FFB81C' };
-  const trim = team.colors.secondary.toUpperCase() === team.colors.primary.toUpperCase() ? '#FFFFFF' : team.colors.secondary;
-  return { body: team.colors.primary, trim };
-}
+import { TIER_FRAME, TIER_LABEL, jerseyColors, type StreakCard } from '@/lib/perfectseason/cards';
 
 const lastName = (name: string) => name.trim().split(/\s+/).slice(1).join(' ') || name;
 
@@ -35,7 +23,7 @@ export default function JerseyCard({ card, width = 280, owner }: { card: StreakC
   const [back, setBack] = useState(false);
   const k = width / 320;
   const px = (n: number) => `${Math.round(n * k)}px`;
-  const frame = FRAME[card.tier];
+  const frame = TIER_FRAME[card.tier];
   const { body, trim } = jerseyColors(card);
   const logo = franchiseLogo(card.player.franchiseId, card.sport, 'dark');
   const config = card.sport === 'nhl' ? nhlConfig : mlbConfig;

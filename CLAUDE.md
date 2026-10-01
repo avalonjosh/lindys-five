@@ -202,9 +202,10 @@ My Teams: `User.teams` is the list of followed teams (NHL/MLB/NFL), first = main
 |-------------|------|--------|---------|
 | `ps:cards:{userId}` | Hash | None | cardId -> `StreakCard` (`lib/perfectseason/cards.ts`) |
 | `ps:cards:{userId}:awarded` | Hash | None | `{sport}:{milestone}:{date}` -> time, so one Daily earns a milestone card once |
+| `ps:cardref:{cardId}` | String | None | cardId -> owner user id, so `/cards/{id}` and its share image resolve without sign-in (`lib/perfectseason/cardStore.ts`, edge-safe) |
 | `ps:number:{sport}:{playerId}` | String | None | Cached jersey number ('' = unknown). NHL from the player landing API; MLB matched by name + career years via the MLB Stats search (Lahman ids aren't MLB ids) |
 
-Cards are earned per game for consecutive saved Dailies (either variant counts; streak read from `ps:user:boards:{id}` daily keys): bronze 7, silver 30, gold 82 (82-0) / 162 (162-0); no streak-saver. Checked in `POST /api/leaderboard/submit` after a Daily save (`checkStreakCard`), which also returns the streak and next milestone for the daily result screen. The card is the best-scoring player in that day's lineup, drawn by `components/perfectseason/JerseyCard.tsx` (jersey-back design, tap to flip). Collection lives on the profile's Perfect Season tab. Not built yet: share image for a card.
+Cards are earned per game for consecutive saved Dailies (either variant counts; streak read from `ps:user:boards:{id}` daily keys): bronze 7, silver 30, gold 82 (82-0) / 162 (162-0); no streak-saver. Checked in `POST /api/leaderboard/submit` after a Daily save (`checkStreakCard`), which also returns the streak and next milestone for the daily result screen. The card is the best-scoring player in that day's lineup, drawn by `components/perfectseason/JerseyCard.tsx` (jersey-back design, tap to flip). Collection lives on the profile's Perfect Season tab. Sharing: `/cards/{id}` (public, noindex) unfurls `/api/og?type=ps-card&id=` (the card front plus who earned it, brand fonts); `ShareCardSheet` offers native share, social links and copy. `/api/og` runs on the Node runtime (not edge) so the card can load the fonts from `assets/fonts`.
 
 ### Newsletter
 | Key Pattern | Type | Expiry | Purpose |
@@ -281,6 +282,7 @@ Embedded via `<script type="application/ld+json">` with `dangerouslySetInnerHTML
 
 | Page | Schemas |
 |------|---------|
+| Streak card (`/cards/{id}`) | none (noindex; OG card image) |
 | Home | WebSite + Organization (`@id` `https://www.lindysfive.com/#organization`, name Lindy's Five, parentOrganization JRR Apps). All other `publisher`/`creator` fields say Lindy's Five; JRR Apps appears only in visible copyright lines |
 | NHL/MLB Hub | WebPage + BreadcrumbList + FAQPage |
 | Playoff Odds (NHL/MLB) | WebPage (+ `dateModified`) + Dataset (+ `dateModified`, `variableMeasured`) + BreadcrumbList + FAQPage |

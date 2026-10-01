@@ -19,6 +19,8 @@ import PicksChart from './PicksChart';
 import SettingsTab from './SettingsTab';
 import FavoriteTeamCard from './FavoriteTeamCard';
 import JerseyCard from '@/components/perfectseason/JerseyCard';
+import ShareCardSheet from '@/components/perfectseason/ShareCardSheet';
+import type { StreakCard } from '@/lib/perfectseason/cards';
 import { CARD_MILESTONES, TIER_LABEL } from '@/lib/perfectseason/cards';
 import { normalizePickDate, type WhatIfSave, type WhatIfPick } from '@/lib/whatif/types';
 import type { GameResult } from '@/lib/types';
@@ -333,6 +335,7 @@ export default function AccountPage() {
   };
   const [tab, setTab] = useState<AccountTab>('overview');
   const [passwordNotice, setPasswordNotice] = useState(false);
+  const [sharingCard, setSharingCard] = useState<StreakCard | null>(null);
   const [checklistDismissed, setChecklistDismissed] = useState(false);
   useEffect(() => {
     try {
@@ -1115,7 +1118,12 @@ export default function AccountPage() {
         ) : (
           <div className="flex flex-wrap justify-center gap-3 sm:justify-start">
             {profile.cards.map(card => (
-              <JerseyCard key={card.id} card={card} width={150} owner={user.username} />
+              <div key={card.id} className="flex flex-col items-center gap-1.5">
+                <JerseyCard card={card} width={150} owner={user.username} />
+                <button type="button" onClick={() => setSharingCard(card)} className="text-xs font-bold hover:underline" style={{ color: heroColor }}>
+                  Share
+                </button>
+              </div>
             ))}
             {(['nhl', 'mlb'] as const).flatMap(sport =>
               CARD_MILESTONES[sport]
@@ -1135,6 +1143,7 @@ export default function AccountPage() {
           </div>
         )}
       </section>
+      {sharingCard && <ShareCardSheet card={sharingCard} onClose={() => setSharingCard(null)} />}
 
       {/* Perfect Season — leaderboard bests from 82-0 / 162-0 */}
       <div className="mb-3 flex items-center justify-between gap-2">

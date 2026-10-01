@@ -11,8 +11,8 @@ import { userBoardsKey } from '../leaderboard';
 import type { PickRecord } from '../engine';
 import type { Player, Sport } from '../types';
 import { getDataset } from './datasets';
+import { cardsKey, cardRefKey } from '../cardStore';
 
-const cardsKey = (userId: string) => `ps:cards:${userId}`;
 const numberKey = (sport: Sport, playerId: string) => `ps:number:${sport}:${playerId}`;
 
 function addDays(iso: string, delta: number): string {
@@ -119,6 +119,7 @@ export async function checkStreakCard(userId: string, sport: Sport, date: string
     },
   };
   await kv.hset(cardsKey(userId), { [card.id]: card });
+  await kv.set(cardRefKey(card.id), userId);
   return { streak, next, card };
 }
 
@@ -130,5 +131,7 @@ export async function getUserCards(userId: string): Promise<StreakCard[]> {
 
 /** Remove every card (account deletion). */
 export async function deleteUserCards(userId: string): Promise<void> {
+  const ids = (await kv.hkeys(cardsKey(userId))) ?? [];
+  if (ids.length) await kv.del(...ids.map((id) => cardRefKey(id)));
   await kv.del(cardsKey(userId), `${cardsKey(userId)}:awarded`);
 }

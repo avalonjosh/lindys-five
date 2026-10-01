@@ -5,6 +5,7 @@
  */
 
 import type { PlayerLine, Sport } from './types';
+import { NHL_TEAMS, MLB_TEAMS } from '@/lib/teamConfig';
 
 export type CardTier = 'bronze' | 'silver' | 'gold';
 
@@ -51,3 +52,17 @@ export function nextMilestone(sport: Sport, streak: number): { days: number; tie
 }
 
 export const TIER_LABEL: Record<CardTier, string> = { bronze: 'Bronze', silver: 'Silver', gold: 'Gold' };
+export const TIER_FRAME: Record<CardTier, string> = { bronze: '#B87333', silver: '#AEB7C2', gold: '#D4AF37' };
+
+/** Jersey colors for a card: the franchise's current primary, with its brightest
+ * contrasting trim (same pick as the team page headers); Lindy's Five navy/gold
+ * for franchises without a current team. */
+export function jerseyColors(card: StreakCard): { body: string; trim: string } {
+  const teams = card.sport === 'nhl' ? NHL_TEAMS : MLB_TEAMS;
+  const team = Object.values(teams).find((t) => t.abbreviation === card.player.franchiseId);
+  if (!team) return { body: '#003087', trim: '#FFB81C' };
+  const { primary, secondary, accent } = team.colors;
+  const same = (a: string, b: string) => a.toUpperCase() === b.toUpperCase();
+  const trim = !same(accent, primary) ? accent : !same(secondary, primary) ? secondary : '#FFFFFF';
+  return { body: primary, trim };
+}

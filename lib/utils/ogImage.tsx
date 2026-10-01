@@ -6,6 +6,7 @@ import { put } from '@vercel/blob';
 import { TEAMS, type TeamConfig } from '@/lib/teamConfig';
 import { franchiseLogo, franchiseColor } from '@/lib/perfectseason/logos';
 import { modeBadgeLabel, type SharedTeam, type SharedTeamRow } from '@/lib/perfectseason/share';
+import { TIER_FRAME, TIER_LABEL, jerseyColors, type StreakCard } from '@/lib/perfectseason/cards';
 
 const OG_WIDTH = 1200;
 const OG_HEIGHT = 630;
@@ -762,6 +763,47 @@ function psPlayerRow(row: SharedTeamRow, sport: 'nhl' | 'mlb', size: number, nam
   );
 }
 
+/** A streak card (jersey-back front) beside who earned it and the game's hook. */
+function psCardTemplate(card: StreakCard, username: string) {
+  const { body, trim } = jerseyColors(card);
+  const frame = TIER_FRAME[card.tier];
+  const slug = card.sport === 'nhl' ? '82-0' : '162-0';
+  const last = card.player.name.trim().split(/\s+/).slice(1).join(' ') || card.player.name;
+  const big = card.player.number ?? card.player.pos[0] ?? '';
+  const logo = franchiseLogo(card.player.franchiseId, card.sport, 'dark');
+
+  return (
+    <div style={{ width: OG_WIDTH, height: OG_HEIGHT, display: 'flex', alignItems: 'center', background: '#0b1220', padding: '0 90px', gap: 70 }}>
+      {/* The card front, 360x504 */}
+      <div style={{ width: 360, height: 504, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', background: body, border: `12px solid ${frame}`, borderRadius: 22, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 170, display: 'flex', background: 'rgba(255,255,255,0.08)', borderBottomLeftRadius: 180, borderBottomRightRadius: 180 }} />
+        <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 18px 0' }}>
+          <div style={{ display: 'flex', fontFamily: 'Bebas Neue', fontSize: 28, letterSpacing: 2, color: trim }}>LINDY&apos;S FIVE</div>
+          <div style={{ width: 42, height: 42, borderRadius: 21, border: `3px solid ${trim}`, display: 'flex', alignItems: 'center', justifyContent: 'center', background: card.sport === 'mlb' ? '#FFFFFF' : 'transparent' }}>
+            {logo ? <img src={logo} width={28} height={28} alt="" /> : <div style={{ display: 'flex', fontSize: 12, fontWeight: 800, color: '#FFFFFF' }}>{card.player.franchiseId}</div>}
+          </div>
+        </div>
+        <div style={{ display: 'flex', marginTop: 34, fontFamily: 'Inter', fontSize: last.length > 11 ? 28 : 36, fontWeight: 800, letterSpacing: 5, color: '#FFFFFF' }}>{last.toUpperCase()}</div>
+        <div style={{ display: 'flex', fontFamily: 'Bebas Neue', fontSize: big.length > 2 ? 190 : 250, lineHeight: 1, color: trim, WebkitTextStroke: '6px #FFFFFF' }}>{big}</div>
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 18px', background: frame }}>
+          <div style={{ display: 'flex', fontFamily: 'Inter', fontSize: 20, fontWeight: 800, letterSpacing: 2, color: '#141B2D' }}>{card.milestone}-DAY STREAK</div>
+          <div style={{ display: 'flex', fontFamily: 'Inter', fontSize: 15, fontWeight: 600, letterSpacing: 2, color: '#141B2D' }}>{TIER_LABEL[card.tier].toUpperCase()}</div>
+        </div>
+      </div>
+
+      {/* Who earned it, and the hook */}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, fontFamily: 'Inter' }}>
+        <div style={{ display: 'flex', fontSize: 20, fontWeight: 600, letterSpacing: 5, color: '#94a3b8' }}>LINDY&apos;S FIVE · {slug} STREAK CARD</div>
+        <div style={{ display: 'flex', marginTop: 14, fontFamily: 'Bebas Neue', fontSize: 104, lineHeight: 1, color: '#FFFFFF' }}>{card.milestone} days straight.</div>
+        <div style={{ display: 'flex', marginTop: 14, fontSize: 30, fontWeight: 800, color: frame }}>{`${TIER_LABEL[card.tier]} card earned by ${username}`}</div>
+        <div style={{ display: 'flex', marginTop: 10, fontSize: 23, fontWeight: 600, color: '#cbd5e1' }}>{`Best pick that day: ${card.player.name}, ${card.player.franchiseName} (${card.player.decade})`}</div>
+        <div style={{ display: 'flex', marginTop: 40, padding: '14px 24px', borderRadius: 14, background: '#FFB81C', alignSelf: 'flex-start', fontSize: 27, fontWeight: 800, color: '#0b1220' }}>{`Can you go ${slug}? Play today's Daily`}</div>
+        <div style={{ display: 'flex', marginTop: 22, fontSize: 16, fontWeight: 600, color: '#64748b' }}>Not affiliated with the NHL, MLB or any team.</div>
+      </div>
+    </div>
+  );
+}
+
 function psTeamTemplate(team: SharedTeam) {
   const isNHL = team.sport === 'nhl';
   const slug = isNHL ? '82-0' : '162-0';
@@ -855,7 +897,7 @@ function psTeamTemplate(team: SharedTeam) {
   );
 }
 
-export type OgImageType = 'game-recap' | 'set-recap' | 'news-analysis' | 'weekly-roundup' | 'series-recap' | 'sport-hub' | 'ps-team';
+export type OgImageType = 'game-recap' | 'set-recap' | 'news-analysis' | 'weekly-roundup' | 'series-recap' | 'sport-hub' | 'ps-team' | 'ps-card';
 
 export interface GameRecapImageParams {
   type: 'game-recap';
@@ -912,7 +954,13 @@ export interface PsTeamImageParams {
   team: SharedTeam;
 }
 
-export type OgImageParams = GameRecapImageParams | SetRecapImageParams | NewsImageParams | WeeklyRoundupImageParams | SeriesRecapImageParams | SportHubImageParams | PsTeamImageParams;
+export interface PsCardImageParams {
+  type: 'ps-card';
+  card: StreakCard;
+  username: string;
+}
+
+export type OgImageParams = GameRecapImageParams | SetRecapImageParams | NewsImageParams | WeeklyRoundupImageParams | SeriesRecapImageParams | SportHubImageParams | PsTeamImageParams | PsCardImageParams;
 
 function buildElement(params: OgImageParams): React.JSX.Element {
   switch (params.type) {
@@ -930,17 +978,20 @@ function buildElement(params: OgImageParams): React.JSX.Element {
       return sportHubTemplate(params);
     case 'ps-team':
       return psTeamTemplate(params.team);
+    case 'ps-card':
+      return psCardTemplate(params.card, params.username);
   }
 }
 
 // Edge-safe (no fs): used by /api/og for hub + Perfect Season cards, which keep
 // the default font. Blog cards go through generateAndUploadOgImage below, where
 // the brand fonts load from disk.
-export function generateOgImageResponse(params: OgImageParams, headers?: Record<string, string>): ImageResponse {
+export function generateOgImageResponse(params: OgImageParams, headers?: Record<string, string>, fonts?: BrandFont[]): ImageResponse {
   return new ImageResponse(buildElement(params), {
     width: OG_WIDTH,
     height: OG_HEIGHT,
     headers,
+    ...(fonts ? { fonts } : {}),
   });
 }
 

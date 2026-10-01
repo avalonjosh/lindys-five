@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server';
 import { kv } from '@vercel/kv';
 import { getCurrentNHLSeason, formatSeasonLabel } from '@/lib/utils/season';
-import { generateOgImageResponse, type OgImageParams } from '@/lib/utils/ogImage';
+import { generateOgImageResponse, loadBrandFonts, type OgImageParams } from '@/lib/utils/ogImage';
 import { shareKey, type SharedTeam } from '@/lib/perfectseason/share';
+import { getCardById } from '@/lib/perfectseason/cardStore';
 
-export const runtime = 'edge';
+// Node runtime (not edge) so streak cards can use the brand fonts from disk.
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -24,6 +25,14 @@ export async function GET(request: NextRequest) {
         const team = await kv.get<SharedTeam>(shareKey(id));
         if (!team) return new Response('Team not found', { status: 404 });
         params = { type: 'ps-team', team };
+        break;
+      }
+      case 'ps-card': {
+        const id = searchParams.get('id');
+        if (!id) return new Response('Missing id parameter', { status: 400 });
+        const found = await getCardById(id);
+        if (!found) return new Response('Card not found', { status: 404 });
+        params = { type: 'ps-card', card: found.card, username: found.username };
         break;
       }
       case 'game-recap':
@@ -92,10 +101,10 @@ export async function GET(request: NextRequest) {
     // Cards are deterministic for a given query string, so let Vercel's CDN
     // serve repeats instantly (social crawlers have tight fetch budgets).
     // Perfect Season share cards are backed by mutable KV data, so keep them short.
-    const cacheControl = type === 'ps-team'
+    const cacheControl = type === 'ps-team' || type === 'ps-card'
       ? 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600'
       : 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800';
-    return generateOgImageResponse(params, { 'Cache-Control': cacheControl });
+    return generateOgImageResponse(params, { 'Cache-Control': cacheControl }, type === 'ps-card' ? await loadBrandFonts() : undefined);
   } catch (error) {
     console.error('OG image generation error:', error);
     return new Response('Failed to generate image', { status: 500 });
