@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
   const season = nflSeasonYear();
   const results: { team: string; status: string; sent?: number }[] = [];
   for (const slug of Object.keys(NFL_TEAMS)) {
-    const subscribers = await getVerifiedSubscribersForTeam(slug);
+    const subscribers = await getVerifiedSubscribersForTeam(slug, 'gameRecaps');
     if (subscribers.length === 0) continue;
     try {
       const built = await dataFor(slug);

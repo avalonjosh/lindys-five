@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     if (!clinch || !CLINCHED.has(clinch)) continue;
     const slug = Object.values(NHL_TEAMS).find((t) => t.abbreviation === standing.teamAbbrev?.default)?.slug;
     if (!slug) continue;
-    const subscribers = await getVerifiedSubscribersForTeam(slug);
+    const subscribers = await getVerifiedSubscribersForTeam(slug, 'specials');
     if (subscribers.length === 0) continue;
     const claimKey = `email:clinch-sent:${slug}:${season}`;
     if (!(await kv.set(claimKey, true, { nx: true }))) continue;

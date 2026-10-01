@@ -9,8 +9,8 @@ const GA_ID = 'G-ZQRG7XK9D6';
  *  traffic) are excluded so the dashboard measures visitors, not us. */
 export default function GoogleAnalytics() {
   const pathname = usePathname();
-  // Reset and confirm-email pages carry one-time tokens in their URLs; keep them out of analytics.
-  if (pathname?.startsWith('/admin') || pathname?.startsWith('/account/reset') || pathname?.startsWith('/account/confirm-email')) return null;
+  // Reset, confirm-email and email-preference pages carry private tokens or ids in their URLs; keep them out of analytics.
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/account/reset') || pathname?.startsWith('/account/confirm-email') || pathname?.startsWith('/email-preferences')) return null;
 
   return (
     <>

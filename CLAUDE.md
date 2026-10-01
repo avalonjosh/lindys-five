@@ -145,6 +145,9 @@ All crons are configured in `vercel.json` and authorized via `CRON_SECRET` Beare
 **Trigger:** Manual `POST /api/newsletter/send` with `{ slug }` when data-driven email fails
 **Flow:** Fetch blog post by slug → convert markdown to email HTML → render simple template with content + buttons
 
+### Email preferences
+Subscribers can switch kinds of email off (`NewsletterSubscriber.prefs`: `gameRecaps`, `setRecaps`, `digest`, `specials`; missing = on, checked with `wantsEmail()`). Every send path passes its kind (`getVerifiedSubscribersForTeam(team, kind)`; the weekly digest filters `digest`). The "Unsubscribe" link in emails (`GET /api/newsletter/unsubscribe?id=`) now opens `/email-preferences?id=`, where the person can drop one team, one kind of email, or everything (`/api/newsletter/preferences`, by subscriber id or by the signed-in account; Settings > Emails uses the same component). The RFC 8058 one-click `POST` still unsubscribes from everything.
+
 ### Webhook Tracking
 **Endpoint:** `POST /api/webhook/resend` — receives Resend delivery events
 **Events tracked:** `email.delivered`, `email.opened`, `email.clicked`, `email.bounced`, `email.complained`

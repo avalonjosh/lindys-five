@@ -21,9 +21,10 @@ async function unsubscribeById(subscriberId: string): Promise<'done' | 'already'
   return 'done';
 }
 
-// GET shows a confirm page instead of unsubscribing directly: corporate link
-// scanners and inbox prefetchers follow GET links, which silently unsubscribed
-// people. The actual unsubscribe happens on POST (confirm button + RFC 8058).
+// GET (the "Unsubscribe" link in every email) opens the email preferences page,
+// where the person can drop one team or one kind of email, or everything. It
+// never unsubscribes by itself: link scanners and inbox prefetchers follow GET
+// links. The one-click unsubscribe (RFC 8058) is the POST below.
 export async function GET(request: NextRequest) {
   const subscriberId = request.nextUrl.searchParams.get('id');
 
@@ -36,10 +37,9 @@ export async function GET(request: NextRequest) {
     if (!subscriber) {
       return renderUnsubscribePage('Subscriber not found', false);
     }
-    if (subscriber.unsubscribedAt) {
-      return renderUnsubscribePage('You have already been unsubscribed.', true);
-    }
-    return renderConfirmPage(subscriberId);
+    const url = new URL('/email-preferences', process.env.NEXT_PUBLIC_SITE_URL || 'https://www.lindysfive.com');
+    url.searchParams.set('id', subscriberId);
+    return NextResponse.redirect(url.toString(), 303);
   } catch (error) {
     console.error('Unsubscribe error:', error);
     return renderUnsubscribePage('Something went wrong. Please try again.', false);
@@ -85,21 +85,6 @@ function pageShell(inner: string) {
   </div>
 </body>
 </html>`;
-}
-
-function renderConfirmPage(subscriberId: string) {
-  const html = pageShell(`
-      <p style="color:#334155;font-size:16px;line-height:1.6;margin:0 0 24px;">Click below to unsubscribe from Lindy's Five emails.</p>
-      <form method="POST" action="/api/newsletter/unsubscribe?id=${encodeURIComponent(subscriberId)}" style="margin:0;">
-        <button type="submit"
-           style="display:inline-block;background:#003087;color:white;padding:12px 24px;border-radius:8px;border:none;font-size:16px;font-weight:600;cursor:pointer;">
-          Unsubscribe
-        </button>
-      </form>`);
-
-  return new NextResponse(html, {
-    headers: { 'Content-Type': 'text/html' },
-  });
 }
 
 function renderUnsubscribePage(message: string, success: boolean) {

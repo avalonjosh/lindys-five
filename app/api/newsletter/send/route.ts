@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, message: `Test game recap sent to ${testEmail}` });
       }
 
-      const subscribers = await getVerifiedSubscribersForTeam(team);
+      const subscribers = await getVerifiedSubscribersForTeam(team, type === 'set-recap' ? 'setRecaps' : 'gameRecaps');
       if (subscribers.length === 0) {
         return NextResponse.json({ error: `No verified subscribers for ${team}` }, { status: 400 });
       }

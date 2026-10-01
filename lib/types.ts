@@ -216,6 +216,17 @@ export interface NewsletterSubscriber {
   verifiedAt?: string;       // ISO date
   unsubscribedAt?: string;   // ISO date (soft delete)
   source?: string;           // Where they signed up (blog-post, landing, team-page)
+  /** Email types switched off (missing or true = on). Set on the email preferences screens. */
+  prefs?: EmailPrefs;
+}
+
+/** The kinds of email a subscriber can switch on or off. */
+export type EmailKind = 'gameRecaps' | 'setRecaps' | 'digest' | 'specials';
+export type EmailPrefs = Partial<Record<EmailKind, boolean>>;
+
+/** Whether this subscriber wants this kind of email (everything is on unless switched off). */
+export function wantsEmail(sub: { prefs?: EmailPrefs }, kind: EmailKind): boolean {
+  return sub.prefs?.[kind] !== false;
 }
 
 export interface EmailVerificationToken {

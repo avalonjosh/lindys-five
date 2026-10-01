@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   try {
     // Check every team that has subscribers
     for (const [slug, teamConfig] of Object.entries(TEAMS)) {
-      const subscribers = await getVerifiedSubscribersForTeam(slug);
+      const subscribers = await getVerifiedSubscribersForTeam(slug, 'setRecaps');
       if (subscribers.length === 0) continue;
 
       try {

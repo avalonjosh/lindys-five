@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
   const year = new Date().getFullYear();
   const results: { team: string; status: string; sent?: number }[] = [];
   for (const slug of Object.keys(ALL_TEAMS)) {
-    const subscribers = await getVerifiedSubscribersForTeam(slug);
+    const subscribers = await getVerifiedSubscribersForTeam(slug, 'specials');
     if (subscribers.length === 0) continue;
     const claimKey = `email:gift-guide-sent:${slug}:${year}`;
     if (!(await kv.set(claimKey, true, { nx: true }))) {

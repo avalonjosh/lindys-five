@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import { kv } from '@vercel/kv';
-import type { BlogPost, NewsletterSubscriber, EmailSendRecord, EmailCampaign, GameResult, GameChunk } from './types';
+import type { BlogPost, NewsletterSubscriber, EmailSendRecord, EmailCampaign, GameResult, GameChunk, EmailKind } from './types';
+import { wantsEmail } from './types';
 import type { LandingResponse, StandingsTeam, ScoringGoal, ThreeStar } from './types/boxscore';
 import { TEAMS } from './teamConfig';
 import { getCurrentNHLSeason } from './utils/season';
@@ -205,7 +206,7 @@ export async function releaseSendClaim(key: string): Promise<void> {
 // ─── Game Recap Email (Blog-based, Sabres only) ──────────────────
 
 export async function sendGameRecapNewsletter(post: BlogPost) {
-  const subscribers = await getVerifiedSubscribersForTeam(post.team);
+  const subscribers = await getVerifiedSubscribersForTeam(post.team, 'gameRecaps');
   if (subscribers.length === 0) return;
 
   // Claim the team/day send so the noon email cron (or a forced re-run of
@@ -239,7 +240,7 @@ export async function sendGameRecapNewsletter(post: BlogPost) {
 
 export async function sendSetRecapNewsletter(post: BlogPost) {
   // Try data-driven set recap first, fall back to blog-based
-  const subscribers = await getVerifiedSubscribersForTeam(post.team);
+  const subscribers = await getVerifiedSubscribersForTeam(post.team, 'setRecaps');
   if (subscribers.length === 0) return;
 
   try {
@@ -2091,7 +2092,9 @@ async function sendBatchEmails(subscribers: NewsletterSubscriber[], subject: str
 
 // ─── KV Helpers ───────────────────────────────────────────────────
 
-export async function getVerifiedSubscribersForTeam(team: string): Promise<NewsletterSubscriber[]> {
+/** Active, confirmed subscribers to a team. With `kind`, only those who haven't
+ * switched that kind of email off on their preferences. */
+export async function getVerifiedSubscribersForTeam(team: string, kind?: EmailKind): Promise<NewsletterSubscriber[]> {
   const subscriberIds = await kv.smembers<string[]>(`email:subscribers:team:${team}`);
   if (!subscriberIds || subscriberIds.length === 0) return [];
 
@@ -2099,7 +2102,7 @@ export async function getVerifiedSubscribersForTeam(team: string): Promise<Newsl
     ...subscriberIds.map((id) => `email:subscriber:${id}`)
   );
   return results.filter(
-    (sub): sub is NewsletterSubscriber => !!sub && sub.verified && !sub.unsubscribedAt
+    (sub): sub is NewsletterSubscriber => !!sub && sub.verified && !sub.unsubscribedAt && (!kind || wantsEmail(sub, kind))
   );
 }
 

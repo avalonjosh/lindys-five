@@ -9,6 +9,7 @@ import { fetchMLBStandings } from '@/lib/services/mlbApi';
 import { fetchNhlStandingsServer } from '@/lib/services/standingsFetch';
 import { NHL_TEAMS, MLB_TEAMS, NFL_TEAMS } from '@/lib/teamConfig';
 import type { BlogPost, NewsletterSubscriber } from '@/lib/types';
+import { wantsEmail } from '@/lib/types';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.lindysfive.com';
 // Off by default — the weekly blast only goes out once this KV flag is set true.
@@ -192,7 +193,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ skipped: 'weekly-digest disabled', hint: `set KV ${ENABLED_KEY}=true to enable` });
   }
   const subscribers = await getAllSubscribers();
-  const active = subscribers.filter((s) => s.verified && !s.unsubscribedAt);
+  const active = subscribers.filter((s) => s.verified && !s.unsubscribedAt && wantsEmail(s, 'digest'));
   const pool = await buildPool(active.flatMap((s: NewsletterSubscriber) => s.teams ?? []));
   const result = await sendWeeklyDigest(active, (sub) => personalize(pool, sub.teams ?? []));
   return NextResponse.json(result);

@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
   const results: { team: string; status: string; set?: number; subscribers?: number }[] = [];
 
   for (const team of Object.values(MLB_TEAMS)) {
-    const subscribers = await getVerifiedSubscribersForTeam(team.slug);
+    const subscribers = await getVerifiedSubscribersForTeam(team.slug, 'setRecaps');
     if (subscribers.length === 0) continue;
     try {
       const set = await teamSet(team, season);

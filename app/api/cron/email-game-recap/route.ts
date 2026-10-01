@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Check if this team has subscribers
-      const subscribers = await getVerifiedSubscribersForTeam(teamSlug);
+      const subscribers = await getVerifiedSubscribersForTeam(teamSlug, 'gameRecaps');
       if (subscribers.length === 0) {
         await releaseSendClaim(claimKey);
         results.push({ team: teamSlug, status: 'no-subscribers' });

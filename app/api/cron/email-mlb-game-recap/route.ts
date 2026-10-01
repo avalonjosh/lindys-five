@@ -167,7 +167,7 @@ export async function GET(request: NextRequest) {
         results.push({ team: data.teamSlug, status: 'already-sent' });
         continue;
       }
-      const subscribers = await getVerifiedSubscribersForTeam(data.teamSlug);
+      const subscribers = await getVerifiedSubscribersForTeam(data.teamSlug, 'gameRecaps');
       if (subscribers.length === 0) {
         results.push({ team: data.teamSlug, status: 'no-subscribers' });
         continue;

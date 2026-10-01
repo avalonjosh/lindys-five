@@ -1,36 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { changeEmail, changePassword, setNewsletterSubscribed, deleteAccount } from '@/lib/perfectseason/account';
-import { NHL_TEAMS, MLB_TEAMS, NFL_TEAMS, findTeam } from '@/lib/teamConfig';
-
-const teamOptions = (teams: Record<string, { city: string; name: string }>) =>
-  Object.entries(teams)
-    .map(([slug, t]) => ({ slug, label: `${t.city} ${t.name}` }))
-    .sort((a, b) => a.label.localeCompare(b.label));
-
-const TEAM_GROUPS = [
-  { label: 'NHL', options: teamOptions(NHL_TEAMS) },
-  { label: 'MLB', options: teamOptions(MLB_TEAMS) },
-  { label: 'NFL', options: teamOptions(NFL_TEAMS) },
-];
-
-const teamLabel = (slug: string) => {
-  const t = findTeam(slug);
-  return t ? `${t.city} ${t.name}` : slug;
-};
-
-/** "Sabres", "Sabres and Bills", "Sabres, Bills and Yankees". */
-const listNames = (names: string[]) =>
-  names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+import { useState } from 'react';
+import { changeEmail, changePassword, deleteAccount } from '@/lib/perfectseason/account';
+import EmailPreferences from '@/components/newsletter/EmailPreferences';
 
 interface SettingsTabProps {
   email: string | null; // null while the profile is loading
   emailVerified: boolean;
   /** New address waiting on its confirm link. */
   pendingEmail?: string;
-  /** Account favorite team slug: the default team for recaps. */
-  favoriteTeam?: string;
   onEmailChangeRequested: (pendingEmail: string) => void;
   /** Favorite-team primary color for buttons (falls back to Sabres navy). */
   accent: string;
@@ -48,7 +26,7 @@ function StatusLine({ status }: { status: FormStatus }) {
   return null;
 }
 
-export default function SettingsTab({ email, emailVerified, pendingEmail, favoriteTeam, onEmailChangeRequested, accent, onDeleted }: SettingsTabProps) {
+export default function SettingsTab({ email, emailVerified, pendingEmail, onEmailChangeRequested, accent, onDeleted }: SettingsTabProps) {
   // Email
   const [emailOpen, setEmailOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
@@ -61,36 +39,11 @@ export default function SettingsTab({ email, emailVerified, pendingEmail, favori
   const [newPassword, setNewPassword] = useState('');
   const [passwordStatus, setPasswordStatus] = useState<FormStatus>({ state: 'idle' });
 
-  // Newsletter: null while loading
-  const [nl, setNl] = useState<{ subscribed: boolean; pending: boolean; teams: string[] } | null>(null);
-  const [nlStatus, setNlStatus] = useState<FormStatus>({ state: 'idle' });
-  const [pickTeam, setPickTeam] = useState('');
-  const favorite = favoriteTeam && findTeam(favoriteTeam) ? favoriteTeam : undefined;
-
   // Delete
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteUnsubscribe, setDeleteUnsubscribe] = useState(true);
   const [deleteStatus, setDeleteStatus] = useState<FormStatus>({ state: 'idle' });
-
-  const loadNewsletter = () =>
-    fetch('/api/newsletter/status', { credentials: 'include' })
-      .then(res => (res.ok ? res.json() : null))
-      .then(data => setNl({ subscribed: !!data?.subscribed, pending: !!data?.pending, teams: data?.teams ?? [] }))
-      .catch(() => setNl({ subscribed: false, pending: false, teams: [] }));
-
-  useEffect(() => {
-    loadNewsletter();
-  }, []);
-
-  // What they get, in plain words, so the card never promises recaps that won't come.
-  const newsletterSummary = !nl
-    ? 'Loading…'
-    : nl.subscribed
-      ? `${nl.teams.length ? `${listNames(nl.teams.map(teamLabel))} game recaps, plus the weekly roundup.` : 'The weekly roundup only. Add a team below to get its game recaps too.'}${nl.pending ? ' Starts once you confirm your email.' : ''}`
-      : favorite
-        ? `Get ${teamLabel(favorite)} game recaps and the weekly roundup. Free, unsubscribe anytime.`
-        : 'Pick a team to get its game recaps, plus the weekly roundup.';
 
   const submitEmail = async () => {
     if (emailStatus.state === 'saving') return;
@@ -118,26 +71,6 @@ export default function SettingsTab({ email, emailVerified, pendingEmail, favori
       setNewPassword('');
     } else {
       setPasswordStatus({ state: 'error', message: result.error });
-    }
-  };
-
-  const updateNewsletter = async (subscribe: boolean, team?: string) => {
-    if (!nl || nlStatus.state === 'saving') return;
-    setNlStatus({ state: 'saving' });
-    const result = await setNewsletterSubscribed(subscribe, team);
-    if (result.ok) {
-      setNlStatus({
-        state: 'done',
-        message: !subscribe ? 'Unsubscribed.' : result.data.pending ? 'Saved. Starts once you confirm your email.' : 'Subscribed!',
-      });
-      setPickTeam('');
-      await loadNewsletter();
-      try {
-        if (subscribe) localStorage.setItem('newsletter-subscribed', '1');
-        else localStorage.removeItem('newsletter-subscribed');
-      } catch { /* ignore */ }
-    } else {
-      setNlStatus({ state: 'error', message: result.error });
     }
   };
 
@@ -253,52 +186,10 @@ export default function SettingsTab({ email, emailVerified, pendingEmail, favori
         <StatusLine status={passwordStatus} />
       </section>
 
-      {/* Newsletter */}
-      <section className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="text-sm font-bold" style={{ color: accent }}>Email Recaps</h3>
-            <p className="text-sm text-gray-500">{newsletterSummary}</p>
-          </div>
-          {nl && (nl.subscribed || favorite) && (
-            <button
-              type="button"
-              onClick={() => updateNewsletter(!nl.subscribed)}
-              disabled={nlStatus.state === 'saving'}
-              className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold disabled:opacity-50 ${
-                nl.subscribed
-                  ? 'bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200'
-                  : 'text-white transition-opacity hover:opacity-90'
-              }`}
-              style={nl.subscribed ? undefined : { backgroundColor: accent }}
-            >
-              {nlStatus.state === 'saving' ? 'Saving…' : nl.subscribed ? 'Unsubscribe' : 'Subscribe'}
-            </button>
-          )}
-        </div>
-        {/* No team yet: pick one (subscribing, or adding game recaps to the roundup). */}
-        {nl && ((!nl.subscribed && !favorite) || (nl.subscribed && nl.teams.length === 0)) && (
-          <div className="mt-3 flex gap-2 border-t border-gray-100 pt-3">
-            <select value={pickTeam} onChange={e => setPickTeam(e.target.value)} className={`${inputClasses} min-w-0 flex-1`}>
-              <option value="">Choose a team</option>
-              {TEAM_GROUPS.map(g => (
-                <optgroup key={g.label} label={g.label}>
-                  {g.options.map(t => <option key={t.slug} value={t.slug}>{t.label}</option>)}
-                </optgroup>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => updateNewsletter(true, pickTeam)}
-              disabled={!pickTeam || nlStatus.state === 'saving'}
-              className="flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{ backgroundColor: accent }}
-            >
-              {nlStatus.state === 'saving' ? 'Saving…' : nl.subscribed ? 'Add' : 'Subscribe'}
-            </button>
-          </div>
-        )}
-        <StatusLine status={nlStatus} />
+      {/* Emails: teams, kinds of email, or none */}
+      <section className="rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:col-span-2 md:p-4">
+        <h3 className="mb-2 text-sm font-bold" style={{ color: accent }}>Emails</h3>
+        <EmailPreferences accent={accent} />
       </section>
 
       {/* Danger zone */}
