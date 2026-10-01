@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { kv } from '@vercel/kv';
-import { getUserId } from '@/lib/perfectseason/server/session';
+import { getUserId, signUserToken, userCookieOptions, USER_COOKIE } from '@/lib/perfectseason/server/session';
 import { rateLimit } from '@/lib/perfectseason/server/ratelimit';
 import { userKey, type User } from '@/lib/perfectseason/leaderboard';
+import { sendPasswordChangedEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   const userId = await getUserId(request);
@@ -32,8 +33,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Current password is incorrect' }, { status: 403 });
   }
 
-  const updated: User = { ...user, passwordHash: await bcrypt.hash(newPassword, 10) };
+  const updated: User = { ...user, passwordHash: await bcrypt.hash(newPassword, 10), passwordChangedAt: new Date().toISOString() };
   await kv.set(userKey(userId), updated);
 
-  return NextResponse.json({ success: true });
+  try {
+    await sendPasswordChangedEmail(user.email);
+  } catch (err) {
+    console.error('Password-changed notice failed:', err);
+  }
+
+  // Other devices are now signed out (their sessions predate the change); keep this one.
+  const res = NextResponse.json({ success: true });
+  res.cookies.set(USER_COOKIE, await signUserToken(userId), userCookieOptions);
+  return res;
 }

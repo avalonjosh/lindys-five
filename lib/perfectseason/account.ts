@@ -29,6 +29,25 @@ export const signup = (email: string, username: string, password: string, subscr
 export const login = (emailOrUsername: string, password: string) =>
   postAuth('/api/account/login', { emailOrUsername, password });
 
+/** Ask for a reset link. Resolves to the message to show (the same whether or not the account exists). */
+export async function requestPasswordReset(emailOrUsername: string): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
+  try {
+    const res = await fetch('/api/account/password-reset/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emailOrUsername }),
+    });
+    const data = await res.json();
+    return res.ok ? { ok: true, message: data.message } : { ok: false, error: data.error || 'Something went wrong' };
+  } catch {
+    return { ok: false, error: 'Network error' };
+  }
+}
+
+/** Set a new password from a reset link; signs the user in on success. */
+export const confirmPasswordReset = (token: string, password: string) =>
+  postAuth('/api/account/password-reset/confirm', { token, password });
+
 export async function logout(): Promise<void> {
   await fetch('/api/account/logout', { method: 'POST', credentials: 'include' });
 }

@@ -179,6 +179,14 @@ All crons are configured in `vercel.json` and authorized via `CRON_SECRET` Beare
 | `blog:weekly:last` | String (date) | None | Last Sabres weekly roundup date |
 | `blog:bills-weekly:last` | String (date) | None | Last Bills weekly roundup date |
 
+### Accounts (password reset)
+| Key Pattern | Type | Expiry | Purpose |
+|-------------|------|--------|---------|
+| `ps:pwreset:{sha256 of token}` | String | 1h | Reset link token hash -> user id. Single use (`getdel`); the raw token only ever lives in the emailed link's `#` fragment |
+| `ps:pwreset:user:{userId}` | String | 1h | The account's live token hash, so a new request cancels the previous link |
+
+`User.passwordChangedAt` makes `getUserId()` reject sessions issued before the last reset or password change (signs out other devices); the device that made the change gets a fresh cookie. Completing a reset sets `User.emailVerifiedAt`. `/account/reset` is excluded from GA4 and sends no Referer.
+
 ### Newsletter
 | Key Pattern | Type | Expiry | Purpose |
 |-------------|------|--------|---------|

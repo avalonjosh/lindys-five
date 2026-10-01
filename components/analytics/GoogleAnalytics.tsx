@@ -9,7 +9,8 @@ const GA_ID = 'G-ZQRG7XK9D6';
  *  traffic) are excluded so the dashboard measures visitors, not us. */
 export default function GoogleAnalytics() {
   const pathname = usePathname();
-  if (pathname?.startsWith('/admin')) return null;
+  // The password reset page carries a one-time token in its URL; keep it out of analytics.
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/account/reset')) return null;
 
   return (
     <>

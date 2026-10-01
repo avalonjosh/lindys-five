@@ -81,6 +81,64 @@ function renderVerificationEmail(verifyUrl: string): string {
 </html>`;
 }
 
+// ─── Account emails (transactional: no unsubscribe, not newsletter sends) ──
+
+export async function sendPasswordResetEmail(email: string, resetLink: string) {
+  await getResend().emails.send({
+    from: FROM_EMAIL,
+    to: email,
+    subject: "Reset your Lindy's Five password",
+    html: renderAccountEmail(
+      'Reset your password',
+      "Someone (hopefully you) asked to reset the password for your Lindy's Five account. Click below to choose a new one:",
+      { label: 'Reset Password', url: resetLink },
+      "This link works once and expires in 1 hour. If you didn't ask for a reset, you can ignore this email; your password won't change."
+    ),
+  });
+}
+
+export async function sendPasswordChangedEmail(email: string) {
+  await getResend().emails.send({
+    from: FROM_EMAIL,
+    to: email,
+    subject: "Your Lindy's Five password was changed",
+    html: renderAccountEmail(
+      'Your password was changed',
+      "The password for your Lindy's Five account was just changed, and any other devices were signed out.",
+      null,
+      `If this wasn't you, reset your password right away using "Forgot password?" on the sign-in screen at ${SITE_URL}/account.`
+    ),
+  });
+}
+
+function renderAccountEmail(heading: string, body: string, button: { label: string; url: string } | null, footnote: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:20px;">
+    <tr><td align="center">
+      <table cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;width:100%;">
+        <tr><td style="${headerBgStyle('#003087')}padding:18px 20px;">
+          <img src="${EMAIL_WORDMARK}" alt="Lindy's Five" width="150" height="23" style="display:block;border:0;" />
+        </td></tr>
+        <tr><td style="padding:24px 20px;">
+          <h2 style="margin:0 0 16px;color:#1e293b;font-size:20px;">${heading}</h2>
+          <p style="margin:0 0 24px;color:#475569;font-size:16px;line-height:1.6;">${body}</p>
+          ${button ? `<a href="${button.url}" style="display:inline-block;background:#003087;color:#ffffff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;">${button.label}</a>` : ''}
+          <p style="margin:24px 0 0;color:#94a3b8;font-size:13px;line-height:1.5;">${footnote}</p>
+        </td></tr>
+        <tr><td style="background:#f8fafc;padding:16px 20px;border-top:1px solid #e2e8f0;">
+          <p style="margin:0;color:#94a3b8;font-size:12px;">Lindy's Five &mdash; NHL Playoff Odds &amp; Standings</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
 // ─── Send-once claims ────────────────────────────────────────────
 // Both the content crons (which email right after publishing) and the
 // dedicated email crons can send the same recap. These atomic claims make

@@ -7,6 +7,8 @@
 
 import type { NextRequest } from 'next/server';
 import { SignJWT, jwtVerify } from 'jose';
+import { kv } from '@vercel/kv';
+import { userKey, type User } from '../leaderboard';
 
 export const USER_COOKIE = 'l5_user';
 const MAX_AGE = 30 * 24 * 60 * 60; // 30 days
@@ -34,13 +36,19 @@ export const userCookieOptions = {
 
 export const clearedUserCookie = { ...userCookieOptions, maxAge: 0 };
 
-/** The signed-in user id from the request cookie, or null. */
+/** The signed-in user id from the request cookie, or null. A session issued
+ * before the account's last password change is rejected, so a reset or a
+ * password change signs out every other device. */
 export async function getUserId(request: NextRequest): Promise<string | null> {
   const token = request.cookies.get(USER_COOKIE)?.value;
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret());
-    return typeof payload.sub === 'string' ? payload.sub : null;
+    if (typeof payload.sub !== 'string') return null;
+    const user = await kv.get<User>(userKey(payload.sub));
+    if (!user) return null;
+    if (user.passwordChangedAt && (payload.iat ?? 0) < Math.floor(Date.parse(user.passwordChangedAt) / 1000)) return null;
+    return payload.sub;
   } catch {
     return null;
   }

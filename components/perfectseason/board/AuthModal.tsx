@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import { login, signup } from '@/lib/perfectseason/account';
+import { login, signup, requestPasswordReset } from '@/lib/perfectseason/account';
 import type { PublicUser } from '@/lib/perfectseason/leaderboard';
 import { NHL_TEAMS, MLB_TEAMS, findTeam } from '@/lib/teamConfig';
 import { readFavorites, mergeFavorite } from '@/lib/favorites';
@@ -36,7 +36,8 @@ const labelClass = 'mb-1 block text-[11px] font-bold uppercase tracking-wide tex
 
 /** Sign In / Sign Up sheet for opt-in leaderboard accounts. Styled like ShareTeamModal. */
 export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', reason, defaultFavoriteTeam }: AuthModalProps) {
-  const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
+  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>(initialMode);
+  const [resetSent, setResetSent] = useState<string | null>(null);
   const [emailOrUsername, setEmailOrUsername] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -62,6 +63,13 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
     if (submitting) return;
     setSubmitting(true);
     setError(null);
+    if (mode === 'forgot') {
+      const sent = await requestPasswordReset(emailOrUsername);
+      setSubmitting(false);
+      if (sent.ok) setResetSent(sent.message);
+      else setError(sent.error);
+      return;
+    }
     const result = mode === 'signin'
       ? await login(emailOrUsername, password)
       : await signup(email, username, password, subscribe, favoriteTeam || undefined);
@@ -74,21 +82,38 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={mode === 'signin' ? 'Sign in' : 'Sign up'}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={mode === 'signin' ? 'Sign in' : mode === 'forgot' ? 'Reset password' : 'Sign up'}>
       <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 bg-black/50" />
       <div className="animate-sheet-up relative max-h-[92vh] w-full max-w-[400px] overflow-y-auto rounded-t-2xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl">
         <div className="mb-1 flex items-start justify-between">
           <h2 className="text-2xl font-bold uppercase tracking-wide text-sabres-navy" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
-            {mode === 'signin' ? 'Sign In' : 'Sign Up'}
+            {mode === 'signin' ? 'Sign In' : mode === 'forgot' ? 'Reset Password' : 'Sign Up'}
           </h2>
           <button type="button" onClick={onClose} aria-label="Close" className="-mr-1 flex h-9 w-9 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
             <X className="h-5 w-5" />
           </button>
         </div>
-        <p className="mb-4 text-sm text-gray-500">{reason ?? 'Save your games and compete on the leaderboard.'}</p>
+        <p className="mb-4 text-sm text-gray-500">
+          {mode === 'forgot'
+            ? "Enter your email or username and we'll email you a link to choose a new password."
+            : reason ?? 'Save your games and compete on the leaderboard.'}
+        </p>
 
         {/* Google OAuth is a planned follow-up; the "Continue with Google" button drops in here. */}
 
+        {mode === 'forgot' && resetSent ? (
+          <div className="flex flex-col gap-3">
+            <p className="rounded-lg bg-green-50 px-3 py-2.5 text-sm text-green-700">{resetSent}</p>
+            <p className="text-xs text-gray-500">Don&apos;t see it? Check your spam folder, or try again in a few minutes.</p>
+            <button
+              type="button"
+              onClick={() => { setMode('signin'); setResetSent(null); setError(null); }}
+              className="mt-1 w-full rounded-xl bg-sabres-blue py-3 text-sm font-bold uppercase tracking-wide text-white shadow-md transition-colors hover:bg-sabres-light"
+            >
+              Back to Sign In
+            </button>
+          </div>
+        ) : (
         <form onSubmit={submit} className="flex flex-col gap-3">
           {mode === 'signup' && (
             <div>
@@ -107,10 +132,21 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
               <input id="auth-id" className={inputClass} value={emailOrUsername} onChange={(e) => setEmailOrUsername(e.target.value)} autoComplete="username" />
             </div>
           )}
-          <div>
-            <label className={labelClass} htmlFor="auth-password">Password</label>
-            <input id="auth-password" type="password" className={inputClass} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} />
-          </div>
+          {mode !== 'forgot' && (
+            <div>
+              <label className={labelClass} htmlFor="auth-password">Password</label>
+              <input id="auth-password" type="password" className={inputClass} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} />
+              {mode === 'signin' && (
+                <button
+                  type="button"
+                  onClick={() => { setMode('forgot'); setError(null); }}
+                  className="mt-1.5 text-xs font-semibold text-sabres-blue hover:underline"
+                >
+                  Forgot password?
+                </button>
+              )}
+            </div>
+          )}
 
           {mode === 'signup' && (
             <div>
@@ -166,16 +202,18 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
             disabled={submitting}
             className="mt-1 w-full rounded-xl bg-sabres-blue py-3 text-sm font-bold uppercase tracking-wide text-white shadow-md transition-colors hover:bg-sabres-light disabled:opacity-60"
           >
-            {submitting ? 'Please wait…' : mode === 'signin' ? 'Sign In' : 'Create Account'}
+            {submitting ? 'Please wait…' : mode === 'signin' ? 'Sign In' : mode === 'forgot' ? 'Email Me a Reset Link' : 'Create Account'}
           </button>
         </form>
+        )}
 
         <p className="mt-4 text-center text-sm text-gray-500">
-          {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
+          {mode === 'signin' ? "Don't have an account? " : mode === 'forgot' ? 'Remembered it? ' : 'Already have an account? '}
           <button
             type="button"
             onClick={() => {
               setMode(mode === 'signin' ? 'signup' : 'signin');
+              setResetSent(null);
               setError(null);
             }}
             className="font-bold text-sabres-blue hover:underline"

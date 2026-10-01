@@ -324,13 +324,20 @@ export default function AccountPage() {
     }
   };
   const [tab, setTab] = useState<AccountTab>('overview');
+  const [passwordNotice, setPasswordNotice] = useState(false);
 
   // Deep link: /account?tab=picks (etc.) opens on that tab — used by the
   // "View My Picks" buttons around the site. Effect (not initializer) to keep
   // server and client first paint identical.
   useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get('tab');
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get('tab');
     if (t === 'picks' || t === 'perfectseason' || t === 'settings' || t === 'overview') setTab(t);
+    // Arriving from a completed password reset.
+    if (params.get('updated') === 'password') {
+      setPasswordNotice(true);
+      window.history.replaceState(null, '', window.location.pathname);
+    }
   }, []);
 
   const changeFavorite = async (slug: string) => {
@@ -685,6 +692,14 @@ export default function AccountPage() {
       </nav>
 
       <main className="mx-auto max-w-7xl px-4 py-6">
+      {passwordNotice && (
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          <span>Password updated. You&apos;re signed in here and signed out on your other devices.</span>
+          <button type="button" onClick={() => setPasswordNotice(false)} aria-label="Dismiss" className="flex-shrink-0 text-green-600 hover:text-green-800">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       {tab === 'settings' && (
         <SettingsTab
           email={profile?.email ?? null}

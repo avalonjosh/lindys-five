@@ -26,6 +26,10 @@ export interface User {
   favoriteTeam?: string;
   // Reserved for a later Google OAuth follow-up:
   googleId?: string;
+  /** Last password change (reset or settings). Sessions issued before it are rejected. */
+  passwordChangedAt?: string;
+  /** Set once the user has proven they read this inbox (e.g. by completing a password reset). */
+  emailVerifiedAt?: string;
 }
 
 /** The safe, public shape returned to the client. */
