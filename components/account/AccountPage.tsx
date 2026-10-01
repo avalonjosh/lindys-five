@@ -18,6 +18,8 @@ import { formatSeasonLabel } from '@/lib/utils/season';
 import PicksChart from './PicksChart';
 import SettingsTab from './SettingsTab';
 import FavoriteTeamCard from './FavoriteTeamCard';
+import JerseyCard from '@/components/perfectseason/JerseyCard';
+import { CARD_MILESTONES, TIER_LABEL } from '@/lib/perfectseason/cards';
 import { normalizePickDate, type WhatIfSave, type WhatIfPick } from '@/lib/whatif/types';
 import type { GameResult } from '@/lib/types';
 import type { ProfileResponse, ProfileBoard } from '@/app/api/account/profile/route';
@@ -1030,6 +1032,41 @@ export default function AccountPage() {
 
       {tab === 'perfectseason' && (
         <>
+      {/* Streak cards: earned for Daily streaks, one game at a time */}
+      <section className="mb-4 rounded-2xl border-2 border-gray-200 bg-white p-3 shadow-xl md:p-4">
+        <div className="mb-1 flex items-baseline justify-between gap-2">
+          <h2 className="text-lg font-bold md:text-2xl" style={{ color: heroColor }}>Streak Cards</h2>
+          {profile && <span className="text-xs font-semibold text-gray-500">{profile.cards.length} earned</span>}
+        </div>
+        <p className="mb-3 text-xs text-gray-500">
+          Play a game&apos;s Daily on consecutive days to earn its cards: bronze at 7 days, silver at 30, gold at 82 (82-0) or 162 (162-0). Miss a day and the streak starts over. Tap a card to flip it.
+        </p>
+        {profile == null ? (
+          <p className="text-sm text-gray-400">Loading…</p>
+        ) : (
+          <div className="flex flex-wrap justify-center gap-3 sm:justify-start">
+            {profile.cards.map(card => (
+              <JerseyCard key={card.id} card={card} width={150} owner={user.username} />
+            ))}
+            {(['nhl', 'mlb'] as const).flatMap(sport =>
+              CARD_MILESTONES[sport]
+                .filter(m => !profile.cards.some(c => c.sport === sport && c.milestone === m.days))
+                .map(m => (
+                  <div
+                    key={`${sport}-${m.days}`}
+                    className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 text-center text-gray-400"
+                    style={{ width: 150, height: 210 }}
+                  >
+                    <span className="text-2xl font-bold" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>{m.days}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wide">{sport === 'nhl' ? '82-0' : '162-0'} · {TIER_LABEL[m.tier]}</span>
+                    <span className="mt-1 text-[10px]">Not earned yet</span>
+                  </div>
+                ))
+            )}
+          </div>
+        )}
+      </section>
+
       {/* Perfect Season — leaderboard bests from 82-0 / 162-0 */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold md:text-2xl" style={{ color: heroColor }}>Perfect Season</h2>

@@ -197,6 +197,15 @@ My Teams: `User.teams` is the list of followed teams (NHL/MLB/NFL), first = main
 
 `User.passwordChangedAt` makes `getUserId()` reject sessions issued before the last reset or password change (signs out other devices); the device that made the change gets a fresh cookie. Completing a reset sets `User.emailVerifiedAt`. `/account/reset` is excluded from GA4 and sends no Referer.
 
+### Streak cards (Perfect Season)
+| Key Pattern | Type | Expiry | Purpose |
+|-------------|------|--------|---------|
+| `ps:cards:{userId}` | Hash | None | cardId -> `StreakCard` (`lib/perfectseason/cards.ts`) |
+| `ps:cards:{userId}:awarded` | Hash | None | `{sport}:{milestone}:{date}` -> time, so one Daily earns a milestone card once |
+| `ps:number:{sport}:{playerId}` | String | None | Cached jersey number ('' = unknown). NHL from the player landing API; MLB matched by name + career years via the MLB Stats search (Lahman ids aren't MLB ids) |
+
+Cards are earned per game for consecutive saved Dailies (either variant counts; streak read from `ps:user:boards:{id}` daily keys): bronze 7, silver 30, gold 82 (82-0) / 162 (162-0); no streak-saver. Checked in `POST /api/leaderboard/submit` after a Daily save (`checkStreakCard`), which also returns the streak and next milestone for the daily result screen. The card is the best-scoring player in that day's lineup, drawn by `components/perfectseason/JerseyCard.tsx` (jersey-back design, tap to flip). Collection lives on the profile's Perfect Season tab. Not built yet: share image for a card.
+
 ### Newsletter
 | Key Pattern | Type | Expiry | Purpose |
 |-------------|------|--------|---------|

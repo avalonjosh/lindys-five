@@ -12,6 +12,8 @@ import ResultBoard, { type RosterEntry } from './ResultBoard';
 import ShareTeamModal from './ShareTeamModal';
 import LeaderboardCta from './LeaderboardCta';
 import NewsletterPrompt from './NewsletterPrompt';
+import JerseyCard from '../JerseyCard';
+import { TIER_LABEL } from '@/lib/perfectseason/cards';
 
 interface NhlDailyResultProps {
   record: DailyRecord;
@@ -51,6 +53,10 @@ export default function NhlDailyResult({ record, config, variant, streak, played
   const slug = config.sport === 'mlb' ? '162-0' : '82-0';
   const [shareTeam, setShareTeam] = useState<SharedTeam | null>(null);
   const [left, setLeft] = useState(secondsUntilEtMidnight());
+  const cardInfo = saveStatus.status === 'done' ? saveStatus.result : undefined;
+  // Signed in, the saved streak (any device, the one cards count) beats this browser's own count.
+  const current = cardInfo?.streak ?? streak.current;
+  const best = Math.max(streak.best, current);
 
   useEffect(() => {
     const t = setInterval(() => setLeft(secondsUntilEtMidnight()), 1000);
@@ -94,9 +100,32 @@ export default function NhlDailyResult({ record, config, variant, streak, played
           {fmt(left)}
         </p>
         <p className="mt-0.5 text-xs text-gray-500">
-          {streak.current >= 2 ? `🔥 ${streak.current}-day streak` : streak.current === 1 ? 'Day 1 of a new streak' : 'Play tomorrow to start a streak'} · Best {streak.best} · Played {played}
+          {current >= 2 ? `🔥 ${current}-day streak` : current === 1 ? 'Day 1 of a new streak' : 'Play tomorrow to start a streak'} · Best {best} · Played {played}
         </p>
+        {/* Streak cards: the server's count of saved Dailies decides them. */}
+        {user ? (
+          cardInfo?.nextCard && !cardInfo.card && (
+            <p className="mt-1 text-xs font-semibold text-sabres-navy">
+              {cardInfo.nextCard.daysLeft === 1 ? 'Play tomorrow' : `${cardInfo.nextCard.daysLeft} more days`} to earn your {cardInfo.nextCard.days}-Day {TIER_LABEL[cardInfo.nextCard.tier]} card
+            </p>
+          )
+        ) : (
+          <p className="mt-1 text-xs text-gray-500">Sign in to save your streak and earn streak cards at 7, 30 and {config.games} days.</p>
+        )}
       </div>
+
+      {cardInfo?.card && (
+        <div className="flex flex-col items-center gap-3 rounded-xl border-2 border-sabres-gold bg-white px-4 py-5 text-center shadow-md">
+          <p className="text-lg font-bold uppercase tracking-wide text-sabres-navy" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+            New card: {cardInfo.card.milestone}-Day {TIER_LABEL[cardInfo.card.tier]}
+          </p>
+          <JerseyCard card={cardInfo.card} width={260} owner={user?.username} />
+          <p className="text-xs text-gray-500">Tap the card to flip it.</p>
+          <Link href="/account?tab=perfectseason" className="text-sm font-bold text-sabres-blue underline-offset-2 hover:underline">
+            See your collection
+          </Link>
+        </div>
+      )}
 
       {canSave ? (
         <LeaderboardCta user={user} status={saveStatus} onSave={onSave} slug={slug} kind="daily" />

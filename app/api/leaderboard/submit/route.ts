@@ -4,6 +4,7 @@ import { getUserId } from '@/lib/perfectseason/server/session';
 import { rateLimit, clientIp } from '@/lib/perfectseason/server/ratelimit';
 import { verifySubmission } from '@/lib/perfectseason/server/verify';
 import { getDataset } from '@/lib/perfectseason/server/datasets';
+import { checkStreakCard, type CardCheck } from '@/lib/perfectseason/server/cards';
 import {
   userKey,
   userBoardsKey,
@@ -102,6 +103,17 @@ export async function POST(request: NextRequest) {
   const primary = boards[0];
   const rank = await kv.zrevrank(lbZKey(primary), userId);
 
+  // A saved Daily may complete a streak milestone and earn a card.
+  // Best-effort: a card hiccup never fails the score save.
+  let cards: CardCheck | null = null;
+  if (sub.source === 'daily' && sub.date) {
+    try {
+      cards = await checkStreakCard(userId, sub.sport, sub.date, sub.picks);
+    } catch (err) {
+      console.error('Streak card check failed:', err);
+    }
+  }
+
   return NextResponse.json({
     board: primary,
     rank: rank == null ? null : rank + 1,
@@ -110,5 +122,6 @@ export async function POST(request: NextRequest) {
     wins: score.wins,
     losses: score.losses,
     improved: improvedAny,
+    ...(cards ? { streak: cards.streak, nextCard: cards.next, card: cards.card } : {}),
   });
 }

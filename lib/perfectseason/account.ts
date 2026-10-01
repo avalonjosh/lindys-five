@@ -4,6 +4,7 @@
  */
 
 import type { PublicUser, ScoreSubmission } from './leaderboard';
+import type { CardTier, StreakCard } from './cards';
 
 type AuthResult = { ok: true; user: PublicUser } | { ok: false; error: string };
 
@@ -149,6 +150,10 @@ export interface SubmitResult {
   wins: number;
   losses: number;
   improved: boolean;
+  /** Daily only: this game's streak, the next card milestone, and a card if one was just earned. */
+  streak?: number;
+  nextCard?: { days: number; tier: CardTier; daysLeft: number } | null;
+  card?: StreakCard | null;
 }
 
 /** UI state for a leaderboard submission, shared by the result components. */

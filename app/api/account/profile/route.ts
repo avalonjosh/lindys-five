@@ -3,6 +3,8 @@ import { kv } from '@vercel/kv';
 import { getUserId } from '@/lib/perfectseason/server/session';
 import { easternDateString } from '@/lib/perfectseason/seed';
 import { findTeam } from '@/lib/teamConfig';
+import { getUserCards } from '@/lib/perfectseason/server/cards';
+import type { StreakCard } from '@/lib/perfectseason/cards';
 import {
   userKey,
   userTeams,
@@ -39,6 +41,8 @@ export interface ProfileResponse {
   createdAt: string;
   favoriteTeam?: string;
   teams: string[];
+  /** Streak cards earned, newest first. */
+  cards: StreakCard[];
   perfectSeason: {
     boards: ProfileBoard[];
     /** Daily plays only keep a composite score in the boards hash; entries expire. */
@@ -155,6 +159,7 @@ export async function GET(request: NextRequest) {
     createdAt: user.createdAt,
     favoriteTeam: user.favoriteTeam,
     teams: userTeams(user),
+    cards: await getUserCards(userId),
     perfectSeason: {
       boards,
       daily: {

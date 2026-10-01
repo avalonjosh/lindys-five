@@ -1,3 +1,4 @@
+import { deleteUserCards } from '@/lib/perfectseason/server/cards';
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { kv } from '@vercel/kv';
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest) {
     ])
   );
   await kv.del(userBoardsKey(userId));
+  await deleteUserCards(userId);
 
   // What-If picks: index members are the save-key suffixes, and the admin
   // global indexes hold the same members prefixed with the userId.
