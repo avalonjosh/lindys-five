@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { LogOut, Settings } from 'lucide-react';
 import type { MLBTeamConfig, NFLTeamConfig, TeamConfig } from '@/lib/teamConfig';
 import { cardColors, logoFor } from '@/components/home/YourTeamCard';
@@ -8,6 +9,8 @@ export interface BannerTile {
   value: string;
   label: string;
   highlight?: boolean;
+  /** Makes the tile a link (the main team's odds go to its tracker). */
+  href?: string;
 }
 
 /** Top of the profile: the main team's colors, the username, and a row of headline numbers. */
@@ -57,14 +60,22 @@ export default function ProfileBanner({
           </div>
           {tiles.length > 0 && (
             <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-5">
-              {tiles.slice(0, 5).map((t, i) => (
-                <div key={t.label} className={`min-w-0 rounded-xl bg-black/25 p-3 ${i > 2 ? 'hidden sm:block' : ''}`}>
-                  <div className="truncate text-4xl leading-none sm:text-5xl" style={{ fontFamily: 'Bebas Neue, sans-serif', color: t.highlight ? accent : '#FFFFFF' }}>
-                    {t.value}
-                  </div>
-                  <div className="mt-1 truncate text-xs text-slate-100">{t.label}</div>
-                </div>
-              ))}
+              {tiles.slice(0, 5).map((t, i) => {
+                const className = `min-w-0 rounded-xl bg-black/25 p-3 ${i > 2 ? 'hidden sm:block' : ''}`;
+                const body = (
+                  <>
+                    <div className="truncate text-4xl leading-none sm:text-5xl" style={{ fontFamily: 'Bebas Neue, sans-serif', color: t.highlight ? accent : '#FFFFFF' }}>
+                      {t.value}
+                    </div>
+                    <div className="mt-1 truncate text-xs text-slate-100">{t.label}{t.href && ' →'}</div>
+                  </>
+                );
+                return t.href ? (
+                  <Link key={t.label} href={t.href} className={`${className} transition-colors hover:bg-black/40`}>{body}</Link>
+                ) : (
+                  <div key={t.label} className={className}>{body}</div>
+                );
+              })}
             </div>
           )}
         </div>

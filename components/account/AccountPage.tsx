@@ -609,7 +609,7 @@ export default function AccountPage() {
   // Banner numbers: only the ones that have something to show.
   const mainOdds = mainTeam ? snapshots[mainTeam]?.odds ?? null : null;
   const bannerTiles: BannerTile[] = [];
-  if (favTeam && mainOdds != null) bannerTiles.push({ value: `${mainOdds}%`, label: `${favTeam.name} odds`, highlight: true });
+  if (favTeam && mainOdds != null) bannerTiles.push({ value: `${mainOdds}%`, label: `${favTeam.name} odds`, highlight: true, href: getTeamUrl(mainTeam!) });
   if ((profile?.perfectSeason.daily.streak.current ?? 0) > 0) bannerTiles.push({ value: String(profile!.perfectSeason.daily.streak.current), label: 'Day streak' });
   if (overall.graded > 0) bannerTiles.push({ value: `${Math.round((overall.exact / overall.graded) * 100)}%`, label: 'Pick accuracy' });
   if (bestRank != null) bannerTiles.push({ value: `#${bestRank}`, label: 'Best rank' });
