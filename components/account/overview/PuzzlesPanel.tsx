@@ -34,7 +34,8 @@ export default function PuzzlesPanel({ profile }: { profile: ProfileResponse | n
       <SectionTitle
         right={today && (
           <span className="whitespace-nowrap text-xs text-slate-400 sm:text-sm">
-            {new Date(`${today}T12:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric' })}
+            <span className="sm:hidden">{new Date(`${today}T12:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' })}</span>
+            <span className="hidden sm:inline">{new Date(`${today}T12:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric' })}</span>
           </span>
         )}
       >
@@ -54,11 +55,14 @@ export default function PuzzlesPanel({ profile }: { profile: ProfileResponse | n
               <div className="text-center text-5xl leading-none text-white lg:w-24 lg:text-left" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>{p.title}</div>
               <div className="flex min-w-0 flex-1 flex-col gap-1 text-center lg:text-left">
                 <div className={`text-[11px] font-bold tracking-wider ${p.label}`}>{p.league} · {played ? 'PLAYED' : 'NOT PLAYED'}</div>
+                {/* Phones: both cards show the same rows (title, status, streak, button), so
+                    the result and blurb lines are desktop-only. */}
                 {played ? (
-                  <div className="text-base font-extrabold text-white sm:text-lg">{records[p.sport] ? `You went ${records[p.sport]}` : 'Played today'}</div>
+                  <div className="hidden text-lg font-extrabold text-white lg:block">{records[p.sport] ? `You went ${records[p.sport]}` : 'Played today'}</div>
                 ) : (
                   <div className="hidden text-sm leading-snug text-slate-200 lg:block">{p.blurb}</div>
                 )}
+                {streak === 0 && <div className="text-xs font-semibold text-slate-300 lg:hidden">Start a streak today</div>}
                 {streak > 0 && (
                   <div className="flex items-center justify-center gap-1 text-xs font-bold text-amber-400 lg:justify-start sm:text-sm">
                     <Flame className="h-3.5 w-3.5 shrink-0" aria-hidden />

@@ -75,11 +75,14 @@ export default function TodaysPuzzles() {
               <div className="text-center text-5xl leading-none text-white lg:w-24 lg:text-left" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
                 {p.title}
               </div>
-              {s && s.streak > 0 && (
+              {/* Phones: every card gets the same line here, so played and unplayed cards line up */}
+              {s && s.streak > 0 ? (
                 <div className="flex items-center justify-center gap-1 text-[11px] font-bold text-amber-400 lg:hidden">
                   <Flame className="h-3 w-3" aria-hidden="true" />
                   {s.streak}-day streak
                 </div>
+              ) : (
+                <div className="text-center text-[11px] font-semibold text-slate-300 lg:hidden">{played ? 'Played today' : 'Start a streak today'}</div>
               )}
               <div className="hidden min-w-0 flex-1 flex-col gap-1 lg:flex">
                 <div className={`text-[11px] font-bold tracking-wider ${p.label}`}>
