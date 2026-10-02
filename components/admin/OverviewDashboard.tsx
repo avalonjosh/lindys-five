@@ -76,6 +76,7 @@ export default function OverviewDashboard() {
   const { toast } = useToast();
   const [todayViews, setTodayViews] = useState<number | null>(null);
   const [viewsChange, setViewsChange] = useState<number | null>(null);
+  const [viewsBasis, setViewsBasis] = useState<string | null>(null);
   const [weekViews, setWeekViews] = useState<number | null>(null);
   const [ga4Error, setGa4Error] = useState<string | null>(null);
   const [liveNow, setLiveNow] = useState<number | null>(null);
@@ -103,6 +104,7 @@ export default function OverviewDashboard() {
     if (todayRes) {
       setTodayViews(todayRes.totalViews ?? 0);
       setViewsChange(todayRes.viewsChange ?? null);
+      setViewsBasis(todayRes.viewsChangeBasis ?? null);
       setGa4Error(todayRes.error || null);
     }
     if (weekRes) setWeekViews(weekRes.totalViews ?? 0);
@@ -193,7 +195,7 @@ export default function OverviewDashboard() {
           icon={<Eye className="h-5 w-5" />}
           label="Views today"
           value={todayViews != null ? todayViews.toLocaleString() : '—'}
-          delta={viewsChange != null && viewsChange !== 0 ? { value: viewsChange, label: 'vs yesterday at this time', format: (n) => `${n > 0 ? '+' : ''}${n}%` } : undefined}
+          delta={viewsChange != null && viewsChange !== 0 ? { value: viewsChange, label: `vs ${viewsBasis ?? 'yesterday'}`, format: (n) => `${n > 0 ? '+' : ''}${n}%` } : undefined}
           sub={liveNow != null && liveNow > 0 ? `${liveNow} on the site right now` : undefined}
         />
         <StatCard

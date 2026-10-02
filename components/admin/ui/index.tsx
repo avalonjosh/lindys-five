@@ -265,19 +265,22 @@ export function StatCard({
 }) {
   const fmt = delta?.format ?? ((n: number) => `${n > 0 ? '+' : ''}${n}`);
   return (
-    <Card className="flex items-start justify-between gap-3" padding={false}>
-      <div className="min-w-0 flex-1 p-4 sm:p-5">
-        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">{label}</p>
+    <Card className="relative" padding={false}>
+      <div className="min-w-0 p-4 sm:p-5">
+        {/* Only the label row makes room for the corner icon; the lines below use the full width */}
+        <p className={`text-xs font-semibold uppercase tracking-wider text-gray-500 ${icon ? 'pr-8' : ''}`}>{label}</p>
         <p className="mt-1 truncate text-2xl font-bold text-gray-900 sm:text-3xl">{value}</p>
         {delta && delta.value !== 0 && (
-          <p className={`mt-1 flex items-center gap-1 text-xs font-semibold ${delta.value > 0 ? 'text-green-600' : 'text-red-500'}`}>
-            {delta.value > 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+          // Inline, so a long label wraps under the number like a sentence instead of
+          // forming its own column beside it.
+          <p className={`mt-1 text-xs font-semibold ${delta.value > 0 ? 'text-green-600' : 'text-red-500'}`}>
+            {delta.value > 0 ? <ArrowUp className="mr-0.5 inline h-3 w-3 align-[-1px]" /> : <ArrowDown className="mr-0.5 inline h-3 w-3 align-[-1px]" />}
             {fmt(delta.value)} <span className="font-normal text-gray-400">{delta.label}</span>
           </p>
         )}
         {sub && <p className="mt-1 text-xs text-gray-400">{sub}</p>}
       </div>
-      {icon && <div className="p-4 text-gray-300 sm:p-5">{icon}</div>}
+      {icon && <div className="absolute right-4 top-4 text-gray-300 sm:right-5 sm:top-5">{icon}</div>}
     </Card>
   );
 }
