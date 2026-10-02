@@ -44,7 +44,9 @@ export function PageHeader({
 }) {
   return (
     <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-      <div>
+      {/* Title side takes the leftover width and wraps its own text, so the
+          actions keep their place when the description changes length. */}
+      <div className="min-w-0 flex-1 basis-64">
         <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
         {description && <p className="mt-1 text-sm text-gray-500">{description}</p>}
       </div>

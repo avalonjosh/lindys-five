@@ -39,9 +39,11 @@ export default function AffiliatesDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (refresh = false) => {
+  // `quiet`: switching ranges with numbers already on screen dims them instead
+  // of swapping in a spinner, so the page doesn't jump while the new range loads.
+  const load = useCallback(async (refresh = false, quiet = false) => {
     if (range === 'custom' && !applied) { setLoading(false); return; }
-    if (refresh) setRefreshing(true);
+    if (refresh || quiet) setRefreshing(true);
     try {
       const window = range === 'custom' && applied ? `custom&from=${applied.from}&to=${applied.to}` : range;
       const res = await fetch(`/api/admin/affiliates?range=${window}${refresh ? '&refresh=1' : ''}`);
@@ -56,7 +58,12 @@ export default function AffiliatesDashboard() {
     }
   }, [range, applied]);
 
-  useEffect(() => { setLoading(true); load(); }, [load]);
+  const hasData = data != null;
+  useEffect(() => {
+    if (hasData) load(false, true);
+    else { setLoading(true); load(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load]);
 
   const fanatics = data?.networks.find((n) => n.network === 'fanatics');
   const stubhub = data?.networks.find((n) => n.network === 'stubhub');
@@ -112,7 +119,6 @@ export default function AffiliatesDashboard() {
           onSubmit={(e) => {
             e.preventDefault();
             if (!customFrom || !customTo) return;
-            setLoading(true);
             setApplied(customFrom <= customTo ? { from: customFrom, to: customTo } : { from: customTo, to: customFrom });
           }}
         >
