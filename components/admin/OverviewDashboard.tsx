@@ -193,7 +193,7 @@ export default function OverviewDashboard() {
           icon={<Eye className="h-5 w-5" />}
           label="Views today"
           value={todayViews != null ? todayViews.toLocaleString() : '—'}
-          delta={viewsChange != null && viewsChange !== 0 ? { value: viewsChange, label: 'vs yesterday', format: (n) => `${n > 0 ? '+' : ''}${n}%` } : undefined}
+          delta={viewsChange != null && viewsChange !== 0 ? { value: viewsChange, label: 'vs yesterday at this time', format: (n) => `${n > 0 ? '+' : ''}${n}%` } : undefined}
           sub={liveNow != null && liveNow > 0 ? `${liveNow} on the site right now` : undefined}
         />
         <StatCard

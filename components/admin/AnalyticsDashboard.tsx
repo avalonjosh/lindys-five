@@ -15,27 +15,26 @@ const VIOLET = '#7c3aed';
 const GRID = '#e5e7eb';
 const AXIS_TEXT = '#9ca3af';
 
-type Range = 'today' | '7d' | '30d' | '12mo';
+type Range = 'today' | 'yesterday' | '7d' | '30d' | '12mo' | 'custom';
 
-const RANGE_LABEL: Record<Range, string> = {
+const RANGE_LABEL: Record<Exclude<Range, 'custom'>, string> = {
   today: 'today',
+  yesterday: 'yesterday',
   '7d': 'last 7 days',
   '30d': 'last 30 days',
   '12mo': 'last 12 months',
 };
 
-const DELTA_LABEL: Record<Range, string | null> = {
-  today: 'vs yesterday',
-  '7d': 'vs previous 7 days',
-  '30d': 'vs previous 30 days',
-  '12mo': null,
-};
+const easternToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+const shortDate = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' });
 
 interface OverviewData {
   error?: string;
   totalViews: number;
   uniqueVisitors: number | null;
   viewsChange: number | null;
+  /** What viewsChange compares with, e.g. "yesterday at this time". */
+  viewsChangeBasis?: string | null;
   bounceRate: number | null;
   avgDuration: number | null;
   topPage: { name: string; count: number } | null;
@@ -101,6 +100,15 @@ function prettifyPath(path: string): string {
 
 export default function AnalyticsDashboard() {
   const [range, setRange] = useState<Range>('today');
+  // Custom range: the inputs, and the dates actually loaded (set by Apply).
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+  const [applied, setApplied] = useState<{ from: string; to: string } | null>(null);
+  const q = range === 'custom' && applied ? `range=custom&from=${applied.from}&to=${applied.to}` : `range=${range}`;
+  const rangeLabel = range === 'custom'
+    ? (applied ? (applied.from === applied.to ? shortDate(applied.from) : `${shortDate(applied.from)} to ${shortDate(applied.to)}`) : 'pick a date range')
+    : RANGE_LABEL[range];
+  const hourly = range === 'today' || range === 'yesterday' || (range === 'custom' && !!applied && applied.from === applied.to);
   const [overview, setOverview] = useState<OverviewData | null>(null);
   const [timeseries, setTimeseries] = useState<TimeseriesData | null>(null);
   const [topPages, setTopPages] = useState<TopItem[]>([]);
@@ -125,6 +133,7 @@ export default function AnalyticsDashboard() {
   const requestIdRef = useRef(0);
 
   const fetchData = useCallback(async (opts?: { background?: boolean }) => {
+    if (range === 'custom' && !applied) { setLoading(false); return; }
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -135,15 +144,15 @@ export default function AnalyticsDashboard() {
     try {
       const [ovRes, tsRes, pagesRes, refRes, devRes, cityRes, teamsRes, srcRes, clicksRes] =
         await Promise.all([
-          fetch(`/api/analytics/overview?range=${range}`, { signal }),
-          fetch(`/api/analytics/timeseries?range=${range}`, { signal }),
-          fetch(`/api/analytics/top?type=pages&range=${range}&limit=10`, { signal }),
-          fetch(`/api/analytics/top?type=referrers&range=${range}&limit=10`, { signal }),
-          fetch(`/api/analytics/top?type=devices&range=${range}&limit=5`, { signal }),
-          fetch(`/api/analytics/top?type=cities&range=${range}&limit=10`, { signal }),
-          fetch(`/api/analytics/top?type=teams&range=${range}&limit=15`, { signal }),
-          fetch(`/api/analytics/top?type=utm_source&range=${range}&limit=10`, { signal }),
-          fetch(`/api/analytics/clicks?range=${range}&limit=15`, { signal }),
+          fetch(`/api/analytics/overview?${q}`, { signal }),
+          fetch(`/api/analytics/timeseries?${q}`, { signal }),
+          fetch(`/api/analytics/top?type=pages&${q}&limit=10`, { signal }),
+          fetch(`/api/analytics/top?type=referrers&${q}&limit=10`, { signal }),
+          fetch(`/api/analytics/top?type=devices&${q}&limit=5`, { signal }),
+          fetch(`/api/analytics/top?type=cities&${q}&limit=10`, { signal }),
+          fetch(`/api/analytics/top?type=teams&${q}&limit=15`, { signal }),
+          fetch(`/api/analytics/top?type=utm_source&${q}&limit=10`, { signal }),
+          fetch(`/api/analytics/clicks?${q}&limit=15`, { signal }),
         ]);
 
       if (requestId !== requestIdRef.current) return; // stale response — drop it
@@ -185,11 +194,11 @@ export default function AnalyticsDashboard() {
         setRefreshing(false);
       }
     }
-  }, [range]);
+  }, [range, applied, q]);
 
   // GSC lags ~2 days and only supports 7d/30d windows; the card labels its own
   // window instead of pretending to follow the page range.
-  const gscRange = range === 'today' || range === '7d' ? '7d' : '30d';
+  const gscRange = range === 'today' || range === 'yesterday' || range === '7d' ? '7d' : '30d';
   const fetchGSC = useCallback(async () => {
     try {
       const res = await fetch(`/api/analytics/search?range=${gscRange}`);
@@ -234,7 +243,7 @@ export default function AnalyticsDashboard() {
     };
   }, [range, fetchData, fetchRealtime]);
 
-  const deltaLabel = DELTA_LABEL[range];
+  const deltaLabel = overview?.viewsChangeBasis ? `vs ${overview.viewsChangeBasis}` : null;
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">
@@ -242,7 +251,7 @@ export default function AnalyticsDashboard() {
         title="Analytics"
         description={
           <>
-            Showing {RANGE_LABEL[range]}
+            Showing {rangeLabel}
             {lastUpdated && <span className="text-gray-400"> · updated {lastUpdated.toLocaleTimeString()}</span>}
             {range === 'today' && <Badge variant="success" className="ml-2">Auto-refreshes every 2m</Badge>}
           </>
@@ -251,17 +260,43 @@ export default function AnalyticsDashboard() {
           <Segmented
             options={[
               { value: 'today', label: 'Today' },
+              { value: 'yesterday', label: 'Yesterday' },
               { value: '7d', label: '7d' },
               { value: '30d', label: '30d' },
               { value: '12mo', label: '12 mo' },
+              { value: 'custom', label: 'Custom' },
             ]}
             value={range}
-            onChange={setRange}
+            onChange={(r) => { setRange(r); if (r !== 'custom') setApplied(null); }}
           />
         }
       />
 
-      {error ? (
+      {range === 'custom' && (
+        <form
+          className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!customFrom || !customTo) return;
+            setApplied(customFrom <= customTo ? { from: customFrom, to: customTo } : { from: customTo, to: customFrom });
+          }}
+        >
+          <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
+            From
+            <input type="date" value={customFrom} max={easternToday()} onChange={(e) => setCustomFrom(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-normal normal-case tracking-normal text-gray-900" />
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
+            To
+            <input type="date" value={customTo} max={easternToday()} onChange={(e) => setCustomTo(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-normal normal-case tracking-normal text-gray-900" />
+          </label>
+          <Button type="submit" variant="primary" disabled={!customFrom || !customTo}>Apply</Button>
+          <p className="w-full text-xs text-gray-400">Dates are Eastern time and include both days. Teams and click panels only go back 90 days; Google Analytics about 14 months.</p>
+        </form>
+      )}
+
+      {range === 'custom' && !applied ? (
+        <p className="py-16 text-center text-sm text-gray-400">Pick a start and end date, then Apply.</p>
+      ) : error ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <p className="mb-3 text-lg text-red-500">{error}</p>
           <Button variant="secondary" onClick={() => { setError(null); setLoading(true); fetchData(); }}>
@@ -320,23 +355,23 @@ export default function AnalyticsDashboard() {
           </div>
 
           {/* Views over time */}
-          {timeseries && <TimeseriesChart data={timeseries} range={range} />}
+          {timeseries && <TimeseriesChart data={timeseries} hourly={hourly} />}
 
           {/* Content */}
-          <SectionBlock title="Content" subtitle={`What people are viewing · ${RANGE_LABEL[range]}`}>
+          <SectionBlock title="Content" subtitle={`What people are viewing · ${rangeLabel}`}>
             <div className="grid gap-4 md:grid-cols-2">
               <TopTable title="Top Pages" items={topPages} prettify={prettifyPath} ga4Down={!!ga4Error} />
               <TopTable
                 title="Team Popularity"
                 items={topTeams}
                 prettify={(s) => prettifyPath(`/${s}`)}
-                note={range === '12mo' ? 'First-party tracking · last 90 days (retention limit)' : 'First-party tracking'}
+                note={range === '12mo' || (range === 'custom' && !!applied && Date.parse(applied.from) < Date.now() - 90 * 864e5) ? 'First-party tracking · last 90 days (retention limit)' : 'First-party tracking'}
               />
             </div>
           </SectionBlock>
 
           {/* Acquisition */}
-          <SectionBlock title="Acquisition" subtitle={`Where visitors come from · ${RANGE_LABEL[range]}`}>
+          <SectionBlock title="Acquisition" subtitle={`Where visitors come from · ${rangeLabel}`}>
             <div className="grid gap-4 md:grid-cols-2">
               <TopTable
                 title="Referrers"
@@ -355,7 +390,7 @@ export default function AnalyticsDashboard() {
           </SectionBlock>
 
           {/* Audience */}
-          <SectionBlock title="Audience" subtitle={`Who is visiting · ${RANGE_LABEL[range]}`}>
+          <SectionBlock title="Audience" subtitle={`Who is visiting · ${rangeLabel}`}>
             <div className="grid gap-4 md:grid-cols-2">
               <TopTable title="Cities" items={topCities} showFlags ga4Down={!!ga4Error} />
               <TopTable title="Devices" items={topDevices} formatName={(s) => s.charAt(0).toUpperCase() + s.slice(1)} ga4Down={!!ga4Error} />
@@ -363,11 +398,11 @@ export default function AnalyticsDashboard() {
           </SectionBlock>
 
           {/* Engagement */}
-          <SectionBlock title="Engagement" subtitle={`Clicks on tickets, gear, and share buttons · ${RANGE_LABEL[range]}`}>
+          <SectionBlock title="Engagement" subtitle={`Clicks on tickets, gear, and share buttons · ${rangeLabel}`}>
             <TopTable
               title="Click Tracking"
               items={clicks}
-              note={range === '12mo' ? 'First-party tracking · last 90 days (retention limit)' : 'First-party tracking'}
+              note={range === '12mo' || (range === 'custom' && !!applied && Date.parse(applied.from) < Date.now() - 90 * 864e5) ? 'First-party tracking · last 90 days (retention limit)' : 'First-party tracking'}
               emptyMessage="Click data will appear as users interact with ticket links, share buttons, and team logos"
             />
           </SectionBlock>
@@ -551,11 +586,11 @@ function Sparkline({ data }: { data: number[] }) {
   );
 }
 
-function TimeseriesChart({ data, range }: { data: TimeseriesData; range: Range }) {
+function TimeseriesChart({ data, hourly }: { data: TimeseriesData; hourly: boolean }) {
   const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string; views: number; visitors?: number } | null>(null);
   const [showVisitors, setShowVisitors] = useState(true);
   const svgRef = useRef<SVGSVGElement>(null);
-  const isToday = range === 'today';
+  const isToday = hourly;
   const count = data.labels.length;
 
   if (count === 0) {

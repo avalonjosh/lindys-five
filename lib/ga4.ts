@@ -1,4 +1,5 @@
 import { google, analyticsdata_v1beta } from 'googleapis';
+import type { AnalyticsWindow } from './analyticsRange';
 
 type Schema$Row = analyticsdata_v1beta.Schema$Row;
 
@@ -33,32 +34,33 @@ function getGA4Client() {
   return { analyticsData, propertyId };
 }
 
-// Ranges are exact window lengths (7d = 7 days including today) so the
-// "vs previous" comparison below is apples-to-apples.
-function formatDateRange(range: string): { startDate: string; endDate: string } {
-  if (range === 'today') return { startDate: 'today', endDate: 'today' };
-  if (range === '7d') return { startDate: '6daysAgo', endDate: 'today' };
-  if (range === '30d') return { startDate: '29daysAgo', endDate: 'today' };
-  // 12mo (formerly mislabeled "alltime") — GA4 retains ~14 months
-  return { startDate: '365daysAgo', endDate: 'today' };
+/** 0-24 -> "7am", "12pm", "midnight". */
+function hourLabel(h: number): string {
+  if (h === 0 || h === 24) return 'midnight';
+  return h < 12 ? `${h}am` : h === 12 ? '12pm' : `${h - 12}pm`;
 }
 
-// Equal-length window immediately before the current one. null = no honest
-// comparison exists (12mo would need data past GA4 retention).
-function previousDateRange(range: string): { startDate: string; endDate: string } | null {
-  if (range === 'today') return { startDate: '1daysAgo', endDate: '1daysAgo' };
-  if (range === '7d') return { startDate: '13daysAgo', endDate: '7daysAgo' };
-  if (range === '30d') return { startDate: '59daysAgo', endDate: '30daysAgo' };
-  return null;
+/** Hour and minute right now in Eastern time (the GA4 property's time zone). */
+function easternClock(): { hour: number; minute: number } {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: 'numeric', hourCycle: 'h23' }).formatToParts(new Date());
+  return {
+    hour: Number(parts.find((p) => p.type === 'hour')?.value ?? 0),
+    minute: Number(parts.find((p) => p.type === 'minute')?.value ?? 0),
+  };
 }
 
-export async function fetchOverview(range: string) {
+export async function fetchOverview(w: AnalyticsWindow) {
   const { analyticsData, propertyId } = getGA4Client();
   const property = `properties/${propertyId}`;
-  const dateRange = formatDateRange(range);
-  const prevRange = previousDateRange(range);
+  const dateRange = { startDate: w.start, endDate: w.end };
+  const prevRange = w.prev ? { startDate: w.prev.start, endDate: w.prev.end } : null;
+  // Today is compared with yesterday up to the same point in the day, not all
+  // of yesterday (which made every morning look like a big drop). GA4 also
+  // processes today a few hours late, so "the same point" is the last hour it
+  // has views for today, not the clock.
+  const sameTimeYesterday = w.start === 'today';
 
-  const [currentRes, prevRes, topPageRes, topRefRes] = await Promise.all([
+  const [currentRes, prevRes, topPageRes, topRefRes, todayHoursRes] = await Promise.all([
     analyticsData.properties.runReport({
       property,
       requestBody: {
@@ -76,6 +78,7 @@ export async function fetchOverview(range: string) {
           property,
           requestBody: {
             dateRanges: [prevRange],
+            ...(sameTimeYesterday ? { dimensions: [{ name: 'hour' }] } : {}),
             metrics: [{ name: 'screenPageViews' }],
           },
         })
@@ -100,6 +103,12 @@ export async function fetchOverview(range: string) {
         limit: '5',
       },
     }),
+    sameTimeYesterday
+      ? analyticsData.properties.runReport({
+          property,
+          requestBody: { dateRanges: [dateRange], dimensions: [{ name: 'hour' }], metrics: [{ name: 'screenPageViews' }] },
+        })
+      : Promise.resolve(null),
   ]);
 
   const row = currentRes.data.rows?.[0];
@@ -108,9 +117,28 @@ export async function fetchOverview(range: string) {
   const bounceRate = parseFloat(row?.metricValues?.[2]?.value || '0');
   const avgDuration = parseFloat(row?.metricValues?.[3]?.value || '0');
 
-  const prevRow = prevRes?.data?.rows?.[0];
-  const previousViews = prevRow ? parseInt(prevRow.metricValues?.[0]?.value || '0') : 0;
-  const viewsChange = previousViews > 0
+  let previousViews = 0;
+  let throughHour: number | null = null;
+  if (sameTimeYesterday) {
+    // Last hour GA4 has views for today; if that's the current hour, count
+    // yesterday's matching hour by the minute.
+    const hours = (todayHoursRes?.data?.rows || [])
+      .filter((r) => parseInt(r.metricValues?.[0]?.value || '0') > 0)
+      .map((r) => parseInt(r.dimensionValues?.[0]?.value || '0'));
+    throughHour = hours.length ? Math.max(...hours) : null;
+    const { hour, minute } = easternClock();
+    for (const r of prevRes?.data?.rows || []) {
+      if (throughHour == null) break;
+      const h = parseInt(r.dimensionValues?.[0]?.value || '0');
+      const v = parseInt(r.metricValues?.[0]?.value || '0');
+      if (h < throughHour) previousViews += v;
+      else if (h === throughHour) previousViews += throughHour === hour ? v * (minute / 60) : v;
+    }
+  } else {
+    const prevRow = prevRes?.data?.rows?.[0];
+    previousViews = prevRow ? parseInt(prevRow.metricValues?.[0]?.value || '0') : 0;
+  }
+  const viewsChange = previousViews > 0 && !(sameTimeYesterday && throughHour == null)
     ? Math.round(((totalViews - previousViews) / previousViews) * 100)
     : null;
 
@@ -134,6 +162,10 @@ export async function fetchOverview(range: string) {
     totalViews,
     uniqueVisitors,
     viewsChange,
+    /** What viewsChange compares against, for the label. */
+    viewsChangeBasis: sameTimeYesterday
+      ? throughHour == null ? null : `yesterday through ${hourLabel(throughHour + 1)}`
+      : w.prev ? `previous ${w.days === 1 ? 'day' : `${w.days} days`}` : null,
     bounceRate: Math.round(bounceRate * 100),
     avgDuration: Math.round(avgDuration),
     topPage,
@@ -163,10 +195,10 @@ const GA4_METRIC_MAP: Record<string, string> = {
   utm_campaign: 'sessions',
 };
 
-export async function fetchTopItems(type: string, range: string, limit: number | string) {
+export async function fetchTopItems(type: string, w: AnalyticsWindow, limit: number | string) {
   // Cities need a second dimension (country) so the flag can render and
   // same-named cities in different countries stay distinct.
-  if (type === 'cities') return fetchTopCities(range, limit);
+  if (type === 'cities') return fetchTopCities(w, limit);
 
   const dimension = GA4_DIMENSION_MAP[type];
   const metric = GA4_METRIC_MAP[type];
@@ -174,7 +206,7 @@ export async function fetchTopItems(type: string, range: string, limit: number |
 
   const { analyticsData, propertyId } = getGA4Client();
   const property = `properties/${propertyId}`;
-  const dateRange = formatDateRange(range);
+  const dateRange = { startDate: w.start, endDate: w.end };
 
   const res = await analyticsData.properties.runReport({
     property,
@@ -195,10 +227,10 @@ export async function fetchTopItems(type: string, range: string, limit: number |
   return { items };
 }
 
-async function fetchTopCities(range: string, limit: number | string) {
+async function fetchTopCities(w: AnalyticsWindow, limit: number | string) {
   const { analyticsData, propertyId } = getGA4Client();
   const property = `properties/${propertyId}`;
-  const dateRange = formatDateRange(range);
+  const dateRange = { startDate: w.start, endDate: w.end };
 
   const res = await analyticsData.properties.runReport({
     property,
@@ -224,12 +256,12 @@ async function fetchTopCities(range: string, limit: number | string) {
   return { items };
 }
 
-export async function fetchTimeseries(range: string) {
+export async function fetchTimeseries(w: AnalyticsWindow) {
   const { analyticsData, propertyId } = getGA4Client();
   const property = `properties/${propertyId}`;
-  const dateRange = formatDateRange(range);
+  const dateRange = { startDate: w.start, endDate: w.end };
 
-  if (range === 'today') {
+  if (w.grain === 'hour') {
     const res = await analyticsData.properties.runReport({
       property,
       requestBody: {
@@ -255,8 +287,8 @@ export async function fetchTimeseries(range: string) {
     return { labels, views, visitors: null, timezone: 'ET' };
   }
 
-  // 12mo — monthly breakdown so the chart stays readable
-  if (range === '12mo' || range === 'alltime') {
+  // Long windows: monthly breakdown so the chart stays readable
+  if (w.grain === 'month') {
     const res = await analyticsData.properties.runReport({
       property,
       requestBody: {

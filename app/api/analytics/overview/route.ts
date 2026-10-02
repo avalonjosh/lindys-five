@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdmin } from '@/lib/adminAuth';
 import { fetchOverview, hasGA4Credentials } from '@/lib/ga4';
+import { resolveAnalyticsWindow } from '@/lib/analyticsRange';
 
 const EMPTY_OVERVIEW = {
   totalViews: 0,
@@ -17,7 +18,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const range = request.nextUrl.searchParams.get('range') || 'today';
+  const window = resolveAnalyticsWindow(request.nextUrl.searchParams);
+  if ('error' in window) return NextResponse.json({ error: window.error, ...EMPTY_OVERVIEW }, { status: 400 });
 
   if (!hasGA4Credentials()) {
     return NextResponse.json({
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = await fetchOverview(range);
+    const data = await fetchOverview(window);
     return NextResponse.json(data);
   } catch (error) {
     console.error('GA4 overview error:', error);
