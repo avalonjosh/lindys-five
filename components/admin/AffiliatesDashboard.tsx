@@ -9,8 +9,10 @@ import type { AffiliatesPayload } from '@/app/api/admin/affiliates/route';
 import { getDateKey } from '@/lib/analytics';
 import type { KofiSummary } from '@/lib/kofi';
 
-type Range = 'today' | '7d' | '30d' | '90d' | '365d';
-const RANGE_LABEL: Record<Range, string> = { today: 'today', '7d': 'last 7 days', '30d': 'last 30 days', '90d': 'last 90 days', '365d': 'last 12 months' };
+type Range = 'today' | 'yesterday' | '7d' | '30d' | '90d' | '365d' | 'custom';
+const RANGE_LABEL: Record<Exclude<Range, 'custom'>, string> = { today: 'today', yesterday: 'yesterday', '7d': 'last 7 days', '30d': 'last 30 days', '90d': 'last 90 days', '365d': 'last 12 months' };
+const easternToday = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+const shortDate = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric' });
 
 const money = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const pct = (num: number, den: number) => (den > 0 ? `${((num / den) * 100).toFixed(1)}%` : '—');
@@ -28,16 +30,22 @@ interface JoinedRow {
 
 export default function AffiliatesDashboard() {
   const [range, setRange] = useState<Range>('today');
+  // Custom range: the inputs, and the dates actually loaded (set by Apply).
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+  const [applied, setApplied] = useState<{ from: string; to: string } | null>(null);
   const [data, setData] = useState<AffiliatesPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (refresh = false) => {
+    if (range === 'custom' && !applied) { setLoading(false); return; }
     if (refresh) setRefreshing(true);
     try {
-      const res = await fetch(`/api/admin/affiliates?range=${range}${refresh ? '&refresh=1' : ''}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const window = range === 'custom' && applied ? `custom&from=${applied.from}&to=${applied.to}` : range;
+      const res = await fetch(`/api/admin/affiliates?range=${window}${refresh ? '&refresh=1' : ''}`);
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || `HTTP ${res.status}`);
       setData(await res.json());
       setError(null);
     } catch (e) {
@@ -46,7 +54,7 @@ export default function AffiliatesDashboard() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [range]);
+  }, [range, applied]);
 
   useEffect(() => { setLoading(true); load(); }, [load]);
 
@@ -58,7 +66,8 @@ export default function AffiliatesDashboard() {
   );
   const human = data?.firstParty.total ?? 0;
   const byVendor = data?.firstParty.byVendor ?? { stubhub: 0, fanatics: 0, amazon: 0 };
-  const partialCoverage = !!data && data.firstParty.coveredDays < ({ today: 1, '7d': 7, '30d': 30, '90d': 90, '365d': 365 } as Record<Range, number>)[range];
+  const partialCoverage = !!data && data.firstParty.coveredDays < data.days;
+  const rangeLabel = range === 'custom' ? (applied ? (applied.from === applied.to ? shortDate(applied.from) : `${shortDate(applied.from)} to ${shortDate(applied.to)}`) : 'pick a date range') : RANGE_LABEL[range];
   const tips = data?.kofi;
   const earned = totals.commission + (tips?.total ?? 0);
   // Affiliate sales and Ko-fi tips in one list, newest first.
@@ -79,16 +88,16 @@ export default function AffiliatesDashboard() {
         title="Earnings"
         description={
           <>
-            Fanatics (Impact) + StubHub (Partnerize) + Ko-fi tips + on-site clicks, {RANGE_LABEL[range]}
+            Fanatics (Impact) + StubHub (Partnerize) + Ko-fi tips + on-site clicks, {rangeLabel}
             {data && <span className="text-gray-400"> · network data as of {new Date(data.cachedAt).toLocaleTimeString()}{range === 'today' ? ' (refreshes every 5 min)' : ''}</span>}
           </>
         }
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Segmented
-              options={[{ value: 'today', label: 'Today' }, { value: '7d', label: '7d' }, { value: '30d', label: '30d' }, { value: '90d', label: '90d' }, { value: '365d', label: '12 mo' }]}
+              options={[{ value: 'today', label: 'Today' }, { value: 'yesterday', label: 'Yesterday' }, { value: '7d', label: '7d' }, { value: '30d', label: '30d' }, { value: '90d', label: '90d' }, { value: '365d', label: '12 mo' }, { value: 'custom', label: 'Custom' }]}
               value={range}
-              onChange={setRange}
+              onChange={(r) => { setRange(r); if (r !== 'custom') setApplied(null); }}
             />
             <Button variant="secondary" onClick={() => load(true)} disabled={refreshing} title="Re-pull from the networks (bypasses the cache)">
               <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -97,7 +106,32 @@ export default function AffiliatesDashboard() {
         }
       />
 
-      {error ? (
+      {range === 'custom' && (
+        <form
+          className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!customFrom || !customTo) return;
+            setLoading(true);
+            setApplied(customFrom <= customTo ? { from: customFrom, to: customTo } : { from: customTo, to: customFrom });
+          }}
+        >
+          <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
+            From
+            <input type="date" value={customFrom} max={easternToday()} onChange={(e) => setCustomFrom(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-normal normal-case tracking-normal text-gray-900" />
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
+            To
+            <input type="date" value={customTo} max={easternToday()} onChange={(e) => setCustomTo(e.target.value)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-normal normal-case tracking-normal text-gray-900" />
+          </label>
+          <Button type="submit" variant="primary" disabled={!customFrom || !customTo}>Apply</Button>
+          <p className="w-full text-xs text-gray-400">Dates are Eastern time and include both days. On-site click history only goes back 90 days.</p>
+        </form>
+      )}
+
+      {range === 'custom' && !applied ? (
+        <p className="py-16 text-center text-sm text-gray-400">Pick a start and end date, then Apply.</p>
+      ) : error ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <p className="mb-3 text-lg text-red-500">Failed to load affiliate data: {error}</p>
           <Button variant="secondary" onClick={() => { setLoading(true); load(); }}>Retry</Button>
@@ -122,7 +156,7 @@ export default function AffiliatesDashboard() {
             <StatCard label="Total earned" value={money(earned)} sub={`${money(totals.commission)} commission${totals.pending > 0 ? ` (${money(totals.pending)} pending)` : ''} · ${money(tips?.total ?? 0)} tips`} icon={<DollarSign className="h-6 w-6" />} />
             <StatCard label="Sales" value={totals.conversions} sub={`${money(totals.sales)} order value`} icon={<ShoppingBag className="h-6 w-6" />} />
             <StatCard label="On-site clicks (humans)" value={human} sub={`${pct(totals.conversions, human)} conversion · ${epc(totals.commission, human)} per click`} icon={<Ticket className="h-6 w-6" />} />
-            <StatCard label="Network clicks" value={totals.clicks} sub={`includes crawlers · ${ratio(totals.clicks, human)}`} icon={<MousePointerClick className="h-6 w-6" />} />
+            <StatCard label="Network clicks" value={totals.clicks} sub={`incl. crawlers · ${ratio(totals.clicks, human)}`} icon={<MousePointerClick className="h-6 w-6" />} />
           </div>
 
           {/* Per network */}
@@ -227,7 +261,7 @@ function KofiCard({ k }: { k: KofiSummary }) {
       </div>
       <div className="grid grid-cols-3 gap-3 text-center">
         <Stat label="Tips" value={k.count.toLocaleString()} sub={`${oneOff} one-time`} />
-        <Stat label="Monthly" value={k.monthlyCount.toLocaleString()} sub="membership payments" />
+        <Stat label="Monthly" value={k.monthlyCount.toLocaleString()} sub="memberships" />
         <Stat label="Received" value={money(k.total)} sub={k.otherCurrency > 0 ? `+${k.otherCurrency} non-USD` : 'before fees'} />
       </div>
       <div className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-500">
@@ -254,7 +288,7 @@ function NetworkCard({ s, rate, humanClicks }: { s: NetworkSummary; rate: string
         <Badge variant={!s.configured ? 'neutral' : s.error ? 'warning' : 'success'}>{!s.configured ? 'not configured' : s.error ? 'error' : 'connected'}</Badge>
       </div>
       <div className="grid grid-cols-3 gap-3 text-center">
-        <Stat label="On-site clicks" value={humanClicks.toLocaleString()} sub="humans" />
+        <Stat label="Clicks" value={humanClicks.toLocaleString()} sub="on-site humans" />
         <Stat label="Sales" value={s.conversions.toLocaleString()} sub={`${pct(s.conversions, humanClicks)} of clicks`} />
         <Stat label="Commission" value={money(s.commission)} sub={epc(s.commission, humanClicks) + '/click'} />
       </div>
@@ -267,12 +301,13 @@ function NetworkCard({ s, rate, humanClicks }: { s: NetworkSummary; rate: string
   );
 }
 
+/** One tile in a network card. Label, number and note each keep to one line so tiles side by side line up. */
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="rounded-lg bg-gray-50 p-3">
-      <p className="text-[10px] uppercase tracking-wider text-gray-500">{label}</p>
-      <p className="text-xl font-bold text-gray-900">{value}</p>
-      {sub && <p className="text-[10px] text-gray-400">{sub}</p>}
+    <div className="min-w-0 rounded-lg bg-gray-50 p-3">
+      <p className="truncate text-[10px] uppercase tracking-wider text-gray-500" title={label}>{label}</p>
+      <p className="truncate text-xl font-bold text-gray-900">{value}</p>
+      <p className="truncate text-[10px] text-gray-400" title={sub}>{sub || '\u00a0'}</p>
     </div>
   );
 }

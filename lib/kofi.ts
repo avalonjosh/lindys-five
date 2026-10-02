@@ -49,11 +49,11 @@ export async function saveKofiTip(tip: KofiTip): Promise<boolean> {
   return true;
 }
 
-/** Tips received since `from`, newest first, with USD totals. */
-export async function getKofiSummary(from: Date): Promise<KofiSummary> {
+/** Tips received between `from` and `to` (default now), newest first, with USD totals. */
+export async function getKofiSummary(from: Date, to: Date = new Date()): Promise<KofiSummary> {
   const configured = !!process.env.KOFI_VERIFICATION_TOKEN;
   const lastTestAt = await kv.get<string>(LAST_TEST);
-  const ids = (await kv.zrange<string[]>(TIPS, from.getTime(), Date.now(), { byScore: true })) ?? [];
+  const ids = (await kv.zrange<string[]>(TIPS, from.getTime(), to.getTime(), { byScore: true })) ?? [];
   const tips = ids.length ? (await kv.mget<(KofiTip | null)[]>(...ids.map(tipKey))).filter((t): t is KofiTip => !!t) : [];
   tips.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
   const usd = tips.filter(t => t.currency.toUpperCase() === 'USD');
