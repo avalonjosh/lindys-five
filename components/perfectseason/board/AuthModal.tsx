@@ -6,6 +6,7 @@ import { login, signup, requestPasswordReset } from '@/lib/perfectseason/account
 import type { PublicUser } from '@/lib/perfectseason/leaderboard';
 import { NHL_TEAMS, MLB_TEAMS, findTeam } from '@/lib/teamConfig';
 import { readFavorites, mergeFavorite } from '@/lib/favorites';
+import { logoFor } from '@/components/home/YourTeamCard';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -34,10 +35,12 @@ const MLB_OPTIONS = teamOptions(MLB_TEAMS);
 const GOOGLE_SIGNIN = process.env.NEXT_PUBLIC_GOOGLE_SIGNIN === '1';
 
 const inputClass =
-  'w-full rounded-lg border-2 border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none transition-colors focus:border-sabres-blue focus:bg-white';
-const labelClass = 'mb-1 block text-[11px] font-bold uppercase tracking-wide text-gray-500';
+  'w-full rounded-lg border border-slate-600 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none transition-colors placeholder:text-slate-500 focus:border-amber-400';
+const labelClass = 'mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-300';
+const primaryButton =
+  'mt-1 w-full rounded-xl bg-amber-400 py-3 text-sm font-extrabold uppercase tracking-wide text-slate-900 transition-opacity hover:opacity-90 disabled:opacity-60';
 
-/** Sign In / Sign Up sheet for opt-in leaderboard accounts. Styled like ShareTeamModal. */
+/** Sign In / Sign Up sheet for accounts, in the site's dark style (same look on light and dark pages). */
 export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', reason, defaultFavoriteTeam }: AuthModalProps) {
   const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>(initialMode);
   const [resetSent, setResetSent] = useState<string | null>(null);
@@ -86,17 +89,17 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal="true" aria-label={mode === 'signin' ? 'Sign in' : mode === 'forgot' ? 'Reset password' : 'Sign up'}>
-      <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 bg-black/50" />
-      <div className="animate-sheet-up relative max-h-[92vh] w-full max-w-[400px] overflow-y-auto rounded-t-2xl bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-2xl">
+      <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 bg-black/60" />
+      <div className="animate-sheet-up relative max-h-[92vh] w-full max-w-[400px] overflow-y-auto rounded-t-2xl border border-slate-700 bg-slate-900 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-white shadow-2xl sm:rounded-2xl">
         <div className="mb-1 flex items-start justify-between">
-          <h2 className="text-2xl font-bold uppercase tracking-wide text-sabres-navy" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
+          <h2 className="text-3xl leading-none text-white" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
             {mode === 'signin' ? 'Sign In' : mode === 'forgot' ? 'Reset Password' : 'Sign Up'}
           </h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="-mr-1 flex h-9 w-9 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
+          <button type="button" onClick={onClose} aria-label="Close" className="-mr-1 -mt-1 flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-white/10 hover:text-white">
             <X className="h-5 w-5" />
           </button>
         </div>
-        <p className="mb-4 text-sm text-gray-500">
+        <p className="mb-4 text-sm text-slate-300">
           {mode === 'forgot'
             ? "Enter your email or username and we'll email you a link to choose a new password."
             : reason ?? 'Save your games and compete on the leaderboard.'}
@@ -106,7 +109,7 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
           <>
             <a
               href={`/api/auth/google?next=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/account')}`}
-              className="flex w-full items-center justify-center gap-2.5 rounded-xl border-2 border-gray-200 bg-white py-3 text-sm font-bold text-gray-800 transition-colors hover:border-gray-300 hover:bg-gray-50"
+              className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-slate-500 bg-slate-950 py-3 text-sm font-bold text-white transition-colors hover:border-slate-400 hover:bg-slate-800"
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden>
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z" />
@@ -116,20 +119,20 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
               </svg>
               Continue with Google
             </a>
-            <div className="my-3 flex items-center gap-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
-              <span className="h-px flex-1 bg-gray-200" />or<span className="h-px flex-1 bg-gray-200" />
+            <div className="my-3 flex items-center gap-3 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <span className="h-px flex-1 bg-slate-700" />or<span className="h-px flex-1 bg-slate-700" />
             </div>
           </>
         )}
 
         {mode === 'forgot' && resetSent ? (
           <div className="flex flex-col gap-3">
-            <p className="rounded-lg bg-green-50 px-3 py-2.5 text-sm text-green-700">{resetSent}</p>
-            <p className="text-xs text-gray-500">Don&apos;t see it? Check your spam folder, or try again in a few minutes.</p>
+            <p className="rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-3 py-2.5 text-sm text-emerald-200">{resetSent}</p>
+            <p className="text-xs text-slate-400">Don&apos;t see it? Check your spam folder, or try again in a few minutes.</p>
             <button
               type="button"
               onClick={() => { setMode('signin'); setResetSent(null); setError(null); }}
-              className="mt-1 w-full rounded-xl bg-sabres-blue py-3 text-sm font-bold uppercase tracking-wide text-white shadow-md transition-colors hover:bg-sabres-light"
+              className={primaryButton}
             >
               Back to Sign In
             </button>
@@ -161,7 +164,7 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
                 <button
                   type="button"
                   onClick={() => { setMode('forgot'); setError(null); }}
-                  className="mt-1.5 text-xs font-semibold text-sabres-blue hover:underline"
+                  className="mt-1.5 text-xs font-semibold text-amber-400 hover:underline"
                 >
                   Forgot password?
                 </button>
@@ -171,15 +174,12 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
 
           {mode === 'signup' && (
             <div>
-              <label className={labelClass} htmlFor="auth-favorite">Favorite team <span className="font-normal normal-case text-gray-400">(optional)</span></label>
+              <label className={labelClass} htmlFor="auth-favorite">Favorite team <span className="font-normal normal-case text-slate-400">(optional)</span></label>
               {favorite && !pickingTeam ? (
-                <div className="flex items-center gap-2 rounded-lg border-2 border-gray-200 bg-gray-50 px-3 py-2">
-                  {'logo' in favorite && favorite.logo && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={favorite.logo} alt="" className="h-6 w-6 shrink-0 object-contain" />
-                  )}
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-800">{favorite.city} {favorite.name}</span>
-                  <button type="button" onClick={() => setPickingTeam(true)} className="shrink-0 text-xs font-bold text-sabres-blue hover:underline">
+                <div className="flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-950 px-3 py-2">
+                  <img src={logoFor(favorite)} alt="" className="h-6 w-6 shrink-0 object-contain" />
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{favorite.city} {favorite.name}</span>
+                  <button type="button" onClick={() => setPickingTeam(true)} className="shrink-0 text-xs font-bold text-amber-400 hover:underline">
                     Change
                   </button>
                 </div>
@@ -210,8 +210,8 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
           )}
 
           {mode === 'signup' && (
-            <label className="flex cursor-pointer items-start gap-2 text-xs text-gray-600">
-              <input type="checkbox" checked={subscribe} onChange={(e) => setSubscribe(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-sabres-blue" />
+            <label className="flex cursor-pointer items-start gap-2 text-xs text-slate-300">
+              <input type="checkbox" checked={subscribe} onChange={(e) => setSubscribe(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-amber-400" />
               <span>
                 {favorite
                   ? `Email me ${favorite.name} game recaps and the weekly Lindy's Five roundup.`
@@ -222,22 +222,18 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
           )}
 
           {mode === 'signup' && (
-            <p className="text-xs text-gray-400">We&apos;ll email you a quick link to confirm your address.</p>
+            <p className="text-xs text-slate-400">We&apos;ll email you a quick link to confirm your address.</p>
           )}
 
-          {error && <p className="text-sm font-semibold text-sabres-red">{error}</p>}
+          {error && <p className="text-sm font-semibold text-red-300">{error}</p>}
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="mt-1 w-full rounded-xl bg-sabres-blue py-3 text-sm font-bold uppercase tracking-wide text-white shadow-md transition-colors hover:bg-sabres-light disabled:opacity-60"
-          >
+          <button type="submit" disabled={submitting} className={primaryButton}>
             {submitting ? 'Please wait…' : mode === 'signin' ? 'Sign In' : mode === 'forgot' ? 'Email Me a Reset Link' : 'Create Account'}
           </button>
         </form>
         )}
 
-        <p className="mt-4 text-center text-sm text-gray-500">
+        <p className="mt-4 text-center text-sm text-slate-400">
           {mode === 'signin' ? "Don't have an account? " : mode === 'forgot' ? 'Remembered it? ' : 'Already have an account? '}
           <button
             type="button"
@@ -246,7 +242,7 @@ export default function AuthModal({ onClose, onSuccess, initialMode = 'signin', 
               setResetSent(null);
               setError(null);
             }}
-            className="font-bold text-sabres-blue hover:underline"
+            className="font-bold text-amber-400 hover:underline"
           >
             {mode === 'signin' ? 'Sign up' : 'Sign in'}
           </button>
