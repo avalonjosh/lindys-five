@@ -107,14 +107,35 @@ function TeamPicker({ current, onDone }: { current: string | null; onDone?: () =
   );
 }
 
-function Stat({ label, value, note, accent }: { label: string; value: string; note?: string; accent?: string }) {
+function Stat({ label, value, note, accent, className = '' }: { label: string; value: string; note?: string; accent?: string; className?: string }) {
   return (
-    <div className="rounded-xl bg-black/25 p-3 sm:p-4">
-      <div className="text-xs text-slate-200 sm:text-sm">{label}</div>
-      <div className="text-4xl leading-tight sm:text-5xl" style={{ fontFamily: 'Bebas Neue, sans-serif', color: accent }}>
+    <div className={`flex min-w-0 flex-col rounded-xl bg-black/25 p-3 sm:p-4 ${className}`}>
+      <div className="truncate text-xs text-slate-200 sm:text-sm">{label}</div>
+      <div className="truncate text-4xl leading-tight sm:text-5xl" style={{ fontFamily: 'Bebas Neue, sans-serif', color: accent }}>
         {value}
       </div>
-      {note && <div className="text-xs text-slate-200 sm:text-sm">{note}</div>}
+      <div className="truncate text-xs text-slate-200 sm:text-sm">{note || '\u00a0'}</div>
+    </div>
+  );
+}
+
+/** "Sat, Oct 3 vs CHI · 7:00 PM" -> a short headline (Today / Sat) and the matchup line. */
+function nextGameParts(next: NonNullable<TeamSnapshot['next']>): { when: string; detail: string } {
+  const [matchup, time] = next.text.split(' · ');
+  const m = matchup.match(/^(\w+), (\w+ \d+) (vs|at) (.+)$/);
+  if (!m) return { when: matchup, detail: time ?? '' };
+  const [, weekday, date, side, opponent] = m;
+  const when = next.daysUntil === 0 ? 'Today' : weekday;
+  const detail = [`${next.daysUntil > 6 ? `${date} ` : ''}${side} ${opponent}`, time].filter(Boolean).join(' · ');
+  return { when, detail };
+}
+
+/** Bebas section heading matching Today's Puzzles beside it (desktop), so both columns start alike. */
+function Heading({ action }: { action?: React.ReactNode }) {
+  return (
+    <div className="hidden items-baseline justify-between lg:flex">
+      <h2 className="text-2xl text-white sm:text-3xl" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>Your Team</h2>
+      {action}
     </div>
   );
 }
@@ -145,56 +166,74 @@ export default function YourTeamCard() {
   }, [favorite]);
 
   if (!mounted) return <div className="h-72 rounded-2xl bg-slate-800/40" aria-hidden="true" />;
-  if (!favorite || picking) return <TeamPicker current={favorite} onDone={picking ? () => setPicking(false) : undefined} />;
+  if (!favorite || picking) {
+    return (
+      <div className="flex flex-col gap-2.5 lg:h-full">
+        <Heading />
+        <TeamPicker current={favorite} onDone={picking ? () => setPicking(false) : undefined} />
+      </div>
+    );
+  }
 
   const team = NHL_TEAMS[favorite] ?? MLB_TEAMS[favorite] ?? NFL_TEAMS[favorite];
   const { bg: primary, accent } = cardColors(team.colors);
   const name = `${team.city} ${team.name}`;
   const href = favorite in NHL_TEAMS ? `/nhl/${favorite}` : favorite in MLB_TEAMS ? `/mlb/${favorite}` : `/pick-the-${NFL_TEAMS[favorite].pickSlug}`;
-  const nextSoon = snapshot?.next && snapshot.next.daysUntil > 1 ? `in ${snapshot.next.daysUntil} days` : snapshot?.next?.daysUntil === 1 ? 'tomorrow' : snapshot?.next ? 'today' : '';
-  const [matchup, time] = snapshot?.next?.text.split(' · ') ?? [];
+  const cta = favorite in NFL_TEAMS ? `Pick the ${team.name}` : `Open ${team.name} tracker`;
+  const next = snapshot?.next ? nextGameParts(snapshot.next) : null;
+  const change = (
+    <button type="button" onClick={() => setPicking(true)} className="min-h-11 shrink-0 px-1 text-sm text-slate-200 underline hover:text-white">
+      Change
+    </button>
+  );
 
   return (
-    <section aria-labelledby="your-team-heading" className="flex flex-col gap-4 rounded-2xl border-2 p-4 sm:p-6" style={{ background: primary, borderColor: accent }}>
-      <div className="flex items-center gap-3 sm:gap-4">
-        <img src={logoFor(team)} alt="" className="h-12 w-12 shrink-0 object-contain sm:h-16 sm:w-16" />
-        <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-bold tracking-wider sm:text-xs" style={{ color: accent }}>YOUR TEAM</div>
-          <h2 id="your-team-heading" className="truncate text-xl font-extrabold text-white sm:text-2xl">{name}</h2>
-          {snapshot?.record && <div className="text-sm text-slate-200">{snapshot.record}</div>}
+    <div className="flex flex-col gap-2.5 lg:h-full">
+      <Heading action={change} />
+      <section aria-labelledby="your-team-heading" className="flex flex-col gap-4 rounded-2xl border-2 p-4 sm:p-6 lg:flex-1" style={{ background: primary, borderColor: accent }}>
+        <div className="flex items-center gap-3 sm:gap-4">
+          <img src={logoFor(team)} alt="" className="h-12 w-12 shrink-0 object-contain sm:h-16 sm:w-16" />
+          <div className="min-w-0 flex-1">
+            <div className="text-[11px] font-bold tracking-wider sm:text-xs lg:hidden" style={{ color: accent }}>YOUR TEAM</div>
+            <h2 id="your-team-heading" className="truncate text-xl font-extrabold text-white sm:text-2xl">{name}</h2>
+            {snapshot?.record && <div className="text-sm text-slate-200">{snapshot.record}</div>}
+          </div>
+          <div className="lg:hidden">{change}</div>
+          {/* Desktop: the tracker button sits in the header row instead of its own row */}
+          <Link
+            href={href}
+            className="hidden min-h-11 shrink-0 items-center gap-1.5 rounded-xl px-5 text-[15px] font-extrabold transition-transform hover:scale-[1.02] lg:flex"
+            style={{ background: accent, color: primary }}
+          >
+            {cta}
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
         </div>
-        <button type="button" onClick={() => setPicking(true)} className="min-h-11 shrink-0 px-1 text-sm text-slate-200 underline hover:text-white">
-          Change
-        </button>
-      </div>
 
-      {!snapshot && !failed && <div className="h-28 animate-pulse rounded-xl bg-black/20" aria-label="Loading team" />}
+        {!snapshot && !failed && <div className="h-28 animate-pulse rounded-xl bg-black/20 lg:flex-1" aria-label="Loading team" />}
 
-      {snapshot && (
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-          {snapshot.odds !== null && <Stat label="Playoff odds" value={`${snapshot.odds}%`} note={snapshot.oddsNote} accent={accent} />}
-          {snapshot.projection && <Stat label={snapshot.projection.label} value={snapshot.projection.value} note={snapshot.projection.note} />}
-          {snapshot.next && (
-            <div className="col-span-2 rounded-xl bg-black/25 p-3 sm:col-span-1 sm:p-4">
-              <div className="text-xs text-slate-200 sm:text-sm">{snapshot.next.label}</div>
-              <div className="mt-1 text-base font-bold leading-snug text-white">{matchup}</div>
-              <div className="mt-0.5 text-xs text-slate-200 sm:text-sm">{[time, nextSoon].filter(Boolean).join(' · ')}</div>
-            </div>
-          )}
-          {snapshot.odds === null && !snapshot.projection && !snapshot.next && (
-            <div className="col-span-2 text-sm text-slate-200 sm:col-span-3">{snapshot.oddsNote || 'Offseason'}</div>
-          )}
-        </div>
-      )}
+        {snapshot && (
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:flex-1">
+            {snapshot.odds !== null && <Stat label="Playoff odds" value={`${snapshot.odds}%`} note={snapshot.oddsNote} accent={accent} />}
+            {snapshot.projection && <Stat label={snapshot.projection.label} value={snapshot.projection.value} note={snapshot.projection.note} />}
+            {snapshot.next && next && (
+              <Stat label={snapshot.next.daysUntil === 1 ? 'Tomorrow' : snapshot.next.label} value={next.when} note={next.detail} className="col-span-2 sm:col-span-1" />
+            )}
+            {snapshot.odds === null && !snapshot.projection && !snapshot.next && (
+              <div className="col-span-2 text-sm text-slate-200 sm:col-span-3">{snapshot.oddsNote || 'Offseason'}</div>
+            )}
+          </div>
+        )}
 
-      <Link
-        href={href}
-        className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl text-[15px] font-extrabold transition-transform hover:scale-[1.02] sm:self-start sm:px-6"
-        style={{ background: accent, color: primary }}
-      >
-        {favorite in NFL_TEAMS ? `Pick the ${team.name}` : `Open ${team.name} tracker`}
-        <ChevronRight className="h-4 w-4" aria-hidden="true" />
-      </Link>
-    </section>
+        <Link
+          href={href}
+          className="flex min-h-12 items-center justify-center gap-1.5 rounded-xl text-[15px] font-extrabold transition-transform hover:scale-[1.02] sm:self-start sm:px-6 lg:hidden"
+          style={{ background: accent, color: primary }}
+        >
+          {cta}
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
+      </section>
+    </div>
   );
 }

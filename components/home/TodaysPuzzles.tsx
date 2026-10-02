@@ -49,7 +49,7 @@ export default function TodaysPuzzles() {
   }, []);
 
   return (
-    <section aria-labelledby="puzzles-heading" className="flex flex-col gap-2.5">
+    <section aria-labelledby="puzzles-heading" className="flex flex-col gap-2.5 lg:h-full">
       <div className="flex items-baseline justify-between">
         <h2 id="puzzles-heading" className="text-2xl text-white sm:text-3xl" style={{ fontFamily: 'Bebas Neue, sans-serif' }}>
           Today&apos;s Puzzles
@@ -61,7 +61,8 @@ export default function TodaysPuzzles() {
           </span>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-1">
+      {/* Desktop: the two cards share the column's height, so the bottom lines up with Your Team */}
+      <div className="grid grid-cols-2 gap-2.5 lg:flex-1 lg:grid-cols-1 lg:auto-rows-fr">
         {PUZZLES.map((p) => {
           const s = status?.[p.sport];
           const played = Boolean(s?.record);

@@ -127,9 +127,14 @@ async function nhlSnapshot(slug: string): Promise<TeamSnapshot | null> {
       standing.clinchIndicator,
     );
     snap.odds = Math.round(probability);
-    snap.oddsNote = 'Updated after every game';
+    // Short notes so each tile reads label, number, one line.
+    const last = [...games].reverse().find((g) => g.outcome !== 'PENDING');
+    snap.oddsNote = last
+      ? `After ${dayLabel(isoFromUS(last.date)).split(',')[0]}'s ${last.outcome === 'W' ? 'win' : last.outcome === 'OTL' ? 'OT loss' : 'loss'}`
+      : 'Updated after every game';
     snap.record = `${standing.wins}-${standing.losses}-${standing.otLosses} · ${standing.points} pts`;
-    if (stats.gamesPlayed > 0) snap.projection = { value: `${Math.round(getModelProjectedPoints(stats.totalPoints, stats.gamesPlayed, team.abbreviation))}`, label: 'Projected points' };
+    const cutLine = Math.round(Math.min(getDivCutLine(standing, standings), getWcCutLine(standing, standings)));
+    if (stats.gamesPlayed > 0) snap.projection = { value: `${Math.round(getModelProjectedPoints(stats.totalPoints, stats.gamesPlayed, team.abbreviation))}`, label: 'Projected points', note: `Cut line ~${cutLine}` };
   }
 
   const next = games.find((g) => g.outcome === 'PENDING' && daysFromToday(isoFromUS(g.date)) >= 0);
