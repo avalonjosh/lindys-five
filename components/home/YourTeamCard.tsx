@@ -189,7 +189,15 @@ export default function YourTeamCard() {
 
   return (
     <div className="flex flex-col gap-2.5 lg:h-full">
-      <Heading action={change} />
+      {/* Desktop heading: Change as a plain text link, so this row is exactly as
+          tall as Today's Puzzles' heading and the two cards start level. */}
+      <Heading
+        action={
+          <button type="button" onClick={() => setPicking(true)} className="shrink-0 text-sm leading-none text-slate-200 underline hover:text-white">
+            Change
+          </button>
+        }
+      />
       <section aria-labelledby="your-team-heading" className="flex flex-col gap-4 rounded-2xl border-2 p-4 sm:p-6 lg:flex-1" style={{ background: primary, borderColor: accent }}>
         <div className="flex items-center gap-3 sm:gap-4">
           <img src={logoFor(team)} alt="" className="h-12 w-12 shrink-0 object-contain sm:h-16 sm:w-16" />
