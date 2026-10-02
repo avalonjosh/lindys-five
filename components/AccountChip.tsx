@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { LogOut, UserRound } from 'lucide-react';
 import { useCurrentUser } from '@/components/perfectseason/useCurrentUser';
 import { logout } from '@/lib/perfectseason/account';
@@ -11,10 +12,14 @@ import { logout } from '@/lib/perfectseason/account';
  * hubs). Signed in: the username's initial, which opens a small menu (My
  * Account, Sign out). Signed out: "Sign in", which goes to /account.
  */
+/** The account page listens for this to open its sign-in window. */
+export const OPEN_SIGNIN_EVENT = 'l5-open-signin';
+
 export default function AccountChip() {
   const { user, loading, setUser } = useCurrentUser();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!open) return;
@@ -35,6 +40,13 @@ export default function AccountChip() {
       <Link
         href="/account"
         aria-label="Sign in"
+        onClick={(e) => {
+          // Already on the account page: open its sign-in window instead of a no-op link.
+          if (pathname === '/account') {
+            e.preventDefault();
+            window.dispatchEvent(new Event(OPEN_SIGNIN_EVENT));
+          }
+        }}
         className="flex h-8 min-w-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-white/15 px-2 text-xs font-bold text-white transition-colors hover:bg-white/25 sm:px-3"
       >
         <UserRound className="h-4 w-4" aria-hidden />

@@ -30,6 +30,7 @@ import { normalizePickDate, type WhatIfSave, type WhatIfPick } from '@/lib/whati
 import type { GameResult } from '@/lib/types';
 import type { ProfileResponse } from '@/app/api/account/profile/route';
 import { supportEnabled } from '@/lib/support';
+import { OPEN_SIGNIN_EVENT } from '@/components/AccountChip';
 import { cardColors, logoFor } from '@/components/home/YourTeamCard';
 import { SectionTitle } from './overview/ui';
 
@@ -339,6 +340,13 @@ export default function AccountPage() {
       setPasswordNotice(true);
       window.history.replaceState(null, '', window.location.pathname);
     }
+  }, []);
+
+  // The header's "Sign in" on this page opens the sign-in window.
+  useEffect(() => {
+    const open = () => { setAuthMode('signin'); setAuthOpen(true); };
+    window.addEventListener(OPEN_SIGNIN_EVENT, open);
+    return () => window.removeEventListener(OPEN_SIGNIN_EVENT, open);
   }, []);
 
   // --- My Teams ---
