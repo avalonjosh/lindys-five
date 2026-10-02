@@ -129,7 +129,7 @@ async function nhlSnapshot(slug: string): Promise<TeamSnapshot | null> {
     snap.odds = Math.round(probability);
     snap.oddsNote = 'Updated after every game';
     snap.record = `${standing.wins}-${standing.losses}-${standing.otLosses} · ${standing.points} pts`;
-    if (stats.gamesPlayed > 0) snap.projection = { value: `${Math.round(stats.projectedPoints)}`, label: 'Points pace' };
+    if (stats.gamesPlayed > 0) snap.projection = { value: `${Math.round(getModelProjectedPoints(stats.totalPoints, stats.gamesPlayed, team.abbreviation))}`, label: 'Projected points' };
   }
 
   const next = games.find((g) => g.outcome === 'PENDING' && daysFromToday(isoFromUS(g.date)) >= 0);

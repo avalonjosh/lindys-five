@@ -49,7 +49,7 @@ function TableHeader({ compact = false }: { compact?: boolean }) {
         </th>
         <th className="text-center py-2 px-2 font-bold text-gray-700">PTS</th>
         <th className={`text-center py-2 px-2 ${compact ? 'hidden 2xl:table-cell' : 'hidden xl:table-cell'}`}>PTS%</th>
-        <th className="text-center py-2 px-2">Pace</th>
+        <th className="text-center py-2 px-2">Proj</th>
         <th className="text-center py-2 px-2 font-bold text-gray-700">Odds</th>
         {!compact && <th className="text-center py-2 px-2 hidden 2xl:table-cell">Strk</th>}
       </tr>
@@ -297,7 +297,7 @@ export default function PlayoffOddsClient({ teams }: { teams: TeamData[] }) {
       {view === 'league' && <LeagueView teams={teams} />}
 
       <div className="mt-8 bg-white rounded-xl border border-gray-200 px-5 py-4 text-sm text-gray-500 flex flex-wrap gap-x-6 gap-y-2 shadow-sm">
-        <span><strong className="text-gray-700">Pace</strong> = projected full-season point total</span>
+        <span><strong className="text-gray-700">Proj</strong> = projected final points (the pace so far, regressed toward each team&apos;s preseason strength)</span>
         <span><strong className="text-gray-700">Odds</strong> = playoff probability</span>
         <span><strong className="text-gray-700">PTS%</strong> = points percentage</span>
         <span><strong className="text-gray-700">WC</strong> = wildcard spot</span>

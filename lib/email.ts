@@ -9,7 +9,7 @@ import { fetchJsonWithRetry } from './fetchWithRetry';
 import { generateGameTicketLink, generateFanaticsLink, FANATICS_ENABLED } from './utils/affiliateLinks';
 import { renderGearCard, gearCardTable, pickGearHero, espnLogoUrl, teamGearOptions, type EmailPlacement } from './emailOffers';
 import { nhlWatchInfo, watchSummary, type TvBroadcast } from './watch/nhlWatch';
-import { getProjectedPoints, getModelProjectedPoints, getDivCutLine, getWcCutLine, isInPlayoffPosition, getPlayoffProbability } from './utils/standingsCalc';
+import { getModelProjectedPoints, getDivCutLine, getWcCutLine, isInPlayoffPosition, getPlayoffProbability } from './utils/standingsCalc';
 import { computePositionAwareProbability, computeSeriesWinProbability, seriesOptionsFor } from './utils/playoffProbability';
 import { fetchPlayoffsSnapshot, type PlayoffsSnapshot } from './services/playoffsSnapshot';
 import type { PlayoffSeries, PlayoffGame } from './types/playoffs';
@@ -292,7 +292,7 @@ export async function sendSetRecapForTeam(
     gamesPlayed: teamStanding.gamesPlayed,
     points: teamStanding.points,
     pace: teamStanding.gamesPlayed > 0 ? (teamStanding.points / teamStanding.gamesPlayed).toFixed(2) : '0.00',
-    projected: getProjectedPoints(teamStanding.points, teamStanding.gamesPlayed),
+    projected: Math.round(getModelProjectedPoints(teamStanding.points, teamStanding.gamesPlayed, teamStanding.teamAbbrev.default)),
     record: `${teamStanding.wins}-${teamStanding.losses}-${teamStanding.otLosses}`,
   } : { gamesPlayed: 0, points: 0, pace: '0.00', projected: 0, record: '0-0-0' };
 
@@ -455,7 +455,7 @@ async function sendBoxscoreRecapForTeam(
     gamesPlayed: teamStanding.gamesPlayed,
     points: teamStanding.points,
     pace: teamStanding.gamesPlayed > 0 ? (teamStanding.points / teamStanding.gamesPlayed).toFixed(2) : '0.00',
-    projected: getProjectedPoints(teamStanding.points, teamStanding.gamesPlayed),
+    projected: Math.round(getModelProjectedPoints(teamStanding.points, teamStanding.gamesPlayed, teamStanding.teamAbbrev.default)),
     record: `${teamStanding.wins}-${teamStanding.losses}-${teamStanding.otLosses}`,
   } : {
     gamesPlayed: 0, points: 0, pace: '0.00', projected: 0, record: '0-0-0',

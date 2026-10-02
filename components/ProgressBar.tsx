@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { MoreHorizontal, X as XIcon, Link as LinkIcon, Check, ChevronDown } from 'lucide-react';
 import type { SeasonStats } from '@/lib/types';
 import type { StandingsTeam } from '@/lib/types/boxscore';
@@ -792,6 +792,14 @@ export default function ProgressBar({ stats, isGoatMode, yearOverYearMode, yearO
   };
 
   // Calculate playoff probabilities
+  // The Projected tile (and the "If they finish with" grid) shows the model's
+  // projection, the number the odds run on, not the raw pace: after one game a
+  // 0-1 team would otherwise read "projected 0" next to 49% odds.
+  const displayStats = useMemo(
+    () => ({ ...stats, projectedPoints: Math.round(getModelProjectedPoints(stats.totalPoints, stats.gamesPlayed, teamAbbrev)) }),
+    [stats, teamAbbrev],
+  );
+
   // Main probability uses position-aware model when cut line data available
   // 99% stays 99% until the NHL's clinch flag says otherwise.
   const probability = cutLineData
@@ -915,7 +923,7 @@ ${teamUrl}
       {/* Current Year Section - wrapped in relative container for share button positioning */}
       <div className="relative">
         <SeasonSection
-          stats={stats}
+          stats={displayStats}
           isGoatMode={isGoatMode}
           teamColors={teamColors}
           darkModeColors={darkModeColors}
@@ -1079,7 +1087,7 @@ ${teamUrl}
             stats={lastSeasonStats}
             isGoatMode={isGoatMode}
             isLastYear={true}
-            currentYearStats={stats}
+            currentYearStats={displayStats}
             lastSeasonLabel={lastSeasonLabel}
             teamColors={teamColors}
             darkModeColors={darkModeColors}

@@ -5,7 +5,7 @@ import MLBTeamNav from '@/components/mlb/MLBTeamNav';
 import { TEAMS } from '@/lib/teamConfig';
 import type { StandingsTeam } from '@/lib/types/boxscore';
 import type { PlayoffBracketResponse } from '@/lib/types/playoffs';
-import { getProjectedPoints, getPlayoffProbability, isInPlayoffPosition } from '@/lib/utils/standingsCalc';
+import { getModelProjectedPoints, getPlayoffProbability, isInPlayoffPosition } from '@/lib/utils/standingsCalc';
 import { buildCupOdds } from '@/lib/utils/cupOdds';
 import { buildProjectedFirstRound } from '@/lib/utils/projectedBracket';
 import PlayoffOddsClient, { type TeamData } from '@/components/PlayoffOddsClient';
@@ -184,7 +184,8 @@ function buildTeamData(standings: StandingsTeam[]): TeamData[] {
     otLosses: team.otLosses,
     points: team.points,
     pointPctg: team.pointPctg,
-    pace: getProjectedPoints(team.points, team.gamesPlayed),
+    // The model's projected final points (what the odds use), not the raw pace.
+    pace: Math.round(getModelProjectedPoints(team.points, team.gamesPlayed, team.teamAbbrev.default)),
     odds: getPlayoffProbability(team, standings),
     streakCode: team.streakCode,
     streakCount: team.streakCount,
@@ -340,7 +341,7 @@ export default async function NHLPlayoffOddsPage() {
                 : `NHL Playoff Odds & Standings ${seasonLabel}`,
               description: seasonComplete
                 ? `Final standings and playoff results for all 32 NHL teams for the ${seasonLabel} season. Each team row includes final record, points, games played, and playoff result.${outcome.championName ? ` ${outcome.championName} won the ${endYear} Stanley Cup.` : ''}`
-                : `Daily-updated playoff probability, projected points, and standings for all 32 NHL teams for the ${seasonLabel} season. Each team row includes record, points, games played, projected points at current pace, and a logistic playoff probability measured against the division and wild card cut lines.`,
+                : `Daily-updated playoff probability, projected points, and standings for all 32 NHL teams for the ${seasonLabel} season. Each team row includes record, points, games played, projected final points, and a logistic playoff probability measured against the division and wild card cut lines.`,
               url: 'https://www.lindysfive.com/nhl-playoff-odds',
               keywords: [
                 'NHL playoff odds',
@@ -434,8 +435,8 @@ export default async function NHLPlayoffOddsPage() {
           ) : (
             <>
               Live NHL playoff probability, projected points, and standings for all 32 teams,
-              ranked by points and updated daily. Projected points extrapolate the current
-              points pace over the full season; playoff probability is a logistic estimate
+              ranked by points and updated daily. Projected points are the model&apos;s expected
+              final total (the current pace, regressed toward each team&apos;s preseason strength); playoff probability is a logistic estimate
               against the division and wild card cut lines.
             </>
           )}
