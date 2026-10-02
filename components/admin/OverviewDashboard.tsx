@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { Eye, Users, FileText, TrendingUp, Zap, Radio, ArrowRight, DollarSign } from 'lucide-react';
+import { Eye, Users, TrendingUp, Zap, Radio, ArrowRight, DollarSign } from 'lucide-react';
 import { fetchPosts, updatePost } from '@/lib/services/blogApi';
 import { getCronJobs, upcomingRuns } from '@/lib/cronSchedule';
 import {
@@ -79,7 +79,8 @@ export default function OverviewDashboard() {
   const [viewsBasis, setViewsBasis] = useState<string | null>(null);
   const [weekViews, setWeekViews] = useState<number | null>(null);
   const [ga4Error, setGa4Error] = useState<string | null>(null);
-  const [liveNow, setLiveNow] = useState<number | null>(null);
+  // GA4 realtime: people on the site in the last 30 minutes, and what they're viewing most.
+  const [live, setLive] = useState<{ active: number; topPage: string | null } | null | 'unavailable'>(null);
   const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
   const [drafts, setDrafts] = useState<BlogPost[]>([]);
   const [settings, setSettings] = useState<Record<string, boolean>>({});
@@ -108,7 +109,7 @@ export default function OverviewDashboard() {
       setGa4Error(todayRes.error || null);
     }
     if (weekRes) setWeekViews(weekRes.totalViews ?? 0);
-    if (rtRes && !rtRes.error) setLiveNow(rtRes.activeUsers ?? null);
+    setLive(rtRes && !rtRes.error ? { active: rtRes.activeUsers ?? 0, topPage: rtRes.pages?.[0]?.name ?? null } : 'unavailable');
     if (subRes) setSubscribers(subRes.subscribers || []);
     if (postsData) {
       setDrafts(
@@ -125,6 +126,17 @@ export default function OverviewDashboard() {
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d && setAffiliates(d))
       .catch(() => null);
+  }, []);
+
+  // Live now refreshes every minute, like the Analytics tab.
+  useEffect(() => {
+    const id = setInterval(() => {
+      fetch('/api/analytics/realtime')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((rt) => setLive(rt && !rt.error ? { active: rt.activeUsers ?? 0, topPage: rt.pages?.[0]?.name ?? null } : 'unavailable'))
+        .catch(() => null);
+    }, 60000);
+    return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
@@ -192,11 +204,34 @@ export default function OverviewDashboard() {
       {/* Stat row */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
+          icon={
+            live && live !== 'unavailable' && live.active > 0 ? (
+              <span className="relative mt-1 flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500" />
+              </span>
+            ) : (
+              <Radio className="h-5 w-5" />
+            )
+          }
+          label="Live now"
+          value={
+            live === null ? '—'
+            : live === 'unavailable' ? '—'
+            : <span className={live.active > 0 ? 'text-green-700' : undefined}>{live.active.toLocaleString()}</span>
+          }
+          sub={
+            live === null ? 'Loading…'
+            : live === 'unavailable' ? 'GA4 realtime unavailable'
+            : live.active === 0 ? 'No one on the site right now'
+            : live.topPage ? `Most viewed: ${live.topPage}` : 'active in the last 30 min'
+          }
+        />
+        <StatCard
           icon={<Eye className="h-5 w-5" />}
           label="Views today"
           value={todayViews != null ? todayViews.toLocaleString() : '—'}
           delta={viewsChange != null && viewsChange !== 0 ? { value: viewsChange, label: `vs ${viewsBasis ?? 'yesterday'}`, format: (n) => `${n > 0 ? '+' : ''}${n}%` } : undefined}
-          sub={liveNow != null && liveNow > 0 ? `${liveNow} on the site right now` : undefined}
         />
         <StatCard
           icon={<TrendingUp className="h-5 w-5" />}
@@ -208,12 +243,6 @@ export default function OverviewDashboard() {
           label="Subscribers"
           value={subStats.verified}
           delta={subStats.newThisWeek > 0 ? { value: subStats.newThisWeek, label: 'new this week' } : undefined}
-        />
-        <StatCard
-          icon={<FileText className="h-5 w-5" />}
-          label="Drafts pending"
-          value={drafts.length}
-          sub={drafts.length > 0 ? 'awaiting review below' : 'all caught up'}
         />
       </div>
 
