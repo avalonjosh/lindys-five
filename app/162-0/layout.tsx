@@ -27,7 +27,9 @@ export function generateMetadata(): Metadata {
 export default function PerfectSeasonLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      {children}
+      {/* At least a screen tall while the board loads in stages, so the footers start
+          below the fold instead of jumping down (a desktop layout-shift flag in Search Console). */}
+      <div className="min-h-screen">{children}</div>
       <footer className="bg-slate-50 px-4 py-6 text-center">
         <nav className="mx-auto mb-4 flex max-w-[480px] flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm font-semibold">
           <Link href="/mlb/playoff-odds" className="text-sabres-blue hover:underline">MLB Playoff Odds</Link>
