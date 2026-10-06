@@ -24,7 +24,7 @@ Cloud routines on Josh's claude.ai account email him at 9am ET for the items mar
 | ~2026-10-12 | StubHub re-harvest: LCS games once each matchup is set (ALCS/NLCS listings say "TBD at {team}" until then), then World Series. Done: Wild Card (12 games, 2026-09-28), Division Series remaining 12 games (2026-10-06: NLDS LAD-ATL, SD-MIL; ALDS CLE-CWS, TB-NYY, incl. if-necessary Game 5s). Until harvested, buttons fall back to the team ticket page |
 | ~2026-10-10 | Check home page pass 1 in GA4: new-visitor engagement 61% -> 70%+ target; tracker/odds/scores share of home clicks ~21% -> 35%+ |
 | 2026-10-10 (email) | Odds model check-in routine (computes all 32 teams, spot-checks live pages). Its prompt still says "30-game prior"; the model is 40 games plus team-specific priors now, ignore that wording |
-| Oct 2026 | Re-check GSC after opening night. What-If picks season-start dry run (verify grading UX against real results) |
+| Oct 2026 | Re-check GSC after opening night. (What-If season-start check done 2026-10-06: all 3 real 2026-27 NHL saves map to real game ids and grade against results, e.g. Sabres saves 1/2 exact after CBJ L, CHI W.) |
 | 2026-11-04 (email) | Home page pass 2 due; build early-to-mid Nov |
 | By 2026-11-23 | Send a gift guide test (`/api/cron/email-gift-guide?test=you@email&team=sabres`), then turn on Holiday Gift Guide in Admin > Newsletter (it sends Nov 24) |
 | By Mar 2027 | Turn on NHL Clinch in Admin > Newsletter before the first clinches |
