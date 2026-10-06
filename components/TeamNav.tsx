@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { TEAMS } from '@/lib/teamConfig';
 import { fetchTeamStandings, type TeamStandings } from '@/lib/services/nhlApi';
@@ -36,17 +36,16 @@ interface TeamNavProps {
 export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, teamColors, refreshTrigger }: TeamNavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
-  const [favorites, setFavorites] = useState<string[]>(() => readFavorites());
+  // Browser-only settings start at their defaults and load after mount, so the
+  // server HTML and the browser's first render match (no hydration mismatch).
+  const [favorites, setFavorites] = useState<string[]>([]);
   // Loads the signed-in account (if any) and merges its favorite into local favorites.
   useCurrentUser();
-  const [expandedDivisions, setExpandedDivisions] = useState<Record<string, boolean>>(() => {
-    if (typeof window === 'undefined') return { 'Atlantic Division': true, 'Metropolitan Division': true };
-    const saved = localStorage.getItem('expanded-divisions');
-    return saved ? JSON.parse(saved) : {
-      'Atlantic Division': true,
-      'Metropolitan Division': true,
-    };
+  const [expandedDivisions, setExpandedDivisions] = useState<Record<string, boolean>>({
+    'Atlantic Division': true,
+    'Metropolitan Division': true,
   });
+  const divisionsLoaded = useRef(false);
   const [teamStandings, setTeamStandings] = useState<Map<string, TeamStandings>>(new Map());
   const [loadingStandings, setLoadingStandings] = useState(false);
   const [activeTab, setActiveTab] = useState<'nhl' | 'mlb'>('nhl');
@@ -60,8 +59,17 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
   // For vintage Jets (dark mode), use classic sidebar styling
   const useClassicStyling = currentTeamId === 'jets' && isGoatMode ? false : isGoatMode;
 
-  // Follow favorites written elsewhere (account sync, profile page, other tabs)
-  useEffect(() => onFavoritesChange(setFavorites), []);
+  // Load browser-saved settings, then follow favorites written elsewhere
+  // (account sync, profile page, other tabs).
+  useEffect(() => {
+    setFavorites(readFavorites());
+    try {
+      const saved = localStorage.getItem('expanded-divisions');
+      if (saved) setExpandedDivisions(JSON.parse(saved));
+    } catch { /* storage unavailable or bad JSON: keep defaults */ }
+    divisionsLoaded.current = true;
+    return onFavoritesChange(setFavorites);
+  }, []);
 
   // Detect whether the NHL playoffs are currently active — used to hide the redundant
   // "Playoff Odds" nav item once playoffs go live. A completed bracket (champion
@@ -89,9 +97,12 @@ export default function TeamNav({ currentTeamId, isGoatMode, darkModeColors, tea
     };
   }, []);
 
-  // Save expanded divisions to localStorage whenever they change
+  // Save expanded divisions whenever they change (after the saved ones have loaded)
   useEffect(() => {
-    localStorage.setItem('expanded-divisions', JSON.stringify(expandedDivisions));
+    if (!divisionsLoaded.current) return;
+    try {
+      localStorage.setItem('expanded-divisions', JSON.stringify(expandedDivisions));
+    } catch { /* storage unavailable */ }
   }, [expandedDivisions]);
 
   // Fetch team standings when menu opens or when refresh is triggered

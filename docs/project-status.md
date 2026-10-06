@@ -42,8 +42,7 @@ Cloud routines on Josh's claude.ai account email him at 9am ET for the items mar
 - **Odds model**: one early-season game still swings odds ~15 pts (backtest does not support flattening more). League sum of odds early season is ~14.5 of 16 (cut-line floors). MLB pace-vs-talent display tension untouched.
 - **Deliberately not changed** (flag only if it becomes a problem): quick-subscribe/account-signup are single opt-in; `incrementSendStat` read-modify-write race (stats only).
 - **Possible future**: TeamTracker hydration refactor (~1.2s main thread on team pages).
-- **Hydration mismatch in TeamNav** (seen in dev 2026-10-02 on `/nhl/sabres`): the menu's favorites section renders differently on the server and client (an `h3` vs a button), so React re-renders that part on load. Likely the localStorage favorites read during render. Harmless to users, worth fixing with the menu's next change.
-- **Dev-only React warning** on NHL team pages: "Each child in a list should have a unique key" (render method of TeamTracker). Checked 2026-09-29: TeamTracker's own lists, the server summary and FAQ are all keyed; not found without a component stack (use React DevTools in a real browser). No production impact.
+- **Dev-only React warning** on NHL and MLB team pages: "Each child in a list should have a unique key" (TeamTracker / MLBTeamTracker, "passed a child from TeamPage"). Narrowed 2026-10-06: it only appears when the page passes its server-rendered summary (`serverSummary`) into the tracker, and goes away with `serverSummary={null}`; keying every child of that block did not clear it, so it looks like a React dev-mode quirk with server elements rendered inside a client component. No production impact; leave it. (The TeamNav hydration mismatch is fixed.)
 - **NHL Shop affiliate**: applied on Impact 2026-08-25, not needed (same inventory/rate as Fanatics). Ignore unless approved; don't nag.
 
 ## In-progress projects

@@ -109,22 +109,19 @@ export default function TeamTracker({
   const [stats, setStats] = useState<SeasonStats | null>(() => (hasInitial ? calculateSeasonStats(calculateChunks(initialGames!, totalGames), totalGames) : null));
   const [loading, setLoading] = useState(!hasInitial);
   const [hideCompleted, setHideCompleted] = useState(true);
-  const [chunkStatsCache, setChunkStatsCache] = useState<Map<number, ChunkStats>>(() => {
-    if (typeof window === 'undefined') return new Map<number, ChunkStats>();
-    // On mount, try to load cached stats from localStorage
-    const initialCache = new Map<number, ChunkStats>();
-
-    // We don't know which chunks exist yet, but we can pre-populate
-    // the cache for chunks 1-17 (max possible in a season: 84 games / 5 = 16.8)
+  const [chunkStatsCache, setChunkStatsCache] = useState<Map<number, ChunkStats>>(() => new Map());
+  // Load cached set stats from localStorage after mount (reading it during the
+  // first render made the browser's HTML differ from the server's). Chunks 1-17
+  // cover any season (84 games / 5 = 16.8).
+  useEffect(() => {
+    const cached = new Map<number, ChunkStats>();
     for (let i = 1; i <= 17; i++) {
-      const cachedStats = loadChunkStatsFromCache(team.id, i, team.nhlId);
-      if (cachedStats) {
-        initialCache.set(i, cachedStats);
-      }
+      const stats = loadChunkStatsFromCache(team.id, i, team.nhlId);
+      if (stats) cached.set(i, stats);
     }
-
-    return initialCache;
-  });
+    if (cached.size > 0) setChunkStatsCache(prev => new Map([...cached, ...prev]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [team.id]);
   const [isGoatMode, setIsGoatMode] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
   const [playoffSeries, setPlayoffSeries] = useState<JourneySeries[]>([]);
