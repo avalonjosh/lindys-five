@@ -4,7 +4,7 @@
  * from scripts/data/stubhub-*.txt; do not edit by hand. Regenerate after a fresh
  * browser harvest (see the script header) when the schedule changes.
  *
- * 1571 events. Canadian home venues are not listed on StubHub US and
+ * 1583 events. Canadian home venues are not listed on StubHub US and
  * fall back to a StubHub search.
  */
 export const STUBHUB_EVENT_IDS: Record<string, number> = {
@@ -31,6 +31,8 @@ export const STUBHUB_EVENT_IDS: Record<string, number> = {
   'mlb:ATL:LAD:2026-08-25': 159262165,
   'mlb:ATL:LAD:2026-08-26': 159262166,
   'mlb:ATL:LAD:2026-08-27': 159262167,
+  'mlb:ATL:LAD:2026-10-06': 161522492,
+  'mlb:ATL:LAD:2026-10-07': 161522485,
   'mlb:ATL:PHI:2026-09-11': 159262174,
   'mlb:ATL:PHI:2026-09-12': 159262175,
   'mlb:ATL:PHI:2026-09-13': 159262176,
@@ -101,6 +103,7 @@ export const STUBHUB_EVENT_IDS: Record<string, number> = {
   'mlb:CLE:CWS:2026-09-14': 159264158,
   'mlb:CLE:CWS:2026-09-15': 159264159,
   'mlb:CLE:CWS:2026-09-16': 159264160,
+  'mlb:CLE:CWS:2026-10-10': 161561557,
   'mlb:CLE:DET:2026-09-04': 159264155,
   'mlb:CLE:DET:2026-09-05': 159264156,
   'mlb:CLE:DET:2026-09-06': 159264157,
@@ -129,6 +132,8 @@ export const STUBHUB_EVENT_IDS: Record<string, number> = {
   'mlb:COL:STL:2026-09-04': 159263574,
   'mlb:COL:STL:2026-09-05': 159263575,
   'mlb:COL:STL:2026-09-06': 159263576,
+  'mlb:CWS:CLE:2026-10-07': 161554370,
+  'mlb:CWS:CLE:2026-10-08': 161554368,
   'mlb:CWS:COL:2026-09-25': 159263422,
   'mlb:CWS:COL:2026-09-26': 159263423,
   'mlb:CWS:COL:2026-09-27': 159263424,
@@ -207,6 +212,7 @@ export const STUBHUB_EVENT_IDS: Record<string, number> = {
   'mlb:LAA:SEA:2026-09-14': 159263013,
   'mlb:LAA:SEA:2026-09-15': 159263014,
   'mlb:LAA:SEA:2026-09-16': 159263015,
+  'mlb:LAD:ATL:2026-10-09': 161542437,
   'mlb:LAD:CIN:2026-09-07': 159257701,
   'mlb:LAD:CIN:2026-09-08': 159257702,
   'mlb:LAD:CIN:2026-09-09': 159257703,
@@ -242,6 +248,7 @@ export const STUBHUB_EVENT_IDS: Record<string, number> = {
   'mlb:MIL:CIN:2026-09-11': 159263176,
   'mlb:MIL:CIN:2026-09-12': 159263177,
   'mlb:MIL:CIN:2026-09-13': 159263178,
+  'mlb:MIL:SD:2026-10-09': 161543159,
   'mlb:MIL:STL:2026-09-25': 159263179,
   'mlb:MIL:STL:2026-09-26': 159263180,
   'mlb:MIL:STL:2026-09-27': 159263181,
@@ -300,6 +307,8 @@ export const STUBHUB_EVENT_IDS: Record<string, number> = {
   'mlb:NYY:TB:2026-09-22': 159257465,
   'mlb:NYY:TB:2026-09-23': 159257466,
   'mlb:NYY:TB:2026-09-24': 159257467,
+  'mlb:NYY:TB:2026-10-07': 161554168,
+  'mlb:NYY:TB:2026-10-08': 161554156,
   'mlb:OAK:BAL:2026-08-28': 159263906,
   'mlb:OAK:BAL:2026-08-29': 159263907,
   'mlb:OAK:BAL:2026-08-30': 159263908,
@@ -354,6 +363,8 @@ export const STUBHUB_EVENT_IDS: Record<string, number> = {
   'mlb:SD:MIA:2026-09-18': 159262417,
   'mlb:SD:MIA:2026-09-19': 159262418,
   'mlb:SD:MIA:2026-09-20': 159262419,
+  'mlb:SD:MIL:2026-10-06': 161794159,
+  'mlb:SD:MIL:2026-10-07': 161794149,
   'mlb:SD:NYY:2026-09-04': 159262411,
   'mlb:SD:NYY:2026-09-05': 159262412,
   'mlb:SD:NYY:2026-09-06': 159262413,
@@ -418,6 +429,7 @@ export const STUBHUB_EVENT_IDS: Record<string, number> = {
   'mlb:TB:NYM:2026-08-31': 159263251,
   'mlb:TB:NYM:2026-09-01': 159263252,
   'mlb:TB:NYM:2026-09-02': 159263253,
+  'mlb:TB:NYY:2026-10-10': 161544337,
   'mlb:TB:OAK:2026-09-15': 159263257,
   'mlb:TB:OAK:2026-09-16': 159263258,
   'mlb:TB:OAK:2026-09-17': 159263259,
