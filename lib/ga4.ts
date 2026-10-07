@@ -162,6 +162,8 @@ export async function fetchOverview(w: AnalyticsWindow) {
     totalViews,
     uniqueVisitors,
     viewsChange,
+    /** The views it was compared against (null when there's no comparison). */
+    previousViews: viewsChange == null ? null : Math.round(previousViews),
     /** What viewsChange compares against, for the label. */
     viewsChangeBasis: sameTimeYesterday
       ? throughHour == null ? null : `yesterday through ${hourLabel(throughHour + 1)}`

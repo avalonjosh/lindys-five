@@ -77,6 +77,7 @@ export default function OverviewDashboard() {
   const [todayViews, setTodayViews] = useState<number | null>(null);
   const [viewsChange, setViewsChange] = useState<number | null>(null);
   const [viewsBasis, setViewsBasis] = useState<string | null>(null);
+  const [prevViews, setPrevViews] = useState<number | null>(null);
   const [weekViews, setWeekViews] = useState<number | null>(null);
   const [ga4Error, setGa4Error] = useState<string | null>(null);
   // GA4 realtime: people on the site in the last 30 minutes, and what they're viewing most.
@@ -106,6 +107,7 @@ export default function OverviewDashboard() {
       setTodayViews(todayRes.totalViews ?? 0);
       setViewsChange(todayRes.viewsChange ?? null);
       setViewsBasis(todayRes.viewsChangeBasis ?? null);
+      setPrevViews(todayRes.previousViews ?? null);
       setGa4Error(todayRes.error || null);
     }
     if (weekRes) setWeekViews(weekRes.totalViews ?? 0);
@@ -231,7 +233,7 @@ export default function OverviewDashboard() {
           icon={<Eye className="h-5 w-5" />}
           label="Views today"
           value={todayViews != null ? todayViews.toLocaleString() : '—'}
-          delta={viewsChange != null && viewsChange !== 0 ? { value: viewsChange, label: `vs ${viewsBasis ?? 'yesterday'}`, format: (n) => `${n > 0 ? '+' : ''}${n}%` } : undefined}
+          delta={viewsChange != null && viewsChange !== 0 ? { value: viewsChange, label: `vs ${prevViews != null ? `${prevViews.toLocaleString()} ` : ''}${viewsBasis ?? 'yesterday'}`, format: (n) => `${n > 0 ? '+' : ''}${n}%` } : undefined}
         />
         <StatCard
           icon={<TrendingUp className="h-5 w-5" />}

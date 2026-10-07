@@ -33,8 +33,9 @@ interface OverviewData {
   totalViews: number;
   uniqueVisitors: number | null;
   viewsChange: number | null;
-  /** What viewsChange compares with, e.g. "yesterday at this time". */
+  /** What viewsChange compares with, e.g. "yesterday through 7am". */
   viewsChangeBasis?: string | null;
+  previousViews?: number | null;
   bounceRate: number | null;
   avgDuration: number | null;
   topPage: { name: string; count: number } | null;
@@ -243,7 +244,10 @@ export default function AnalyticsDashboard() {
     };
   }, [range, fetchData, fetchRealtime]);
 
-  const deltaLabel = overview?.viewsChangeBasis ? `vs ${overview.viewsChangeBasis}` : null;
+  // e.g. "vs 86 yesterday through 7am": the actual earlier views, not just the percentage.
+  const deltaLabel = overview?.viewsChangeBasis
+    ? `vs ${overview.previousViews != null ? `${overview.previousViews.toLocaleString()} ` : ''}${overview.viewsChangeBasis}`
+    : null;
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8">
