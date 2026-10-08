@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { getDateKey } from '@/lib/analytics';
+import { withCronHealth } from '@/lib/health/cronRuns';
 
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -63,3 +64,5 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({ ok: true, cleaned: deleted.length });
 }
+
+export const GET = withCronHealth('analytics-cleanup', handler);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendAffiliateWeeklySummary, loadAffiliateWeeklyData, renderAffiliateWeeklyEmail } from '@/lib/affiliateSummaryEmail';
+import { withCronHealth } from '@/lib/health/cronRuns';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -8,7 +9,7 @@ export const maxDuration = 60;
  * Weekly affiliate summary email to the site owner (Mondays, 9am ET via vercel.json).
  * `?preview=1` returns the rendered HTML instead of sending, for checking the layout.
  */
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -25,3 +26,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
   }
 }
+
+export const GET = withCronHealth('affiliate-summary', handler);

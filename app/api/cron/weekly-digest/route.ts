@@ -10,6 +10,7 @@ import { fetchNhlStandingsServer } from '@/lib/services/standingsFetch';
 import { NHL_TEAMS, MLB_TEAMS, NFL_TEAMS } from '@/lib/teamConfig';
 import type { BlogPost, NewsletterSubscriber } from '@/lib/types';
 import { wantsEmail } from '@/lib/types';
+import { withCronHealth } from '@/lib/health/cronRuns';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.lindysfive.com';
 // Off by default — the weekly blast only goes out once this KV flag is set true.
@@ -159,7 +160,7 @@ function personalize(pool: DigestPool, teams: string[]): WeeklyDigestContent | n
 const parseTeams = (raw: string | null): string[] =>
   (raw ?? '').split(',').map((t) => t.trim()).filter(Boolean);
 
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -198,3 +199,5 @@ export async function GET(request: NextRequest) {
   const result = await sendWeeklyDigest(active, (sub) => personalize(pool, sub.teams ?? []));
   return NextResponse.json(result);
 }
+
+export const GET = withCronHealth('weekly-digest', handler);

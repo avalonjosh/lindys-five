@@ -6,11 +6,12 @@ import { TEAMS } from '@/lib/teamConfig';
 import { sendSetRecapForTeam, getVerifiedSubscribersForTeam } from '@/lib/email';
 import { fetchJsonWithRetry } from '@/lib/fetchWithRetry';
 import type { GameResult } from '@/lib/types';
+import { withCronHealth } from '@/lib/health/cronRuns';
 
 const NHL_API = 'https://api-web.nhle.com/v1';
 const GAMES_PER_SET = 5;
 
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -125,3 +126,5 @@ async function getLatestCompletedSetNumber(teamAbbrev: string, teamId: number): 
 
   return latestCompleted;
 }
+
+export const GET = withCronHealth('email-set-recap', handler);

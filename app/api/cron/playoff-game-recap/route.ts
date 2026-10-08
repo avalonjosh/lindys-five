@@ -12,6 +12,7 @@ import { quickFactCheck } from '@/lib/factCheck';
 import { sendGameRecapNewsletter } from '@/lib/email';
 import { generateAndUploadOgImage } from '@/lib/utils/ogImage';
 import { TEAMS } from '@/lib/teamConfig';
+import { withCronHealth } from '@/lib/health/cronRuns';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 const GAME_END_BUFFER_MS = 30 * 60 * 1000;
@@ -217,7 +218,7 @@ const ROUND_LABELS: Record<number, string> = {
   4: 'Stanley Cup Final',
 };
 
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -378,3 +379,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to process playoff game recaps', message: error.message }, { status: 500 });
   }
 }
+
+export const GET = withCronHealth('playoff-game-recap', handler);

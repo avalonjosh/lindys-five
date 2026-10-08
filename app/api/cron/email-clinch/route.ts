@@ -9,6 +9,7 @@ import { fetchJsonWithRetry } from '@/lib/fetchWithRetry';
 import { generateTeamTicketsLink } from '@/lib/utils/affiliateLinks';
 import { getVerifiedSubscribersForTeam, renderClinchEmail, sendMomentEmail } from '@/lib/email';
 import type { StandingsTeam } from '@/lib/types/boxscore';
+import { withCronHealth } from '@/lib/health/cronRuns';
 
 // Off by default — real sends to subscribers only once this flag is set true.
 // Runs daily; each team gets one clinch email per season (its first clinch).
@@ -21,7 +22,7 @@ const ticketsFor = (slug: string) => {
 };
 const subjectFor = (slug: string) => `The ${NHL_TEAMS[slug]?.name ?? ''} clinched a playoff spot!`;
 
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -71,3 +72,5 @@ export async function GET(request: NextRequest) {
   }
   return NextResponse.json({ results });
 }
+
+export const GET = withCronHealth('email-clinch', handler);

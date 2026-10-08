@@ -10,6 +10,7 @@ import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry
 import { sendSetRecapNewsletter } from '@/lib/email';
 import { generateAndUploadOgImage } from '@/lib/utils/ogImage';
 import { tweetPublishedPost } from '@/lib/utils/postToX';
+import { withCronHealth } from '@/lib/health/cronRuns';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 
@@ -167,7 +168,7 @@ async function markSetProcessed(setNumber: number, postId: string, metadata: any
   await kv.set(`blog:setrecap:log:${getCurrentNHLSeason()}:${setNumber}`, { processedAt: new Date().toISOString(), postId, ...metadata });
 }
 
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -285,3 +286,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to process set recap', message: error.message }, { status: 500 });
   }
 }
+
+export const GET = withCronHealth('set-recap', handler);

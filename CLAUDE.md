@@ -122,6 +122,9 @@ All crons are configured in `vercel.json` and authorized via `CRON_SECRET` Beare
 | `email-game-recap` | `0 12 * * *` (noon daily) | Send game recap emails to verified subscribers for any team with completed games in last 24h. |
 | `email-set-recap` | `0 14 * * *` (2pm daily) | Send set recap emails when a 5-game set completes. |
 | `analytics-cleanup` | `0 3 * * *` (3am daily) | Delete hourly keys >7 days old, daily keys >90 days old. Trim sorted sets to top 200/100. |
+| `health-check` | `30 15 * * *` (11:30am ET daily) | Site health check (`lib/health/checks.ts`, ~28 read-only checks: ticket/affiliate links and event coverage, odds model and consistency, key pages, search basics, email service, last Sabres recap, bounces, scheduled jobs, X posting, accounts, daily puzzles, data feeds, GA4/GSC/reporting keys, critical settings). Saves `health:last` (admin Overview panel with Run now); emails `HEALTH_REPORT_EMAIL` (falls back to `AFFILIATE_REPORT_EMAIL`) on any failure and every Monday. `?preview=1`, `?email=0`. |
+
+Every scheduled job is wrapped in `withCronHealth(name, handler)` (`lib/health/cronRuns.ts`), which records its last run (`health:cron:{name}`: ok / partial / failed + note) so the health check can flag failing or late jobs. Wrap any new cron the same way and add its max gap to `JOB_MAX_AGE_H` in `lib/health/checks.ts`.
 
 **AI models used:** Claude Sonnet 4 (content generation with prompt caching), Claude Haiku (news importance detection).
 

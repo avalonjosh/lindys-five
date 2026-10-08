@@ -9,6 +9,7 @@ import { getAutoPublishSetting } from '@/lib/blogSettings';
 import { fetchJsonWithRetry, calculateJaccardSimilarity, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { generateAndUploadOgImage } from '@/lib/utils/ogImage';
 import { tweetPublishedPost } from '@/lib/utils/postToX';
+import { withCronHealth } from '@/lib/health/cronRuns';
 
 const NHL_API_BASE = 'https://api-web.nhle.com/v1';
 const SEMANTIC_SIMILARITY_THRESHOLD = 0.4;
@@ -220,7 +221,7 @@ async function createPost(postData: any) {
   return post;
 }
 
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   const expectedAuth = `Bearer ${process.env.CRON_SECRET}`;
 
@@ -350,3 +351,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to scan news', message: error.message }, { status: 500 });
   }
 }
+
+export const GET = withCronHealth('news-scan', handler);

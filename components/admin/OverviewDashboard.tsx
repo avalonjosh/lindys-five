@@ -14,6 +14,7 @@ import {
 } from './ui';
 import type { BlogPost, NewsletterSubscriber } from '@/lib/types';
 import type { AffiliatesPayload } from '@/app/api/admin/affiliates/route';
+import HealthPanel from './HealthPanel';
 
 const money = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -202,6 +203,9 @@ export default function OverviewDashboard() {
           </WarningBanner>
         </div>
       )}
+
+      {/* Daily site health check */}
+      <HealthPanel />
 
       {/* Stat row */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">

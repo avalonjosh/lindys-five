@@ -5,10 +5,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { TEAMS } from '@/lib/teamConfig';
 import { sendBoxscoreRecapForTeam, getVerifiedSubscribersForTeam, claimGameRecapSend, releaseSendClaim } from '@/lib/email';
 import { fetchJsonWithRetry } from '@/lib/fetchWithRetry';
+import { withCronHealth } from '@/lib/health/cronRuns';
 
 const NHL_API = 'https://api-web.nhle.com/v1';
 
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -92,3 +93,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Cron job failed' }, { status: 500 });
   }
 }
+
+export const GET = withCronHealth('email-game-recap', handler);

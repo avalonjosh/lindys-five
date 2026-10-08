@@ -9,6 +9,7 @@ import { generateStubHubLink } from '@/lib/utils/affiliateLinks';
 import { computeNFLOdds } from '@/lib/services/nflLeague';
 import { getVerifiedSubscribersForTeam, sendNFLWeekly, renderNFLWeeklyEmail, type NFLWeeklyEmailData } from '@/lib/email';
 import type { NFLGameResult } from '@/lib/types/nfl';
+import { withCronHealth } from '@/lib/health/cronRuns';
 
 // Off by default — real sends to subscribers only once this flag is set true.
 const ENABLED_KEY = 'blog:settings:nfl-weekly-enabled';
@@ -81,7 +82,7 @@ async function dataFor(slug: string): Promise<{ data: NFLWeeklyEmailData; lastIs
   return { data, lastIso: finals[finals.length - 1]?.isoDate ?? null };
 }
 
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -139,3 +140,5 @@ export async function GET(request: NextRequest) {
   }
   return NextResponse.json({ results });
 }
+
+export const GET = withCronHealth('email-nfl-weekly', handler);

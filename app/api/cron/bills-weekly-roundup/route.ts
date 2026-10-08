@@ -8,6 +8,7 @@ import { getAutoPublishSetting } from '@/lib/blogSettings';
 import { tweetPublishedPost } from '@/lib/utils/postToX';
 import { generateAndUploadOgImage } from '@/lib/utils/ogImage';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
+import { withCronHealth } from '@/lib/health/cronRuns';
 
 const ESPN_API_BASE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 
@@ -114,7 +115,7 @@ async function createPost(postData: any) {
   return post;
 }
 
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -194,3 +195,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to generate Bills weekly roundup', message: error.message }, { status: 500 });
   }
 }
+
+export const GET = withCronHealth('bills-weekly-roundup', handler);

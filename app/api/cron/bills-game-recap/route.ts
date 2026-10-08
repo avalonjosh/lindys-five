@@ -9,6 +9,7 @@ import { tweetPublishedPost } from '@/lib/utils/postToX';
 import { generateAndUploadOgImage } from '@/lib/utils/ogImage';
 import { fetchJsonWithRetry, truncateAtWordBoundary } from '@/lib/fetchWithRetry';
 import { quickFactCheck } from '@/lib/factCheck';
+import { withCronHealth } from '@/lib/health/cronRuns';
 
 const ESPN_API_BASE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl';
 const BILLS_TEAM_ID = 2; // Buffalo Bills ESPN team ID
@@ -317,7 +318,7 @@ async function markGameProcessed(gameId: string, postId: string, metadata: any) 
   });
 }
 
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -473,3 +474,5 @@ export async function GET(request: NextRequest) {
     }, { status: 500 });
   }
 }
+
+export const GET = withCronHealth('bills-game-recap', handler);
