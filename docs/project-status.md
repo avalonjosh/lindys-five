@@ -122,7 +122,7 @@ Game "Get Tickets" buttons deep-link to exact StubHub events via `lib/affiliate/
 How to harvest (StubHub blocks server fetches, so use Claude in Chrome on Josh's browser):
 - Open `https://www.stubhub.com/{city-team}-tickets` per team (Athletics: `oakland-athletics-tickets`; Utah: `utah-hockey-club-tickets/performer/150310185`). One team per browser_batch call; three tabs in parallel works.
 - In-page JS: collect `a[href*="/event/"]`, parse `tickets-M-D-YYYY/event/ID`; team text patterns like `CBJBlue Jackets@BUFSabresHome` (NHL) and `Sep8TueRockies@YankeesHome` (MLB). Click "Next page" until stale. Accumulate in localStorage; dump in ~28-line chunks. Skip parking/season-ticket listings.
-- Write `id|MMDD|AWAY@HOME[|P]` lines, run `node scripts/build-stubhub-events.mjs`, `npx tsc --noEmit`, commit, ask before push. New MLB season file: `scripts/data/stubhub-mlb-2027-28.txt` (Aug-Dec = start year).
+- Write `id|MMDD|AWAY@HOME[|P]` lines, run `node scripts/build-stubhub-events.mjs`, `npx tsc --noEmit`, commit, ask before push. Then `TZ=UTC npx tsx scripts/check-ticket-links.ts` (event lookups must not depend on the server's time zone; a UTC off-by-one-day bug sent every team-page button to search results until 2026-10-08). New MLB season file: `scripts/data/stubhub-mlb-2027-28.txt` (Aug-Dec = start year).
 - Josh decided not to ask StubHub for a feed; don't suggest it again.
 
 ## Affiliate stack (current, don't re-research)

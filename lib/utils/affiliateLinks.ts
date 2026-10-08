@@ -152,10 +152,23 @@ export function generateGameTicketLink(
   });
 }
 
-/** Eastern game date as YYYY-MM-DD from a YYYY-MM-DD string or an ISO datetime. */
+/** "MM/DD/YYYY" (the NHL schedule's date) as YYYY-MM-DD, read as a plain calendar date. */
+function usDateYmd(date: string): string | null {
+  const m = date.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  return m ? `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}` : null;
+}
+
+/**
+ * Eastern game date as YYYY-MM-DD from YYYY-MM-DD, MM/DD/YYYY or an ISO datetime.
+ * Plain dates are never run through Date(): that reads them as midnight in the
+ * machine's own time zone, which on a UTC server lands on the previous day in
+ * Eastern time and misses the event table.
+ */
 function gameDateYmd(date?: string): string | null {
   if (!date || !/\d{4}/.test(date)) return null;
   if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+  const us = usDateYmd(date);
+  if (us) return us;
   const d = new Date(date);
   if (Number.isNaN(d.getTime())) return null;
   const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d);
@@ -189,14 +202,15 @@ function fullTeamName(abbrev: string, sport: 'nhl' | 'mlb'): string | null {
   return t ? `${t.city} ${t.name}` : null;
 }
 
-/** Game date as "October 3 2026" (Eastern). Accepts YYYY-MM-DD or an ISO datetime. */
+/** Game date as "October 3 2026" (Eastern). Accepts YYYY-MM-DD, MM/DD/YYYY or an ISO datetime. */
 function gameDateLabel(date?: string): string | null {
   if (!date || !/\d{4}/.test(date)) return null; // display strings like "8/24" carry no year
-  const ymd = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  const d = ymd ? new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3]), 12) : new Date(date);
+  // Calendar dates are formatted as that day at noon UTC, so no time zone can shift them.
+  const plain = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : usDateYmd(date);
+  const d = plain ? new Date(`${plain}T12:00:00Z`) : new Date(date);
   if (Number.isNaN(d.getTime())) return null;
   return d.toLocaleDateString('en-US', {
-    ...(ymd ? {} : { timeZone: 'America/New_York' }),
+    timeZone: plain ? 'UTC' : 'America/New_York',
     month: 'long', day: 'numeric', year: 'numeric',
   }).replace(',', '');
 }
