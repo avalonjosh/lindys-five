@@ -11,8 +11,11 @@ const AMAZON_TAG = process.env.NEXT_PUBLIC_AMAZON_TAG || 'lindysfive-20';
 const STUBHUB_BASE_URL = 'https://stubhub.prf.hn/click';
 // Campaign Reference (camref) from Partnerize - specific to StubHub NORAM campaign
 const CAMPAIGN_REF = process.env.NEXT_PUBLIC_STUBHUB_CAMREF || '1110lpjky';
-// Set to true to use direct StubHub links (non-affiliate) for testing
-const USE_DIRECT_LINKS = false;
+// Partnerize answers "Invalid Link" for this camref since early Oct 2026, so
+// ticket links go straight to StubHub (no commission, but a working page).
+// Set NEXT_PUBLIC_STUBHUB_AFFILIATE=on in Vercel (and redeploy) once the
+// campaign works again to route them through Partnerize.
+const USE_DIRECT_LINKS = process.env.NEXT_PUBLIC_STUBHUB_AFFILIATE !== 'on';
 
 interface AffiliateLinParams {
   stubhubId: number;
@@ -75,11 +78,7 @@ export function generateStubHubLink({ stubhubId, trackingRef, teamSlug, teamCity
     destinationUrl = `https://www.stubhub.com/performer/${stubhubId}`;
   }
 
-  // Temporary: Use direct links until Partnerize account is fully activated
-  if (USE_DIRECT_LINKS) {
-    console.log('Using direct StubHub link (non-affiliate):', destinationUrl);
-    return destinationUrl;
-  }
+  if (USE_DIRECT_LINKS) return destinationUrl;
 
   // URL encode the destination
   const encodedDestination = encodeURIComponent(destinationUrl);

@@ -39,7 +39,7 @@ export async function fetchTeamScheduleServer(team: TeamConfig, season: string):
       ? new Date(game.startTimeUTC).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true })
       : undefined;
     return {
-      date, startTime, opponent: oppTeam.abbrev, opponentLogo: oppTeam.logo || '',
+      date, startTime, opponent: oppTeam.abbrev, opponentAbbreviation: oppTeam.abbrev, opponentLogo: oppTeam.logo || '',
       isHome, sabresScore: myTeam.score || 0, opponentScore: oppTeam.score || 0,
       outcome, points, gameState: game.gameState, gameId: game.id,
     };

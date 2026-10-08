@@ -36,6 +36,8 @@ Cloud routines on Josh's claude.ai account email him at 9am ET for the items mar
 
 ## Open items (no date)
 
+- **StubHub affiliate links broken (found 2026-10-08):** Partnerize answers "Invalid Link" for every link with camref `1110lpjky` (StubHub NORAM), so all ticket buttons dead-ended. Ticket links now go straight to StubHub without the affiliate wrapper (no commission) via `USE_DIRECT_LINKS` in `lib/utils/affiliateLinks.ts`. **Josh: log in to Partnerize and check the StubHub campaign status (paused/ended, account issue, or a new camref).** Once links work again: set `NEXT_PUBLIC_STUBHUB_AFFILIATE=on` (and `NEXT_PUBLIC_STUBHUB_CAMREF` if the code changed) in Vercel and redeploy. Test with `curl -s -o /dev/null -w '%{http_code}' 'https://stubhub.prf.hn/click/camref:<camref>/destination:https%3A%2F%2Fwww.stubhub.com'` (302 = working, 400 = invalid).
+
 - **X auto-posting** (working since 2026-08-17): enable Auto Recharge with a spend cap on the X pay-per-use credits (~$0.20 per post with a URL), or posts fail silently ("X failed" badges in /admin/posts). Auto-publish toggles at /admin/posts may still be off.
 - **Admin What-If tab**: click "Backfill Index" once on prod.
 - **What-If account checks** on prod: post-save email prompt, /account hero on mobile and with no favorite, cross-device favorite sync.
