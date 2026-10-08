@@ -122,11 +122,10 @@ const fanatics: Check = async () => {
 
 const affiliateConfig: Check = async () => {
   const missing = [
-    !process.env.NEXT_PUBLIC_AMAZON_TAG && 'NEXT_PUBLIC_AMAZON_TAG',
     !process.env.NEXT_PUBLIC_WATCH_PRIME_URL && 'NEXT_PUBLIC_WATCH_PRIME_URL',
     process.env.NEXT_PUBLIC_KOFI_URL && !process.env.KOFI_VERIFICATION_TOKEN && 'KOFI_VERIFICATION_TOKEN',
   ].filter(Boolean);
-  return missing.length ? warn(`Not set: ${missing.join(', ')}`) : ok('Amazon tag, Prime Video link and Ko-fi webhook token are set');
+  return missing.length ? warn(`Not set: ${missing.join(', ')}`) : ok('Prime Video link and Ko-fi webhook token are set (Amazon uses its built-in lindysfive-20 tag)');
 };
 
 // ---------------------------------------------------------------------------
@@ -439,7 +438,7 @@ export const CHECKS: { id: string; area: CheckArea; label: string; run: Check }[
   { id: 'stubhub-coverage', area: 'Money', label: 'Exact-game ticket links, NHL next 7 days', run: stubhubCoverage },
   { id: 'stubhub-mlb', area: 'Money', label: 'Exact-game ticket links, MLB next 7 days', run: mlbCoverage },
   { id: 'fanatics', area: 'Money', label: 'Fanatics gear links', run: fanatics },
-  { id: 'affiliate-config', area: 'Money', label: 'Amazon, Prime Video and Ko-fi settings', run: affiliateConfig },
+  { id: 'affiliate-config', area: 'Money', label: 'Prime Video and Ko-fi settings', run: affiliateConfig },
   { id: 'nhl-odds', area: 'Odds', label: 'NHL playoff odds model', run: nhlOdds },
   { id: 'odds-consistency', area: 'Odds', label: 'Odds match across pages', run: oddsConsistency },
   { id: 'key-pages', area: 'Pages', label: 'Key pages load', run: keyPages },
