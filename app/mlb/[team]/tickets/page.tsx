@@ -16,11 +16,11 @@ export async function generateMetadata({ params }: { params: Promise<{ team: str
   if (!t) return {};
   const full = `${t.city} ${t.name}`;
   return {
-    title: `${full} Tickets — MLB Schedule & Seats on StubHub`,
-    description: `Find ${full} tickets for every home and away game on StubHub. Verified resale with seat maps and live pricing.`,
+    title: `${full} Tickets — MLB Schedule & Seats`,
+    description: `Find ${full} tickets for every home and away game this season, with links to each game's seats and prices.`,
     openGraph: {
-      title: `${full} Tickets — MLB Schedule & Seats on StubHub`,
-      description: `Find ${full} tickets for every home and away game on StubHub. Verified resale with seat maps and live pricing.`,
+      title: `${full} Tickets — MLB Schedule & Seats`,
+      description: `Find ${full} tickets for every home and away game this season, with links to each game's seats and prices.`,
       type: 'website',
       url: `https://www.lindysfive.com/mlb/${team}/tickets`,
       siteName: "Lindy's Five",
@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: { params: Promise<{ team: str
     },
     twitter: {
       card: 'summary',
-      title: `${full} Tickets on StubHub`,
+      title: `${full} Tickets`,
       description: `Find ${full} tickets for every home and away game. Verified resale with seat maps and live pricing.`,
       images: [t.logo],
     },

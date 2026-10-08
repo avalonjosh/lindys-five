@@ -82,9 +82,10 @@ const stubhubAffiliate: Check = async () => {
   const res = await get(`https://stubhub.prf.hn/click/camref:${camref}/pubref:healthcheck/destination:${encodeURIComponent('https://www.stubhub.com/')}`, { redirect: 'manual' });
   const works = res.status >= 300 && res.status < 400;
   if (process.env.NEXT_PUBLIC_STUBHUB_AFFILIATE !== 'on') {
+    // StubHub ended our program participation on 2026-08-27; links are plain StubHub links.
     return works
-      ? warn('Partnerize links work again, but ticket links still skip the affiliate wrapper (no commission). Set NEXT_PUBLIC_STUBHUB_AFFILIATE=on in Vercel and redeploy.')
-      : warn(`Ticket links go straight to StubHub (no commission) because Partnerize rejects camref ${camref} (HTTP ${res.status}). Fix the campaign in Partnerize.`);
+      ? warn('Partnerize StubHub links work again (reinstated?). Set NEXT_PUBLIC_STUBHUB_AFFILIATE=on in Vercel and redeploy to earn commission.')
+      : skip('StubHub ended the affiliate program for us on Aug 27, 2026; ticket buttons are plain StubHub links (no commission)');
   }
   return works ? ok('Partnerize ticket link redirects to StubHub') : fail(`Partnerize answered HTTP ${res.status} for camref ${camref}: every ticket button lands on an error page`);
 };

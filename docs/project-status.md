@@ -38,7 +38,7 @@ Cloud routines on Josh's claude.ai account email him at 9am ET for the items mar
 
 - **Site health check** (built 2026-10-08): daily 11:30am ET, emails on problems plus a Monday summary, panel at the top of /admin. Its first runs will show the StubHub Partnerize warning and MLB LCS games needing a ticket harvest. Optional for Josh: a free outside uptime monitor (e.g. UptimeRobot) on https://www.lindysfive.com, since the check can't email if the whole site is down.
 
-- **StubHub affiliate links broken (found 2026-10-08):** Partnerize answers "Invalid Link" for every link with camref `1110lpjky` (StubHub NORAM), so all ticket buttons dead-ended. Ticket links now go straight to StubHub without the affiliate wrapper (no commission) via `USE_DIRECT_LINKS` in `lib/utils/affiliateLinks.ts`. **Josh: log in to Partnerize and check the StubHub campaign status (paused/ended, account issue, or a new camref).** Once links work again: set `NEXT_PUBLIC_STUBHUB_AFFILIATE=on` (and `NEXT_PUBLIC_STUBHUB_CAMREF` if the code changed) in Vercel and redeploy. Test with `curl -s -o /dev/null -w '%{http_code}' 'https://stubhub.prf.hn/click/camref:<camref>/destination:https%3A%2F%2Fwww.stubhub.com'` (302 = working, 400 = invalid).
+- **StubHub affiliate program ended (notice by email, effective 2026-08-27):** StubHub/viagogo dropped us in a program-wide review ("for convenience", 3 days' notice); Partnerize shows the campaign as rejected, clicks went from 131 (Aug 24-31) to 0 from Sep 1. Pending commission still pays (Partnerize shows $5.99 to withdraw). Done 2026-10-08: ticket buttons are plain StubHub links (exact game pages, no affiliate wrapper), StubHub marketing wording and logos removed per their terms (ticket hub titles/copy, privacy policy, support page), ticket-commission disclosures only show while `TICKET_AFFILIATE_ACTIVE`. **Josh: (1) optionally email affiliates@stubhub.com for reinstatement (Partnerize account name, site URL, interest), low odds; (2) fix the Impact bank/tax mismatch, which unlocks a replacement ticket seller (Vivid Seats / SeatGeek / Ticketmaster on Impact) plus Fubo, and Fanatics payouts.** If reinstated: `NEXT_PUBLIC_STUBHUB_AFFILIATE=on` in Vercel + redeploy.
 
 - **X auto-posting** (working since 2026-08-17): enable Auto Recharge with a spend cap on the X pay-per-use credits (~$0.20 per post with a URL), or posts fail silently ("X failed" badges in /admin/posts). Auto-publish toggles at /admin/posts may still be off.
 - **Admin What-If tab**: click "Backfill Index" once on prod.
@@ -128,7 +128,7 @@ How to harvest (StubHub blocks server fetches, so use Claude in Chrome on Josh's
 - Josh decided not to ask StubHub for a feed; don't suggest it again.
 
 ## Affiliate stack (current, don't re-research)
-Tickets: StubHub via Partnerize (4% flat). Merch: Fanatics via Impact (8%, primary; `lib/affiliate/fanaticsTeams.ts`, `NEXT_PUBLIC_FANATICS_DEEPLINK`), Amazon secondary on `/gear`. Reporting: Admin > Affiliates tab (`lib/services/affiliateNetworks.ts`); weekly `affiliate-summary` email Mondays 9am ET.
+Tickets: none since StubHub ended the program 2026-08-27 (plain StubHub links; was Partnerize 4% flat). Merch: Fanatics via Impact (8%, primary; `lib/affiliate/fanaticsTeams.ts`, `NEXT_PUBLIC_FANATICS_DEEPLINK`), Amazon secondary on `/gear`. Reporting: Admin > Affiliates tab (`lib/services/affiliateNetworks.ts`); weekly `affiliate-summary` email Mondays 9am ET.
 
 ## Setting up a new computer
 

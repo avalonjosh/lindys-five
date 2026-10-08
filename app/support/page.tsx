@@ -51,7 +51,7 @@ export default function SupportPage() {
               <li>
                 Get your team&apos;s recaps by email from your <Link href="/account" className="text-sabres-blue underline">account</Link>.
               </li>
-              <li>Buying tickets or gear through the links on team pages also sends a small commission our way, at no cost to you.</li>
+              <li>Buying gear through the links on team pages also sends a small commission our way, at no cost to you.</li>
             </ul>
           </div>
           <p className="mt-6 text-sm text-gray-700">Thank you. Seriously.</p>

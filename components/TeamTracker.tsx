@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, type ReactNode } from 'react';
+import { TICKET_AFFILIATE_ACTIVE } from '@/lib/utils/affiliateLinks';
 import Link from 'next/link';
 import { Tv } from 'lucide-react';
 import HeaderProfileIcon from '@/components/HeaderProfileIcon';
@@ -1601,9 +1602,11 @@ export default function TeamTracker({
         <p className="text-xs mb-2">
           Data provided by NHL API | Updates automatically every minute
         </p>
-        <p className="text-xs mb-2">
-          We may earn a commission from ticket purchases made through our affiliate links.
-        </p>
+        {TICKET_AFFILIATE_ACTIVE && (
+          <p className="text-xs mb-2">
+            We may earn a commission from ticket purchases made through our affiliate links.
+          </p>
+        )}
         <p className="text-xs">
           &copy; {new Date().getFullYear()} JRR Apps. All rights reserved.
         </p>

@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import SiteFooter from '@/components/SiteFooter';
 import { Ticket } from 'lucide-react';
-import { generateTeamTicketsLink } from '@/lib/utils/affiliateLinks';
+import { generateTeamTicketsLink, TICKET_AFFILIATE_ACTIVE } from '@/lib/utils/affiliateLinks';
 import AffiliateLink from './AffiliateLink';
 import type { HubTeam } from './TeamGearHub';
 
 const BASE = 'https://www.lindysfive.com';
 
-/** Server-rendered, indexable per-team tickets hub (StubHub via Partnerize). */
+/** Server-rendered, indexable per-team tickets hub. Links go to the team's StubHub page. */
 export default function TeamTicketsHub({ team, stubhubId }: { team: HubTeam; stubhubId: number }) {
   const full = `${team.city} ${team.name}`;
   const league = team.sport === 'nhl' ? 'NHL' : 'MLB';
@@ -40,7 +40,7 @@ export default function TeamTicketsHub({ team, stubhubId }: { team: HubTeam; stu
             {full} Tickets
           </h1>
           <p className="mx-auto mt-2 max-w-xl text-sm text-white/80">
-            Find {full} {league} tickets for every home and away game on StubHub — verified resale with a buyer guarantee.
+            Find {full} {league} tickets for every home and away game this season.
           </p>
         </div>
       </header>
@@ -66,7 +66,7 @@ export default function TeamTicketsHub({ team, stubhubId }: { team: HubTeam; stu
             className="mt-4 inline-block rounded-xl px-6 py-3.5 text-base font-bold uppercase tracking-wide text-white shadow-md transition-opacity hover:opacity-90"
             style={{ background: team.primaryColor }}
           >
-            See tickets on StubHub
+            See tickets
           </AffiliateLink>
         </div>
 
@@ -76,10 +76,12 @@ export default function TeamTicketsHub({ team, stubhubId }: { team: HubTeam; stu
           <Link href={`${teamPath}/gear`} className="font-semibold text-sabres-blue hover:underline">{team.name} gear →</Link>
         </div>
 
-        <p className="mt-6 text-center text-[11px] leading-relaxed text-gray-400">
-          Lindy&apos;s Five may earn a commission from ticket purchases made through our affiliate links, at no extra
-          cost to you.
-        </p>
+        {TICKET_AFFILIATE_ACTIVE && (
+          <p className="mt-6 text-center text-[11px] leading-relaxed text-gray-400">
+            Lindy&apos;s Five may earn a commission from ticket purchases made through our affiliate links, at no extra
+            cost to you.
+          </p>
+        )}
       </main>
       <SiteFooter />
     </div>

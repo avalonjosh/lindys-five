@@ -11,11 +11,13 @@ const AMAZON_TAG = process.env.NEXT_PUBLIC_AMAZON_TAG || 'lindysfive-20';
 const STUBHUB_BASE_URL = 'https://stubhub.prf.hn/click';
 // Campaign Reference (camref) from Partnerize - specific to StubHub NORAM campaign
 const CAMPAIGN_REF = process.env.NEXT_PUBLIC_STUBHUB_CAMREF || '1110lpjky';
-// Partnerize answers "Invalid Link" for this camref since early Oct 2026, so
-// ticket links go straight to StubHub (no commission, but a working page).
-// Set NEXT_PUBLIC_STUBHUB_AFFILIATE=on in Vercel (and redeploy) once the
-// campaign works again to route them through Partnerize.
+// StubHub ended our Publisher Program participation on 2026-08-27 (program-wide
+// review), so ticket links go straight to StubHub as plain links: no commission,
+// no affiliate wrapper. If we're reinstated, set NEXT_PUBLIC_STUBHUB_AFFILIATE=on
+// in Vercel (and redeploy) to route them through Partnerize again.
 const USE_DIRECT_LINKS = process.env.NEXT_PUBLIC_STUBHUB_AFFILIATE !== 'on';
+/** True only while ticket links earn a commission (drives the ticket disclosures). */
+export const TICKET_AFFILIATE_ACTIVE = !USE_DIRECT_LINKS;
 
 interface AffiliateLinParams {
   stubhubId: number;

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://www.lindysfive.com/privacy' },
 };
 
-const UPDATED = 'October 1, 2026';
+const UPDATED = 'October 8, 2026';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -55,7 +55,7 @@ export default function PrivacyPage() {
 
           <Section title="Who we share it with">
             <p>Only the services that run the site: Vercel (hosting and data storage), Resend (sending email), Google (Analytics, and Sign in with Google if you use it), Ko-fi (tips). They process data on our behalf.</p>
-            <p>Some links go to partners such as StubHub, Fanatics and Amazon, and we may earn a commission if you buy something. Those sites have their own privacy policies and may use their own cookies once you click through.</p>
+            <p>Some links go to partners such as Fanatics and Amazon, and we may earn a commission if you buy something. Ticket links go to StubHub. Those sites have their own privacy policies and may use their own cookies once you click through.</p>
           </Section>
 
           <Section title="Your choices">
