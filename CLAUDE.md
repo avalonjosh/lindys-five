@@ -229,6 +229,7 @@ Cards are earned per game for consecutive saved Dailies (either variant counts; 
 | `email:resend-map:{resendId}` | String | 30 days | Resend email ID → send record ID (for webhook tracking) |
 | `email:game-recap-sent:{team}:{date}` | Boolean | 48h | Duplicate prevention per team/day |
 | `email:set-recap-sent:{team}:{season}:{setNumber}` | Boolean | None | Duplicate prevention per set (MLB: `email:mlb-set-recap-sent:{team}:{year}:{setNumber}`) |
+| `email:events` | Sorted Set | None (last 5000) | Opt-in/opt-out log (`lib/emailEvents.ts`): signups by source, confirms, unsubscribes, kinds/teams switched off, spam complaints, each credited to the email it came from. Unsubscribe links carry `&s={sendRecordId}`; shown in Admin > Subscribers "Opt-ins & Opt-outs" |
 
 ### Analytics
 > **Architecture note (current):** The admin dashboard reads most metrics (pageviews, visitors, bounce, duration, top pages, referrers, devices, countries, UTM, realtime) from the **GA4 Data API** via `lib/ga4.ts`, gated on `GSC_CLIENT_EMAIL` / `GSC_PRIVATE_KEY` / `GA4_PROPERTY_ID` (a missing/expired key makes every panel return zeros, not an error). Only **team views** (`analytics:top:teams:*`) and **click targets** (`analytics:clicks:*`) are still written to KV, by `app/api/analytics/track/route.ts`. Team views depend on `extractTeamFromPath` matching `/nhl/{team}` and `/mlb/{team}` (and `/blog/{team}`). GA4 is excluded from `/admin` routes via `components/analytics/GoogleAnalytics.tsx`. Most of the KV keys below are legacy/no longer written.

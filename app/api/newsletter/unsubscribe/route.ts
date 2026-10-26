@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
+import { logEmailEvent } from '@/lib/emailEvents';
 import type { NewsletterSubscriber } from '@/lib/types';
 
-async function unsubscribeById(subscriberId: string): Promise<'done' | 'already' | 'not-found'> {
+async function unsubscribeById(subscriberId: string, sendId: string | null): Promise<'done' | 'already' | 'not-found'> {
   const subscriber = await kv.get<NewsletterSubscriber>(`email:subscriber:${subscriberId}`);
   if (!subscriber) return 'not-found';
   if (subscriber.unsubscribedAt) return 'already';
@@ -18,6 +19,7 @@ async function unsubscribeById(subscriberId: string): Promise<'done' | 'already'
   for (const team of subscriber.teams) {
     await kv.srem(`email:subscribers:team:${team}`, subscriberId);
   }
+  await logEmailEvent(subscriber, 'unsubscribed', { via: 'one-click', sendId });
   return 'done';
 }
 
@@ -39,6 +41,9 @@ export async function GET(request: NextRequest) {
     }
     const url = new URL('/email-preferences', process.env.NEXT_PUBLIC_SITE_URL || 'https://www.lindysfive.com');
     url.searchParams.set('id', subscriberId);
+    // The email this link came from, so a change made there is credited to it.
+    const sendId = request.nextUrl.searchParams.get('s');
+    if (sendId) url.searchParams.set('s', sendId);
     return NextResponse.redirect(url.toString(), 303);
   } catch (error) {
     console.error('Unsubscribe error:', error);
@@ -55,7 +60,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await unsubscribeById(subscriberId);
+    const result = await unsubscribeById(subscriberId, request.nextUrl.searchParams.get('s'));
     if (result === 'not-found') {
       return renderUnsubscribePage('Subscriber not found', false);
     }

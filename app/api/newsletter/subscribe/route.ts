@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { sendVerificationEmail } from '@/lib/email';
 import { findSubscriberByEmail } from '@/lib/newsletter';
+import { logEmailEvent } from '@/lib/emailEvents';
 import { rateLimit, clientIp } from '@/lib/perfectseason/server/ratelimit';
 import { NHL_TEAMS, MLB_TEAMS, NFL_TEAMS } from '@/lib/teamConfig';
 import type { NewsletterSubscriber, EmailVerificationToken } from '@/lib/types';
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest) {
         for (const team of teams) {
           await kv.sadd(`email:subscribers:team:${team}`, existing.id);
         }
+        await logEmailEvent(updated, 'resubscribed', { via: 'signup' }, { detail: updated.source });
         await sendVerificationToken(existing.id, email.toLowerCase());
         return NextResponse.json({ success: true, message: 'Check your email to re-confirm your subscription' });
       }
@@ -78,6 +80,7 @@ export async function POST(request: NextRequest) {
       await kv.sadd(`email:subscribers:team:${team}`, id);
     }
 
+    await logEmailEvent(subscriber, 'subscribed', { via: 'signup' }, { detail: subscriber.source });
     await sendVerificationToken(id, email.toLowerCase());
 
     return NextResponse.json({ success: true, message: 'Check your email to confirm your subscription!' });

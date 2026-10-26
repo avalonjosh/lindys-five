@@ -7,6 +7,7 @@ import {
   ErrorBanner, Input, Select, SearchInput, Segmented, Table, Th, Td, EmptyState, useToast,
 } from './ui';
 import { getCronJobs } from '@/lib/cronSchedule';
+import EmailChurnPanel from './EmailChurnPanel';
 import type { NewsletterSubscriber, EmailSendRecord } from '@/lib/types';
 
 // Gated email programs (KV flags via /api/blog/settings) with their cron
@@ -821,6 +822,8 @@ export default function NewsletterDashboard() {
           )}
         </Card>
       </div>
+
+      <EmailChurnPanel subscribers={subscribers} sends={sends} campaignOf={campaignOf} campaignLabel={CAMPAIGN_LABEL} />
 
       {/* Recent Sends */}
       {sends.length > 0 && (

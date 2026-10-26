@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       const state = await accountOptIn(user, [team], 'my-teams');
       return NextResponse.json({ team, on: true, pending: state === 'pending' });
     }
-    await removeSubscriberTeam(user.email, team);
+    await removeSubscriberTeam(user.email, team, { via: 'account' });
     return NextResponse.json({ team, on: false, pending: false });
   } catch (err) {
     console.error('Team recap toggle failed:', err);

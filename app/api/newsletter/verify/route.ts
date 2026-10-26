@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import type { NewsletterSubscriber, EmailVerificationToken } from '@/lib/types';
 import { sendWelcomeEmail } from '@/lib/email';
+import { logEmailEvent } from '@/lib/emailEvents';
 import { markAccountVerifiedForEmail } from '@/lib/perfectseason/server/accountEmail';
 
 export async function GET(request: NextRequest) {
@@ -35,6 +36,7 @@ export async function GET(request: NextRequest) {
       verifiedAt: new Date().toISOString(),
     };
     await kv.set(`email:subscriber:${subscriber.id}`, updated);
+    if (!subscriber.verified) await logEmailEvent(updated, 'confirmed', { via: 'email-link' });
 
     // Clean up token
     await kv.del(`email:verification:${token}`);

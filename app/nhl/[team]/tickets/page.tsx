@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { NHL_TEAMS } from '@/lib/teamConfig';
 import TeamTicketsHub from '@/components/affiliate/TeamTicketsHub';
+import { TICKET_AFFILIATE_ACTIVE } from '@/lib/utils/affiliateLinks';
 import type { HubTeam } from '@/components/affiliate/TeamGearHub';
 
 export const revalidate = 86400;
@@ -15,12 +16,16 @@ export async function generateMetadata({ params }: { params: Promise<{ team: str
   const t = NHL_TEAMS[team];
   if (!t) return {};
   const full = `${t.city} ${t.name}`;
+  const onStubHub = TICKET_AFFILIATE_ACTIVE ? ' on StubHub' : '';
+  const desc = TICKET_AFFILIATE_ACTIVE
+    ? `Find ${full} tickets for every home and away game on StubHub. Verified resale with seat maps and live pricing.`
+    : `Find ${full} tickets for every home and away game this season, with links to each game's seats and prices.`;
   return {
-    title: `${full} Tickets — NHL Schedule & Seats`,
-    description: `Find ${full} tickets for every home and away game this season, with links to each game's seats and prices.`,
+    title: `${full} Tickets — NHL Schedule & Seats${onStubHub}`,
+    description: desc,
     openGraph: {
-      title: `${full} Tickets — NHL Schedule & Seats`,
-      description: `Find ${full} tickets for every home and away game this season, with links to each game's seats and prices.`,
+      title: `${full} Tickets — NHL Schedule & Seats${onStubHub}`,
+      description: desc,
       type: 'website',
       url: `https://www.lindysfive.com/nhl/${team}/tickets`,
       siteName: "Lindy's Five",
@@ -28,7 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<{ team: str
     },
     twitter: {
       card: 'summary',
-      title: `${full} Tickets`,
+      title: `${full} Tickets${onStubHub}`,
       description: `Find ${full} tickets for every home and away game. Verified resale with seat maps and live pricing.`,
       images: [t.logo],
     },

@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       const team = typeof body.team === 'string' && findTeam(body.team) ? body.team : user.favoriteTeam;
       pending = (await accountOptIn(user, team ? [team] : [], 'account-settings')) === 'pending';
     } else {
-      await unsubscribeByEmail(user.email);
+      await unsubscribeByEmail(user.email, { via: 'account' });
     }
   } catch (err) {
     console.error('Account newsletter toggle failed:', err);

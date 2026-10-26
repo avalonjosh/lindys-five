@@ -6,7 +6,8 @@ import { accountOptIn } from '@/lib/perfectseason/server/accountEmail';
 import { findSubscriberByEmail, removeSubscriberTeam } from '@/lib/newsletter';
 import { userKey, userTeams, type User } from '@/lib/perfectseason/leaderboard';
 import { findTeam } from '@/lib/teamConfig';
-import type { EmailKind, EmailPrefs, NewsletterSubscriber } from '@/lib/types';
+import { logEmailEvent, type EventContext } from '@/lib/emailEvents';
+import { wantsEmail, type EmailKind, type EmailPrefs, type NewsletterSubscriber } from '@/lib/types';
 
 /**
  * Email preferences: which teams' recaps, which kinds of email, or none at all.
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  let body: { id?: string; prefs?: EmailPrefs; team?: { slug?: string; on?: boolean }; unsubscribeAll?: boolean; resubscribe?: boolean };
+  let body: { id?: string; sendId?: string; prefs?: EmailPrefs; team?: { slug?: string; on?: boolean }; unsubscribeAll?: boolean; resubscribe?: boolean };
   try {
     body = await request.json();
   } catch {
@@ -64,6 +65,9 @@ export async function POST(request: NextRequest) {
 
   let who = await resolve(request, typeof body.id === 'string' ? body.id : null);
   if (!who) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  const ctx: EventContext = typeof body.id === 'string'
+    ? { via: 'email-link', sendId: typeof body.sendId === 'string' ? body.sendId : null }
+    : { via: 'account' };
   const reload = async () => (who = (await resolve(request, typeof body.id === 'string' ? body.id : null)) ?? who);
 
   try {
@@ -71,7 +75,7 @@ export async function POST(request: NextRequest) {
     if (body.team && typeof body.team.slug === 'string' && findTeam(body.team.slug) && typeof body.team.on === 'boolean') {
       const slug = body.team.slug;
       if (!body.team.on) {
-        if (who.sub) await removeSubscriberTeam(who.sub.email, slug);
+        if (who.sub) await removeSubscriberTeam(who.sub.email, slug, ctx);
       } else if (who.user) {
         // Account: same rules as everywhere else (held until the email is confirmed).
         await accountOptIn(who.user, [slug], 'email-preferences');
@@ -81,6 +85,7 @@ export async function POST(request: NextRequest) {
         const teams = Array.from(new Set([...(sub.teams ?? []), slug]));
         await kv.set(`email:subscriber:${sub.id}`, { ...sub, teams, unsubscribedAt: undefined });
         for (const t of teams) await kv.sadd(`email:subscribers:team:${t}`, sub.id);
+        if (!(sub.teams ?? []).includes(slug)) await logEmailEvent(sub, 'team-on', ctx, { team: slug });
       }
       await reload();
     }
@@ -90,6 +95,11 @@ export async function POST(request: NextRequest) {
       const prefs: EmailPrefs = { ...(who.sub.prefs ?? {}) };
       for (const k of KINDS) if (typeof body.prefs[k] === 'boolean') prefs[k] = body.prefs[k];
       await kv.set(`email:subscriber:${who.sub.id}`, { ...who.sub, prefs });
+      for (const k of KINDS) {
+        if (wantsEmail(who.sub, k) !== wantsEmail({ prefs }, k)) {
+          await logEmailEvent(who.sub, wantsEmail({ prefs }, k) ? 'kind-on' : 'kind-off', ctx, { detail: k });
+        }
+      }
       await reload();
     }
 
@@ -98,6 +108,7 @@ export async function POST(request: NextRequest) {
       const sub = who.sub;
       await kv.set(`email:subscriber:${sub.id}`, { ...sub, unsubscribedAt: new Date().toISOString() });
       for (const t of sub.teams ?? []) await kv.srem(`email:subscribers:team:${t}`, sub.id);
+      await logEmailEvent(sub, 'unsubscribed', ctx);
       await reload();
     }
 
@@ -109,6 +120,7 @@ export async function POST(request: NextRequest) {
       } else {
         await kv.set(`email:subscriber:${sub.id}`, { ...sub, unsubscribedAt: undefined });
         for (const t of sub.teams ?? []) await kv.sadd(`email:subscribers:team:${t}`, sub.id);
+        await logEmailEvent(sub, 'resubscribed', ctx);
       }
       await reload();
     }

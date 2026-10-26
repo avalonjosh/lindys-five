@@ -49,6 +49,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
+    const resendEmailId = data.email_id;
+    const sendRecordId = resendEmailId ? await getSendRecordIdForResendEmail(resendEmailId) : null;
+
     // Suppress addresses that hard-bounce or complain — continuing to mail them
     // is what damages sender reputation. Transient bounces (full inbox etc.)
     // are left alone.
@@ -59,7 +62,7 @@ export async function POST(request: NextRequest) {
         const recipients: string[] = Array.isArray(data.to) ? data.to : [data.to].filter(Boolean);
         for (const recipient of recipients) {
           try {
-            await unsubscribeByEmail(recipient);
+            await unsubscribeByEmail(recipient, { via: 'webhook', sendId: sendRecordId, kind: type === 'email.complained' ? 'complained' : 'bounced' });
           } catch (err) {
             console.error(`Resend webhook: failed to suppress ${type} recipient:`, err);
           }
@@ -67,13 +70,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const resendEmailId = data.email_id;
     if (!resendEmailId) {
       return NextResponse.json({ received: true });
     }
 
-    // Look up which send record this email belongs to
-    const sendRecordId = await getSendRecordIdForResendEmail(resendEmailId);
     if (!sendRecordId) {
       console.warn(`Resend webhook: no send record found for email ID ${resendEmailId} (event: ${type})`);
       return NextResponse.json({ received: true });

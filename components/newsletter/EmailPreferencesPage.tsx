@@ -7,11 +7,14 @@ import EmailPreferences from './EmailPreferences';
 export default function EmailPreferencesPage() {
   // undefined = not read yet, null = no id in the link
   const [id, setId] = useState<string | null | undefined>(undefined);
+  const [sendId, setSendId] = useState<string | undefined>();
   useEffect(() => {
-    setId(new URLSearchParams(window.location.search).get('id'));
+    const params = new URLSearchParams(window.location.search);
+    setSendId(params.get('s') ?? undefined);
+    setId(params.get('id'));
   }, []);
 
   if (id === undefined) return <p className="text-sm text-slate-400">Loading…</p>;
   if (!id) return <p className="text-sm text-slate-300">Open this page from the &quot;Unsubscribe&quot; link at the bottom of any Lindy&apos;s Five email, or sign in and use Settings on your account page.</p>;
-  return <EmailPreferences id={id} />;
+  return <EmailPreferences id={id} sendId={sendId} />;
 }

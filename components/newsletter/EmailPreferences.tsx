@@ -44,7 +44,7 @@ const teamLabel = (slug: string) => {
  */
 const ACCENT = '#FBBF24';
 
-export default function EmailPreferences({ id }: { id?: string }) {
+export default function EmailPreferences({ id, sendId }: { id?: string; sendId?: string }) {
   const [view, setView] = useState<PrefsView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -70,7 +70,7 @@ export default function EmailPreferences({ id }: { id?: string }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ...(id ? { id } : {}), ...change }),
+        body: JSON.stringify({ ...(id ? { id, sendId } : {}), ...change }),
       });
       const data = await res.json();
       if (!res.ok) setError(data.error || 'Something went wrong');

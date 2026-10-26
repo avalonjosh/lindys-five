@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 import { getAllSubscribers, getAllSendRecords, deleteSubscriber } from '@/lib/email';
+import { getEmailEvents } from '@/lib/emailEvents';
 
 async function verifyAdmin(request: NextRequest): Promise<boolean> {
   const token = request.cookies.get('admin_token')?.value;
@@ -25,6 +26,12 @@ export async function GET(request: NextRequest) {
     if (type === 'sends') {
       const sends = await getAllSendRecords();
       return NextResponse.json({ sends });
+    }
+
+    if (type === 'events') {
+      const days = Math.min(365, Math.max(1, Number(request.nextUrl.searchParams.get('days')) || 90));
+      const events = await getEmailEvents(Date.now() - days * 86_400_000);
+      return NextResponse.json({ events });
     }
 
     const subscribers = await getAllSubscribers();

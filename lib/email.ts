@@ -2021,7 +2021,7 @@ async function sendPersonalizedBatch(
   for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
     const batch = recipients.slice(i, i + BATCH_SIZE);
     const emails = batch.map((sub) => {
-      const unsubscribeUrl = `${SITE_URL}/api/newsletter/unsubscribe?id=${sub.id}`;
+      const unsubscribeUrl = `${SITE_URL}/api/newsletter/unsubscribe?id=${sub.id}${sendRecordId ? `&s=${sendRecordId}` : ''}`;
       return {
         from: FROM_EMAIL,
         to: sub.email,

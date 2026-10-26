@@ -7,6 +7,7 @@
 
 import { kv } from '@vercel/kv';
 import { sendVerificationEmail, sendWelcomeEmail, getAllSubscribers } from '@/lib/email';
+import { logEmailEvent, type EventContext } from '@/lib/emailEvents';
 import type { NewsletterSubscriber, EmailVerificationToken } from '@/lib/types';
 
 /** Single opt-in acknowledgment. Best-effort — never block signup on a send. */
@@ -49,31 +50,37 @@ export async function findSubscriberByEmail(email: string): Promise<NewsletterSu
 
 /** Soft-delete a subscription: mark unsubscribed and drop the team indexes.
  * Same behavior as the email unsubscribe link. No-op if not subscribed. */
-export async function unsubscribeByEmail(email: string): Promise<void> {
+export async function unsubscribeByEmail(
+  email: string,
+  log?: EventContext & { kind?: 'unsubscribed' | 'complained' | 'bounced' },
+): Promise<void> {
   const sub = await findSubscriberByEmail(email);
   if (!sub || sub.unsubscribedAt) return;
   await kv.set(`email:subscriber:${sub.id}`, { ...sub, unsubscribedAt: new Date().toISOString() });
   for (const team of sub.teams ?? []) {
     await kv.srem(`email:subscribers:team:${team}`, sub.id);
   }
+  if (log) await logEmailEvent(sub, log.kind ?? 'unsubscribed', log);
 }
 
 /** Attach teams to an existing subscriber (record + per-team index). No-op if nothing is new. */
-async function addSubscriberTeams(sub: NewsletterSubscriber, teams: string[]): Promise<void> {
+async function addSubscriberTeams(sub: NewsletterSubscriber, teams: string[], source: string): Promise<void> {
   const current = sub.teams ?? [];
   const missing = teams.filter((t) => !current.includes(t));
   if (missing.length === 0) return;
   await kv.set(`email:subscriber:${sub.id}`, { ...sub, teams: [...current, ...missing] });
   for (const team of missing) await kv.sadd(`email:subscribers:team:${team}`, sub.id);
+  for (const team of missing) await logEmailEvent(sub, 'team-on', { via: 'signup' }, { team, detail: source });
 }
 
 /** Stop one team's recaps for this email; the rest of the subscription (other
  * teams, the weekly roundup) stays. No-op if not subscribed to that team. */
-export async function removeSubscriberTeam(email: string, team: string): Promise<void> {
+export async function removeSubscriberTeam(email: string, team: string, log?: EventContext): Promise<void> {
   const sub = await findSubscriberByEmail(email);
   if (!sub || sub.unsubscribedAt || !(sub.teams ?? []).includes(team)) return;
   await kv.set(`email:subscriber:${sub.id}`, { ...sub, teams: sub.teams.filter((t) => t !== team) });
   await kv.srem(`email:subscribers:team:${team}`, sub.id);
+  if (log) await logEmailEvent(sub, 'team-off', log, { team });
 }
 
 export async function ensureSubscriber(
@@ -91,7 +98,7 @@ export async function ensureSubscriber(
   if (existing) {
     if (existing.verified && !existing.unsubscribedAt) {
       // Already on the list: just make sure any newly requested teams are attached.
-      await addSubscriberTeams(existing, teams);
+      await addSubscriberTeams(existing, teams, source);
       return;
     }
     const updated: NewsletterSubscriber = {
@@ -104,6 +111,7 @@ export async function ensureSubscriber(
     };
     await kv.set(`email:subscriber:${existing.id}`, updated);
     for (const team of teams) await kv.sadd(`email:subscribers:team:${team}`, existing.id);
+    await logEmailEvent(updated, existing.unsubscribedAt ? 'resubscribed' : 'subscribed', { via: 'signup' }, { detail: source });
     if (single) await sendWelcome(existing.id, lower);
     else if (!held) await sendVerificationToken(existing.id, lower);
     return;
@@ -122,6 +130,7 @@ export async function ensureSubscriber(
   await kv.set(`email:subscriber:${id}`, subscriber);
   await kv.sadd('email:subscribers', id);
   for (const team of teams) await kv.sadd(`email:subscribers:team:${team}`, id);
+  await logEmailEvent(subscriber, 'subscribed', { via: 'signup' }, { detail: subscriber.source });
   if (single) await sendWelcome(id, lower);
   else if (!held) await sendVerificationToken(id, lower);
 }
@@ -132,5 +141,6 @@ export async function activateSubscriberByEmail(email: string): Promise<void> {
   const sub = await findSubscriberByEmail(email);
   if (!sub || sub.verified || sub.unsubscribedAt) return;
   await kv.set(`email:subscriber:${sub.id}`, { ...sub, verified: true, verifiedAt: new Date().toISOString() });
+  await logEmailEvent(sub, 'confirmed', { via: 'account' });
   await sendWelcome(sub.id, sub.email);
 }

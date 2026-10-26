@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
   // Newsletter is a separate consent — only unsubscribe if asked.
   if (body.unsubscribe) {
     try {
-      await unsubscribeByEmail(user.email);
+      await unsubscribeByEmail(user.email, { via: 'account-delete' });
     } catch (err) {
       console.error('Unsubscribe during account deletion failed:', err);
     }

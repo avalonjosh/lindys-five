@@ -7,7 +7,7 @@ import type { HubTeam } from './TeamGearHub';
 
 const BASE = 'https://www.lindysfive.com';
 
-/** Server-rendered, indexable per-team tickets hub. Links go to the team's StubHub page. */
+/** Server-rendered, indexable per-team tickets hub (StubHub via Partnerize while TICKET_AFFILIATE_ACTIVE). */
 export default function TeamTicketsHub({ team, stubhubId }: { team: HubTeam; stubhubId: number }) {
   const full = `${team.city} ${team.name}`;
   const league = team.sport === 'nhl' ? 'NHL' : 'MLB';
@@ -40,7 +40,9 @@ export default function TeamTicketsHub({ team, stubhubId }: { team: HubTeam; stu
             {full} Tickets
           </h1>
           <p className="mx-auto mt-2 max-w-xl text-sm text-white/80">
-            Find {full} {league} tickets for every home and away game this season.
+            {TICKET_AFFILIATE_ACTIVE
+              ? <>Find {full} {league} tickets for every home and away game on StubHub — verified resale with a buyer guarantee.</>
+              : <>Find {full} {league} tickets for every home and away game this season.</>}
           </p>
         </div>
       </header>
@@ -66,7 +68,7 @@ export default function TeamTicketsHub({ team, stubhubId }: { team: HubTeam; stu
             className="mt-4 inline-block rounded-xl px-6 py-3.5 text-base font-bold uppercase tracking-wide text-white shadow-md transition-opacity hover:opacity-90"
             style={{ background: team.primaryColor }}
           >
-            See tickets
+            {TICKET_AFFILIATE_ACTIVE ? 'See tickets on StubHub' : 'See tickets'}
           </AffiliateLink>
         </div>
 
