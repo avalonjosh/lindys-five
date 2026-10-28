@@ -25,7 +25,7 @@ const data = JSON.parse(
 const OUT = join(process.cwd(), 'data', `${SPORT}-daily-schedule.json`);
 
 const START = DAILY_EPOCH; // first scheduled day
-const DAYS = 150; // roughly five months ahead
+const END = '2027-12-31'; // last scheduled day; extend before it runs out (health check warns 30 days ahead)
 
 function addDays(date: string, n: number): string {
   const d = new Date(`${date}T12:00:00Z`);
@@ -37,6 +37,7 @@ const days: Record<string, { dayNumber: number; rounds: unknown }> = {};
 let ok = 0;
 const failures: string[] = [];
 const t0 = Date.now();
+const DAYS = Math.round((Date.parse(`${END}T12:00:00Z`) - Date.parse(`${START}T12:00:00Z`)) / 86_400_000) + 1;
 
 for (let i = 0; i < DAYS; i++) {
   const date = addDays(START, i);

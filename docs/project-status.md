@@ -30,6 +30,7 @@ Cloud routines on Josh's claude.ai account email him at 9am ET for the items mar
 | By Mar 2027 | Turn on NHL Clinch in Admin > Newsletter before the first clinches |
 | 2026-12-07 (email) | StubHub re-harvest: MLB 2027 regular season |
 | 2027-04-12 (email) | StubHub re-harvest: NHL playoffs (as each round is set) |
+| By 2027-12-01 | 82-0 / 162-0 daily puzzles run out after 2027-12-31: extend `END` in `scripts/build-daily-schedule.ts`, run it for `nhl` and `mlb` (past days stay identical). The health check warns 30 days ahead. (They ran out 2026-10-28 and were extended that day.) |
 | First playoff night, Apr 2027 | Playoff crons (`playoff-game-recap`, `series-recap`) have never run for real; verify them. Bracket fetch fixed in a25ddd0 |
 | Mid-Apr 2027 | Set 17 (4-game final set) recap fires once game 84 is final |
 | Each NHL offseason | Regenerate the odds model's team priors: `npx tsx scripts/build-nhl-prior-pace.ts` (after the prior season ends). If skipped, the model silently falls back to league average and the preseason-to-game-1 jump returns |

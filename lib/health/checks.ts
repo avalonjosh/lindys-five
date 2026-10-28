@@ -14,7 +14,7 @@ import { generateFanaticsTeamLink, FANATICS_ENABLED } from '@/lib/utils/affiliat
 import { fetchImpactSummary, fetchPartnerizeSummary, hasImpactCredentials, hasPartnerizeCredentials } from '@/lib/services/affiliateNetworks';
 import { fetchOverview, hasGA4Credentials } from '@/lib/ga4';
 import { resolveAnalyticsWindow } from '@/lib/analyticsRange';
-import { getScheduleWindow } from '@/lib/perfectseason/server/datasets';
+import { getDataset, getScheduleWindow } from '@/lib/perfectseason/server/datasets';
 import { cronRunKey, type CronRun } from './cronRuns';
 
 export type CheckStatus = 'ok' | 'warn' | 'fail' | 'skip';
@@ -376,14 +376,18 @@ const accounts: Check = async () => {
 };
 
 const dailyPuzzles: Check = async () => {
-  const problems: string[] = [];
+  const problems: string[] = [], runningOut: string[] = [];
   for (const sport of ['nhl', 'mlb'] as const) {
     const days = Object.keys(getScheduleWindow(sport).days);
     for (const d of [easternDate(), easternDate(1)]) if (!days.includes(d)) problems.push(`${sport === 'nhl' ? '82-0' : '162-0'} has no puzzle for ${d}`);
     const res = await get(`${SITE}/api/perfectseason/data/${sport}`);
     if (res.status !== 200) problems.push(`${sport} player data HTTP ${res.status}`);
+    const last = Object.keys(getDataset(sport).schedule.days).sort().at(-1) ?? '';
+    if (last < easternDate(30)) runningOut.push(`${sport === 'nhl' ? '82-0' : '162-0'} puzzles end ${last}`);
   }
-  return problems.length ? fail(problems.join('; ')) : ok("Today's and tomorrow's 82-0 and 162-0 puzzles and their player data are there");
+  if (problems.length) return fail(problems.join('; '));
+  if (runningOut.length) return warn(`${runningOut.join('; ')}. Extend END in scripts/build-daily-schedule.ts and rerun it for nhl and mlb`);
+  return ok("Today's and tomorrow's 82-0 and 162-0 puzzles and their player data are there");
 };
 
 // ---------------------------------------------------------------------------
