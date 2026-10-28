@@ -4,7 +4,7 @@
  * from scripts/data/stubhub-*.txt; do not edit by hand. Regenerate after a fresh
  * browser harvest (see the script header) when the schedule changes.
  *
- * 1583 events. Canadian home venues are not listed on StubHub US and
+ * 1586 events. Canadian home venues are not listed on StubHub US and
  * fall back to a StubHub search.
  */
 export const STUBHUB_EVENT_IDS: Record<string, number> = {
@@ -252,6 +252,8 @@ export const STUBHUB_EVENT_IDS: Record<string, number> = {
   'mlb:MIL:STL:2026-09-25': 159263179,
   'mlb:MIL:STL:2026-09-26': 159263180,
   'mlb:MIL:STL:2026-09-27': 159263181,
+  'mlb:MIL:TB:2026-10-30': 161543155,
+  'mlb:MIL:TB:2026-10-31': 161543158,
   'mlb:MIL:TEX:2026-08-28': 159263170,
   'mlb:MIL:TEX:2026-08-29': 159263171,
   'mlb:MIL:TEX:2026-08-30': 159263172,
@@ -426,6 +428,7 @@ export const STUBHUB_EVENT_IDS: Record<string, number> = {
   'mlb:TB:HOU:2026-09-11': 159263254,
   'mlb:TB:HOU:2026-09-12': 159263255,
   'mlb:TB:HOU:2026-09-13': 159263256,
+  'mlb:TB:MIL:2026-10-28': 161544334,
   'mlb:TB:NYM:2026-08-31': 159263251,
   'mlb:TB:NYM:2026-09-01': 159263252,
   'mlb:TB:NYM:2026-09-02': 159263253,
